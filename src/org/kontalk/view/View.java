@@ -33,6 +33,7 @@ import org.kontalk.MyKontalk;
 import org.kontalk.model.UserList;
 import org.kontalk.model.KontalkThread;
 import org.kontalk.model.ThreadList;
+import org.kontalk.model.User;
 
 /**
  *
@@ -120,7 +121,8 @@ public class View {
             }
     }
     
-    public void threadListChanged(ThreadList threads) {
+    public void threadListChanged() {
+        ThreadList threads = ThreadList.getInstance();
         mThreadListView.modelChanged(threads);
     }
     
@@ -130,7 +132,8 @@ public class View {
         }
     }
     
-    public void userListChanged(UserList user) {
+    public void userListChanged() {
+        UserList user = UserList.getInstance();
         mUserListView.modelChanged(user);
     }
 
@@ -143,7 +146,7 @@ public class View {
     }
     
     private void showConfig(String helpText) {
-        JDialog configFrame = new ConfigurationFrame(this, helpText);
+        JDialog configFrame = new ConfigurationDialog(this, helpText);
         configFrame.setVisible(true);
     }
     
@@ -159,11 +162,11 @@ public class View {
         mModel.disconnect();
     }
 
-    void selectedUserChanged(int userID) {
-        if (userID == -1) {
+    void selectThread(User user) {
+        if (user == null) {
             mChatView.showThread(null);
         } else {
-            KontalkThread thread = mModel.getThreadByUserID(userID);
+            KontalkThread thread = ThreadList.getInstance().getThreadByUser(user);
             mThreadListView.selectThread(thread.getID());
             mMainFrame.selectTab(MainFrame.Tab.THREADS);
             mChatView.showThread(thread);

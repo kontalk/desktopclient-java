@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.RosterEntry;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.Database;
 
@@ -59,7 +58,7 @@ public class User {
      */
     User(String jid, String name) {
         mJID = StringUtils.parseBareAddress(jid);
-        mName = name != null ? name : "<unknown>";
+        mName = name;
         
         Database db = Database.getInstance();
         List<Object> values = new LinkedList();
@@ -83,12 +82,22 @@ public class User {
         return mJID;
     }
     
+    public void setJID(String jid) {
+        mJID = StringUtils.parseBareAddress(jid);
+        this.save();
+    }
+    
     public int getID() {
         return mID;
     }
     
     public String getName() {
         return mName;
+    }
+    
+    public void setName(String name) {
+        mName = name;
+        this.save();
     }
     
     public void save() {

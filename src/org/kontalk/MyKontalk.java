@@ -129,11 +129,11 @@ public class MyKontalk {
     }
     
     public void userListChanged(){
-        mView.userListChanged(mUserList);
+        mView.userListChanged();
     }
     
     public void threadListChanged(){
-        mView.threadListChanged(mThreadList);
+        mView.threadListChanged();
     }
     
     public void threadChanged(KontalkThread thread) {
@@ -153,17 +153,6 @@ public class MyKontalk {
             String xmppID = mMessageList.addTo(thread, oneUser, text, encrypted);
             mClient.sendText(xmppID, oneUser.getJID(), text);
         }
-    }
-    
-    public KontalkThread getThreadByUserID(int userID) {
-        User user = mUserList.getUserByID(userID);
-        if (user == null) {
-            LOGGER.warning("can't find user with id: " + userID);
-            return null;
-        }
-        KontalkThread thread = mThreadList.getThreadByUser(user);
-        mView.threadListChanged(mThreadList);
-        return thread;
     }
     
     public KontalkThread getThreadByID(int id) {

@@ -37,7 +37,7 @@ import org.kontalk.KontalkConfiguration;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ConfigurationFrame extends WebDialog {
+public class ConfigurationDialog extends WebDialog {
 
     private final KontalkConfiguration mConf;
     private final WebTextField serverField;
@@ -46,7 +46,7 @@ public class ConfigurationFrame extends WebDialog {
     private final WebFileChooserField bridgeCertChooser;
     private final WebTextField passField;
 
-    ConfigurationFrame(final View viewModel, String helpText) {
+    ConfigurationDialog(final View viewModel, String helpText) {
         
         mConf = KontalkConfiguration.getConfiguration();
 
@@ -63,6 +63,7 @@ public class ConfigurationFrame extends WebDialog {
         serverField = new WebTextField(mConf.getString(KontalkConfiguration.SERV_HOST), 24);
         serverField.setInputPrompt(KontalkConfiguration.DEFAULT_SERV_HOST);
         serverField.setInputPromptFont(serverField.getFont().deriveFont(Font.ITALIC));
+        serverField.setHideInputPromptOnFocus(false);
         
         groupPanel.add(serverField);
         groupPanel.add(new WebSeparator(true, true));
@@ -86,10 +87,12 @@ public class ConfigurationFrame extends WebDialog {
         // text field for passphrase
         groupPanel.add(new WebLabel("Passphrase:"));
         passField = new WebTextField(42);
-        if (mConf.getString(KontalkConfiguration.ACC_PASS).isEmpty()) 
+        if (mConf.getString(KontalkConfiguration.ACC_PASS).isEmpty()) {
             passField.setInputPrompt("Enter passphrase...");
-        else
+            passField.setHideInputPromptOnFocus(false);
+        } else {
             passField.setText(mConf.getString(KontalkConfiguration.ACC_PASS));
+        }
         groupPanel.add(passField);
         groupPanel.add(new WebSeparator(true, true));
         
@@ -102,8 +105,7 @@ public class ConfigurationFrame extends WebDialog {
             public void actionPerformed(ActionEvent e) {
                 dispose();
             }
-        }
-        );
+        });
         WebButton saveButton = new WebButton("Save");
         saveButton.addActionListener(new ActionListener() {
             @Override

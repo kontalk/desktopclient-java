@@ -18,46 +18,124 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.panel.GroupPanel;
+import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
+import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.text.WebTextField;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.logging.Logger;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
+import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
 /**
- *
+ * Display all known user (aka contacts) in a list.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class UserListView extends WebList {
     private final static Logger LOGGER = Logger.getLogger(UserListView.class.getName());
     
     private final DefaultListModel<UserView> mListModel = new DefaultListModel();
+    private final WebPopupMenu mPopupMenu;
     
     UserListView(final View modelView) {
-        super();
         
         this.setModel(mListModel);
         this.setCellRenderer(new UserListRenderer());
         
-        //this.setPreferredWidth(150);
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        //this.setPreferredWidth(150);
         
+        // right click popup menu
+        mPopupMenu = new WebPopupMenu();
+        // note: actions only work when right click does also selection
+        WebMenuItem newMenuItem = new WebMenuItem("New Thread");
+        newMenuItem.setToolTipText("Creates a new thread for this contact");
+        newMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                // TODO
+            }
+        });
+        mPopupMenu.add(newMenuItem);
+        
+        WebMenuItem editMenuItem = new WebMenuItem("Edit Contact");
+        editMenuItem.setToolTipText("Edit this contact");
+        editMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                JDialog editUserDialog = new EditUserDialog(mListModel.get(getSelectedIndex()));
+                editUserDialog.setVisible(true);
+            }
+        });
+        mPopupMenu.add(editMenuItem);
+        
+        WebMenuItem deleteMenuItem = new WebMenuItem("Delete Contact");
+        deleteMenuItem.setToolTipText("Delete this contact");
+        deleteMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                // TODO delete threads/messages too? android client may add it 
+                // to roster again? useful at all? only self created contacts?
+            }
+        });
+        mPopupMenu.add(deleteMenuItem);
+        
+        // actions triggered by selection
         this.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                modelView.selectedUserChanged(getSelectedUserID());
+                // TODO ?
+                //modelView.selectedUserChanged(getSelectedUserID());
+            }
+        });
+        
+        // actions triggered by mouse events
+        this.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                super.mouseClicked(e);
+                if (e.getClickCount() == 2) {
+                    modelView.selectThread(getSelectedUser());
+                } 
+            }
+            @Override
+            public void mousePressed(MouseEvent e) {
+                check(e);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                check(e);
+            }
+            private void check(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    setSelectedIndex(locationToIndex(e.getPoint()));
+                    showPopupMenu(e);
+                }
             }
         });
     }
@@ -65,33 +143,51 @@ public class UserListView extends WebList {
     void modelChanged(UserList user) {
         mListModel.clear();
         for (User oneUser: user.values())
-            mListModel.addElement(new UserView(oneUser.getID(), oneUser.getJID()));
+            mListModel.addElement(new UserView(oneUser));
     }
     
-    int getSelectedUserID() {
+    User getSelectedUser() {
         if (getSelectedIndex() == -1)
-            return -1;
-        return mListModel.get(getSelectedIndex()).getID();
+            return null;
+        return mListModel.get(getSelectedIndex()).getUser();
     }
     
+    private void showPopupMenu(MouseEvent e){
+           mPopupMenu.show(this, e.getX(), e.getY());
+       }
+    
+    /**
+     * One item in the contact list representing a user.
+     */
     private class UserView extends WebPanel{
         
-        private final int mID;
-        private final String mJID;
+        private final User mUser;
+        WebLabel nameLabel;
+        WebLabel jidLabel;
      
-        UserView(int id, String jid) {
-            mID = id;
-            mJID = jid;
+        UserView(User user) {
+            mUser = user;
             
             //this.setPaintFocus(true);
             this.setMargin(5);
+            this.setLayout(new BorderLayout(10, 5));
             
-            this.add(new WebLabel(Integer.toString(mID)), BorderLayout.NORTH);
-            this.add(new WebLabel(mJID), BorderLayout.CENTER);
+            this.add(new WebLabel(Integer.toString(mUser.getID())), BorderLayout.WEST);
+            
+            nameLabel = new WebLabel();
+            nameLabel.setFontSize(14);
+            this.add(nameLabel, BorderLayout.CENTER);
+            
+            jidLabel = new WebLabel();
+            jidLabel.setForeground(Color.GRAY);
+            jidLabel.setFontSize(11);
+            this.add(jidLabel, BorderLayout.SOUTH);
+            
+            updateView();
         }
 
-        int getID() {
-            return mID;
+        User getUser() {
+            return mUser;
         }
         
         void paintSelected(boolean isSelected){
@@ -101,6 +197,13 @@ public class UserListView extends WebList {
                 this.setBackground(Color.WHITE);
         }
         
+        private void updateView() {
+           String mName = mUser.getName() != null ? mUser.getName() : "<unknown>";
+           String mJID = mUser.getJID().length() < 25 ? mUser.getJID() : 
+                   mUser.getJID().substring(0, 24) + "...";
+           nameLabel.setText(mName);
+           jidLabel.setText(mJID);
+        }
     }
     
     private class UserListRenderer extends DefaultListCellRenderer {
@@ -120,5 +223,76 @@ public class UserListView extends WebList {
             }
         }
     }
+    
+    private class EditUserDialog extends WebDialog {
 
+        private final UserView mUserView;
+        private final WebTextField nameField;
+        private final WebTextField jidField;
+        
+        public EditUserDialog(UserView userView) {
+            
+            mUserView = userView;
+            
+            this.setTitle("Edit Contact");
+            this.setSize(400, 280);
+            this.setResizable(false);
+            this.setModal(true);
+            
+            GroupPanel groupPanel = new GroupPanel(10, false);
+            groupPanel.setMargin(5);
+
+            groupPanel.add(new WebLabel("Last seen:  TODO"));
+            groupPanel.add(new WebLabel("Status:  TODO"));
+            groupPanel.add(new WebSeparator(true, true));
+            
+            // buttons
+            WebButton cancelButton = new WebButton("Cancel");
+            cancelButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    dispose();
+                }
+            });
+            final WebButton saveButton = new WebButton("Save");
+            saveButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    saveUser();
+                    dispose();
+                }
+            });
+            
+            // editable fields
+            groupPanel.add(new WebLabel("Name:"));
+            nameField = new WebTextField(mUserView.getUser().getName(), 16);
+            nameField.setInputPrompt(mUserView.getUser().getName());
+            nameField.setHideInputPromptOnFocus(false);
+            groupPanel.add(nameField);
+            groupPanel.add(new WebSeparator(true, true));
+            
+            groupPanel.add(new WebLabel("JID:"));
+            jidField = new WebTextField(mUserView.getUser().getJID(), 24);
+            jidField.setInputPrompt(mUserView.getUser().getJID());
+            jidField.setHideInputPromptOnFocus(false);
+            groupPanel.add(jidField);
+            groupPanel.add(new WebSeparator(true, true));
+            
+            this.add(groupPanel, BorderLayout.CENTER);
+            
+            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
+            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
+            this.add(buttonPanel, BorderLayout.SOUTH);
+        }
+        
+        private void saveUser() {
+            if (!nameField.getText().isEmpty()) {
+                mUserView.getUser().setName(nameField.getText());
+            }
+            if (!jidField.getText().isEmpty()) {
+                mUserView.getUser().setJID(jidField.getText());
+            }
+            mUserView.updateView();
+        }
+    }
 }

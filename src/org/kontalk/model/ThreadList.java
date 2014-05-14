@@ -90,6 +90,7 @@ public class ThreadList extends HashMap<Integer, KontalkThread> {
         }
         KontalkThread newThread = new KontalkThread(user);
         this.put(newThread.getID(), newThread);
+        MyKontalk.getInstance().threadListChanged();
         return newThread;
     }
     
