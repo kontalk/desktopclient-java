@@ -51,7 +51,6 @@ public class ConfigurationDialog extends WebDialog {
         mConf = KontalkConfiguration.getConfiguration();
 
         this.setTitle("Connection configuration");
-        this.setSize(500, 460);
         this.setResizable(false);
         this.setModal(true);
 
@@ -127,6 +126,8 @@ public class ConfigurationDialog extends WebDialog {
         GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton, okButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
+        
+        this.pack();
     }
 
     private WebFileChooserField createFileChooser(String path){

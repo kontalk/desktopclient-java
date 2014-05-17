@@ -47,7 +47,7 @@ public class MainFrame extends JFrame {
 
     public static enum Tab {THREADS, USER};
     
-    private WebTabbedPane mTabbedPane;
+    private final WebTabbedPane mTabbedPane;
     
     public MainFrame(final View viewModel,
             Component userList,
@@ -158,6 +158,7 @@ public class MainFrame extends JFrame {
                 new WebVerticalLabel("Threads"));
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(), 
                 new WebVerticalLabel("Contacts"));
+        this.add(mTabbedPane, BorderLayout.WEST);
 
         // ...right...
         WebPanel rightPanel = new WebPanel();
@@ -166,14 +167,7 @@ public class MainFrame extends JFrame {
         bottomPanel.add(sendTextField, BorderLayout.CENTER);
         bottomPanel.add(sendButton, BorderLayout.EAST);
         rightPanel.add(bottomPanel, BorderLayout.SOUTH);
-
-        // ...into split pane.
-        WebSplitPane splitPane = new WebSplitPane(HORIZONTAL_SPLIT, mTabbedPane, rightPanel);
-        splitPane.setOneTouchExpandable(true);
-        //splitPane.setPreferredSize(new Dimension(250, 200));
-        splitPane.setDividerLocation(250);
-        splitPane.setContinuousLayout(true);
-        this.add(splitPane, BorderLayout.CENTER);
+        this.add(rightPanel, BorderLayout.CENTER);
 
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);

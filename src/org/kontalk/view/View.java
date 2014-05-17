@@ -162,7 +162,7 @@ public class View {
         mModel.disconnect();
     }
 
-    void selectThread(User user) {
+    void selectThreadByUser(User user) {
         if (user == null) {
             mChatView.showThread(null);
         } else {
@@ -173,25 +173,20 @@ public class View {
         }
     }
     
-    void selectedThreadChanged(int threadID) {
-        if (threadID == -1)
-            return;
-        
-        KontalkThread thread = mModel.getThreadByID(threadID);
+    void selectedThreadChanged(KontalkThread thread) {
         if (thread == null)
             return;
-
         mChatView.showThread(thread);
     }
 
     private void sendText() {
-       int threadID = mThreadListView.getSelectedThreadID();
-       if (threadID <= 0) {
+       KontalkThread thread = mThreadListView.getSelectedThread();
+       if (thread == null) {
            // TODO
            // nothing selected
            return;
        }
-       mModel.sendText(threadID, mSendTextField.getText());
+       mModel.sendText(thread, mSendTextField.getText());
        mSendTextField.setText("");
     }
     

@@ -67,6 +67,7 @@ public class UserListListener implements RosterListener {
         // TODO
         UserList userList = UserList.getInstance();
         for (RosterEntry entry: mRoster.getEntries()) {
+            System.out.println(entry.getUser()+" "+entry.getType());
             userList.addUser(entry.getUser(), entry.getName());
         }
     }

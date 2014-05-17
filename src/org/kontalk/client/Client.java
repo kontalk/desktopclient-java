@@ -30,8 +30,6 @@ import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.filter.PacketTypeFilter;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
-import org.jivesoftware.smack.packet.PacketExtension;
-import org.jivesoftware.smack.packet.XMPPError;
 import org.kontalk.KontalkConfiguration;
 import org.kontalk.MyKontalk;
 import org.kontalk.crypto.PersonalKey;
@@ -42,7 +40,7 @@ import org.kontalk.crypto.PersonalKey;
  */
 public class Client implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
-
+    
     private final MyKontalk mModel;
     private final KontalkConfiguration mConfig;
     private final EndpointServer mServer;
@@ -59,12 +57,15 @@ public class Client implements PacketListener {
         int port = mConfig.getInt("server.port");
         mServer = new EndpointServer(network, host, port);
         //mLimited = limited;
+        
+        // open smack debug window when connecting
+        //Connection.DEBUG_ENABLED = true;
     }
     
     public void connect(PersonalKey key){
 
        this.disconnect();
-
+       
         // create connection
         try {
             mConn = new KontalkConnection(mServer,
@@ -86,7 +87,7 @@ public class Client implements PacketListener {
         // login
         try {
             // the dummy values are not actually used
-            // server does authentification purely based on the pgp key
+            // server does authentification based purely on the pgp key
             mConn.login("dummy", "dummy");
         } catch (XMPPException ex) {
             LOGGER.log(Level.WARNING, "can't login", ex);
@@ -134,17 +135,6 @@ public class Client implements PacketListener {
     
     @Override
     public void processPacket(Packet packet) {
-        LOGGER.info("Got packet from "+packet.getFrom());
-        System.out.println("Packet ID: "+packet.getPacketID());
-        for (String propName: packet.getPropertyNames()) {
-            System.out.println("Propertie: "+propName+" "+packet.getProperty(propName));
-        }
-        
-        for (PacketExtension ex: packet.getExtensions()) {
-            System.out.println("Extension: "+ex.toXML());
-        }
-        XMPPError error = packet.getError();
-        if (error != null)
-            System.out.println("Error: "+error);
+        LOGGER.info("Got packet: "+packet.toXML());
     }
 }

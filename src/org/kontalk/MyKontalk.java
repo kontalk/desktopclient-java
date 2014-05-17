@@ -22,7 +22,6 @@ import org.kontalk.client.Client;
 import org.kontalk.model.UserList;
 import org.kontalk.model.Account;
 import com.alee.laf.WebLookAndFeel;
-import java.util.Date;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.logging.Logger;
@@ -144,8 +143,7 @@ public class MyKontalk {
         mView.statusChanged(status);
     }
     
-    public void sendText(int threadID, String text) {
-        KontalkThread thread = mThreadList.getThreadByID(threadID);
+    public void sendText(KontalkThread thread, String text) {
         boolean encrypted = false; // TODO
         // TODO no group chat support yet
         Set<User> user = thread.getUser();

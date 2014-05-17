@@ -36,9 +36,13 @@ public class User {
     
     public static final String TABLE = "user";
     public static final String CREATE_TABLE = "(" +
-            "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-            "jid TEXT NOT NULL UNIQUE," +
-            "name TEXT" +
+            "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            "jid TEXT NOT NULL UNIQUE, " +
+            "name TEXT, " +
+            "status TEXT, " +
+            "last_seen INTEGER, " +
+            "public_KEY TEXT UNIQUE, " +
+            "key_fingerprint TEXT UNIQUE" +
             ")";
     
     private final int mID;

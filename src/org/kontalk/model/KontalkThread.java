@@ -60,7 +60,7 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
     private final int mID;
     private final String mXMPPID;
     private Set<User> mUser;
-    private String mSubject = "<unnamed>";
+    private String mSubject;
     
     /**
      * Used when creating a new thread
@@ -71,6 +71,7 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
         mXMPPID = null;
         mUser = new HashSet();
         mUser.add(user);
+        mSubject = null;
         
         Database db = Database.getInstance();
         List<Object> values = new LinkedList();
@@ -109,6 +110,11 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
     
     public String getSubject() {
         return mSubject;
+    }
+    
+    public void setSubject(String subject) {
+        mSubject = subject;
+        this.save();
     }
     
     public void save(){

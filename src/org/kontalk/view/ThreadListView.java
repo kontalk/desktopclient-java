@@ -18,16 +18,29 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.panel.GroupPanel;
+import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
+import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.text.WebTextField;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.Enumeration;
 import java.util.logging.Logger;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
+import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
@@ -43,22 +56,63 @@ public class ThreadListView extends WebList {
     private final static Logger LOGGER = Logger.getLogger(ThreadListView.class.getName());
     
     private final DefaultListModel<ThreadView> mListModel = new DefaultListModel();
+    private final WebPopupMenu mPopupMenu;
     
     ThreadListView(final View modelView) {
-        //super();
         
         this.setModel(mListModel);
         this.setCellRenderer(new ThreadListRenderer());
         
-        //this.setPreferredWidth(150);
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         
+        // right click popup menu
+        mPopupMenu = new WebPopupMenu();
+        WebMenuItem editMenuItem = new WebMenuItem("Edit Thread");
+        editMenuItem.setToolTipText("Edit this thread");
+        editMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                JDialog editUserDialog = new EditThreadDialog(mListModel.get(getSelectedIndex()));
+                editUserDialog.setVisible(true);
+            }
+        });
+        mPopupMenu.add(editMenuItem);
+        
+        WebMenuItem deleteMenuItem = new WebMenuItem("Delete Thread");
+        deleteMenuItem.setToolTipText("Delete this thread");
+        deleteMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                // TODO
+            }
+        });
+        mPopupMenu.add(deleteMenuItem);
+        
+        // actions triggered by selection
         this.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                modelView.selectedThreadChanged(getSelectedThreadID());
+                modelView.selectedThreadChanged(getSelectedThread());
+            }
+        });
+        
+        // actions triggered by mouse events
+        this.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                check(e);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                check(e);
+            }
+            private void check(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    setSelectedIndex(locationToIndex(e.getPoint()));
+                    showPopupMenu(e);
+                }
             }
         });
     }
@@ -67,7 +121,7 @@ public class ThreadListView extends WebList {
         Enumeration e = mListModel.elements();
         for(Enumeration<ThreadView> threads = e; e.hasMoreElements();){
             ThreadView threadView = threads.nextElement();
-            if (threadView.getID() == threadID)
+            if (threadView.getThread().getID() == threadID)
                 this.setSelectedValue(threadView);
         }
     }
@@ -75,37 +129,42 @@ public class ThreadListView extends WebList {
     void modelChanged(ThreadList threads) {
         mListModel.clear();
         for (KontalkThread thread: threads.values()) {
-            ThreadView newThreadView = new ThreadView(thread.getID(), thread.getXMPPID(), thread.getSubject());
+            ThreadView newThreadView = new ThreadView(thread);
             mListModel.addElement(newThreadView);
         }
     }
     
-    int getSelectedThreadID() {
+    KontalkThread getSelectedThread() {
         if (this.getSelectedIndex() == -1)
-            return -1;
-        return mListModel.get(this.getSelectedIndex()).mID;
+            return null;
+        return mListModel.get(this.getSelectedIndex()).getThread();
+    }
+    
+    private void showPopupMenu(MouseEvent e){
+           mPopupMenu.show(this, e.getX(), e.getY());
     }
     
     private class ThreadView extends WebPanel{
         
-        private final int mID;
-        private final String mXMPPID;
-        private final String mSubject;
+        private final KontalkThread mThread;
+        private final WebLabel mSubjectLabel;
      
-        ThreadView(int id, String xmppID, String subject) {
-            mID = id;
-            mXMPPID = xmppID;
-            mSubject = subject;
+        ThreadView(KontalkThread thread) {
+            mThread = thread;
             
             this.setMargin(5);
+            this.setLayout(new BorderLayout(10, 5));
             
-            this.add(new WebLabel(mXMPPID), BorderLayout.NORTH);
-            this.add(new WebLabel(Integer.toString(mID)), BorderLayout.WEST);
-            this.add(new WebLabel(mSubject), BorderLayout.CENTER);
+            this.add(new WebLabel(Integer.toString(thread.getID())), BorderLayout.WEST);
+            mSubjectLabel = new WebLabel();
+            mSubjectLabel.setFontSize(14);
+            this.add(mSubjectLabel, BorderLayout.CENTER);
+            
+            updateView();
         }
         
-        int getID(){
-            return mID;
+        KontalkThread getThread(){
+            return mThread;
         }
         
         void paintSelected(boolean isSelected){
@@ -113,6 +172,11 @@ public class ThreadListView extends WebList {
                 this.setBackground(View.BLUE);
             else
                 this.setBackground(Color.WHITE);
+        }
+        
+        private void updateView() {
+           String subject = mThread.getSubject() != null ? mThread.getSubject(): "<unnamed>";
+           mSubjectLabel.setText(subject);
         }
 
     }
@@ -132,6 +196,73 @@ public class ThreadListView extends WebList {
             } else {
                 return new WebPanel(new WebLabel("ERRROR"));
             }
+        }
+    }
+    
+    private class EditThreadDialog extends WebDialog {
+
+        private final ThreadView mThreadView;
+        private final WebTextField mSubjectField;
+        
+        public EditThreadDialog(ThreadView threadView) {
+            
+            mThreadView = threadView;
+            
+            this.setTitle("Edit Thread");
+            this.setResizable(false);
+            this.setModal(true);
+            
+            GroupPanel groupPanel = new GroupPanel(10, false);
+            groupPanel.setMargin(5);
+            
+            // editable fields
+            groupPanel.add(new WebLabel("Subject:"));
+            mSubjectField = new WebTextField(mThreadView.getThread().getSubject(), 16);
+            mSubjectField.setInputPrompt(mThreadView.getThread().getSubject());
+            mSubjectField.setHideInputPromptOnFocus(false);
+            groupPanel.add(mSubjectField);
+            groupPanel.add(new WebSeparator(true, true));
+            
+            groupPanel.add(new WebLabel("Add User:"));
+            // TODO
+            groupPanel.add(new WebSeparator(true, true));
+            
+            groupPanel.add(new WebLabel("Remove User:"));
+            // TODO
+            groupPanel.add(new WebSeparator(true, true));
+            
+            this.add(groupPanel, BorderLayout.CENTER);
+            
+            // buttons
+            WebButton cancelButton = new WebButton("Cancel");
+            cancelButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    dispose();
+                }
+            });
+            final WebButton saveButton = new WebButton("Save");
+            saveButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    saveUser();
+                    dispose();
+                }
+            });
+            
+            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
+            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
+            this.add(buttonPanel, BorderLayout.SOUTH);
+            
+            this.pack();
+        }
+        
+        private void saveUser() {
+            if (!mSubjectField.getText().isEmpty()) {
+                mThreadView.getThread().setSubject(mSubjectField.getText());
+            }
+
+            mThreadView.updateView();
         }
     }
 

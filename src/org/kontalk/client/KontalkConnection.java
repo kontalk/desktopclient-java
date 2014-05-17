@@ -48,7 +48,7 @@ public class KontalkConnection extends XMPPConnection {
 
     protected EndpointServer mServer;
 
-    public KontalkConnection(EndpointServer server) throws XMPPException {
+    private KontalkConnection(EndpointServer server) throws XMPPException {
         //super(new AndroidConnectionConfiguration(server.getHost(), server.getPort()));
         super(new ConnectionConfiguration(server.getHost(), server.getPort()));
 

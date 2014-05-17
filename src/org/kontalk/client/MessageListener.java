@@ -162,7 +162,6 @@ class MessageListener implements PacketListener {
     private void processReceipt(Message m, ServerReceipt receipt) {
         if (receipt != null && receipt instanceof SentServerReceipt) {
             SentServerReceipt sentServerReceipt = (SentServerReceipt) receipt;
-            LOGGER.info("got sent server receipt: " + sentServerReceipt.toXML());
             // update message status and save receipt ID
             MessageList.getInstance().updateMsgBySentReceipt(m.getPacketID(), 
                     sentServerReceipt.getId());
@@ -170,7 +169,6 @@ class MessageListener implements PacketListener {
         }
         if (receipt != null && receipt instanceof ReceivedServerReceipt) {
             ReceivedServerReceipt receivedServerReceipt = (ReceivedServerReceipt) receipt;
-            LOGGER.info("got received server receipt: " + receivedServerReceipt.toXML());
             // HOORAY! our message was received
             MessageList.getInstance().updateMsgByReceivedReceipt(
                     receivedServerReceipt.getId());
@@ -182,7 +180,6 @@ class MessageListener implements PacketListener {
         }
         if (receipt != null && receipt instanceof AckServerReceipt) {
             AckServerReceipt ackServerReceipt = (AckServerReceipt) receipt;
-            LOGGER.info("got ack server receipt: " + ackServerReceipt.toXML());
             // TODO it looks like the packet id is used now to identify the 
             // 'received' for this acknowledement, unlike the spec says
             // ignore this for now

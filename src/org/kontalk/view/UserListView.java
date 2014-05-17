@@ -34,8 +34,6 @@ import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.logging.Logger;
@@ -46,7 +44,6 @@ import javax.swing.JList;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
@@ -66,7 +63,6 @@ public class UserListView extends WebList {
         this.setCellRenderer(new UserListRenderer());
         
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        //this.setPreferredWidth(150);
         
         // right click popup menu
         mPopupMenu = new WebPopupMenu();
@@ -120,7 +116,7 @@ public class UserListView extends WebList {
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
                 if (e.getClickCount() == 2) {
-                    modelView.selectThread(getSelectedUser());
+                    modelView.selectThreadByUser(getSelectedUser());
                 } 
             }
             @Override
@@ -162,8 +158,8 @@ public class UserListView extends WebList {
     private class UserView extends WebPanel{
         
         private final User mUser;
-        WebLabel nameLabel;
-        WebLabel jidLabel;
+        private final WebLabel mNameLabel;
+        private final WebLabel mJIDLabel;
      
         UserView(User user) {
             mUser = user;
@@ -174,14 +170,14 @@ public class UserListView extends WebList {
             
             this.add(new WebLabel(Integer.toString(mUser.getID())), BorderLayout.WEST);
             
-            nameLabel = new WebLabel();
-            nameLabel.setFontSize(14);
-            this.add(nameLabel, BorderLayout.CENTER);
+            mNameLabel = new WebLabel();
+            mNameLabel.setFontSize(14);
+            this.add(mNameLabel, BorderLayout.CENTER);
             
-            jidLabel = new WebLabel();
-            jidLabel.setForeground(Color.GRAY);
-            jidLabel.setFontSize(11);
-            this.add(jidLabel, BorderLayout.SOUTH);
+            mJIDLabel = new WebLabel();
+            mJIDLabel.setForeground(Color.GRAY);
+            mJIDLabel.setFontSize(11);
+            this.add(mJIDLabel, BorderLayout.SOUTH);
             
             updateView();
         }
@@ -198,11 +194,11 @@ public class UserListView extends WebList {
         }
         
         private void updateView() {
-           String mName = mUser.getName() != null ? mUser.getName() : "<unknown>";
-           String mJID = mUser.getJID().length() < 25 ? mUser.getJID() : 
+           String name = mUser.getName() != null ? mUser.getName() : "<unknown>";
+           String jid = mUser.getJID().length() < 25 ? mUser.getJID() : 
                    mUser.getJID().substring(0, 24) + "...";
-           nameLabel.setText(mName);
-           jidLabel.setText(mJID);
+           mNameLabel.setText(name);
+           mJIDLabel.setText(jid);
         }
     }
     
@@ -227,15 +223,15 @@ public class UserListView extends WebList {
     private class EditUserDialog extends WebDialog {
 
         private final UserView mUserView;
-        private final WebTextField nameField;
-        private final WebTextField jidField;
+        private final WebTextField mNameField;
+        private final WebTextField mJIDField;
         
         public EditUserDialog(UserView userView) {
             
             mUserView = userView;
             
             this.setTitle("Edit Contact");
-            this.setSize(400, 280);
+            //this.setSize(400, 280);
             this.setResizable(false);
             this.setModal(true);
             
@@ -245,6 +241,26 @@ public class UserListView extends WebList {
             groupPanel.add(new WebLabel("Last seen:  TODO"));
             groupPanel.add(new WebLabel("Status:  TODO"));
             groupPanel.add(new WebSeparator(true, true));
+            
+            // editable fields
+            WebPanel namePanel = new WebPanel();
+            namePanel.setLayout(new BorderLayout(10, 5));
+            namePanel.add(new WebLabel("Display Name:"), BorderLayout.WEST);
+            mNameField = new WebTextField(mUserView.getUser().getName());
+            mNameField.setInputPrompt(mUserView.getUser().getName());
+            mNameField.setHideInputPromptOnFocus(false);
+            namePanel.add(mNameField, BorderLayout.CENTER);
+            groupPanel.add(namePanel);
+            groupPanel.add(new WebSeparator(true, true));
+            
+            groupPanel.add(new WebLabel("JID:"));
+            mJIDField = new WebTextField(mUserView.getUser().getJID(), 38);
+            mJIDField.setInputPrompt(mUserView.getUser().getJID());
+            mJIDField.setHideInputPromptOnFocus(false);
+            groupPanel.add(mJIDField);
+            groupPanel.add(new WebSeparator(true, true));
+            
+            this.add(groupPanel, BorderLayout.CENTER);
             
             // buttons
             WebButton cancelButton = new WebButton("Cancel");
@@ -263,34 +279,19 @@ public class UserListView extends WebList {
                 }
             });
             
-            // editable fields
-            groupPanel.add(new WebLabel("Name:"));
-            nameField = new WebTextField(mUserView.getUser().getName(), 16);
-            nameField.setInputPrompt(mUserView.getUser().getName());
-            nameField.setHideInputPromptOnFocus(false);
-            groupPanel.add(nameField);
-            groupPanel.add(new WebSeparator(true, true));
-            
-            groupPanel.add(new WebLabel("JID:"));
-            jidField = new WebTextField(mUserView.getUser().getJID(), 24);
-            jidField.setInputPrompt(mUserView.getUser().getJID());
-            jidField.setHideInputPromptOnFocus(false);
-            groupPanel.add(jidField);
-            groupPanel.add(new WebSeparator(true, true));
-            
-            this.add(groupPanel, BorderLayout.CENTER);
-            
             GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
             buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
             this.add(buttonPanel, BorderLayout.SOUTH);
+            
+            this.pack();
         }
         
         private void saveUser() {
-            if (!nameField.getText().isEmpty()) {
-                mUserView.getUser().setName(nameField.getText());
+            if (!mNameField.getText().isEmpty()) {
+                mUserView.getUser().setName(mNameField.getText());
             }
-            if (!jidField.getText().isEmpty()) {
-                mUserView.getUser().setJID(jidField.getText());
+            if (!mJIDField.getText().isEmpty()) {
+                mUserView.getUser().setJID(mJIDField.getText());
             }
             mUserView.updateView();
         }
