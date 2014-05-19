@@ -1,17 +1,17 @@
 /*
  *  Kontalk Java client
  *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- * 
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,6 +31,7 @@ import com.alee.laf.text.WebTextField;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -53,17 +54,17 @@ import org.kontalk.model.UserList;
  */
 public class UserListView extends WebList {
     private final static Logger LOGGER = Logger.getLogger(UserListView.class.getName());
-    
+
     private final DefaultListModel<UserView> mListModel = new DefaultListModel();
     private final WebPopupMenu mPopupMenu;
-    
+
     UserListView(final View modelView) {
-        
+
         this.setModel(mListModel);
         this.setCellRenderer(new UserListRenderer());
-        
+
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        
+
         // right click popup menu
         mPopupMenu = new WebPopupMenu();
         // note: actions only work when right click does also selection
@@ -76,7 +77,7 @@ public class UserListView extends WebList {
             }
         });
         mPopupMenu.add(newMenuItem);
-        
+
         WebMenuItem editMenuItem = new WebMenuItem("Edit Contact");
         editMenuItem.setToolTipText("Edit this contact");
         editMenuItem.addActionListener(new ActionListener() {
@@ -87,18 +88,18 @@ public class UserListView extends WebList {
             }
         });
         mPopupMenu.add(editMenuItem);
-        
+
         WebMenuItem deleteMenuItem = new WebMenuItem("Delete Contact");
         deleteMenuItem.setToolTipText("Delete this contact");
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                // TODO delete threads/messages too? android client may add it 
+                // TODO delete threads/messages too? android client may add it
                 // to roster again? useful at all? only self created contacts?
             }
         });
         mPopupMenu.add(deleteMenuItem);
-        
+
         // actions triggered by selection
         this.addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -109,7 +110,7 @@ public class UserListView extends WebList {
                 //modelView.selectedUserChanged(getSelectedUserID());
             }
         });
-        
+
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
             @Override
@@ -117,7 +118,7 @@ public class UserListView extends WebList {
                 super.mouseClicked(e);
                 if (e.getClickCount() == 2) {
                     modelView.selectThreadByUser(getSelectedUser());
-                } 
+                }
             }
             @Override
             public void mousePressed(MouseEvent e) {
@@ -141,69 +142,77 @@ public class UserListView extends WebList {
         for (User oneUser: user.values())
             mListModel.addElement(new UserView(oneUser));
     }
-    
+
     User getSelectedUser() {
         if (getSelectedIndex() == -1)
             return null;
         return mListModel.get(getSelectedIndex()).getUser();
     }
-    
+
     private void showPopupMenu(MouseEvent e){
            mPopupMenu.show(this, e.getX(), e.getY());
        }
-    
+
     /**
      * One item in the contact list representing a user.
      */
     private class UserView extends WebPanel{
-        
+
         private final User mUser;
         private final WebLabel mNameLabel;
         private final WebLabel mJIDLabel;
-     
+
         UserView(User user) {
             mUser = user;
-            
+
             //this.setPaintFocus(true);
             this.setMargin(5);
             this.setLayout(new BorderLayout(10, 5));
-            
+
             this.add(new WebLabel(Integer.toString(mUser.getID())), BorderLayout.WEST);
-            
+
             mNameLabel = new WebLabel();
             mNameLabel.setFontSize(14);
             this.add(mNameLabel, BorderLayout.CENTER);
-            
+
             mJIDLabel = new WebLabel();
             mJIDLabel.setForeground(Color.GRAY);
             mJIDLabel.setFontSize(11);
             this.add(mJIDLabel, BorderLayout.SOUTH);
-            
+
             updateView();
         }
 
         User getUser() {
             return mUser;
         }
-        
+
         void paintSelected(boolean isSelected){
-            if (isSelected) 
+            if (isSelected)
                 this.setBackground(View.BLUE);
             else
                 this.setBackground(Color.WHITE);
         }
-        
+
         private void updateView() {
+           // if too long, draw three dots at the end
+           mJIDLabel.setText("dummy text");
+           Dimension size = mJIDLabel.getPreferredSize();
+           mJIDLabel.setMinimumSize(size);
+           mJIDLabel.setPreferredSize(size);
+           mNameLabel.setText("dummy text");
+           size = mNameLabel.getPreferredSize();
+           mNameLabel.setMinimumSize(size);
+           mNameLabel.setPreferredSize(size);
+
            String name = mUser.getName() != null ? mUser.getName() : "<unknown>";
-           String jid = mUser.getJID().length() < 25 ? mUser.getJID() : 
-                   mUser.getJID().substring(0, 24) + "...";
            mNameLabel.setText(name);
-           mJIDLabel.setText(jid);
+           mJIDLabel.setText(mUser.getJID());
         }
     }
-    
+
     private class UserListRenderer extends DefaultListCellRenderer {
-        
+
         @Override
         public Component getListCellRendererComponent(JList list,
                                                 Object value,
@@ -219,29 +228,29 @@ public class UserListView extends WebList {
             }
         }
     }
-    
+
     private class EditUserDialog extends WebDialog {
 
         private final UserView mUserView;
         private final WebTextField mNameField;
         private final WebTextField mJIDField;
-        
+
         public EditUserDialog(UserView userView) {
-            
+
             mUserView = userView;
-            
+
             this.setTitle("Edit Contact");
             //this.setSize(400, 280);
             this.setResizable(false);
             this.setModal(true);
-            
+
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
             groupPanel.add(new WebLabel("Last seen:  TODO"));
             groupPanel.add(new WebLabel("Status:  TODO"));
             groupPanel.add(new WebSeparator(true, true));
-            
+
             // editable fields
             WebPanel namePanel = new WebPanel();
             namePanel.setLayout(new BorderLayout(10, 5));
@@ -252,16 +261,16 @@ public class UserListView extends WebList {
             namePanel.add(mNameField, BorderLayout.CENTER);
             groupPanel.add(namePanel);
             groupPanel.add(new WebSeparator(true, true));
-            
+
             groupPanel.add(new WebLabel("JID:"));
             mJIDField = new WebTextField(mUserView.getUser().getJID(), 38);
             mJIDField.setInputPrompt(mUserView.getUser().getJID());
             mJIDField.setHideInputPromptOnFocus(false);
             groupPanel.add(mJIDField);
             groupPanel.add(new WebSeparator(true, true));
-            
+
             this.add(groupPanel, BorderLayout.CENTER);
-            
+
             // buttons
             WebButton cancelButton = new WebButton("Cancel");
             cancelButton.addActionListener(new ActionListener() {
@@ -278,14 +287,14 @@ public class UserListView extends WebList {
                     dispose();
                 }
             });
-            
+
             GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
             buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
             this.add(buttonPanel, BorderLayout.SOUTH);
-            
+
             this.pack();
         }
-        
+
         private void saveUser() {
             if (!mNameField.getText().isEmpty()) {
                 mUserView.getUser().setName(mNameField.getText());

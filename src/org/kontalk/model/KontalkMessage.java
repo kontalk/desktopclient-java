@@ -173,7 +173,7 @@ public class KontalkMessage implements Comparable<KontalkMessage>{
         return mXMPPID;
     }
     
-    private Date getDate() {
+    public Date getDate() {
         return mDate;
     }
     
