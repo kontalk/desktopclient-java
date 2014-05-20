@@ -1,17 +1,17 @@
 /*
  *  Kontalk Java client
  *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- * 
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -31,6 +31,7 @@ import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import javax.swing.JFrame;
 import org.kontalk.KontalkConfiguration;
 
 /**
@@ -46,8 +47,9 @@ public class ConfigurationDialog extends WebDialog {
     private final WebFileChooserField bridgeCertChooser;
     private final WebTextField passField;
 
-    ConfigurationDialog(final View viewModel, String helpText) {
-        
+    ConfigurationDialog(JFrame owner, final View viewModel, String helpText) {
+        super(owner);
+
         mConf = KontalkConfiguration.getConfiguration();
 
         this.setTitle("Connection configuration");
@@ -56,33 +58,33 @@ public class ConfigurationDialog extends WebDialog {
 
         GroupPanel groupPanel = new GroupPanel(10, false);
         groupPanel.setMargin(5);
-        
+
         // server text field
         groupPanel.add(new WebLabel("Server:"));
         serverField = new WebTextField(mConf.getString(KontalkConfiguration.SERV_HOST), 24);
         serverField.setInputPrompt(KontalkConfiguration.DEFAULT_SERV_HOST);
         serverField.setInputPromptFont(serverField.getFont().deriveFont(Font.ITALIC));
         serverField.setHideInputPromptOnFocus(false);
-        
+
         groupPanel.add(serverField);
         groupPanel.add(new WebSeparator(true, true));
-        
+
         // file chooser for key files
         groupPanel.add(new WebLabel("Choose public key:"));
         publicKeyChooser = createFileChooser(mConf.getString(KontalkConfiguration.ACC_PUB_KEY));
         groupPanel.add(publicKeyChooser);
         groupPanel.add(new WebSeparator(true, true));
-        
+
         groupPanel.add(new WebLabel("Choose private key:"));
         privateKeyChooser = createFileChooser(mConf.getString(KontalkConfiguration.ACC_PRIV_KEY));
         groupPanel.add(privateKeyChooser);
         groupPanel.add(new WebSeparator(true, true));
-        
+
         groupPanel.add(new WebLabel("Choose bridge certificate:"));
         bridgeCertChooser = createFileChooser(mConf.getString(KontalkConfiguration.ACC_BRIDGE_CERT));
         groupPanel.add(bridgeCertChooser);
         groupPanel.add(new WebSeparator(true, true));
-        
+
         // text field for passphrase
         groupPanel.add(new WebLabel("Passphrase:"));
         passField = new WebTextField(42);
@@ -94,9 +96,9 @@ public class ConfigurationDialog extends WebDialog {
         }
         groupPanel.add(passField);
         groupPanel.add(new WebSeparator(true, true));
-        
+
         this.add(groupPanel, BorderLayout.CENTER);
-        
+
         // buttons
         WebButton cancelButton = new WebButton("Cancel");
         cancelButton.addActionListener(new ActionListener() {
@@ -122,11 +124,11 @@ public class ConfigurationDialog extends WebDialog {
                 viewModel.connect();
             }
         });
-        
+
         GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton, okButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
-        
+
         this.pack();
     }
 
@@ -143,9 +145,9 @@ public class ConfigurationDialog extends WebDialog {
     }
 
     private void saveConfiguration() {
-        
+
         mConf.setProperty(KontalkConfiguration.SERV_HOST, serverField.getText());
-        
+
         File file = publicKeyChooser.getSelectedFiles().get(0);
         mConf.setProperty(KontalkConfiguration.ACC_PUB_KEY, file.getAbsolutePath());
         file = privateKeyChooser.getSelectedFiles().get(0);

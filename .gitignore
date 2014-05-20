@@ -1,5 +1,11 @@
 *.class
 
+# EDIT:
+/nbproject/
+kontalk.db
+kontalk.properties
+*.pgp
+
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
 

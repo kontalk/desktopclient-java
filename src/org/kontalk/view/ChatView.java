@@ -29,6 +29,7 @@ import java.awt.Component;
 import java.text.SimpleDateFormat;
 import java.util.logging.Logger;
 import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListSelectionModel;
 import javax.swing.JList;
 import org.kontalk.model.KontalkMessage;
 import org.kontalk.model.KontalkThread;
@@ -50,7 +51,15 @@ public class ChatView extends WebList {
 
         this.setModel(mListModel);
         this.setCellRenderer(new MessageListRenderer());
-
+        // great swing option to disable selection
+        this.setSelectionModel(new DefaultListSelectionModel() {
+            @Override
+            public void setSelectionInterval(int index0, int index1) {
+            }
+            @Override
+            public void addSelectionInterval(int index0, int index1) {
+            }
+        });
     }
 
     void showThread(KontalkThread thread) {
@@ -64,7 +73,8 @@ public class ChatView extends WebList {
         mListModel.clear();
 
         for (KontalkMessage message: thread) {
-            mListModel.addElement(new MessageView(message));
+            MessageView newMessageView = new MessageView(message);
+            mListModel.addElement(newMessageView);
         }
         if (!mListModel.isEmpty())
             // TODO doesn't work, swing sucks
@@ -80,6 +90,9 @@ public class ChatView extends WebList {
 
     private class MessageView extends WebPanel {
 
+        private final WebTextArea mTextArea;
+        private final int mPreferredTextAreaWidth;
+
         MessageView(KontalkMessage message) {
 
             this.setOpaque(false);
@@ -87,31 +100,28 @@ public class ChatView extends WebList {
             //this.setBorder(new EmptyBorder(10, 10, 10, 10));
 
             WebPanel messagePanel = new WebPanel(true);
-            //messagePanel.setLayout(new BorderLayout(10, 10));
+            messagePanel.setMargin(4);
 
+            // from label
             if (message.getDir().equals(KontalkMessage.Direction.IN)) {
                 WebLabel fromLabel = new WebLabel(message.getJID().substring(0, 8));
                 fromLabel.setFontSize(12);
                 fromLabel.setForeground(Color.BLUE);
                 fromLabel.setItalicFont();
                 messagePanel.add(fromLabel, BorderLayout.NORTH);
-                //messagePanel.setAlignmentX(Component.RIGHT_ALIGNMENT);
-                //layout.setAlignment(FlowLayout.LEADING);
-            } else {
-                //layout.setAlignment(FlowLayout.TRAILING);
             }
-            WebTextArea textArea = new WebTextArea(message.getText());
-            textArea.setOpaque(false);
-            textArea.setFontSize(13);
-            textArea.setLineWrap(true);
-            textArea.setWrapStyleWord(true);
-            // TODO this disables word wrap, but there is no easy solution to
-            // set the textarea to one-line when possible and multi-line when
-            // horizontal space is not enough
-            textArea.setColumns(20);
-            //textArea.setColumns(message.getText().length());
-            //messagePanel.setPreferredWidth(199);
-            messagePanel.add(textArea, BorderLayout.CENTER);
+
+            // text
+            mTextArea = new WebTextArea(message.getText());
+            mTextArea.setOpaque(false);
+            mTextArea.setFontSize(13);
+            // save the width that is requied to show the text in one line
+            mPreferredTextAreaWidth = mTextArea.getPreferredSize().width;
+            mTextArea.setLineWrap(true);
+            mTextArea.setWrapStyleWord(true);
+            messagePanel.add(mTextArea, BorderLayout.CENTER);
+
+            // date label
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, HH:mm");
             WebLabel dateLabel = new WebLabel(dateFormat.format(message.getDate()));
             dateLabel.setForeground(Color.GRAY);
@@ -123,6 +133,12 @@ public class ChatView extends WebList {
             } else {
                 this.add(messagePanel, BorderLayout.EAST);
             }
+        }
+
+        void resize(int listWidth) {
+            int maxWidth = (int)(listWidth * 0.8);
+            int width = Math.min(mPreferredTextAreaWidth, maxWidth);
+            mTextArea.setSize(width, Short.MAX_VALUE);
         }
 
     }
@@ -137,8 +153,7 @@ public class ChatView extends WebList {
                                                 boolean hasFocus) {
             if (value instanceof MessageView) {
                 MessageView messageView = (MessageView) value;
-                //messageView.paintSelected(isSelected);
-                mListModel.update(messageView);
+                messageView.resize(list.getWidth());
                 return messageView;
             } else {
                 return new WebPanel(new WebLabel("ERRROR"));

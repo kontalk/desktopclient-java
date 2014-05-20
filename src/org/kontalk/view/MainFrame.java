@@ -18,7 +18,9 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.label.WebVerticalLabel;
+import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenu;
 import com.alee.laf.menu.WebMenuBar;
 import com.alee.laf.menu.WebMenuItem;
@@ -30,11 +32,15 @@ import com.alee.managers.hotkey.Hotkey;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.net.URL;
+import java.util.logging.Logger;
+import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.ScrollPaneConstants;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
@@ -44,6 +50,10 @@ import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class MainFrame extends JFrame {
+    private final static Logger LOGGER = Logger.getLogger(ChatView.class.getName());
+
+    private final static URL ICON_IMAGE_URL = ClassLoader.getSystemResource(
+            "org/kontalk/res/kontalk.png");
 
     public static enum Tab {THREADS, USER};
 
@@ -60,6 +70,12 @@ public class MainFrame extends JFrame {
         // general view + behaviour
         this.setTitle("Kontalk Java Client");
         this.setSize(700, 600);
+
+        if (ICON_IMAGE_URL != null) {
+            this.setIconImage(Toolkit.getDefaultToolkit().createImage(ICON_IMAGE_URL));
+        } else {
+            LOGGER.warning("can't find icon image resource");
+        }
         //this.setResizable(false);
 
         // closing behaviour
@@ -138,9 +154,7 @@ public class MainFrame extends JFrame {
         aboutMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                WebOptionPane.showMessageDialog(null,
-                        "Kontalk Java Client v0.1", "About",
-                        WebOptionPane.INFORMATION_MESSAGE);
+                showAboutDialog();
             }
         });
         helpMenu.add(aboutMenuItem);
@@ -170,7 +184,11 @@ public class MainFrame extends JFrame {
 
         // ...right...
         WebPanel rightPanel = new WebPanel();
-        rightPanel.add(new WebScrollPane(threadView), BorderLayout.CENTER);
+        WebScrollPane threadViewScrollPane = new WebScrollPane(threadView);
+        threadViewScrollPane.setHorizontalScrollBarPolicy(
+                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        threadViewScrollPane.getVerticalScrollBar().setUnitIncrement(25);
+        rightPanel.add(threadViewScrollPane, BorderLayout.CENTER);
         WebPanel bottomPanel = new WebPanel();
         bottomPanel.add(sendTextField, BorderLayout.CENTER);
         bottomPanel.add(sendButton, BorderLayout.EAST);
@@ -185,4 +203,23 @@ public class MainFrame extends JFrame {
         mTabbedPane.setSelectedIndex(tab.ordinal());
     }
 
+    private void showAboutDialog() {
+        WebPanel aboutPanel = new WebPanel();
+        aboutPanel.add(new WebLabel("Kontalk Java Client v0.1"));
+        WebLinkLabel linkLabel = new WebLinkLabel();
+        linkLabel.setLink("http://www.kontalk.org");
+        linkLabel.setText("Visit kontalk.org");
+        aboutPanel.add(linkLabel, BorderLayout.SOUTH);
+        ImageIcon icon;
+        if (ICON_IMAGE_URL != null) {
+            icon = new ImageIcon(ICON_IMAGE_URL);
+        } else {
+            icon = new ImageIcon();
+        }
+        WebOptionPane.showMessageDialog(this,
+                aboutPanel,
+                "About",
+                WebOptionPane.INFORMATION_MESSAGE,
+                icon);
+    }
 }
