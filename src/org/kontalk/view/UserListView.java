@@ -22,12 +22,16 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
+import com.alee.laf.list.WebListCellRenderer;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.TooltipWay;
+import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -37,8 +41,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
 import java.util.logging.Logger;
-import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
 import javax.swing.JList;
@@ -55,8 +59,13 @@ import org.kontalk.model.UserList;
 public class UserListView extends WebList {
     private final static Logger LOGGER = Logger.getLogger(UserListView.class.getName());
 
+    private final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
+            new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");
+
     private final DefaultListModel<UserView> mListModel = new DefaultListModel();
     private final WebPopupMenu mPopupMenu;
+
+    private WebCustomTooltip mTip = null;
 
     UserListView(final View modelView) {
 
@@ -68,7 +77,7 @@ public class UserListView extends WebList {
         // right click popup menu
         mPopupMenu = new WebPopupMenu();
         // note: actions only work when right click does also selection
-        WebMenuItem newMenuItem = new WebMenuItem("New Thread");
+        WebMenuItem newMenuItem = new WebMenuItem("New Contact");
         newMenuItem.setToolTipText("Creates a new thread for this contact");
         newMenuItem.addActionListener(new ActionListener() {
             @Override
@@ -134,6 +143,11 @@ public class UserListView extends WebList {
                     showPopupMenu(e);
                 }
             }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (mTip != null)
+                    mTip.closeTooltip();
+            }
         });
     }
 
@@ -152,6 +166,17 @@ public class UserListView extends WebList {
     private void showPopupMenu(MouseEvent e){
            mPopupMenu.show(this, e.getX(), e.getY());
        }
+
+    void showTooltip(UserView userView) {
+        if (mTip != null)
+            mTip.closeTooltip();
+
+        WebCustomTooltip tip = TooltipManager.showOneTimeTooltip(this,
+                this.getMousePosition(),
+                userView.getTooltipText(),
+                TooltipWay.down);
+        mTip = tip;
+    }
 
     /**
      * One item in the contact list representing a user.
@@ -209,9 +234,42 @@ public class UserListView extends WebList {
            mNameLabel.setText(name);
            mJIDLabel.setText(mUser.getJID());
         }
+
+        // catch the event, when a tooltip should be shown for this item and
+        // create a own one
+        @Override
+           public String getToolTipText(MouseEvent event) {
+               System.out.println("FIRE! "+event.toString());
+               showTooltip(this);
+               return null;
+           }
+
+        public String getTooltipText() {
+            String isAvailable;
+            if (mUser.getAvailable() == User.Available.YES)
+                isAvailable = "Yes";
+            else if (mUser.getAvailable() == User.Available.NO)
+                isAvailable = "No";
+            else
+                isAvailable = "?";
+
+            String status = mUser.getStatus() == null ? "?" : mUser.getStatus();
+
+            String lastSeen = mUser.getLastSeen() == null ? "?" :
+                    TOOLTIP_DATE_FORMAT.format(mUser.getLastSeen());
+
+            String html = "<html><body>" +
+                    //"<h3>Header</h3>" +
+                    "Available: " + isAvailable + "<br>" +
+                    "Status: " + status + "<br>" +
+                    "Last seen: " + lastSeen + "<br>" +
+                    "";
+
+            return html;
+        }
     }
 
-    private class UserListRenderer extends DefaultListCellRenderer {
+    private class UserListRenderer extends WebListCellRenderer {
 
         @Override
         public Component getListCellRendererComponent(JList list,
@@ -222,6 +280,7 @@ public class UserListView extends WebList {
             if (value instanceof UserView) {
                 UserView userView = (UserView) value;
                 userView.paintSelected(isSelected);
+                TooltipManager.showTooltips(userView);
                 return userView;
             } else {
                 return new WebPanel(new WebLabel("ERRROR"));
@@ -246,10 +305,6 @@ public class UserListView extends WebList {
 
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
-
-            groupPanel.add(new WebLabel("Last seen:  TODO"));
-            groupPanel.add(new WebLabel("Status:  TODO"));
-            groupPanel.add(new WebSeparator(true, true));
 
             // editable fields
             WebPanel namePanel = new WebPanel();

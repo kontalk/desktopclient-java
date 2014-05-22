@@ -26,6 +26,7 @@ import com.alee.laf.menu.WebMenuBar;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
+import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.managers.hotkey.Hotkey;
@@ -41,7 +42,6 @@ import java.awt.event.WindowEvent;
 import java.net.URL;
 import java.util.logging.Logger;
 import javax.swing.ImageIcon;
-import javax.swing.JFrame;
 import javax.swing.ScrollPaneConstants;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 
@@ -49,7 +49,7 @@ import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class MainFrame extends JFrame {
+public class MainFrame extends WebFrame {
     private final static Logger LOGGER = Logger.getLogger(ChatView.class.getName());
 
     private final static URL ICON_IMAGE_URL = ClassLoader.getSystemResource(

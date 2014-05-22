@@ -1,17 +1,17 @@
 /*
  *  Kontalk Java client
  *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- * 
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -42,14 +42,13 @@ import org.kontalk.model.User;
 public class Database {
     private final static Logger LOGGER = Logger.getLogger(Database.class.getName());
     private final static String DB_NAME = "kontalk.db";
-    
+
     private static Database INSTANCE = null;
 
     private final MyKontalk mModel = MyKontalk.getInstance();
     private Connection mConn = null;
-    
-    private Database() {
 
+    private Database() {
         // load the sqlite-JDBC driver using the current class loader
         try {
             Class.forName("org.sqlite.JDBC");
@@ -62,27 +61,27 @@ public class Database {
         try {
           mConn = DriverManager.getConnection("jdbc:sqlite:"+DB_NAME);
         } catch(SQLException ex) {
-          // if the error message is "out of memory", 
+          // if the error message is "out of memory",
           // it probably means no database file is found
           LOGGER.log(Level.WARNING, "can't create database connection", ex);
           mModel.shutDown();
         }
-        
+
         try {
             mConn.setAutoCommit(true);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't set autocommit", ex);
         }
-        
+
         // make sure tables are created
         createTables();
     }
-    
+
     private void createTables() {
         String create = "CREATE TABLE IF NOT EXISTS ";
         try (Statement stat = mConn.createStatement()) {
             stat.executeUpdate(create + User.TABLE + " " + User.CREATE_TABLE);
-            stat.executeUpdate(create + 
+            stat.executeUpdate(create +
                     KontalkThread.TABLE +
                     " " +
                     KontalkThread.CREATE_TABLE);
@@ -96,7 +95,7 @@ public class Database {
                     KontalkMessage.CREATE_TABLE);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't create tables", ex);
-            mModel.shutDown();
+            System.exit(-1);
         }
     }
 
@@ -110,15 +109,15 @@ public class Database {
             }
         }
     }
-    
+
     public ResultSet execSelectAll(String table) {
         return execSelect("SELECT * FROM " + table);
     }
-    
+
     public ResultSet execSelectWhereInsecure(String table, String where) {
         return execSelect("SELECT * FROM " + table + " WHERE " + where);
     }
-    
+
     private ResultSet execSelect(String select) {
         try {
             PreparedStatement stat = mConn.prepareStatement(select);
@@ -127,25 +126,10 @@ public class Database {
             ResultSet resultSet = stat.executeQuery();
             return resultSet;
         } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't execute select: "+select, ex);
+            LOGGER.log(Level.WARNING, "can't execute select: " + select, ex);
             return null;
         }
     }
-    
-//    public ResultSet execSelectWhere(String table, Map<String, Object> where) {
-//        String select = "SELECT * FROM " + table + " WHERE ";
-//        List<String> keys = new LinkedList(where.keySet());
-//        for (String key: keys)
-//            select += key + " = ?, ";
-//        
-//        try (PreparedStatement statement = mConn.prepareStatement(select)){
-//            insertValues(statement, keys, where);
-//            return statement.executeQuery();
-//        } catch (SQLException ex) {
-//            LOGGER.warning("can't prepare statement " + ex);
-//            return null;
-//        }
-//    }
 
     /**
      *
@@ -160,8 +144,9 @@ public class Database {
                 insert += ",";
         }
         insert += ")";
-        
-        try (PreparedStatement stat = mConn.prepareStatement(insert, Statement.RETURN_GENERATED_KEYS)){
+
+        try (PreparedStatement stat = mConn.prepareStatement(insert,
+                Statement.RETURN_GENERATED_KEYS)){
             insertValues(stat, values);
             stat.executeUpdate();
             ResultSet keys = stat.getGeneratedKeys();
@@ -171,7 +156,7 @@ public class Database {
             return 0;
         }
     }
-    
+
     /**
      * Update values (at most one row)
      * @param table
@@ -189,7 +174,7 @@ public class Database {
         }
         // TODO
         update += " WHERE _id == " + id ;//+ " LIMIT 1";
-        
+
         try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)){
             insertValues(stat, setKeys, set);
             stat.executeUpdate();
@@ -200,7 +185,7 @@ public class Database {
             return 0;
         }
     }
-    
+
     public void execDelete(String table, int id){
         try (Statement stat = mConn.createStatement()){
             stat.executeQuery("DELETE * FROM " + table + " WHERE _id = " + id);
@@ -208,30 +193,30 @@ public class Database {
             LOGGER.log(Level.WARNING, "can't delete", ex);
         }
     }
-    
+
     public static Database getInstance() {
         if (INSTANCE == null) {
             INSTANCE = new Database();
         }
         return INSTANCE;
     }
-    
-    private static void insertValues(PreparedStatement stat, 
-            List<String> keys, 
+
+    private static void insertValues(PreparedStatement stat,
+            List<String> keys,
             Map<String, Object> map) throws SQLException {
         for (int i = 0; i < keys.size(); i++) {
             setValue(stat, i, map.get(keys.get(i)));
          }
     }
-    
-    private static void insertValues(PreparedStatement stat, 
-            List<Object> values) throws SQLException {     
+
+    private static void insertValues(PreparedStatement stat,
+            List<Object> values) throws SQLException {
         for (int i = 0; i < values.size(); i++) {
             setValue(stat, i, values.get(i));
         }
     }
-    
-    private static void setValue(PreparedStatement stat, int i, Object value) 
+
+    private static void setValue(PreparedStatement stat, int i, Object value)
             throws SQLException {
         if (value instanceof String) {
                 stat.setString(i+1, (String) value);
@@ -247,5 +232,5 @@ public class Database {
                 LOGGER.warning("unknown type: " + value);
             }
     }
-    
+
 }

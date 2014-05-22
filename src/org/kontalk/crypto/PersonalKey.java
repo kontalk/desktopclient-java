@@ -25,7 +25,6 @@ import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Iterator;
 
 import org.kontalk.crypto.PGP.PGPDecryptedKeyPairRing;
@@ -45,15 +44,6 @@ import org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
-
-//import android.accounts.Account;
-//import android.accounts.AccountManager;
-//import android.content.Context;
-//import android.os.Parcel;
-//import android.os.Parcelable;
-//import android.util.Base64;
-//import android.util.Log;
-
 
 /** Personal asymmetric encryption key. */
 public class PersonalKey {

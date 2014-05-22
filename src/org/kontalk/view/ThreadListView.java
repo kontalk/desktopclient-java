@@ -22,6 +22,7 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
+import com.alee.laf.list.WebListCellRenderer;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
@@ -39,7 +40,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Enumeration;
 import java.util.logging.Logger;
-import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
 import javax.swing.JList;
@@ -188,7 +188,7 @@ public class ThreadListView extends WebList {
 
     }
 
-    private class ThreadListRenderer extends DefaultListCellRenderer {
+    private class ThreadListRenderer extends WebListCellRenderer {
 
         @Override
         public Component getListCellRendererComponent(JList list,

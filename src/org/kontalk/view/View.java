@@ -28,6 +28,7 @@ import java.awt.event.ActionListener;
 import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.JTextField;
+import javax.swing.ToolTipManager;
 import org.kontalk.KontalkException;
 import org.kontalk.MyKontalk;
 import org.kontalk.model.KontalkThread;
@@ -55,6 +56,8 @@ public class View {
 
     public View(MyKontalk model) {
         mModel = model;
+
+        ToolTipManager.sharedInstance().setInitialDelay(200);
 
         mUserListView = new UserListView(this);
         mThreadListView = new ThreadListView(this);

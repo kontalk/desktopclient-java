@@ -20,6 +20,7 @@ package org.kontalk.view;
 
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
+import com.alee.laf.list.WebListCellRenderer;
 import com.alee.laf.list.WebListModel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.text.WebTextArea;
@@ -28,7 +29,6 @@ import java.awt.Color;
 import java.awt.Component;
 import java.text.SimpleDateFormat;
 import java.util.logging.Logger;
-import javax.swing.DefaultListCellRenderer;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.JList;
 import org.kontalk.model.KontalkMessage;
@@ -143,7 +143,7 @@ public class ChatView extends WebList {
 
     }
 
-    private class MessageListRenderer extends DefaultListCellRenderer {
+    private class MessageListRenderer extends WebListCellRenderer {
 
         @Override
         public Component getListCellRendererComponent(JList list,

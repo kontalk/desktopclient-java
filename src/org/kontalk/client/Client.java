@@ -1,17 +1,17 @@
 /*
  *  Kontalk Java client
  *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- * 
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -40,12 +40,12 @@ import org.kontalk.crypto.PersonalKey;
  */
 public class Client implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
-    
+
     private final MyKontalk mModel;
     private final KontalkConfiguration mConfig;
     private final EndpointServer mServer;
     protected Connection mConn;
-    
+
     /** Limited connection flag. */
     //protected boolean mLimited;
 
@@ -57,15 +57,15 @@ public class Client implements PacketListener {
         int port = mConfig.getInt("server.port");
         mServer = new EndpointServer(network, host, port);
         //mLimited = limited;
-        
+
         // open smack debug window when connecting
         //Connection.DEBUG_ENABLED = true;
     }
-    
+
     public void connect(PersonalKey key){
 
        this.disconnect();
-       
+
         // create connection
         try {
             mConn = new KontalkConnection(mServer,
@@ -75,7 +75,7 @@ public class Client implements PacketListener {
             LOGGER.log(Level.WARNING, "can't create connection", ex);
             return;
         }
-        
+
         // connect
         try {
             mConn.connect();
@@ -83,6 +83,13 @@ public class Client implements PacketListener {
             LOGGER.log(Level.WARNING, "can't connect", ex);
             return;
         }
+
+        // listeners
+        mConn.getRoster().addRosterListener(new MyRosterListener(mConn.getRoster()));
+        PacketFilter messageFilter = new PacketTypeFilter(Message.class);
+        mConn.addPacketListener(new MessageListener(this), messageFilter);
+        mConn.addPacketListener(this, new AndFilter(
+                new NotFilter(messageFilter))); // fallback
 
         // login
         try {
@@ -94,14 +101,7 @@ public class Client implements PacketListener {
             // TODO: most likely the pgp key is invalid, tell that to user
             return;
         }
-        
-        // listeners
-        mConn.getRoster().addRosterListener(new UserListListener(mConn.getRoster()));
-        PacketFilter messageFilter = new PacketTypeFilter(Message.class);
-        mConn.addPacketListener(new MessageListener(this), messageFilter);
-        mConn.addPacketListener(this, new AndFilter(
-                new NotFilter(messageFilter))); // fallback
-        
+
         LOGGER.info("Connected!");
         mModel.statusChanged(MyKontalk.Status.CONNECTED);
     }
@@ -111,7 +111,7 @@ public class Client implements PacketListener {
             mConn.disconnect();
             mConn = null;
         }
-            mModel.statusChanged(MyKontalk.Status.DISCONNECTED);   
+            mModel.statusChanged(MyKontalk.Status.DISCONNECTED);
         }
 
     public void sendText(String xmppID, String recipientJID, String text) {
@@ -123,7 +123,7 @@ public class Client implements PacketListener {
         m.addExtension(new ServerReceiptRequest());
         sendPacket(m);
     }
-    
+
     void sendPacket(Packet p) {
         if (mConn == null || !mConn.isAuthenticated()) {
             LOGGER.warning("can't send packet, not connected.");
@@ -132,7 +132,7 @@ public class Client implements PacketListener {
         mConn.sendPacket(p);
         LOGGER.info("sent packet: " + p.toXML());
     }
-    
+
     @Override
     public void processPacket(Packet packet) {
         LOGGER.info("Got packet: "+packet.toXML());
