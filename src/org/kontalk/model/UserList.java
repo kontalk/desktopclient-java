@@ -28,13 +28,12 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.Database;
-import org.kontalk.MyKontalk;
 
 /**
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class UserList {
+public class UserList extends ChangeSubject {
     private final static Logger LOGGER = Logger.getLogger(UserList.class.getName());
 
     private static UserList INSTANCE = null;
@@ -61,7 +60,7 @@ public class UserList {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load users from db", ex);
         }
-        MyKontalk.getInstance().userListChanged();
+        this.changed();
     }
 
     public Collection<User> getUser() {
@@ -74,7 +73,7 @@ public class UserList {
             return;
         User newUser = new User(jid, name);
         mMap.put(jid, newUser);
-        MyKontalk.getInstance().userListChanged();
+        this.changed();
         this.save();
     }
 

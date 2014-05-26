@@ -59,8 +59,8 @@ public class View {
 
         ToolTipManager.sharedInstance().setInitialDelay(200);
 
-        mUserListView = new UserListView(this);
-        mThreadListView = new ThreadListView(this);
+        mUserListView = new UserListView(this, UserList.getInstance());
+        mThreadListView = new ThreadListView(this, ThreadList.getInstance());
 
         mThreadView = new ThreadView();
 
@@ -124,20 +124,10 @@ public class View {
             }
     }
 
-    public void threadListChanged() {
-        ThreadList threads = ThreadList.getInstance();
-        mThreadListView.modelChanged(threads);
-    }
-
     public void threadChanged(KontalkThread thread) {
         if (mThreadView.getCurrentThreadID() == thread.getID()) {
             mThreadView.showThread(thread);
         }
-    }
-
-    public void userListChanged() {
-        UserList user = UserList.getInstance();
-        mUserListView.modelChanged(user);
     }
 
     public void showConfig() {

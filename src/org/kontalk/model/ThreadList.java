@@ -27,13 +27,12 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.Database;
-import org.kontalk.MyKontalk;
 
 /**
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ThreadList {
+public class ThreadList extends ChangeSubject {
     private final static Logger LOGGER = Logger.getLogger(ThreadList.class.getName());
 
     private static ThreadList INSTANCE = null;
@@ -76,7 +75,7 @@ public class ThreadList {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load threads from db", ex);
         }
-        MyKontalk.getInstance().threadListChanged();
+        this.changed();
     }
 
     public Collection<KontalkThread> getThreads() {
@@ -97,7 +96,7 @@ public class ThreadList {
         }
         KontalkThread newThread = new KontalkThread(user);
         mMap.put(newThread.getID(), newThread);
-        MyKontalk.getInstance().threadListChanged();
+        this.changed();
         return newThread;
     }
 

@@ -126,14 +126,6 @@ public class MyKontalk {
         mClient.disconnect();
     }
 
-    public void userListChanged(){
-        mView.userListChanged();
-    }
-
-    public void threadListChanged(){
-        mView.threadListChanged();
-    }
-
     public void statusChanged(Status status){
         mView.statusChanged(status);
     }

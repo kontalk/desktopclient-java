@@ -47,6 +47,8 @@ import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.ListSelectionModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.model.User;
@@ -56,18 +58,21 @@ import org.kontalk.model.UserList;
  * Display all known user (aka contacts) in a list.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class UserListView extends WebList {
+public class UserListView extends WebList implements ChangeListener {
     private final static Logger LOGGER = Logger.getLogger(UserListView.class.getName());
 
     private final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
             new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");
 
+    private final UserList mUserList;
     private final DefaultListModel<UserView> mListModel = new DefaultListModel();
     private final WebPopupMenu mPopupMenu;
 
     private WebCustomTooltip mTip = null;
 
-    UserListView(final View modelView) {
+    UserListView(final View modelView, UserList userList) {
+        mUserList = userList;
+        mUserList.addListener(this);
 
         this.setModel(mListModel);
         this.setCellRenderer(new UserListRenderer());
@@ -151,21 +156,18 @@ public class UserListView extends WebList {
         });
     }
 
-    void modelChanged(UserList user) {
+    @Override
+    public void stateChanged(ChangeEvent e) {
         mListModel.clear();
-        for (User oneUser: user.getUser())
+        for (User oneUser: mUserList.getUser())
             mListModel.addElement(new UserView(oneUser));
     }
-
+    
     User getSelectedUser() {
         if (getSelectedIndex() == -1)
             return null;
         return mListModel.get(getSelectedIndex()).getUser();
     }
-
-    private void showPopupMenu(MouseEvent e){
-           mPopupMenu.show(this, e.getX(), e.getY());
-       }
 
     void showTooltip(UserView userView) {
         if (mTip != null)
@@ -176,6 +178,10 @@ public class UserListView extends WebList {
                 userView.getTooltipText(),
                 TooltipWay.down);
         mTip = tip;
+    }
+
+    private void showPopupMenu(MouseEvent e){
+        mPopupMenu.show(this, e.getX(), e.getY());
     }
 
     /**

@@ -44,6 +44,8 @@ import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
 import javax.swing.JList;
 import javax.swing.ListSelectionModel;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.model.KontalkThread;
@@ -53,15 +55,18 @@ import org.kontalk.model.ThreadList;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ThreadListView extends WebList {
+public class ThreadListView extends WebList implements ChangeListener {
     private final static Logger LOGGER = Logger.getLogger(ThreadListView.class.getName());
 
+    private final ThreadList mThreadList;
     private final DefaultListModel<ThreadView> mListModel = new DefaultListModel();
     private final WebPopupMenu mPopupMenu;
 
-    ThreadListView(final View modelView) {
-
+    ThreadListView(final View modelView, ThreadList threadList) {
+        mThreadList = threadList;
+        mThreadList.addListener(this);
         this.setModel(mListModel);
+
         this.setCellRenderer(new ThreadListRenderer());
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -127,14 +132,6 @@ public class ThreadListView extends WebList {
         }
     }
 
-    void modelChanged(ThreadList threads) {
-        mListModel.clear();
-        for (KontalkThread thread: threads.getThreads()) {
-            ThreadView newThreadView = new ThreadView(thread);
-            mListModel.addElement(newThreadView);
-        }
-    }
-
     KontalkThread getSelectedThread() {
         if (this.getSelectedIndex() == -1)
             return null;
@@ -143,6 +140,15 @@ public class ThreadListView extends WebList {
 
     private void showPopupMenu(MouseEvent e) {
            mPopupMenu.show(this, e.getX(), e.getY());
+    }
+
+    @Override
+    public void stateChanged(ChangeEvent e) {
+        mListModel.clear();
+        for (KontalkThread thread: mThreadList.getThreads()) {
+            ThreadView newThreadView = new ThreadView(thread);
+            mListModel.addElement(newThreadView);
+        }
     }
 
     private class ThreadView extends WebPanel {
