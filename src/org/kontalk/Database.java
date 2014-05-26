@@ -45,10 +45,11 @@ public class Database {
 
     private static Database INSTANCE = null;
 
-    private final MyKontalk mModel = MyKontalk.getInstance();
+    private final MyKontalk mModel;
     private Connection mConn = null;
 
-    private Database() {
+    private Database(MyKontalk model) {
+        mModel = model;
         // load the sqlite-JDBC driver using the current class loader
         try {
             Class.forName("org.sqlite.JDBC");
@@ -194,14 +195,7 @@ public class Database {
         }
     }
 
-    public static Database getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new Database();
-        }
-        return INSTANCE;
-    }
-
-    private static void insertValues(PreparedStatement stat,
+    private void insertValues(PreparedStatement stat,
             List<String> keys,
             Map<String, Object> map) throws SQLException {
         for (int i = 0; i < keys.size(); i++) {
@@ -209,14 +203,14 @@ public class Database {
          }
     }
 
-    private static void insertValues(PreparedStatement stat,
+    private void insertValues(PreparedStatement stat,
             List<Object> values) throws SQLException {
         for (int i = 0; i < values.size(); i++) {
             setValue(stat, i, values.get(i));
         }
     }
 
-    private static void setValue(PreparedStatement stat, int i, Object value)
+    private void setValue(PreparedStatement stat, int i, Object value)
             throws SQLException {
         if (value instanceof String) {
                 stat.setString(i+1, (String) value);
@@ -231,6 +225,17 @@ public class Database {
             } else {
                 LOGGER.warning("unknown type: " + value);
             }
+    }
+
+    public static void initialize(MyKontalk model) {
+        INSTANCE = new Database(model);
+    }
+
+    public static Database getInstance() {
+        if (INSTANCE == null) {
+            LOGGER.warning("database not initialized");
+        }
+        return INSTANCE;
     }
 
 }

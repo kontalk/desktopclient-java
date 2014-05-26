@@ -41,8 +41,6 @@ public class MyKontalk {
 
     private final KontalkConfiguration mConfig = KontalkConfiguration.getConfiguration();
 
-    private static MyKontalk INSTANCE;
-
     public enum Status {
         DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN
     }
@@ -58,18 +56,19 @@ public class MyKontalk {
         PGP.registerProvider();
     }
 
-    private MyKontalk(String[] args){
-
-        INSTANCE = this;
-
+    public MyKontalk(String[] args){
         parseArgs(args);
 
         mUserList = UserList.getInstance();
         mThreadList = ThreadList.getInstance();
         mMessageList = MessageList.getInstance();
 
-        mClient = new Client();
+        mClient = new Client(this);
         mView = new View(this);
+    }
+
+    public void start() {
+        Database.initialize(this);
 
         // order matters!
         mUserList.load();
@@ -140,18 +139,6 @@ public class MyKontalk {
         }
     }
 
-    public KontalkThread getThreadByID(int id) {
-        return mThreadList.getThreadByID(id);
-    }
-
-    public UserList getUserList() {
-        return mUserList;
-    }
-
-    public static MyKontalk getInstance() {
-        return INSTANCE;
-    }
-
     /**
      * @param args the command line arguments
      */
@@ -162,6 +149,7 @@ public class MyKontalk {
         WebLookAndFeel.install();
 
         MyKontalk model = new MyKontalk(args);
+        model.start();
         //model.connect();
     }
 

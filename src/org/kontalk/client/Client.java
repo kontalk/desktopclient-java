@@ -46,11 +46,11 @@ public class Client implements PacketListener {
     private final EndpointServer mServer;
     protected Connection mConn;
 
-    /** Limited connection flag. */
+    // Limited connection flag.
     //protected boolean mLimited;
 
-    public Client() {
-        mModel = MyKontalk.getInstance();
+    public Client(MyKontalk model) {
+        mModel = model;
         mConfig = KontalkConfiguration.getConfiguration();
         String network = mConfig.getString("server.network");
         String host = mConfig.getString("server.host");
