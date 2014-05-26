@@ -53,7 +53,7 @@ public class UserList extends ChangeSubject {
                 String name = resultSet.getString("name");
                 String status = resultSet.getString("status");
                 long l = resultSet.getLong("last_seen");
-                Date lastSeen = l == 0 ? null : new Date();
+                Date lastSeen = l == 0 ? null : new Date(l);
                 mMap.put(jid, new User(id, jid, name, status, lastSeen));
             }
         resultSet.close();
