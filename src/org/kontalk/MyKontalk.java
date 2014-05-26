@@ -134,10 +134,6 @@ public class MyKontalk {
         mView.threadListChanged();
     }
 
-    public void threadChanged(KontalkThread thread) {
-        mView.threadChanged(thread);
-    }
-
     public void statusChanged(Status status){
         mView.statusChanged(status);
     }

@@ -129,7 +129,7 @@ public class ThreadListView extends WebList {
 
     void modelChanged(ThreadList threads) {
         mListModel.clear();
-        for (KontalkThread thread: threads.values()) {
+        for (KontalkThread thread: threads.getThreads()) {
             ThreadView newThreadView = new ThreadView(thread);
             mListModel.addElement(newThreadView);
         }
@@ -268,7 +268,6 @@ public class ThreadListView extends WebList {
             if (!mSubjectField.getText().isEmpty()) {
                 mThreadView.getThread().setSubject(mSubjectField.getText());
             }
-
             mThreadView.updateView();
         }
     }

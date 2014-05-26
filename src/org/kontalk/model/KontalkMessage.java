@@ -1,17 +1,17 @@
 /*
  *  Kontalk Java client
  *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- * 
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -32,14 +32,14 @@ import org.kontalk.Database;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KontalkMessage implements Comparable<KontalkMessage>{
+public class KontalkMessage extends ChangeSubject implements Comparable<KontalkMessage> {
     private final static Logger LOGGER = Logger.getLogger(KontalkMessage.class.getName());
 
     public static enum Direction {IN, OUT};
     public static enum Status {IN, //ACKNOWLEDGED, // for incoming
-                               SENDING, SENT, RECEIVED, // for outgoing
+                               PENDING, SENT, RECEIVED, // for outgoing
                                ERROR};
-    
+
     public final static String TABLE = "messages";
     public final static String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -59,14 +59,14 @@ public class KontalkMessage implements Comparable<KontalkMessage>{
             "status INTEGER NOT NULL, " +
             // receipt id
             "receipt_id TEXT UNIQUE, " +
-            
+
             "content BLOB, " +
             "encrypted INTEGER NOT NULL, " +
-            
+
             "FOREIGN KEY (thread_id) REFERENCES thread (_id), " +
             "FOREIGN KEY (user_id) REFERENCES user (_id) " +
             ")";
-    
+
     private final int mID;
     private final KontalkThread mThread;
     private final Direction mDir;
@@ -81,28 +81,28 @@ public class KontalkMessage implements Comparable<KontalkMessage>{
     private final boolean mEncrypted;
 
     /**
-     * Used when sending new message
+     * Used when sending a new message
      */
-    KontalkMessage(KontalkThread thread, 
-            User user, 
-            String text, 
+    KontalkMessage(KontalkThread thread,
+            User user,
+            String text,
             boolean encrypted) {
         mThread = thread;
         mDir = Direction.OUT;
         mUser = user;
         mJID = user.getJID();
         mXMPPID = Packet.nextID();
-        mDate = new Date(); // 'now'
+        mDate = new Date(); // "now"
         mRead = false;
-        mStatus = Status.SENDING;
+        mStatus = Status.PENDING;
         mReceiptID = null;
         mText = text;
         mEncrypted = encrypted;
-        
+
         mID = this.insert();
     }
 
-    /** 
+    /**
      * Used when receiving a new message
      */
     KontalkMessage(KontalkThread thread,
@@ -124,20 +124,20 @@ public class KontalkMessage implements Comparable<KontalkMessage>{
         mReceiptID = receiptID;
         mText = text;
         mEncrypted = encrypted;
-        
+
         mID = this.insert();
     }
-    
+
     /**
      * Used when loading from database
      */
-    KontalkMessage(int id, 
-            KontalkThread thread, 
-            Direction dir, 
-            User user, 
-            String jid, 
-            String xmppID, 
-            Date date, 
+    KontalkMessage(int id,
+            KontalkThread thread,
+            Direction dir,
+            User user,
+            String jid,
+            String xmppID,
+            Date date,
             boolean read,
             Status status,
             String receiptID,
@@ -157,26 +157,34 @@ public class KontalkMessage implements Comparable<KontalkMessage>{
         mEncrypted = encrypted;
     }
 
-    int getID() {
+    public int getID() {
         return mID;
     }
-    
+
+    public KontalkThread getThread() {
+        return mThread;
+    }
+
     public Direction getDir() {
         return mDir;
     }
-    
+
     public String getJID() {
         return mJID;
     }
-    
+
     String getXMPPID() {
         return mXMPPID;
     }
-    
+
     public Date getDate() {
         return mDate;
     }
-    
+
+    public Status getStatus() {
+        return mStatus;
+    }
+
     String getReceiptID() {
         return mReceiptID;
     }
@@ -191,24 +199,26 @@ public class KontalkMessage implements Comparable<KontalkMessage>{
         int dateComp = mDate.compareTo(o.getDate());
         return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
     }
-    
+
     void updateBySentReceipt(String receiptID) {
         assert mDir == Direction.OUT;
-        assert mStatus == Status.SENDING;
+        assert mStatus == Status.PENDING;
         assert mReceiptID == null;
         mReceiptID = receiptID;
         mStatus = Status.SENT;
         this.save();
+        this.changed();
     }
-    
+
     void updateByReceivedReceipt() {
         assert mDir == Direction.OUT;
         assert mStatus == Status.SENT;
         assert mReceiptID != null;
         mStatus = Status.RECEIVED;
         this.save();
+        this.changed();
     }
-    
+
     private int insert(){
         Database db = Database.getInstance();
         List<Object> values = new LinkedList();
@@ -222,15 +232,15 @@ public class KontalkMessage implements Comparable<KontalkMessage>{
         values.add(mStatus.ordinal());
         values.add(mReceiptID);
         values.add(mText);
-        values.add(mEncrypted); 
-        
+        values.add(mEncrypted);
+
         int id = db.execInsert(TABLE, values);
         if (id < 1) {
             LOGGER.log(Level.WARNING, "couldn't insert message");
         }
         return id;
     }
-    
+
     private void save() {
        Database db = Database.getInstance();
        Map<String, Object> set = new HashMap();

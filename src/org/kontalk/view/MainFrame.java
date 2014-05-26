@@ -50,7 +50,7 @@ import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class MainFrame extends WebFrame {
-    private final static Logger LOGGER = Logger.getLogger(ChatView.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
 
     private final static URL ICON_IMAGE_URL = ClassLoader.getSystemResource(
             "org/kontalk/res/kontalk.png");
@@ -184,11 +184,12 @@ public class MainFrame extends WebFrame {
 
         // ...right...
         WebPanel rightPanel = new WebPanel();
-        WebScrollPane threadViewScrollPane = new WebScrollPane(threadView);
-        threadViewScrollPane.setHorizontalScrollBarPolicy(
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        threadViewScrollPane.getVerticalScrollBar().setUnitIncrement(25);
-        rightPanel.add(threadViewScrollPane, BorderLayout.CENTER);
+//        WebScrollPane threadViewScrollPane = new WebScrollPane(threadView);
+//        threadViewScrollPane.setHorizontalScrollBarPolicy(
+//                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+//        threadViewScrollPane.getVerticalScrollBar().setUnitIncrement(25);
+//        rightPanel.add(threadViewScrollPane, BorderLayout.CENTER);
+        rightPanel.add(threadView);
         WebPanel bottomPanel = new WebPanel();
         bottomPanel.add(sendTextField, BorderLayout.CENTER);
         bottomPanel.add(sendButton, BorderLayout.EAST);

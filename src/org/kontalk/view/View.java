@@ -48,7 +48,7 @@ public class View {
     private final MyKontalk mModel;
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
-    private final ChatView mChatView;
+    private final ThreadView mThreadView;
     private final JTextField mSendTextField;
     private final WebButton mSendButton;
     private final WebStatusLabel mStatusBarLabel;
@@ -62,7 +62,7 @@ public class View {
         mUserListView = new UserListView(this);
         mThreadListView = new ThreadListView(this);
 
-        mChatView = new ChatView();
+        mThreadView = new ThreadView();
 
         // text field
         mSendTextField = new JTextField();
@@ -91,7 +91,7 @@ public class View {
 
         // main frame
         mMainFrame = new MainFrame(this, mUserListView, mThreadListView,
-                mChatView, mSendTextField, mSendButton, statusBar);
+                mThreadView, mSendTextField, mSendButton, statusBar);
         mMainFrame.setVisible(true);
 
         // TODO: always disconnected?
@@ -104,7 +104,7 @@ public class View {
                 mStatusBarLabel.setText("Connecting...");
                 break;
             case CONNECTED:
-                mChatView.setBackground(Color.white);
+                mThreadView.setBackground(Color.white);
                 mSendTextField.setEditable(true);
                 mSendButton.setEnabled(true);
                 mStatusBarLabel.setText("Connected");
@@ -113,7 +113,7 @@ public class View {
                 mStatusBarLabel.setText("Disconnecting...");
                 break;
             case DISCONNECTED:
-                mChatView.setBackground(Color.lightGray);
+                mThreadView.setBackground(Color.lightGray);
                 mSendTextField.setEditable(false);
                 mSendButton.setEnabled(false);
                 mStatusBarLabel.setText("Not connected");
@@ -130,8 +130,8 @@ public class View {
     }
 
     public void threadChanged(KontalkThread thread) {
-        if (mChatView.getCurrentThreadID() == thread.getID()) {
-            mChatView.showThread(thread);
+        if (mThreadView.getCurrentThreadID() == thread.getID()) {
+            mThreadView.showThread(thread);
         }
     }
 
@@ -167,19 +167,19 @@ public class View {
 
     void selectThreadByUser(User user) {
         if (user == null) {
-            mChatView.showThread(null);
+            mThreadView.showThread(null);
         } else {
             KontalkThread thread = ThreadList.getInstance().getThreadByUser(user);
             mThreadListView.selectThread(thread.getID());
             mMainFrame.selectTab(MainFrame.Tab.THREADS);
-            mChatView.showThread(thread);
+            mThreadView.showThread(thread);
         }
     }
 
     void selectedThreadChanged(KontalkThread thread) {
         if (thread == null)
             return;
-        mChatView.showThread(thread);
+        mThreadView.showThread(thread);
     }
 
     private void sendText() {

@@ -153,7 +153,7 @@ public class UserListView extends WebList {
 
     void modelChanged(UserList user) {
         mListModel.clear();
-        for (User oneUser: user.values())
+        for (User oneUser: user.getUser())
             mListModel.addElement(new UserView(oneUser));
     }
 
@@ -239,7 +239,6 @@ public class UserListView extends WebList {
         // create a own one
         @Override
            public String getToolTipText(MouseEvent event) {
-               System.out.println("FIRE! "+event.toString());
                showTooltip(this);
                return null;
            }

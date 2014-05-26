@@ -30,10 +30,12 @@ import org.kontalk.Database;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class MessageList extends HashMap<Integer, KontalkMessage>{
+public class MessageList {
     private final static Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static MessageList INSTANCE;
+
+    private final HashMap<Integer, KontalkMessage> mMap = new HashMap();
 
     private MessageList() {
     }
@@ -74,7 +76,7 @@ public class MessageList extends HashMap<Integer, KontalkMessage>{
                         text,
                         encrypted);
                 thread.add(newMessage);
-                this.put(id, newMessage);
+                mMap.put(id, newMessage);
             }
             resultSet.close();
         } catch (SQLException ex) {
@@ -88,7 +90,7 @@ public class MessageList extends HashMap<Integer, KontalkMessage>{
             boolean encrypted) {
         KontalkMessage newMessage = new KontalkMessage(thread, user, text, encrypted);
         thread.add(newMessage);
-        this.put(newMessage.getID(), newMessage);
+        mMap.put(newMessage.getID(), newMessage);
         return newMessage.getXMPPID();
     }
 
@@ -114,13 +116,13 @@ public class MessageList extends HashMap<Integer, KontalkMessage>{
                 text,
                 encrypted);
         thread.add(newMessage);
-        this.put(newMessage.getID(), newMessage);
+        mMap.put(newMessage.getID(), newMessage);
     }
 
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
         // TODO performance
         KontalkMessage message = null;
-        for (KontalkMessage m : this.values()) {
+        for (KontalkMessage m : mMap.values()) {
             if (m.getXMPPID() != null && m.getXMPPID().equals(xmppID))
                 message = m;
         }
@@ -134,7 +136,7 @@ public class MessageList extends HashMap<Integer, KontalkMessage>{
     public void updateMsgByReceivedReceipt(String receiptID) {
         // TODO performance
         KontalkMessage message = null;
-        for (KontalkMessage m : this.values()) {
+        for (KontalkMessage m : mMap.values()) {
             if (m.getReceiptID() != null && m.getReceiptID().equals(receiptID))
                 message = m;
         }

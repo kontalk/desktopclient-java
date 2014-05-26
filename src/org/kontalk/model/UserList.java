@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -33,10 +34,12 @@ import org.kontalk.MyKontalk;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class UserList extends HashMap<String, User>{
+public class UserList {
     private final static Logger LOGGER = Logger.getLogger(UserList.class.getName());
 
     private static UserList INSTANCE = null;
+
+    private final HashMap<String, User> mMap = new HashMap();
 
     private UserList() {
     }
@@ -52,7 +55,7 @@ public class UserList extends HashMap<String, User>{
                 String status = resultSet.getString("status");
                 long l = resultSet.getLong("last_seen");
                 Date lastSeen = l == 0 ? null : new Date();
-                this.put(jid, new User(id, jid, name, status, lastSeen));
+                mMap.put(jid, new User(id, jid, name, status, lastSeen));
             }
         resultSet.close();
         } catch (SQLException ex) {
@@ -61,24 +64,28 @@ public class UserList extends HashMap<String, User>{
         MyKontalk.getInstance().userListChanged();
     }
 
+    public Collection<User> getUser() {
+            return mMap.values();
+    }
+
     public void addUser(String jid, String name) {
         jid = StringUtils.parseBareAddress(jid);
-        if (this.containsKey(jid))
+        if (mMap.containsKey(jid))
             return;
         User newUser = new User(jid, name);
-        this.put(jid, newUser);
+        mMap.put(jid, newUser);
         MyKontalk.getInstance().userListChanged();
         this.save();
     }
 
     public void save() {
-        for (User user: this.values()) {
+        for (User user: mMap.values()) {
             user.save();
         }
     }
 
     public User getUserByID(int id) {
-        for (User user: this.values()) {
+        for (User user: mMap.values()) {
             if (user.getID() == id)
                 return user;
         }
@@ -95,20 +102,20 @@ public class UserList extends HashMap<String, User>{
 
     public User getUserByJID(String jid) {
         jid = StringUtils.parseBareAddress(jid);
-        if (this.containsKey(jid))
-            return this.get(jid);
+        if (mMap.containsKey(jid))
+            return mMap.get(jid);
         User newUser = new User(jid);
-        this.put(jid, newUser);
+        mMap.put(jid, newUser);
         return newUser;
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
         jid = StringUtils.parseBareAddress(jid);
-        if (!this.containsKey(jid)) {
+        if (!mMap.containsKey(jid)) {
             LOGGER.info("can't find user with jid: "+jid);
             return;
         }
-        User user = this.get(jid);
+        User user = mMap.get(jid);
         user.setPresence(type, status);
     }
 

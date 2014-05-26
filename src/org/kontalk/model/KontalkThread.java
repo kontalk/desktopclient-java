@@ -1,17 +1,17 @@
 /*
  *  Kontalk Java client
  *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- * 
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -30,22 +30,21 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.Database;
-import org.kontalk.MyKontalk;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KontalkThread extends TreeSet<KontalkMessage> {
+public class KontalkThread extends ChangeSubject {
     private final static Logger LOGGER = Logger.getLogger(KontalkThread.class.getName());
-    
+
     public static final String TABLE = "threads";
     public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "xmpp_id TEXT UNIQUE, " +
             "subject TEXT " +
             ")";
-    
+
     // many to many relationship requires additional table for receiver
     public static final String TABLE_RECEIVER = "receiver";
     public static final String CREATE_TABLE_RECEIVER = "(" +
@@ -56,23 +55,25 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
             "FOREIGN KEY (thread_id) REFERENCES thread (_id), " +
             "FOREIGN KEY (user_id) REFERENCES user (_id) " +
             ")";
-    
+
+    private final TreeSet<KontalkMessage> mSet = new TreeSet();
+
     private final int mID;
     private final String mXMPPID;
     private Set<User> mUser;
     private String mSubject;
-    
+
     /**
      * Used when creating a new thread
      */
     KontalkThread(User user) {
-        // Kontalk Android client is ignoring it, so set it to null for now 
+        // Kontalk Android client is ignoring it, so set it to null for now
         //mXMPPID = StringUtils.randomString(8);
         mXMPPID = null;
         mUser = new HashSet();
         mUser.add(user);
         mSubject = null;
-        
+
         Database db = Database.getInstance();
         List<Object> values = new LinkedList();
         values.add(mXMPPID);
@@ -82,10 +83,10 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
             LOGGER.warning("couldn't insert thread");
             return;
         }
-        
+
         insertUser(user);
     }
-    
+
     /**
      * Used for loading from database
      */
@@ -95,7 +96,11 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
         mUser = user;
         mSubject = subject;
     }
-    
+
+    public Set<KontalkMessage> getMessages() {
+        return mSet;
+    }
+
     public int getID() {
         return mID;
     }
@@ -103,20 +108,20 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
     public String getXMPPID(){
         return mXMPPID;
     }
-    
+
     public Set<User> getUser() {
         return mUser;
     }
-    
+
     public String getSubject() {
         return mSubject;
     }
-    
+
     public void setSubject(String subject) {
         mSubject = subject;
         this.save();
     }
-    
+
     public void save(){
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap();
@@ -135,7 +140,7 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't get receiver", ex);
         }
-        
+
         // add missing user
         for (User user : mUser){
             if (!dbUser.keySet().contains(user.getID())) {
@@ -146,25 +151,24 @@ public class KontalkThread extends TreeSet<KontalkMessage> {
             }
             dbUser.remove(user.getID());
         }
-        
+
         // whats left is too much and can be removed
         for (int id : dbUser.values()) {
             db.execDelete(TABLE_RECEIVER, id);
         }
-        
+
     }
-    
-    @Override
+
     public boolean add(KontalkMessage message) {
-        if (this.contains(message)) {
+        if (mSet.contains(message)) {
             LOGGER.warning("message already in thread, ID: " + message.getID());
             return false;
         }
-        boolean contains = super.add(message);
-        MyKontalk.getInstance().threadChanged(this);
+        boolean contains = mSet.add(message);
+        this.changed();
         return contains;
     }
-    
+
     private void insertUser(User user) {
         Database db = Database.getInstance();
         List<Object> recValues = new LinkedList();
