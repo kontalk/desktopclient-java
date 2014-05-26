@@ -113,6 +113,7 @@ public class User {
     public void setName(String name) {
         mName = name;
         this.save();
+        UserList.getInstance().changed();
     }
 
     public String getStatus() {
@@ -138,6 +139,7 @@ public class User {
         if (status != null) {
             mStatus = status;
         }
+        UserList.getInstance().changed();
     }
 
     public void save() {

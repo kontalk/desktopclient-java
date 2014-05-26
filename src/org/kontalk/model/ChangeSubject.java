@@ -18,10 +18,16 @@ import javax.swing.event.ChangeListener;
 public class ChangeSubject {
     private final List<ChangeListener> mListenerList = new ArrayList();
 
+    /**
+     * Add listener to this subject.
+     */
     public void addListener(ChangeListener l) {
         mListenerList.add(l);
     }
 
+    /**
+     * Notify listeners of changes.
+     */
     void changed() {
         for (ChangeListener l: mListenerList) {
             l.stateChanged(new ChangeEvent(this));

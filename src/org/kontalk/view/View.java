@@ -61,6 +61,8 @@ public class View {
 
         mUserListView = new UserListView(this, UserList.getInstance());
         mThreadListView = new ThreadListView(this, ThreadList.getInstance());
+        // notify threadlist of changes in user list
+        UserList.getInstance().addListener(mThreadListView);
 
         mThreadView = new ThreadView();
 

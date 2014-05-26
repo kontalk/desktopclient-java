@@ -69,7 +69,7 @@ public class MainFrame extends WebFrame {
 
         // general view + behaviour
         this.setTitle("Kontalk Java Client");
-        this.setSize(700, 600);
+        this.setSize(600, 650);
 
         if (ICON_IMAGE_URL != null) {
             this.setIconImage(Toolkit.getDefaultToolkit().createImage(ICON_IMAGE_URL));

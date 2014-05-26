@@ -154,11 +154,11 @@ public class ThreadView extends WebScrollPane {
             mMessage.addListener(this);
 
             this.setOpaque(false);
-            this.setMargin(3);
+            this.setMargin(2);
             //this.setBorder(new EmptyBorder(10, 10, 10, 10));
 
             WebPanel messagePanel = new WebPanel(true);
-            messagePanel.setMargin(4);
+            messagePanel.setMargin(1);
 
             // from label
             if (mMessage.getDir().equals(KontalkMessage.Direction.IN)) {

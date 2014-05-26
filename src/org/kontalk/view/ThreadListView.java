@@ -38,7 +38,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
@@ -48,8 +50,10 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.KontalkThread;
 import org.kontalk.model.ThreadList;
+import org.kontalk.model.User;
 
 /**
  *
@@ -155,6 +159,7 @@ public class ThreadListView extends WebList implements ChangeListener {
 
         private final KontalkThread mThread;
         private final WebLabel mSubjectLabel;
+        private final WebLabel mUserLabel;
 
         ThreadView(KontalkThread thread) {
             mThread = thread;
@@ -166,6 +171,11 @@ public class ThreadListView extends WebList implements ChangeListener {
             mSubjectLabel = new WebLabel();
             mSubjectLabel.setFontSize(14);
             this.add(mSubjectLabel, BorderLayout.CENTER);
+
+            mUserLabel = new WebLabel();
+            mUserLabel.setForeground(Color.GRAY);
+            mUserLabel.setFontSize(11);
+            this.add(mUserLabel, BorderLayout.SOUTH);
 
             updateView();
         }
@@ -190,8 +200,11 @@ public class ThreadListView extends WebList implements ChangeListener {
            String subject = mThread.getSubject() != null ? mThread.getSubject(): "<unnamed>";
            mSubjectLabel.setText(subject);
 
+           List<String> nameList = new ArrayList();
+           for (User user : mThread.getUser())
+               nameList.add(user.getName() == null ? "<unknown>" : user.getName());
+           mUserLabel.setText(StringUtils.join(nameList, ", "));
         }
-
     }
 
     private class ThreadListRenderer extends WebListCellRenderer {
@@ -258,7 +271,7 @@ public class ThreadListView extends WebList implements ChangeListener {
             saveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    saveUser();
+                    saveThread();
                     dispose();
                 }
             });
@@ -270,7 +283,7 @@ public class ThreadListView extends WebList implements ChangeListener {
             this.pack();
         }
 
-        private void saveUser() {
+        private void saveThread() {
             if (!mSubjectField.getText().isEmpty()) {
                 mThreadView.getThread().setSubject(mSubjectField.getText());
             }

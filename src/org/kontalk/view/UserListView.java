@@ -162,7 +162,7 @@ public class UserListView extends WebList implements ChangeListener {
         for (User oneUser: mUserList.getUser())
             mListModel.addElement(new UserView(oneUser));
     }
-    
+
     User getSelectedUser() {
         if (getSelectedIndex() == -1)
             return null;
@@ -211,7 +211,19 @@ public class UserListView extends WebList implements ChangeListener {
             mJIDLabel.setFontSize(11);
             this.add(mJIDLabel, BorderLayout.SOUTH);
 
-            updateView();
+            // if too long, draw three dots at the end
+            mJIDLabel.setText("dummy text");
+            Dimension size = mJIDLabel.getPreferredSize();
+            mJIDLabel.setMinimumSize(size);
+            mJIDLabel.setPreferredSize(size);
+            mNameLabel.setText("dummy text");
+            size = mNameLabel.getPreferredSize();
+            mNameLabel.setMinimumSize(size);
+            mNameLabel.setPreferredSize(size);
+
+            String name = mUser.getName() != null ? mUser.getName() : "<unknown>";
+            mNameLabel.setText(name);
+            mJIDLabel.setText(mUser.getJID());
         }
 
         User getUser() {
@@ -223,22 +235,6 @@ public class UserListView extends WebList implements ChangeListener {
                 this.setBackground(View.BLUE);
             else
                 this.setBackground(Color.WHITE);
-        }
-
-        private void updateView() {
-           // if too long, draw three dots at the end
-           mJIDLabel.setText("dummy text");
-           Dimension size = mJIDLabel.getPreferredSize();
-           mJIDLabel.setMinimumSize(size);
-           mJIDLabel.setPreferredSize(size);
-           mNameLabel.setText("dummy text");
-           size = mNameLabel.getPreferredSize();
-           mNameLabel.setMinimumSize(size);
-           mNameLabel.setPreferredSize(size);
-
-           String name = mUser.getName() != null ? mUser.getName() : "<unknown>";
-           mNameLabel.setText(name);
-           mJIDLabel.setText(mUser.getJID());
         }
 
         // catch the event, when a tooltip should be shown for this item and
@@ -362,7 +358,6 @@ public class UserListView extends WebList implements ChangeListener {
             if (!mJIDField.getText().isEmpty()) {
                 mUserView.getUser().setJID(mJIDField.getText());
             }
-            mUserView.updateView();
         }
     }
 }
