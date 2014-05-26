@@ -25,12 +25,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.KontalkMessage;
 import org.kontalk.model.KontalkThread;
 import org.kontalk.model.User;
@@ -134,17 +135,19 @@ public class Database {
 
     /**
      *
+     * @param table table name the values are inserted into
+     * @param values arbitrary objects that are inserted
      * @return id value of inserted row, 0 if something went wrong
      */
     public int execInsert(String table, List<Object> values) {
         // first column is the id
         String insert = "INSERT INTO " + table + " VALUES (NULL,";
-        for (int i = 0; i < values.size(); i++) {
-            insert += "?";
-            if (i != values.size()-1)
-                insert += ",";
-        }
-        insert += ")";
+
+        List vList = new ArrayList();
+        while(vList.size() < values.size())
+            vList.add("?");
+
+        insert += StringUtils.join(vList, ", ") + ")";
 
         try (PreparedStatement stat = mConn.prepareStatement(insert,
                 Statement.RETURN_GENERATED_KEYS)){
@@ -167,17 +170,19 @@ public class Database {
      */
     public int execUpdate(String table, Map<String, Object> set, int id) {
         String update = "UPDATE OR FAIL " + table + " SET ";
-        List<String> setKeys = new LinkedList(set.keySet());
-        for (int i = 0; i < setKeys.size(); i++) {
-            update += setKeys.get(i) + " = ?";
-            if (i != setKeys.size()-1)
-                update += ", ";
-        }
-        // TODO
-        update += " WHERE _id == " + id ;//+ " LIMIT 1";
+
+        List<String> keyList = new ArrayList(set.keySet());
+
+        List vList = new ArrayList();
+        for (String key : keyList)
+            vList.add(key + " = ?");
+
+        update += StringUtils.join(vList, ", ") + " WHERE _id == " + id ;
+        // note: looks like driver doesn't support "LIMIT"
+        //update += " LIMIT 1";
 
         try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)){
-            insertValues(stat, setKeys, set);
+            insertValues(stat, keyList, set);
             stat.executeUpdate();
             ResultSet keys = stat.getGeneratedKeys();
             return keys.getInt(1);
