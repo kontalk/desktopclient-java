@@ -18,6 +18,8 @@
 
 package org.kontalk.client;
 
+import java.util.List;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
@@ -39,10 +41,13 @@ import org.kontalk.crypto.PersonalKey;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class Client implements PacketListener {
+public class Client implements PacketListener, Runnable {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     public final static String KONTALK_NETWORK = "kontalk.net";
+    public final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue();
+
+    public static enum Command {CONNECT, DISCONNECT};
 
     private final MyKontalk mModel;
     private final KontalkConfiguration mConfig;
@@ -65,47 +70,51 @@ public class Client implements PacketListener {
         //Connection.DEBUG_ENABLED = true;
     }
 
-    public void connect(PersonalKey key){
+    private void connect(PersonalKey key){
 
        this.disconnect();
+       mModel.statusChanged(MyKontalk.Status.CONNECTING);
 
-        // create connection
-        try {
-            mConn = new KontalkConnection(mServer,
-                    key.getBridgePrivateKey(),
-                    key.getBridgeCertificate());
-        } catch (XMPPException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't create connection", ex);
-            return;
-        }
+       synchronized (this) {
 
-        // connect
-        try {
-            mConn.connect();
-        } catch (XMPPException ex) {
-            LOGGER.log(Level.WARNING, "can't connect", ex);
-            return;
-        }
+            // create connection
+            try {
+                mConn = new KontalkConnection(mServer,
+                        key.getBridgePrivateKey(),
+                        key.getBridgeCertificate());
+            } catch (XMPPException | PGPException ex) {
+                LOGGER.log(Level.WARNING, "can't create connection", ex);
+                return;
+            }
 
-        // listeners
-        mConn.getRoster().addRosterListener(new MyRosterListener(mConn.getRoster()));
-        PacketFilter messageFilter = new PacketTypeFilter(Message.class);
-        mConn.addPacketListener(new MessageListener(this), messageFilter);
-        PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
-        mConn.addPacketListener(new VCardListener(), vCardFilter);
-         // fallback
-        mConn.addPacketListener(this, new AndFilter(
-                new NotFilter(messageFilter), new NotFilter(vCardFilter)));
+            // connect
+            try {
+                mConn.connect();
+            } catch (XMPPException ex) {
+                LOGGER.log(Level.WARNING, "can't connect", ex);
+                return;
+            }
 
-        // login
-        try {
-            // the dummy values are not actually used
-            // server does authentification based purely on the pgp key
-            mConn.login("dummy", "dummy");
-        } catch (XMPPException ex) {
-            LOGGER.log(Level.WARNING, "can't login", ex);
-            // TODO: most likely the pgp key is invalid, tell that to user
-            return;
+            // listeners
+            mConn.getRoster().addRosterListener(new MyRosterListener(mConn.getRoster()));
+            PacketFilter messageFilter = new PacketTypeFilter(Message.class);
+            mConn.addPacketListener(new MessageListener(this), messageFilter);
+            PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
+            mConn.addPacketListener(new VCardListener(), vCardFilter);
+             // fallback
+            mConn.addPacketListener(this, new AndFilter(
+                    new NotFilter(messageFilter), new NotFilter(vCardFilter)));
+
+            // login
+            try {
+                // the dummy values are not actually used
+                // server does authentification based purely on the pgp key
+                mConn.login("dummy", "dummy");
+            } catch (XMPPException ex) {
+                LOGGER.log(Level.WARNING, "can't login", ex);
+                // TODO: most likely the pgp key is invalid, tell that to user
+                return;
+            }
         }
 
         LOGGER.info("Connected!");
@@ -114,12 +123,14 @@ public class Client implements PacketListener {
     }
 
     public void disconnect() {
-        if (mConn != null) {
-            mConn.disconnect();
-            mConn = null;
+        synchronized (this) {
+            if (mConn != null) {
+                mConn.disconnect();
+                mConn = null;
+            }
         }
-            mModel.statusChanged(MyKontalk.Status.DISCONNECTED);
-        }
+        mModel.statusChanged(MyKontalk.Status.DISCONNECTED);
+    }
 
     public void sendText(String xmppID, String recipientJID, String text) {
         Message m = new Message();
@@ -138,7 +149,7 @@ public class Client implements PacketListener {
         sendPacket(vcard);
     }
 
-    void sendPacket(Packet p) {
+    synchronized void sendPacket(Packet p) {
         if (mConn == null || !mConn.isAuthenticated()) {
             LOGGER.warning("can't send packet, not connected.");
             return;
@@ -150,5 +161,39 @@ public class Client implements PacketListener {
     @Override
     public void processPacket(Packet packet) {
         LOGGER.info("Got packet: "+packet.toXML());
+    }
+
+    @Override
+    public void run() {
+        while (true) {
+            Task t;
+            try {
+                // blocking
+                t = TASK_QUEUE.take();
+            } catch (InterruptedException ex) {
+                LOGGER.log(Level.WARNING, "interrupted while waiting ", ex);
+                return;
+            }
+            switch (t.command) {
+                case CONNECT:
+                    this.connect((PersonalKey) t.args.get(0));
+                    break;
+                case DISCONNECT:
+                    this.disconnect();
+                    break;
+            }
+        }
+    }
+
+    public static class Task {
+
+        final Command command;
+        final List args;
+
+        public Task(Command c, List a) {
+            command = c;
+            args = a;
+        }
+
     }
 }

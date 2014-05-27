@@ -90,20 +90,9 @@ public class ThreadView extends WebScrollPane {
 
     private static class Viewport extends JViewport {
 
-        private int TILE = 50;
-
         public Viewport() {
             this.setBackground(Color.LIGHT_GRAY);
-            //this.setOpaque(false);
-            //this.setPreferredSize(new Dimension(6 * TILE, 6 * TILE));
         }
-
-//        @Override
-//        public void paintComponent(Graphics g) {
-//            super.paintComponent(g);
-//            g.setColor(Color.blue);
-//            g.fillRect(TILE, TILE, 3 * TILE, 3 * TILE);
-//        }
     }
 
     /**

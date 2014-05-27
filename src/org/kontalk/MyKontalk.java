@@ -20,6 +20,8 @@ package org.kontalk;
 
 import com.alee.laf.WebLookAndFeel;
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -80,11 +82,14 @@ public class MyKontalk {
         mMessageList = MessageList.getInstance();
 
         mClient = new Client(this);
+
         mView = new View(this);
 
     }
 
     public void start() {
+        new Thread(mClient).start();
+
         Database.initialize(this, mConfigDir + "/kontalk_db.sqlite");
 
         // order matters!
@@ -133,8 +138,9 @@ public class MyKontalk {
             mView.connectionProblem(ex);
             return;
         }
-        mView.statusChanged(Status.CONNECTING);
-        mClient.connect(account.getPersonalKey());
+        List args = new ArrayList(1);
+        args.add(account.getPersonalKey());
+        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.CONNECT, args));
     }
 
     public void disconnect() {
