@@ -19,10 +19,12 @@
 package org.kontalk;
 
 import com.alee.laf.WebLookAndFeel;
+import java.io.File;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import org.apache.commons.lang.SystemUtils;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.PGP;
@@ -40,17 +42,17 @@ import org.kontalk.view.View;
 public class MyKontalk {
     private final static Logger LOGGER = Logger.getLogger(MyKontalk.class.getName());
 
-    private final KontalkConfiguration mConfig = KontalkConfiguration.getConfiguration();
-
     public enum Status {
         DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN
     }
 
+    private final KontalkConfiguration mConfig;
     private final Client mClient;
     private final View mView;
     private final UserList mUserList;
     private final ThreadList mThreadList;
     private final MessageList mMessageList;
+    private String mConfigDir;
 
     static {
         // register provider
@@ -58,6 +60,19 @@ public class MyKontalk {
     }
 
     public MyKontalk(String[] args){
+
+        String homeDir = System.getProperty("user.home");
+        if (SystemUtils.IS_OS_WINDOWS) {
+            mConfigDir = homeDir + "/Kontalk";
+        } else {
+            mConfigDir = homeDir + "/.kontalk";
+        }
+        boolean created = new File(mConfigDir).mkdirs();
+        if (created)
+            LOGGER.info("created configuration directory");
+
+        mConfig = KontalkConfiguration.initialize(mConfigDir + "/kontalk.properties");
+
         parseArgs(args);
 
         mUserList = UserList.getInstance();
@@ -66,10 +81,11 @@ public class MyKontalk {
 
         mClient = new Client(this);
         mView = new View(this);
+
     }
 
     public void start() {
-        Database.initialize(this);
+        Database.initialize(this, mConfigDir + "/kontalk_db.sqlite");
 
         // order matters!
         mUserList.load();

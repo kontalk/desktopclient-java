@@ -50,7 +50,7 @@ public class ConfigurationDialog extends WebDialog {
     ConfigurationDialog(JFrame owner, final View viewModel, String helpText) {
         super(owner);
 
-        mConf = KontalkConfiguration.getConfiguration();
+        mConf = KontalkConfiguration.getInstance();
 
         this.setTitle("Connection configuration");
         this.setResizable(false);

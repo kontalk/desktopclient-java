@@ -54,7 +54,7 @@ public class Client implements PacketListener {
 
     public Client(MyKontalk model) {
         mModel = model;
-        mConfig = KontalkConfiguration.getConfiguration();
+        mConfig = KontalkConfiguration.getInstance();
         String network = mConfig.getString("server.network");
         String host = mConfig.getString("server.host");
         int port = mConfig.getInt("server.port");

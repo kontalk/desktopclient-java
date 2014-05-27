@@ -42,14 +42,13 @@ import org.kontalk.model.User;
  */
 public class Database {
     private final static Logger LOGGER = Logger.getLogger(Database.class.getName());
-    private final static String DB_NAME = "kontalk.db";
 
     private static Database INSTANCE = null;
 
     private final MyKontalk mModel;
     private Connection mConn = null;
 
-    private Database(MyKontalk model) {
+    private Database(MyKontalk model, String filePath) {
         mModel = model;
         // load the sqlite-JDBC driver using the current class loader
         try {
@@ -61,7 +60,7 @@ public class Database {
 
         // create database connection
         try {
-          mConn = DriverManager.getConnection("jdbc:sqlite:"+DB_NAME);
+          mConn = DriverManager.getConnection("jdbc:sqlite:"+filePath);
         } catch(SQLException ex) {
           // if the error message is "out of memory",
           // it probably means no database file is found
@@ -232,8 +231,8 @@ public class Database {
             }
     }
 
-    public static void initialize(MyKontalk model) {
-        INSTANCE = new Database(model);
+    public static void initialize(MyKontalk model, String filePath) {
+        INSTANCE = new Database(model, filePath);
     }
 
     public static Database getInstance() {

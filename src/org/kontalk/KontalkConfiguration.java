@@ -31,8 +31,6 @@ import org.kontalk.client.Client;
 public class KontalkConfiguration extends PropertiesConfiguration {
     private final static Logger LOGGER = Logger.getLogger(KontalkConfiguration.class.getName());
 
-    private final static String CONFIGFILENAME = "kontalk.properties";
-
     private static KontalkConfiguration INSTANCE = null;
 
     public final static String SERV_NET = "server.network";
@@ -53,11 +51,8 @@ public class KontalkConfiguration extends PropertiesConfiguration {
 
     private KontalkConfiguration() {
         super();
-        initConfig();
-    }
 
-    private void initConfig() {
-        setFileName(CONFIGFILENAME);
+        // init config
         setProperty(SERV_NET, DEFAULT_SERV_NET);
         setProperty(SERV_HOST, DEFAULT_SERV_HOST);
         setProperty(SERV_PORT, DEFAULT_SERV_PORT);
@@ -68,19 +63,6 @@ public class KontalkConfiguration extends PropertiesConfiguration {
         setProperty(ACC_PASS, "");
     }
 
-    public static KontalkConfiguration getConfiguration() {
-        if ( INSTANCE != null)
-            return INSTANCE;
-
-        try {
-            INSTANCE = new KontalkConfiguration(CONFIGFILENAME);
-        } catch (ConfigurationException ex) {
-            LOGGER.info("Configuration not found. Using default values");
-            INSTANCE = new KontalkConfiguration();
-        }
-        return INSTANCE;
-    }
-
     public void saveToFile() {
         try {
             this.save();
@@ -88,5 +70,21 @@ public class KontalkConfiguration extends PropertiesConfiguration {
             LOGGER.log(Level.WARNING, "Can't save configuration", ex);
         }
     }
+
+    static KontalkConfiguration initialize(String filePath) {
+        try {
+            INSTANCE = new KontalkConfiguration(filePath);
+        } catch (ConfigurationException ex) {
+            LOGGER.info("Configuration not found. Using default values");
+            INSTANCE = new KontalkConfiguration();
+            INSTANCE.setFileName(filePath);
+        }
+        return INSTANCE;
+    }
+
+    public static KontalkConfiguration getInstance() {
+        return INSTANCE;
+    }
+
 
 }
