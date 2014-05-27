@@ -54,7 +54,10 @@ public class UserList extends ChangeSubject {
                 String status = resultSet.getString("status");
                 long l = resultSet.getLong("last_seen");
                 Date lastSeen = l == 0 ? null : new Date(l);
-                mMap.put(jid, new User(id, jid, name, status, lastSeen));
+                boolean encr = resultSet.getBoolean("encrypted");
+                String key = resultSet.getString("public_key");
+                String fp = resultSet.getString("key_fingerprint");
+                mMap.put(jid, new User(id, jid, name, status, lastSeen, encr, key, fp));
             }
         resultSet.close();
         } catch (SQLException ex) {
@@ -98,7 +101,6 @@ public class UserList extends ChangeSubject {
      * @param jid
      * @return
      */
-
     public User getUserByJID(String jid) {
         jid = StringUtils.parseBareAddress(jid);
         if (mMap.containsKey(jid))
@@ -111,11 +113,20 @@ public class UserList extends ChangeSubject {
     public void setPresence(String jid, Presence.Type type, String status) {
         jid = StringUtils.parseBareAddress(jid);
         if (!mMap.containsKey(jid)) {
-            LOGGER.info("can't find user with jid: "+jid);
+            LOGGER.warning("can't find user with jid: "+jid);
             return;
         }
         User user = mMap.get(jid);
         user.setPresence(type, status);
+    }
+
+    public void setPGPKey(String jid, byte[] rawKey) {
+        jid = StringUtils.parseBareAddress(jid);
+        if (!mMap.containsKey(jid)) {
+            LOGGER.warning("can't find user with jid: "+jid);
+            return;
+        }
+        mMap.get(jid).setKey(rawKey);
     }
 
     public static UserList getInstance() {

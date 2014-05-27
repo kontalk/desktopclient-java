@@ -43,6 +43,8 @@ public class KontalkThread extends ChangeSubject {
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "xmpp_id TEXT UNIQUE, " +
             "subject TEXT " +
+            // contains unread messages?
+            "read INTEGER " +
             ")";
 
     // many to many relationship requires additional table for receiver
@@ -62,6 +64,7 @@ public class KontalkThread extends ChangeSubject {
     private final String mXMPPID;
     private Set<User> mUser;
     private String mSubject;
+    private boolean mRead;
 
     /**
      * Used when creating a new thread

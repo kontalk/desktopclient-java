@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -25,9 +26,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.util.encoders.Base64;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.Database;
+import org.kontalk.crypto.PGP;
+import org.kontalk.util.MessageUtils;
 
 /**
  *
@@ -44,9 +50,11 @@ public class User {
             "jid TEXT NOT NULL UNIQUE, " +
             "name TEXT, " +
             "status TEXT, " +
-            "last_seen INTEGER " +
-            //"public_KEY TEXT UNIQUE, " +
-            //"key_fingerprint TEXT UNIQUE" +
+            "last_seen INTEGER, " +
+            // send messages encrypted?
+            "encrypted INTEGER, " +
+            "public_key TEXT UNIQUE, " +
+            "key_fingerprint TEXT UNIQUE" +
             ")";
 
     private final int mID;
@@ -55,6 +63,9 @@ public class User {
     private String mStatus = null;
     private Date mLastSeen = null;
     private Available mAvailable = Available.UNKNOWN;
+    private boolean mEncrypted = true;
+    private String mKey = null;
+    private String mFingerprint = null;
     //private ItemType mType;
 
     /**
@@ -77,6 +88,9 @@ public class User {
         values.add(mName);
         values.add(mStatus);
         values.add(mLastSeen);
+        values.add(mEncrypted);
+        values.add(mKey);
+        values.add(mFingerprint);
         mID = db.execInsert(TABLE, values);
         if (mID < 1)
             LOGGER.log(Level.WARNING, "couldn't insert user");
@@ -85,12 +99,16 @@ public class User {
     /**
      * Used for loading users from database
      */
-    User(int id, String jid, String name, String status, Date lastSeen) {
+    User(int id, String jid, String name, String status, Date lastSeen,
+            boolean encrypted, String publicKey, String fingerprint) {
         mID = id;
         mJID = jid;
         mName = name;
         mStatus = status;
         mLastSeen = lastSeen;
+        mEncrypted = encrypted;
+        mKey = publicKey;
+        mFingerprint = fingerprint;
     }
 
     public String getJID() {
@@ -142,6 +160,29 @@ public class User {
         UserList.getInstance().changed();
     }
 
+    void setKey(byte[] rawKey) {
+        PGPPublicKey key;
+        try {
+            key = PGP.getMasterKey(rawKey);
+        } catch (IOException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't parse public key", ex);
+            return;
+        }
+
+        // if not set use id in key for username
+        String id = PGP.getUserId(key, null);
+        if (id != null && id.contains(" (NO COMMENT) ")){
+            String userName = id.substring(0, id.indexOf(" (NO COMMENT) "));
+            if (!userName.isEmpty() && mName == null)
+                mName = userName;
+        }
+
+        mKey = Base64.toBase64String(rawKey);
+        mFingerprint = MessageUtils.bytesToHex(key.getFingerprint());
+        this.save();
+        UserList.getInstance().changed();
+    }
+
     public void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap();
@@ -149,6 +190,9 @@ public class User {
         set.put("name", mName);
         set.put("status", mStatus);
         set.put("last_seen", mLastSeen);
+        set.put("encrypted", mEncrypted);
+        set.put("public_key", mKey);
+        set.put("key_fingerprint", mFingerprint);
         db.execUpdate(TABLE, set, mID);
     }
 

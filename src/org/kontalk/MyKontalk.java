@@ -127,6 +127,9 @@ public class MyKontalk {
 
     public void statusChanged(Status status){
         mView.statusChanged(status);
+        if (status == Status.CONNECTED) {
+            
+        }
     }
 
     public void sendText(KontalkThread thread, String text) {

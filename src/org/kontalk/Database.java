@@ -143,7 +143,7 @@ public class Database {
         // first column is the id
         String insert = "INSERT INTO " + table + " VALUES (NULL,";
 
-        List vList = new ArrayList();
+        List vList = new ArrayList(values.size());
         while(vList.size() < values.size())
             vList.add("?");
 
@@ -173,7 +173,7 @@ public class Database {
 
         List<String> keyList = new ArrayList(set.keySet());
 
-        List vList = new ArrayList();
+        List vList = new ArrayList(keyList.size());
         for (String key : keyList)
             vList.add(key + " = ?");
 

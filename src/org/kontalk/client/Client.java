@@ -28,6 +28,7 @@ import org.jivesoftware.smack.filter.AndFilter;
 import org.jivesoftware.smack.filter.NotFilter;
 import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.filter.PacketTypeFilter;
+import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.kontalk.KontalkConfiguration;
@@ -88,8 +89,11 @@ public class Client implements PacketListener {
         mConn.getRoster().addRosterListener(new MyRosterListener(mConn.getRoster()));
         PacketFilter messageFilter = new PacketTypeFilter(Message.class);
         mConn.addPacketListener(new MessageListener(this), messageFilter);
+        PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
+        mConn.addPacketListener(new VCardListener(), vCardFilter);
+         // fallback
         mConn.addPacketListener(this, new AndFilter(
-                new NotFilter(messageFilter))); // fallback
+                new NotFilter(messageFilter), new NotFilter(vCardFilter)));
 
         // login
         try {
@@ -103,6 +107,7 @@ public class Client implements PacketListener {
         }
 
         LOGGER.info("Connected!");
+
         mModel.statusChanged(MyKontalk.Status.CONNECTED);
     }
 
@@ -122,6 +127,13 @@ public class Client implements PacketListener {
         m.setBody(text);
         m.addExtension(new ServerReceiptRequest());
         sendPacket(m);
+    }
+
+    public void sendVCardRequest(String jid) {
+        VCard4 vcard = new VCard4();
+        vcard.setType(IQ.Type.GET);
+        vcard.setTo(jid);
+        sendPacket(vcard);
     }
 
     void sendPacket(Packet p) {

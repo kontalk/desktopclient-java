@@ -200,7 +200,7 @@ public class ThreadListView extends WebList implements ChangeListener {
            String subject = mThread.getSubject() != null ? mThread.getSubject(): "<unnamed>";
            mSubjectLabel.setText(subject);
 
-           List<String> nameList = new ArrayList();
+           List<String> nameList = new ArrayList(mThread.getUser().size());
            for (User user : mThread.getUser())
                nameList.add(user.getName() == null ? "<unknown>" : user.getName());
            mUserLabel.setText(StringUtils.join(nameList, ", "));
