@@ -261,6 +261,7 @@ public class UserListView extends WebList implements ChangeListener {
 
             String html = "<html><body>" +
                     //"<h3>Header</h3>" +
+                    "<br>" +
                     "Available: " + isAvailable + "<br>" +
                     "Status: " + status + "<br>" +
                     "Last seen: " + lastSeen + "<br>" +

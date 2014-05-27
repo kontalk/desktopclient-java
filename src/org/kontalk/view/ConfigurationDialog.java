@@ -40,7 +40,7 @@ import org.kontalk.KontalkConfiguration;
  */
 public class ConfigurationDialog extends WebDialog {
 
-    private final KontalkConfiguration mConf;
+    private final KontalkConfiguration mConf = KontalkConfiguration.getInstance();
     private final WebTextField serverField;
     private final WebFileChooserField publicKeyChooser;
     private final WebFileChooserField privateKeyChooser;
@@ -49,8 +49,6 @@ public class ConfigurationDialog extends WebDialog {
 
     ConfigurationDialog(JFrame owner, final View viewModel, String helpText) {
         super(owner);
-
-        mConf = KontalkConfiguration.getInstance();
 
         this.setTitle("Connection configuration");
         this.setResizable(false);

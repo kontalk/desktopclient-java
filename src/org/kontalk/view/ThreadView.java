@@ -37,7 +37,6 @@ import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JList;
-import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -64,8 +63,6 @@ public class ThreadView extends WebScrollPane {
         this.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.getVerticalScrollBar().setUnitIncrement(25);
-
-        this.setViewport(new Viewport());
     }
 
     int getCurrentThreadID() {
@@ -88,11 +85,8 @@ public class ThreadView extends WebScrollPane {
         mCurrentThreadID = thread.getID();
     }
 
-    private static class Viewport extends JViewport {
-
-        public Viewport() {
-            this.setBackground(Color.LIGHT_GRAY);
-        }
+    void setColor(Color color) {
+        this.getViewport().setBackground(color);
     }
 
     /**

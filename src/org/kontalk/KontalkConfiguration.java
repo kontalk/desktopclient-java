@@ -18,6 +18,9 @@
 
 package org.kontalk;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.ConfigurationException;
@@ -40,6 +43,8 @@ public class KontalkConfiguration extends PropertiesConfiguration {
     public final static String ACC_PRIV_KEY = "account.private_key";
     public final static String ACC_BRIDGE_CERT = "account.bridge_cert";
     public final static String ACC_PASS = "account.passphrase";
+    public final static String VIEW_FRAME_WIDTH = "view.frame.width";
+    public final static String VIEW_FRAME_HEIGHT = "view.frame.height";
 
     public final static String DEFAULT_SERV_NET = Client.KONTALK_NETWORK;
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
@@ -51,16 +56,6 @@ public class KontalkConfiguration extends PropertiesConfiguration {
 
     private KontalkConfiguration() {
         super();
-
-        // init config
-        setProperty(SERV_NET, DEFAULT_SERV_NET);
-        setProperty(SERV_HOST, DEFAULT_SERV_HOST);
-        setProperty(SERV_PORT, DEFAULT_SERV_PORT);
-        setProperty(ACC_PUB_KEY, "kontalk-public.pgp");
-        setProperty(ACC_PRIV_KEY, "kontalk-private.pgp");
-        setProperty(ACC_BRIDGE_CERT, "kontalk-login.crt");
-        //mConfig.setProperty("account.bridge_key", "kontalk-login.key");
-        setProperty(ACC_PASS, "");
     }
 
     public void saveToFile() {
@@ -79,6 +74,26 @@ public class KontalkConfiguration extends PropertiesConfiguration {
             INSTANCE = new KontalkConfiguration();
             INSTANCE.setFileName(filePath);
         }
+
+        // init config
+        Map<String, Object> map = new HashMap();
+        map.put(SERV_NET, DEFAULT_SERV_NET);
+        map.put(SERV_HOST, DEFAULT_SERV_HOST);
+        map.put(SERV_PORT, DEFAULT_SERV_PORT);
+        map.put(ACC_PUB_KEY, "kontalk-public.pgp");
+        map.put(ACC_PRIV_KEY, "kontalk-private.pgp");
+        map.put(ACC_BRIDGE_CERT, "kontalk-login.crt");
+        //map.put("account.bridge_key", "kontalk-login.key");
+        map.put(ACC_PASS, "");
+        map.put(VIEW_FRAME_WIDTH, 600);
+        map.put(VIEW_FRAME_HEIGHT, 650);
+
+        for(Entry<String, Object> e : map.entrySet()) {
+            if (!INSTANCE.containsKey(e.getKey())) {
+                INSTANCE.setProperty(e.getKey(), e.getValue());
+            }
+        }
+
         return INSTANCE;
     }
 
