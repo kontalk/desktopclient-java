@@ -37,6 +37,7 @@ import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JList;
+import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -63,6 +64,8 @@ public class ThreadView extends WebScrollPane {
         this.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.getVerticalScrollBar().setUnitIncrement(25);
+
+        this.setViewport(new Viewport());
     }
 
     int getCurrentThreadID() {
@@ -85,6 +88,24 @@ public class ThreadView extends WebScrollPane {
         mCurrentThreadID = thread.getID();
     }
 
+    private static class Viewport extends JViewport {
+
+        private int TILE = 50;
+
+        public Viewport() {
+            this.setBackground(Color.LIGHT_GRAY);
+            //this.setOpaque(false);
+            //this.setPreferredSize(new Dimension(6 * TILE, 6 * TILE));
+        }
+
+//        @Override
+//        public void paintComponent(Graphics g) {
+//            super.paintComponent(g);
+//            g.setColor(Color.blue);
+//            g.fillRect(TILE, TILE, 3 * TILE, 3 * TILE);
+//        }
+    }
+
     /**
      * View all messages of on thread in a left/right MIM style list.
      */
@@ -100,9 +121,11 @@ public class ThreadView extends WebScrollPane {
 
             //this.setEditable(false);
             //this.setAutoscrolls(true);
+            this.setOpaque(false);
 
             this.setModel(mListModel);
             this.setCellRenderer(new MessageListRenderer());
+
             // beautiful swing option to disable selection
             this.setSelectionModel(new DefaultListSelectionModel() {
                 @Override

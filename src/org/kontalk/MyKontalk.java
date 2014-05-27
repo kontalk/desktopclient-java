@@ -145,7 +145,8 @@ public class MyKontalk {
     public void statusChanged(Status status){
         mView.statusChanged(status);
         if (status == Status.CONNECTED) {
-            // send vcard/public key requests to kontalk users with missing key
+            // send vcard/public key requests for kontalk users with missing key
+            // TODO also do this when new user is created from roster
             for (User user : mUserList.getUser()) {
                 String network = StringUtils.parseServer(user.getJID());
                 if (user.getFingerprint() == null &&
