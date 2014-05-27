@@ -1,17 +1,17 @@
 /*
  *  Kontalk Java client
  *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- * 
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -22,18 +22,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.kontalk.client.Client;
 
 /**
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KontalkConfiguration extends PropertiesConfiguration{
+public class KontalkConfiguration extends PropertiesConfiguration {
     private final static Logger LOGGER = Logger.getLogger(KontalkConfiguration.class.getName());
 
     private final static String CONFIGFILENAME = "kontalk.properties";
-    
+
     private static KontalkConfiguration INSTANCE = null;
-    
+
     public final static String SERV_NET = "server.network";
     public final static String SERV_HOST = "server.host";
     public final static String SERV_PORT = "server.port";
@@ -41,11 +42,11 @@ public class KontalkConfiguration extends PropertiesConfiguration{
     public final static String ACC_PRIV_KEY = "account.private_key";
     public final static String ACC_BRIDGE_CERT = "account.bridge_cert";
     public final static String ACC_PASS = "account.passphrase";
-    
-    public final static String DEFAULT_SERV_NET = "kontalk.net";
+
+    public final static String DEFAULT_SERV_NET = Client.KONTALK_NETWORK;
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
     public final static int DEFAULT_SERV_PORT = 5222;
-    
+
     private KontalkConfiguration(String filename) throws ConfigurationException {
         super(filename);
     }
@@ -70,7 +71,7 @@ public class KontalkConfiguration extends PropertiesConfiguration{
     public static KontalkConfiguration getConfiguration() {
         if ( INSTANCE != null)
             return INSTANCE;
-        
+
         try {
             INSTANCE = new KontalkConfiguration(CONFIGFILENAME);
         } catch (ConfigurationException ex) {
@@ -87,5 +88,5 @@ public class KontalkConfiguration extends PropertiesConfiguration{
             LOGGER.log(Level.WARNING, "Can't save configuration", ex);
         }
     }
-    
+
 }

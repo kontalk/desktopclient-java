@@ -160,6 +160,10 @@ public class User {
         UserList.getInstance().changed();
     }
 
+    public String getFingerprint() {
+        return mFingerprint;
+    }
+
     void setKey(byte[] rawKey) {
         PGPPublicKey key;
         try {
@@ -176,6 +180,9 @@ public class User {
             if (!userName.isEmpty() && mName == null)
                 mName = userName;
         }
+
+        if (mKey != null)
+            LOGGER.info("overwriting public key, user id: "+mID);
 
         mKey = Base64.toBase64String(rawKey);
         mFingerprint = MessageUtils.bytesToHex(key.getFingerprint());

@@ -42,6 +42,8 @@ import org.kontalk.crypto.PersonalKey;
 public class Client implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
 
+    public final static String KONTALK_NETWORK = "kontalk.net";
+
     private final MyKontalk mModel;
     private final KontalkConfiguration mConfig;
     private final EndpointServer mServer;

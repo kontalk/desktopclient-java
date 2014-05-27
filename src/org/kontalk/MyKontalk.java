@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.PGP;
 import org.kontalk.model.Account;
@@ -128,7 +129,13 @@ public class MyKontalk {
     public void statusChanged(Status status){
         mView.statusChanged(status);
         if (status == Status.CONNECTED) {
-            
+            // send vcard/public key requests to kontalk users with missing key
+            for (User user : mUserList.getUser()) {
+                String network = StringUtils.parseServer(user.getJID());
+                if (user.getFingerprint() == null &&
+                        network.equals(Client.KONTALK_NETWORK))
+                mClient.sendVCardRequest(user.getJID());
+            }
         }
     }
 
