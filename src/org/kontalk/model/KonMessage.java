@@ -193,6 +193,10 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         return mText;
     }
 
+    public boolean isEncrypted() {
+        return mEncrypted;
+    }
+
     @Override
     public int compareTo(KonMessage o) {
         int idComp = Integer.compare(this.mID, o.mID);

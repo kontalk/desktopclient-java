@@ -154,7 +154,7 @@ public class Client implements PacketListener, Runnable {
 
     synchronized void sendPacket(Packet p) {
         if (mConn == null || !mConn.isAuthenticated()) {
-            LOGGER.warning("can't send packet, not connected.");
+            LOGGER.info("can't send packet, not connected.");
             return;
         }
         mConn.sendPacket(p);

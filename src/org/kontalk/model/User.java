@@ -52,7 +52,7 @@ public class User {
             "status TEXT, " +
             "last_seen INTEGER, " +
             // send messages encrypted?
-            "encrypted INTEGER, " +
+            "encrypted INTEGER NOT NULL, " +
             "public_key TEXT UNIQUE, " +
             "key_fingerprint TEXT UNIQUE" +
             ")";

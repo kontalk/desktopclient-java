@@ -53,6 +53,8 @@ public class ThreadView extends WebScrollPane {
     private static Icon PENDING_ICON;
     private static Icon SENT_ICON;
     private static Icon DELIVERED_ICON;
+    private static Icon CRYPT_ICON;
+    private static Icon UNENCRYPT_ICON;
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap();
     private int mCurrentThreadID = -1;
@@ -63,6 +65,14 @@ public class ThreadView extends WebScrollPane {
         this.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.getVerticalScrollBar().setUnitIncrement(25);
+
+        // load icons
+        String iconPath = "org/kontalk/res/";
+        PENDING_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_pending.png"));
+        SENT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_sent.png"));
+        DELIVERED_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_delivered.png"));
+        CRYPT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_crypt.png"));
+        UNENCRYPT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_unencrypt.png"));
     }
 
     int getCurrentThreadID() {
@@ -87,6 +97,10 @@ public class ThreadView extends WebScrollPane {
 
     void setColor(Color color) {
         this.getViewport().setBackground(color);
+    }
+
+    private void doRepaint() {
+        this.repaint();
     }
 
     /**
@@ -118,12 +132,6 @@ public class ThreadView extends WebScrollPane {
                 public void addSelectionInterval(int index0, int index1) {
                 }
             });
-
-            // load icons
-            String iconPath = "org/kontalk/res/";
-            PENDING_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_pending.png"));
-            SENT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_sent.png"));
-            DELIVERED_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_delivered.png"));
         }
 
         private void update() {
@@ -146,7 +154,7 @@ public class ThreadView extends WebScrollPane {
     }
 
     /**
-     * View for one message.
+     * View for one message. The content is added to a panel inside this panel.
      */
     private class MessageView extends WebPanel implements ChangeListener {
 
@@ -188,10 +196,17 @@ public class ThreadView extends WebScrollPane {
             WebPanel statusPanel = new WebPanel();
             statusPanel.setOpaque(false);
             statusPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
-            // status icon
+            // icons
             mStatusIconLabel = new WebLabel();
             update();
             statusPanel.add(mStatusIconLabel);
+            WebLabel encryptIconLabel = new WebLabel();
+            if (message.isEncrypted()) {
+                encryptIconLabel.setIcon(CRYPT_ICON);
+            } else {
+                encryptIconLabel.setIcon(UNENCRYPT_ICON);
+            }
+            statusPanel.add(encryptIconLabel);
             // date label
             SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, HH:mm");
             WebLabel dateLabel = new WebLabel(dateFormat.format(mMessage.getDate()));
@@ -229,10 +244,8 @@ public class ThreadView extends WebScrollPane {
                     mStatusIconLabel.setIcon(DELIVERED_ICON);
                     break;
             }
-            // TODO damn icon is not updated
-            this.revalidate();
-            this.invalidate();
-            this.repaint();
+            // need to repaint parent to see changes
+            doRepaint();
         }
 
         @Override
@@ -252,6 +265,7 @@ public class ThreadView extends WebScrollPane {
             if (value instanceof MessageView) {
                 MessageView messageView = (MessageView) value;
                 messageView.resize(list.getWidth());
+                messageView.update();
                 return messageView;
             } else {
                 return new WebPanel(new WebLabel("ERRROR"));

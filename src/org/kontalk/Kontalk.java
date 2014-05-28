@@ -163,7 +163,7 @@ public class Kontalk {
             for (User user : mUserList.getUser()) {
                 String network = StringUtils.parseServer(user.getJID());
                 if (user.getFingerprint() == null &&
-                        network.equals(Client.KONTALK_NETWORK))
+                        network.equalsIgnoreCase(Client.KONTALK_NETWORK))
                 mClient.sendVCardRequest(user.getJID());
             }
         }

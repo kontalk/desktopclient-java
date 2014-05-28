@@ -1,17 +1,17 @@
 /*
  *  Kontalk Java client
  *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
- * 
+ *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
  *  the Free Software Foundation, either version 3 of the License, or
  *  (at your option) any later version.
- * 
+ *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  *  GNU General Public License for more details.
- * 
+ *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -37,10 +37,10 @@ class MessageListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(MessageListener.class.getName());
 
     private final Client mClient;
-    
+
     MessageListener(Client client) {
         mClient = client;
-        
+
         ProviderManager pm = ProviderManager.getInstance();
         pm.addExtensionProvider(SentServerReceipt.ELEMENT_NAME, SentServerReceipt.NAMESPACE, new SentServerReceipt.Provider());
         pm.addExtensionProvider(ReceivedServerReceipt.ELEMENT_NAME, ReceivedServerReceipt.NAMESPACE, new ReceivedServerReceipt.Provider());
@@ -50,7 +50,7 @@ class MessageListener implements PacketListener {
         //pm.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
         pm.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
     }
-    
+
     @Override
     public void processPacket(Packet packet) {
         org.jivesoftware.smack.packet.Message m = (org.jivesoftware.smack.packet.Message) packet;
@@ -66,12 +66,12 @@ class MessageListener implements PacketListener {
             LOGGER.warning("unknown message type: "+m.getType());
         }
     }
-    
+
     private void processChatMessage(Message m) {
         LOGGER.info("got message: "+m.toXML());
-        // note: thread and subject are null if message comes from Kontalk 
+        // note: thread and subject are null if message comes from Kontalk
         // android client
-        
+
         // timestamp
         // delayed deliver extension is the first the be processed
         // because it's used also in delivery receipts
@@ -96,7 +96,7 @@ class MessageListener implements PacketListener {
             LOGGER.info("got chatstate: " + chatstate);
             // TODO
         }
-        
+
         // non-active notifications are not to be processed as messages
         if (chatstate != null && !chatstate.getElementName().equals(ChatState.active.name())) {
             LOGGER.info("got non-active notification");
@@ -110,11 +110,11 @@ class MessageListener implements PacketListener {
             processReceipt(m, serverReceipt);
             return;
         }
-        
+
         // must be an incoming message
-        
+
         // get text from body
-        String text = "";
+        String text = null;
         boolean encrypted;
         PacketExtension encryption = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
         if (encryption != null && encryption instanceof E2EEncryption) {
@@ -131,7 +131,7 @@ class MessageListener implements PacketListener {
         if (_media != null && _media instanceof OutOfBandData) {
             LOGGER.info("out of band data not supported yet .(");
         }
-        
+
         // receipt id
         String receiptID = null;
         if (receiptExt != null && receiptExt instanceof ServerReceiptRequest) {
@@ -141,16 +141,16 @@ class MessageListener implements PacketListener {
         // TODO why!?
         //if (msgId == null)
         //    msgId = "incoming" + StringUtils.randomString(6);
-        
+
         // add message
-        MessageList.getInstance().addFrom(m.getFrom(), 
-                m.getPacketID(), 
-                m.getThread(), 
-                date, 
-                receiptID, 
-                text, 
+        MessageList.getInstance().addFrom(m.getFrom(),
+                m.getPacketID(),
+                m.getThread(),
+                date,
+                receiptID,
+                text,
                 encrypted);
-        
+
         // send a 'received' for a request
         if (receiptID != null) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
@@ -158,12 +158,12 @@ class MessageListener implements PacketListener {
             mClient.sendPacket(received);
         }
     }
-    
+
     private void processReceipt(Message m, ServerReceipt receipt) {
         if (receipt != null && receipt instanceof SentServerReceipt) {
             SentServerReceipt sentServerReceipt = (SentServerReceipt) receipt;
             // update message status and save receipt ID
-            MessageList.getInstance().updateMsgBySentReceipt(m.getPacketID(), 
+            MessageList.getInstance().updateMsgBySentReceipt(m.getPacketID(),
                     sentServerReceipt.getId());
             return;
         }
@@ -180,7 +180,7 @@ class MessageListener implements PacketListener {
         }
         if (receipt != null && receipt instanceof AckServerReceipt) {
             AckServerReceipt ackServerReceipt = (AckServerReceipt) receipt;
-            // TODO it looks like the packet id is used now to identify the 
+            // TODO it looks like the packet id is used now to identify the
             // 'received' for this acknowledement, unlike the spec says
             // ignore this for now
             // update: actually we don't have to do anything here
