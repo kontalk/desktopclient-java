@@ -32,7 +32,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import javax.swing.JFrame;
-import org.kontalk.KontalkConfiguration;
+import org.kontalk.KonConfiguration;
 
 /**
  *
@@ -40,7 +40,7 @@ import org.kontalk.KontalkConfiguration;
  */
 public class ConfigurationDialog extends WebDialog {
 
-    private final KontalkConfiguration mConf = KontalkConfiguration.getInstance();
+    private final KonConfiguration mConf = KonConfiguration.getInstance();
     private final WebTextField serverField;
     private final WebFileChooserField publicKeyChooser;
     private final WebFileChooserField privateKeyChooser;
@@ -59,8 +59,8 @@ public class ConfigurationDialog extends WebDialog {
 
         // server text field
         groupPanel.add(new WebLabel("Server:"));
-        serverField = new WebTextField(mConf.getString(KontalkConfiguration.SERV_HOST), 24);
-        serverField.setInputPrompt(KontalkConfiguration.DEFAULT_SERV_HOST);
+        serverField = new WebTextField(mConf.getString(KonConfiguration.SERV_HOST), 24);
+        serverField.setInputPrompt(KonConfiguration.DEFAULT_SERV_HOST);
         serverField.setInputPromptFont(serverField.getFont().deriveFont(Font.ITALIC));
         serverField.setHideInputPromptOnFocus(false);
 
@@ -69,28 +69,28 @@ public class ConfigurationDialog extends WebDialog {
 
         // file chooser for key files
         groupPanel.add(new WebLabel("Choose public key:"));
-        publicKeyChooser = createFileChooser(mConf.getString(KontalkConfiguration.ACC_PUB_KEY));
+        publicKeyChooser = createFileChooser(mConf.getString(KonConfiguration.ACC_PUB_KEY));
         groupPanel.add(publicKeyChooser);
         groupPanel.add(new WebSeparator(true, true));
 
         groupPanel.add(new WebLabel("Choose private key:"));
-        privateKeyChooser = createFileChooser(mConf.getString(KontalkConfiguration.ACC_PRIV_KEY));
+        privateKeyChooser = createFileChooser(mConf.getString(KonConfiguration.ACC_PRIV_KEY));
         groupPanel.add(privateKeyChooser);
         groupPanel.add(new WebSeparator(true, true));
 
         groupPanel.add(new WebLabel("Choose bridge certificate:"));
-        bridgeCertChooser = createFileChooser(mConf.getString(KontalkConfiguration.ACC_BRIDGE_CERT));
+        bridgeCertChooser = createFileChooser(mConf.getString(KonConfiguration.ACC_BRIDGE_CERT));
         groupPanel.add(bridgeCertChooser);
         groupPanel.add(new WebSeparator(true, true));
 
         // text field for passphrase
         groupPanel.add(new WebLabel("Passphrase:"));
         passField = new WebTextField(42);
-        if (mConf.getString(KontalkConfiguration.ACC_PASS).isEmpty()) {
+        if (mConf.getString(KonConfiguration.ACC_PASS).isEmpty()) {
             passField.setInputPrompt("Enter passphrase...");
             passField.setHideInputPromptOnFocus(false);
         } else {
-            passField.setText(mConf.getString(KontalkConfiguration.ACC_PASS));
+            passField.setText(mConf.getString(KonConfiguration.ACC_PASS));
         }
         groupPanel.add(passField);
         groupPanel.add(new WebSeparator(true, true));
@@ -144,16 +144,16 @@ public class ConfigurationDialog extends WebDialog {
 
     private void saveConfiguration() {
 
-        mConf.setProperty(KontalkConfiguration.SERV_HOST, serverField.getText());
+        mConf.setProperty(KonConfiguration.SERV_HOST, serverField.getText());
 
         File file = publicKeyChooser.getSelectedFiles().get(0);
-        mConf.setProperty(KontalkConfiguration.ACC_PUB_KEY, file.getAbsolutePath());
+        mConf.setProperty(KonConfiguration.ACC_PUB_KEY, file.getAbsolutePath());
         file = privateKeyChooser.getSelectedFiles().get(0);
-        mConf.setProperty(KontalkConfiguration.ACC_PRIV_KEY, file.getAbsolutePath());
+        mConf.setProperty(KonConfiguration.ACC_PRIV_KEY, file.getAbsolutePath());
         file = bridgeCertChooser.getSelectedFiles().get(0);
-        mConf.setProperty(KontalkConfiguration.ACC_BRIDGE_CERT, file.getAbsolutePath());
+        mConf.setProperty(KonConfiguration.ACC_BRIDGE_CERT, file.getAbsolutePath());
 
-        mConf.setProperty(KontalkConfiguration.ACC_PASS, passField.getText());
+        mConf.setProperty(KonConfiguration.ACC_PASS, passField.getText());
     }
 
 }

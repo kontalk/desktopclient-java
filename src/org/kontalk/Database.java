@@ -32,8 +32,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
-import org.kontalk.model.KontalkMessage;
-import org.kontalk.model.KontalkThread;
+import org.kontalk.model.KonMessage;
+import org.kontalk.model.KonThread;
 import org.kontalk.model.User;
 
 /**
@@ -45,10 +45,10 @@ public class Database {
 
     private static Database INSTANCE = null;
 
-    private final MyKontalk mModel;
+    private final Kontalk mModel;
     private Connection mConn = null;
 
-    private Database(MyKontalk model, String filePath) {
+    private Database(Kontalk model, String filePath) {
         mModel = model;
         // load the sqlite-JDBC driver using the current class loader
         try {
@@ -83,17 +83,17 @@ public class Database {
         try (Statement stat = mConn.createStatement()) {
             stat.executeUpdate(create + User.TABLE + " " + User.CREATE_TABLE);
             stat.executeUpdate(create +
-                    KontalkThread.TABLE +
+                    KonThread.TABLE +
                     " " +
-                    KontalkThread.CREATE_TABLE);
+                    KonThread.CREATE_TABLE);
             stat.executeUpdate(create +
-                    KontalkThread.TABLE_RECEIVER +
+                    KonThread.TABLE_RECEIVER +
                     " " +
-                    KontalkThread.CREATE_TABLE_RECEIVER);
+                    KonThread.CREATE_TABLE_RECEIVER);
             stat.executeUpdate(create +
-                    KontalkMessage.TABLE +
+                    KonMessage.TABLE +
                     " " +
-                    KontalkMessage.CREATE_TABLE);
+                    KonMessage.CREATE_TABLE);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't create tables", ex);
             System.exit(-1);
@@ -231,7 +231,7 @@ public class Database {
             }
     }
 
-    public static void initialize(MyKontalk model, String filePath) {
+    public static void initialize(Kontalk model, String filePath) {
         INSTANCE = new Database(model, filePath);
     }
 

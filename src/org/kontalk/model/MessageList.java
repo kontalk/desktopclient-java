@@ -36,23 +36,23 @@ public class MessageList {
 
     private static MessageList INSTANCE;
 
-    private final HashMap<Integer, KontalkMessage> mMap = new HashMap();
+    private final HashMap<Integer, KonMessage> mMap = new HashMap();
 
     private MessageList() {
     }
 
     public void load() {
         Database db = Database.getInstance();
-        ResultSet resultSet = db.execSelectAll(KontalkMessage.TABLE);
-        KontalkMessage.Direction[] dirValues = KontalkMessage.Direction.values();
-        KontalkMessage.Status[] statusValues = KontalkMessage.Status.values();
+        ResultSet resultSet = db.execSelectAll(KonMessage.TABLE);
+        KonMessage.Direction[] dirValues = KonMessage.Direction.values();
+        KonMessage.Status[] statusValues = KonMessage.Status.values();
         try {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");
                 int threadID = resultSet.getInt("thread_id");
-                KontalkThread thread = ThreadList.getInstance().getThreadByID(threadID);
+                KonThread thread = ThreadList.getInstance().getThreadByID(threadID);
                 int dirIndex = resultSet.getInt("direction");
-                KontalkMessage.Direction dir = dirValues[dirIndex];
+                KonMessage.Direction dir = dirValues[dirIndex];
                 int userID = resultSet.getInt("user_id");
                 User user = UserList.getInstance().getUserByID(userID);
                 String jid = resultSet.getString("jid");
@@ -60,11 +60,11 @@ public class MessageList {
                 Date date = new Date(resultSet.getLong("date"));
                 boolean read = resultSet.getBoolean("read");
                 int statusIndex = resultSet.getInt("status");
-                KontalkMessage.Status status = statusValues[statusIndex];
+                KonMessage.Status status = statusValues[statusIndex];
                 String receiptID = resultSet.getString("receipt_id");
                 String text = resultSet.getString("content");
                 boolean encrypted = resultSet.getBoolean("encrypted");
-                KontalkMessage newMessage = new KontalkMessage(id,
+                KonMessage newMessage = new KonMessage(id,
                         thread,
                         dir,
                         user,
@@ -85,11 +85,11 @@ public class MessageList {
         }
     }
 
-    public KontalkMessage addTo(KontalkThread thread,
+    public KonMessage addTo(KonThread thread,
             User user,
             String text,
             boolean encrypted) {
-        KontalkMessage newMessage = new KontalkMessage(thread, user, text, encrypted);
+        KonMessage newMessage = new KonMessage(thread, user, text, encrypted);
         thread.add(newMessage);
         mMap.put(newMessage.getID(), newMessage);
         return newMessage;
@@ -104,11 +104,11 @@ public class MessageList {
             boolean encrypted) {
         User user = UserList.getInstance().getUserByJID(from);
         ThreadList threadList = ThreadList.getInstance();
-        KontalkThread thread = threadList.getThreadByXMPPID(xmppThreadID);
+        KonThread thread = threadList.getThreadByXMPPID(xmppThreadID);
         if (thread == null)
             thread = threadList.getThreadByUser(user);
 
-        KontalkMessage newMessage = new KontalkMessage(thread,
+        KonMessage newMessage = new KonMessage(thread,
                 user,
                 from,
                 xmppID,
@@ -120,15 +120,15 @@ public class MessageList {
         mMap.put(newMessage.getID(), newMessage);
     }
 
-    public Collection<KontalkMessage> getMessages() {
+    public Collection<KonMessage> getMessages() {
         return mMap.values();
     }
 
 
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
         // TODO performance
-        KontalkMessage message = null;
-        for (KontalkMessage m : mMap.values()) {
+        KonMessage message = null;
+        for (KonMessage m : mMap.values()) {
             if (m.getXMPPID() != null && m.getXMPPID().equals(xmppID))
                 message = m;
         }
@@ -141,8 +141,8 @@ public class MessageList {
 
     public void updateMsgByReceivedReceipt(String receiptID) {
         // TODO performance
-        KontalkMessage message = null;
-        for (KontalkMessage m : mMap.values()) {
+        KonMessage message = null;
+        for (KonMessage m : mMap.values()) {
             if (m.getReceiptID() != null && m.getReceiptID().equals(receiptID))
                 message = m;
         }

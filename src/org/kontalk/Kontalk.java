@@ -31,8 +31,8 @@ import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.PGP;
 import org.kontalk.model.Account;
-import org.kontalk.model.KontalkMessage;
-import org.kontalk.model.KontalkThread;
+import org.kontalk.model.KonMessage;
+import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
@@ -42,14 +42,14 @@ import org.kontalk.view.View;
 /**
  * @author Alexander Bikadorov
  */
-public class MyKontalk {
-    private final static Logger LOGGER = Logger.getLogger(MyKontalk.class.getName());
+public class Kontalk {
+    private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
     public enum Status {
         DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN
     }
 
-    private final KontalkConfiguration mConfig;
+    private final KonConfiguration mConfig;
     private final Client mClient;
     private final View mView;
     private final UserList mUserList;
@@ -62,7 +62,7 @@ public class MyKontalk {
         PGP.registerProvider();
     }
 
-    public MyKontalk(String[] args){
+    public Kontalk(String[] args){
 
         String homeDir = System.getProperty("user.home");
         if (SystemUtils.IS_OS_WINDOWS) {
@@ -74,7 +74,7 @@ public class MyKontalk {
         if (created)
             LOGGER.info("created configuration directory");
 
-        mConfig = KontalkConfiguration.initialize(mConfigDir + "/kontalk.properties");
+        mConfig = KonConfiguration.initialize(mConfigDir + "/kontalk.properties");
 
         parseArgs(args);
 
@@ -134,7 +134,7 @@ public class MyKontalk {
         // TODO new account for each connection?
         try {
             account = new Account(mConfig);
-        } catch (KontalkException ex) {
+        } catch (KonException ex) {
             // something wrong with the account, tell view
             mView.connectionProblem(ex);
             return;
@@ -153,8 +153,8 @@ public class MyKontalk {
         mView.statusChanged(status);
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (KontalkMessage m : mMessageList.getMessages()) {
-                if (m.getStatus() == KontalkMessage.Status.PENDING) {
+            for (KonMessage m : mMessageList.getMessages()) {
+                if (m.getStatus() == KonMessage.Status.PENDING) {
                     mClient.sendMessage(m);
                 }
             }
@@ -169,12 +169,12 @@ public class MyKontalk {
         }
     }
 
-    public void sendText(KontalkThread thread, String text) {
+    public void sendText(KonThread thread, String text) {
         boolean encrypted = false; // TODO
         // TODO no group chat support yet
         Set<User> user = thread.getUser();
         for (User oneUser: user) {
-            KontalkMessage newMessage = mMessageList.addTo(thread, oneUser, text, encrypted);
+            KonMessage newMessage = mMessageList.addTo(thread, oneUser, text, encrypted);
             mClient.sendMessage(newMessage);
         }
     }
@@ -188,7 +188,7 @@ public class MyKontalk {
 
         WebLookAndFeel.install();
 
-        MyKontalk model = new MyKontalk(args);
+        Kontalk model = new Kontalk(args);
         model.start();
         //model.connect();
     }

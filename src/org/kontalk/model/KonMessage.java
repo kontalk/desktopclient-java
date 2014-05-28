@@ -32,8 +32,8 @@ import org.kontalk.Database;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KontalkMessage extends ChangeSubject implements Comparable<KontalkMessage> {
-    private final static Logger LOGGER = Logger.getLogger(KontalkMessage.class.getName());
+public class KonMessage extends ChangeSubject implements Comparable<KonMessage> {
+    private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     public static enum Direction {IN, OUT};
     public static enum Status {IN, //ACKNOWLEDGED, // for incoming
@@ -68,7 +68,7 @@ public class KontalkMessage extends ChangeSubject implements Comparable<KontalkM
             ")";
 
     private final int mID;
-    private final KontalkThread mThread;
+    private final KonThread mThread;
     private final Direction mDir;
     private final User mUser;
     private final String mJID;
@@ -83,7 +83,7 @@ public class KontalkMessage extends ChangeSubject implements Comparable<KontalkM
     /**
      * Used when sending a new message
      */
-    KontalkMessage(KontalkThread thread,
+    KonMessage(KonThread thread,
             User user,
             String text,
             boolean encrypted) {
@@ -105,7 +105,7 @@ public class KontalkMessage extends ChangeSubject implements Comparable<KontalkM
     /**
      * Used when receiving a new message
      */
-    KontalkMessage(KontalkThread thread,
+    KonMessage(KonThread thread,
             User user,
             String jid,
             String xmppID,
@@ -131,8 +131,8 @@ public class KontalkMessage extends ChangeSubject implements Comparable<KontalkM
     /**
      * Used when loading from database
      */
-    KontalkMessage(int id,
-            KontalkThread thread,
+    KonMessage(int id,
+            KonThread thread,
             Direction dir,
             User user,
             String jid,
@@ -161,7 +161,7 @@ public class KontalkMessage extends ChangeSubject implements Comparable<KontalkM
         return mID;
     }
 
-    public KontalkThread getThread() {
+    public KonThread getThread() {
         return mThread;
     }
 
@@ -194,7 +194,7 @@ public class KontalkMessage extends ChangeSubject implements Comparable<KontalkM
     }
 
     @Override
-    public int compareTo(KontalkMessage o) {
+    public int compareTo(KonMessage o) {
         int idComp = Integer.compare(this.mID, o.mID);
         int dateComp = mDate.compareTo(o.getDate());
         return (idComp == 0 || dateComp == 0) ? idComp : dateComp;

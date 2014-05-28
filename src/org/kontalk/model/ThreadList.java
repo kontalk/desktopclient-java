@@ -37,15 +37,15 @@ public class ThreadList extends ChangeSubject {
 
     private static ThreadList INSTANCE = null;
 
-    private final HashMap<Integer, KontalkThread> mMap = new HashMap();
+    private final HashMap<Integer, KonThread> mMap = new HashMap();
 
     private ThreadList() {
     }
 
     public void load() {
         Database db = Database.getInstance();
-        ResultSet receiverRS = db.execSelectAll(KontalkThread.TABLE_RECEIVER);
-        ResultSet threadRS = db.execSelectAll(KontalkThread.TABLE);
+        ResultSet receiverRS = db.execSelectAll(KonThread.TABLE_RECEIVER);
+        ResultSet threadRS = db.execSelectAll(KonThread.TABLE);
         HashMap<Integer, Set<User>> threadUserMapping = new HashMap();
         UserList userList = UserList.getInstance();
         try {
@@ -69,7 +69,7 @@ public class ThreadList extends ChangeSubject {
                 String xmppThreadID = threadRS.getString("xmpp_id");
                 Set<User> userSet = threadUserMapping.get(id);
                 String subject = threadRS.getString("subject");
-                mMap.put(id, new KontalkThread(id, xmppThreadID, userSet, subject));
+                mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject));
             }
             threadRS.close();
         } catch (SQLException ex) {
@@ -78,40 +78,40 @@ public class ThreadList extends ChangeSubject {
         this.changed();
     }
 
-    public Collection<KontalkThread> getThreads() {
+    public Collection<KonThread> getThreads() {
         return mMap.values();
     }
 
     public void save() {
-        for (KontalkThread thread: mMap.values()) {
+        for (KonThread thread: mMap.values()) {
             thread.save();
         }
     }
 
-    public KontalkThread getThreadByUser(User user) {
-        for (KontalkThread thread : mMap.values()) {
+    public KonThread getThreadByUser(User user) {
+        for (KonThread thread : mMap.values()) {
             Set<User> threadUser = thread.getUser();
             if (threadUser.size() == 1 && threadUser.contains(user))
                 return thread;
         }
-        KontalkThread newThread = new KontalkThread(user);
+        KonThread newThread = new KonThread(user);
         mMap.put(newThread.getID(), newThread);
         this.changed();
         return newThread;
     }
 
-    public KontalkThread getThreadByID(int id) {
-        KontalkThread thread = mMap.get(id);
+    public KonThread getThreadByID(int id) {
+        KonThread thread = mMap.get(id);
         if (thread == null)
             LOGGER.warning("can't find thread with id: "+id);
         return thread;
     }
 
-    public KontalkThread getThreadByXMPPID(String xmppThreadID) {
+    public KonThread getThreadByXMPPID(String xmppThreadID) {
         if (xmppThreadID == null) {
             return null;
         }
-        for (KontalkThread thread : mMap.values()) {
+        for (KonThread thread : mMap.values()) {
             if (thread.getXMPPID().equals(xmppThreadID))
                 return thread;
         }

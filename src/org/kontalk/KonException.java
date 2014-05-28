@@ -24,10 +24,10 @@ import java.util.logging.Logger;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KontalkException extends Exception {
-    private final static Logger LOGGER = Logger.getLogger(KontalkException.class.getName());
+public class KonException extends Exception {
+    private final static Logger LOGGER = Logger.getLogger(KonException.class.getName());
 
-    public KontalkException(java.lang.Exception ex) {
+    public KonException(java.lang.Exception ex) {
         super(ex);
     }
 

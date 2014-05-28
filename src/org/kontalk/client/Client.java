@@ -34,10 +34,10 @@ import org.jivesoftware.smack.filter.PacketTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
-import org.kontalk.KontalkConfiguration;
-import org.kontalk.MyKontalk;
+import org.kontalk.KonConfiguration;
+import org.kontalk.Kontalk;
 import org.kontalk.crypto.PersonalKey;
-import org.kontalk.model.KontalkMessage;
+import org.kontalk.model.KonMessage;
 
 /**
  *
@@ -51,17 +51,17 @@ public class Client implements PacketListener, Runnable {
 
     public static enum Command {CONNECT, DISCONNECT};
 
-    private final MyKontalk mModel;
-    private final KontalkConfiguration mConfig;
+    private final Kontalk mModel;
+    private final KonConfiguration mConfig;
     private final EndpointServer mServer;
     protected Connection mConn;
 
     // Limited connection flag.
     //protected boolean mLimited;
 
-    public Client(MyKontalk model) {
+    public Client(Kontalk model) {
         mModel = model;
-        mConfig = KontalkConfiguration.getInstance();
+        mConfig = KonConfiguration.getInstance();
         String network = mConfig.getString("server.network");
         String host = mConfig.getString("server.host");
         int port = mConfig.getInt("server.port");
@@ -75,13 +75,13 @@ public class Client implements PacketListener, Runnable {
     private void connect(PersonalKey key){
 
        this.disconnect();
-       mModel.statusChanged(MyKontalk.Status.CONNECTING);
+       mModel.statusChanged(Kontalk.Status.CONNECTING);
 
        synchronized (this) {
 
             // create connection
             try {
-                mConn = new KontalkConnection(mServer,
+                mConn = new KonConnection(mServer,
                         key.getBridgePrivateKey(),
                         key.getBridgeCertificate());
             } catch (XMPPException | PGPException ex) {
@@ -98,7 +98,7 @@ public class Client implements PacketListener, Runnable {
             }
 
             // listeners
-            RosterListener rl = new MyRosterListener(mConn.getRoster(), this);
+            RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
             mConn.getRoster().addRosterListener(rl);
             PacketFilter messageFilter = new PacketTypeFilter(Message.class);
             mConn.addPacketListener(new MessageListener(this), messageFilter);
@@ -122,7 +122,7 @@ public class Client implements PacketListener, Runnable {
 
         LOGGER.info("Connected!");
 
-        mModel.statusChanged(MyKontalk.Status.CONNECTED);
+        mModel.statusChanged(Kontalk.Status.CONNECTED);
     }
 
     public void disconnect() {
@@ -132,10 +132,10 @@ public class Client implements PacketListener, Runnable {
                 mConn = null;
             }
         }
-        mModel.statusChanged(MyKontalk.Status.DISCONNECTED);
+        mModel.statusChanged(Kontalk.Status.DISCONNECTED);
     }
 
-    public void sendMessage(KontalkMessage message) {
+    public void sendMessage(KonMessage message) {
         Message smackMessage = new Message();
         smackMessage.setPacketID(message.getXMPPID());
         smackMessage.setType(Message.Type.chat);

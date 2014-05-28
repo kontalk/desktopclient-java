@@ -40,8 +40,8 @@ import javax.swing.JList;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.kontalk.model.KontalkMessage;
-import org.kontalk.model.KontalkThread;
+import org.kontalk.model.KonMessage;
+import org.kontalk.model.KonThread;
 
 /**
  *
@@ -69,7 +69,7 @@ public class ThreadView extends WebScrollPane {
         return mCurrentThreadID;
     }
 
-    void showThread(KontalkThread thread) {
+    void showThread(KonThread thread) {
         if (thread == null)
             return;
 
@@ -96,9 +96,9 @@ public class ThreadView extends WebScrollPane {
 
         private final WebListModel<MessageView> mListModel = new WebListModel();
 
-        private final KontalkThread mThread;
+        private final KonThread mThread;
 
-        MessageViewList(KontalkThread thread) {
+        MessageViewList(KonThread thread) {
             mThread = thread;
             mThread.addListener(this);
 
@@ -130,7 +130,7 @@ public class ThreadView extends WebScrollPane {
             // TODO performance
             mListModel.clear();
             // insert messages
-            for (KontalkMessage message: mThread.getMessages()) {
+            for (KonMessage message: mThread.getMessages()) {
                 MessageView newMessageView = new MessageView(message);
                 mListModel.addElement(newMessageView);
             }
@@ -150,12 +150,12 @@ public class ThreadView extends WebScrollPane {
      */
     private class MessageView extends WebPanel implements ChangeListener {
 
-        private final KontalkMessage mMessage;
+        private final KonMessage mMessage;
         private final WebTextArea mTextArea;
         private final int mPreferredTextAreaWidth;
         private final WebLabel mStatusIconLabel;
 
-        MessageView(KontalkMessage message) {
+        MessageView(KonMessage message) {
             mMessage = message;
             mMessage.addListener(this);
 
@@ -167,7 +167,7 @@ public class ThreadView extends WebScrollPane {
             messagePanel.setMargin(1);
 
             // from label
-            if (mMessage.getDir().equals(KontalkMessage.Direction.IN)) {
+            if (mMessage.getDir().equals(KonMessage.Direction.IN)) {
                 WebLabel fromLabel = new WebLabel(mMessage.getJID().substring(0, 8));
                 fromLabel.setFontSize(12);
                 fromLabel.setForeground(Color.BLUE);
@@ -200,7 +200,7 @@ public class ThreadView extends WebScrollPane {
             statusPanel.add(dateLabel);
             messagePanel.add(statusPanel, BorderLayout.SOUTH);
 
-            if (mMessage.getDir().equals(KontalkMessage.Direction.IN)) {
+            if (mMessage.getDir().equals(KonMessage.Direction.IN)) {
                 this.add(messagePanel, BorderLayout.WEST);
             } else {
                 this.add(messagePanel, BorderLayout.EAST);

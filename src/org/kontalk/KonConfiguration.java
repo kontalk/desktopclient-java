@@ -31,10 +31,10 @@ import org.kontalk.client.Client;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KontalkConfiguration extends PropertiesConfiguration {
-    private final static Logger LOGGER = Logger.getLogger(KontalkConfiguration.class.getName());
+public class KonConfiguration extends PropertiesConfiguration {
+    private final static Logger LOGGER = Logger.getLogger(KonConfiguration.class.getName());
 
-    private static KontalkConfiguration INSTANCE = null;
+    private static KonConfiguration INSTANCE = null;
 
     public final static String SERV_NET = "server.network";
     public final static String SERV_HOST = "server.host";
@@ -50,11 +50,11 @@ public class KontalkConfiguration extends PropertiesConfiguration {
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
     public final static int DEFAULT_SERV_PORT = 5222;
 
-    private KontalkConfiguration(String filename) throws ConfigurationException {
+    private KonConfiguration(String filename) throws ConfigurationException {
         super(filename);
     }
 
-    private KontalkConfiguration() {
+    private KonConfiguration() {
         super();
     }
 
@@ -66,12 +66,12 @@ public class KontalkConfiguration extends PropertiesConfiguration {
         }
     }
 
-    static KontalkConfiguration initialize(String filePath) {
+    static KonConfiguration initialize(String filePath) {
         try {
-            INSTANCE = new KontalkConfiguration(filePath);
+            INSTANCE = new KonConfiguration(filePath);
         } catch (ConfigurationException ex) {
             LOGGER.info("Configuration not found. Using default values");
-            INSTANCE = new KontalkConfiguration();
+            INSTANCE = new KonConfiguration();
             INSTANCE.setFileName(filePath);
         }
 
@@ -97,7 +97,7 @@ public class KontalkConfiguration extends PropertiesConfiguration {
         return INSTANCE;
     }
 
-    public static KontalkConfiguration getInstance() {
+    public static KonConfiguration getInstance() {
         return INSTANCE;
     }
 

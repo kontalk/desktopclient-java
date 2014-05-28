@@ -35,8 +35,8 @@ import org.kontalk.Database;
  * A model for a conversation thread consisting of an ordered list of messages.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KontalkThread extends ChangeSubject {
-    private final static Logger LOGGER = Logger.getLogger(KontalkThread.class.getName());
+public class KonThread extends ChangeSubject {
+    private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());
 
     public static final String TABLE = "threads";
     public static final String CREATE_TABLE = "( " +
@@ -58,7 +58,7 @@ public class KontalkThread extends ChangeSubject {
             "FOREIGN KEY (user_id) REFERENCES user (_id) " +
             ")";
 
-    private final TreeSet<KontalkMessage> mSet = new TreeSet();
+    private final TreeSet<KonMessage> mSet = new TreeSet();
 
     private final int mID;
     private final String mXMPPID;
@@ -69,7 +69,7 @@ public class KontalkThread extends ChangeSubject {
     /**
      * Used when creating a new thread
      */
-    KontalkThread(User user) {
+    KonThread(User user) {
         // Kontalk Android client is ignoring it, so set it to null for now
         //mXMPPID = StringUtils.randomString(8);
         mXMPPID = null;
@@ -93,14 +93,14 @@ public class KontalkThread extends ChangeSubject {
     /**
      * Used for loading from database
      */
-    KontalkThread(int id, String xmppID, Set<User> user, String subject) {
+    KonThread(int id, String xmppID, Set<User> user, String subject) {
         mID = id;
         mXMPPID = xmppID;
         mUser = user;
         mSubject = subject;
     }
 
-    public Set<KontalkMessage> getMessages() {
+    public Set<KonMessage> getMessages() {
         return mSet;
     }
 
@@ -162,7 +162,7 @@ public class KontalkThread extends ChangeSubject {
 
     }
 
-    public boolean add(KontalkMessage message) {
+    public boolean add(KonMessage message) {
         if (mSet.contains(message)) {
             LOGGER.warning("message already in thread, ID: " + message.getID());
             return false;

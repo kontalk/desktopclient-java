@@ -29,17 +29,17 @@ import org.apache.commons.configuration.Configuration;
 
 import org.kontalk.crypto.PersonalKey;
 import org.bouncycastle.openpgp.PGPException;
-import org.kontalk.KontalkException;
-import org.kontalk.MyKontalk;
+import org.kontalk.KonException;
+import org.kontalk.Kontalk;
 
 public class Account {
-    private final static Logger LOGGER = Logger.getLogger(MyKontalk.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
     
     private final Configuration mConfig;
     private final PersonalKey mKey;
     
 
-    public Account(Configuration config) throws KontalkException {
+    public Account(Configuration config) throws KonException {
         mConfig = config;
         
         // read key files
@@ -54,7 +54,7 @@ public class Account {
              mKey = PersonalKey.load(privateKeyData, publicKeyData, passphrase, bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
             LOGGER.log(Level.INFO, "can't load personal key", ex);
-            throw new KontalkException(ex);
+            throw new KonException(ex);
         }
     }
     
@@ -62,13 +62,13 @@ public class Account {
         return mKey;
     }
     
-    private static byte[] readBytes(String path) throws KontalkException {
+    private static byte[] readBytes(String path) throws KonException {
         byte[] bytes = null;
         try {
             bytes = Files.readAllBytes(Paths.get(path));
         } catch (IOException ex) {
             LOGGER.warning("can't read key file: "+ex.getLocalizedMessage());
-            throw new KontalkException(ex);
+            throw new KonException(ex);
         }
         return bytes;
     }

@@ -29,9 +29,9 @@ import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.JTextField;
 import javax.swing.ToolTipManager;
-import org.kontalk.KontalkException;
-import org.kontalk.MyKontalk;
-import org.kontalk.model.KontalkThread;
+import org.kontalk.KonException;
+import org.kontalk.Kontalk;
+import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
@@ -45,7 +45,7 @@ public class View {
 
     final static Color BLUE = new Color(131, 173, 239);
 
-    private final MyKontalk mModel;
+    private final Kontalk mModel;
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
     private final ThreadView mThreadView;
@@ -54,7 +54,7 @@ public class View {
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
 
-    public View(MyKontalk model) {
+    public View(Kontalk model) {
         mModel = model;
 
         ToolTipManager.sharedInstance().setInitialDelay(200);
@@ -97,10 +97,10 @@ public class View {
         mMainFrame.setVisible(true);
 
         // TODO: always disconnected?
-        this.statusChanged(MyKontalk.Status.DISCONNECTED);
+        this.statusChanged(Kontalk.Status.DISCONNECTED);
     }
 
-    public void statusChanged(MyKontalk.Status status) {
+    public void statusChanged(Kontalk.Status status) {
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText("Connecting...");
@@ -123,7 +123,7 @@ public class View {
             }
     }
 
-    public void threadChanged(KontalkThread thread) {
+    public void threadChanged(KonThread thread) {
         if (mThreadView.getCurrentThreadID() == thread.getID()) {
             mThreadView.showThread(thread);
         }
@@ -133,7 +133,7 @@ public class View {
         this.showConfig("Default text here");
     }
 
-    public void connectionProblem(KontalkException ex) {
+    public void connectionProblem(KonException ex) {
         this.showConfig("Help Message here");
     }
 
@@ -158,21 +158,21 @@ public class View {
         if (user == null) {
             mThreadView.showThread(null);
         } else {
-            KontalkThread thread = ThreadList.getInstance().getThreadByUser(user);
+            KonThread thread = ThreadList.getInstance().getThreadByUser(user);
             mThreadListView.selectThread(thread.getID());
             mMainFrame.selectTab(MainFrame.Tab.THREADS);
             mThreadView.showThread(thread);
         }
     }
 
-    void selectedThreadChanged(KontalkThread thread) {
+    void selectedThreadChanged(KonThread thread) {
         if (thread == null)
             return;
         mThreadView.showThread(thread);
     }
 
     private void sendText() {
-       KontalkThread thread = mThreadListView.getSelectedThread();
+       KonThread thread = mThreadListView.getSelectedThread();
        if (thread == null) {
            // TODO
            // nothing selected

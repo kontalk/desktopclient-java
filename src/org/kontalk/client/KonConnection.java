@@ -43,12 +43,12 @@ import org.jivesoftware.smack.packet.Presence;
 import java.util.logging.Level;
 
 
-public class KontalkConnection extends XMPPConnection {
-    private final static Logger LOGGER = Logger.getLogger(KontalkConnection.class.getName());
+public class KonConnection extends XMPPConnection {
+    private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
     protected EndpointServer mServer;
 
-    private KontalkConnection(EndpointServer server) throws XMPPException {
+    private KonConnection(EndpointServer server) throws XMPPException {
         //super(new AndroidConnectionConfiguration(server.getHost(), server.getPort()));
         super(new ConnectionConfiguration(server.getHost(), server.getPort()));
 
@@ -70,7 +70,7 @@ public class KontalkConnection extends XMPPConnection {
         config.setSendPresence(false);
     }
 
-    public KontalkConnection(EndpointServer server, PrivateKey privateKey, X509Certificate bridgeCert) throws XMPPException {
+    public KonConnection(EndpointServer server, PrivateKey privateKey, X509Certificate bridgeCert) throws XMPPException {
         this(server);
 
         setupSSL(privateKey, bridgeCert);

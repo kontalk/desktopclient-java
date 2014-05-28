@@ -44,7 +44,7 @@ import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 import javax.swing.ScrollPaneConstants;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
-import org.kontalk.KontalkConfiguration;
+import org.kontalk.KonConfiguration;
 
 /**
  *
@@ -58,7 +58,7 @@ public class MainFrame extends WebFrame {
 
     public static enum Tab {THREADS, USER};
 
-    private final KontalkConfiguration mConf = KontalkConfiguration.getInstance();
+    private final KonConfiguration mConf = KonConfiguration.getInstance();
     private final WebTabbedPane mTabbedPane;
 
     public MainFrame(final View viewModel,
@@ -71,8 +71,8 @@ public class MainFrame extends WebFrame {
 
         // general view + behaviour
         this.setTitle("Kontalk Java Client");
-        this.setSize(mConf.getInt(KontalkConfiguration.VIEW_FRAME_WIDTH),
-                mConf.getInt(KontalkConfiguration.VIEW_FRAME_HEIGHT));
+        this.setSize(mConf.getInt(KonConfiguration.VIEW_FRAME_WIDTH),
+                mConf.getInt(KonConfiguration.VIEW_FRAME_HEIGHT));
 
         if (ICON_IMAGE_URL != null) {
             this.setIconImage(Toolkit.getDefaultToolkit().createImage(ICON_IMAGE_URL));
@@ -228,7 +228,7 @@ public class MainFrame extends WebFrame {
     }
 
     void save() {
-        mConf.setProperty(KontalkConfiguration.VIEW_FRAME_WIDTH, this.getWidth());
-        mConf.setProperty(KontalkConfiguration.VIEW_FRAME_HEIGHT, this.getHeight());
+        mConf.setProperty(KonConfiguration.VIEW_FRAME_WIDTH, this.getWidth());
+        mConf.setProperty(KonConfiguration.VIEW_FRAME_HEIGHT, this.getHeight());
     }
 }

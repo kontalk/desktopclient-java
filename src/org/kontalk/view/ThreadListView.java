@@ -51,7 +51,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
-import org.kontalk.model.KontalkThread;
+import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 
@@ -136,7 +136,7 @@ public class ThreadListView extends WebList implements ChangeListener {
         }
     }
 
-    KontalkThread getSelectedThread() {
+    KonThread getSelectedThread() {
         if (this.getSelectedIndex() == -1)
             return null;
         return mListModel.get(this.getSelectedIndex()).getThread();
@@ -149,7 +149,7 @@ public class ThreadListView extends WebList implements ChangeListener {
     @Override
     public void stateChanged(ChangeEvent e) {
         mListModel.clear();
-        for (KontalkThread thread: mThreadList.getThreads()) {
+        for (KonThread thread: mThreadList.getThreads()) {
             ThreadView newThreadView = new ThreadView(thread);
             mListModel.addElement(newThreadView);
         }
@@ -157,11 +157,11 @@ public class ThreadListView extends WebList implements ChangeListener {
 
     private class ThreadView extends WebPanel {
 
-        private final KontalkThread mThread;
+        private final KonThread mThread;
         private final WebLabel mSubjectLabel;
         private final WebLabel mUserLabel;
 
-        ThreadView(KontalkThread thread) {
+        ThreadView(KonThread thread) {
             mThread = thread;
 
             this.setMargin(5);
@@ -180,7 +180,7 @@ public class ThreadListView extends WebList implements ChangeListener {
             updateView();
         }
 
-        KontalkThread getThread() {
+        KonThread getThread() {
             return mThread;
         }
 

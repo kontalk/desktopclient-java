@@ -31,13 +31,13 @@ import org.kontalk.model.UserList;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class MyRosterListener implements RosterListener {
-    private final static Logger LOGGER = Logger.getLogger(MyRosterListener.class.getName());
+public class KonRosterListener implements RosterListener {
+    private final static Logger LOGGER = Logger.getLogger(KonRosterListener.class.getName());
 
     private final Roster mRoster;
     private final Client mClient;
 
-    MyRosterListener(Roster roster, Client client) {
+    KonRosterListener(Roster roster, Client client) {
         mRoster = roster;
         mClient = client;
     }
