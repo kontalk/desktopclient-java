@@ -29,6 +29,8 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -80,17 +82,12 @@ public class ThreadView extends WebScrollPane {
     }
 
     void showThread(KonThread thread) {
-        if (thread == null)
-            return;
 
         if (!mThreadCache.containsKey(thread.getID())) {
             mThreadCache.put(thread.getID(), new MessageViewList(thread));
         }
         MessageViewList list = mThreadCache.get(thread.getID());
         this.setViewportView(list);
-        list.update();
-        // have to do it twice somehow
-        list.update();
 
         mCurrentThreadID = thread.getID();
     }
@@ -123,6 +120,15 @@ public class ThreadView extends WebScrollPane {
             this.setModel(mListModel);
             this.setCellRenderer(new MessageListRenderer());
 
+            this.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    // cell height may have changed, the list doesn't detect
+                    // this, so we have to invalidate the cell size cache
+                    recache();
+                }
+            });
+
             // beautiful swing option to disable selection
             this.setSelectionModel(new DefaultListSelectionModel() {
                 @Override
@@ -132,6 +138,12 @@ public class ThreadView extends WebScrollPane {
                 public void addSelectionInterval(int index0, int index1) {
                 }
             });
+
+            this.update();
+
+            // TODO doesnt work again
+            if (!mListModel.isEmpty())
+                this.ensureIndexIsVisible(mListModel.getSize() -1 );
         }
 
         private void update() {
@@ -142,8 +154,6 @@ public class ThreadView extends WebScrollPane {
                 MessageView newMessageView = new MessageView(message);
                 mListModel.addElement(newMessageView);
             }
-            if (!mListModel.isEmpty())
-                this.ensureIndexIsVisible(mListModel.getSize() -1 );
         }
 
         @Override
@@ -151,6 +161,10 @@ public class ThreadView extends WebScrollPane {
             update();
         }
 
+        private void recache() {
+            this.setFixedCellHeight(1);
+            this.setFixedCellHeight(-1);
+        }
     }
 
     /**
@@ -176,7 +190,15 @@ public class ThreadView extends WebScrollPane {
 
             // from label
             if (mMessage.getDir().equals(KonMessage.Direction.IN)) {
-                WebLabel fromLabel = new WebLabel(mMessage.getJID().substring(0, 8));
+                String from;
+                if (mMessage.getUser().getName() != null) {
+                    from = mMessage.getUser().getName();
+                } else {
+                    from = mMessage.getJID();
+                    if (from.length() > 40)
+                        from = from.substring(0, 8);
+                }
+                WebLabel fromLabel = new WebLabel(" "+from);
                 fromLabel.setFontSize(12);
                 fromLabel.setForeground(Color.BLUE);
                 fromLabel.setItalicFont();
@@ -227,9 +249,14 @@ public class ThreadView extends WebScrollPane {
         }
 
         private void resize(int listWidth) {
+            // on the very first call the list width is zero
+            //if (listWidth == 0)
+            //    listWidth = 500;
+
             int maxWidth = (int)(listWidth * 0.8);
             int width = Math.min(mPreferredTextAreaWidth, maxWidth);
-            mTextArea.setSize(width, Short.MAX_VALUE);
+            // height is reset later
+            mTextArea.setSize(width, mTextArea.getPreferredSize().height);
         }
 
         private void update() {
@@ -244,13 +271,13 @@ public class ThreadView extends WebScrollPane {
                     mStatusIconLabel.setIcon(DELIVERED_ICON);
                     break;
             }
-            // need to repaint parent to see changes
-            doRepaint();
         }
 
         @Override
         public void stateChanged(ChangeEvent e) {
             update();
+            // need to repaint parent to see changes
+            doRepaint();
         }
     }
 

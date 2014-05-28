@@ -123,12 +123,6 @@ public class View {
             }
     }
 
-    public void threadChanged(KonThread thread) {
-        if (mThreadView.getCurrentThreadID() == thread.getID()) {
-            mThreadView.showThread(thread);
-        }
-    }
-
     public void showConfig() {
         this.showConfig("Default text here");
     }
@@ -155,19 +149,19 @@ public class View {
     }
 
     void selectThreadByUser(User user) {
-        if (user == null) {
-            mThreadView.showThread(null);
-        } else {
-            KonThread thread = ThreadList.getInstance().getThreadByUser(user);
-            mThreadListView.selectThread(thread.getID());
-            mMainFrame.selectTab(MainFrame.Tab.THREADS);
-            mThreadView.showThread(thread);
-        }
+        if (user == null)
+            return;
+
+        KonThread thread = ThreadList.getInstance().getThreadByUser(user);
+        mThreadListView.selectThread(thread.getID());
+        mMainFrame.selectTab(MainFrame.Tab.THREADS);
+        mThreadView.showThread(thread);
     }
 
     void selectedThreadChanged(KonThread thread) {
         if (thread == null)
             return;
+
         mThreadView.showThread(thread);
     }
 

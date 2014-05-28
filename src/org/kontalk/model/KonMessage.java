@@ -169,6 +169,10 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         return mDir;
     }
 
+    public User getUser() {
+        return mUser;
+    }
+
     public String getJID() {
         return mJID;
     }
