@@ -70,14 +70,15 @@ public class UserList extends ChangeSubject {
             return mMap.values();
     }
 
-    public void addUser(String jid, String name) {
+    public User addUser(String jid, String name) {
         jid = StringUtils.parseBareAddress(jid);
         if (mMap.containsKey(jid))
-            return;
+            return null;
         User newUser = new User(jid, name);
         mMap.put(jid, newUser);
         this.changed();
         this.save();
+        return newUser;
     }
 
     public void save() {

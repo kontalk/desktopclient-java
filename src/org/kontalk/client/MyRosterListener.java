@@ -24,6 +24,7 @@ import org.jivesoftware.smack.Roster;
 import org.jivesoftware.smack.RosterEntry;
 import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.packet.Presence;
+import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
 /**
@@ -33,10 +34,12 @@ import org.kontalk.model.UserList;
 public class MyRosterListener implements RosterListener {
     private final static Logger LOGGER = Logger.getLogger(MyRosterListener.class.getName());
 
-    private Roster mRoster;
+    private final Roster mRoster;
+    private final Client mClient;
 
-    MyRosterListener(Roster roster) {
+    MyRosterListener(Roster roster, Client client) {
         mRoster = roster;
+        mClient = client;
     }
 
     @Override
@@ -46,8 +49,10 @@ public class MyRosterListener implements RosterListener {
 
         UserList userList = UserList.getInstance();
         for (RosterEntry entry: mRoster.getEntries()) {
-            System.out.println(entry.getUser()+" "+entry.getType());
-            userList.addUser(entry.getUser(), entry.getName());
+            User newUser = userList.addUser(entry.getUser(), entry.getName());
+            if (newUser != null) {
+                mClient.sendVCardRequest(newUser.getJID());
+            }
         }
     }
 

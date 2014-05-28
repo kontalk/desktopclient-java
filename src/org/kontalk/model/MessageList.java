@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -84,14 +85,14 @@ public class MessageList {
         }
     }
 
-    public String addTo(KontalkThread thread,
+    public KontalkMessage addTo(KontalkThread thread,
             User user,
             String text,
             boolean encrypted) {
         KontalkMessage newMessage = new KontalkMessage(thread, user, text, encrypted);
         thread.add(newMessage);
         mMap.put(newMessage.getID(), newMessage);
-        return newMessage.getXMPPID();
+        return newMessage;
     }
 
     public void addFrom(String from,
@@ -118,6 +119,11 @@ public class MessageList {
         thread.add(newMessage);
         mMap.put(newMessage.getID(), newMessage);
     }
+
+    public Collection<KontalkMessage> getMessages() {
+        return mMap.values();
+    }
+
 
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
         // TODO performance

@@ -25,6 +25,7 @@ import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.Connection;
 import org.jivesoftware.smack.PacketListener;
+import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.AndFilter;
 import org.jivesoftware.smack.filter.NotFilter;
@@ -36,6 +37,7 @@ import org.jivesoftware.smack.packet.Packet;
 import org.kontalk.KontalkConfiguration;
 import org.kontalk.MyKontalk;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.model.KontalkMessage;
 
 /**
  *
@@ -96,7 +98,8 @@ public class Client implements PacketListener, Runnable {
             }
 
             // listeners
-            mConn.getRoster().addRosterListener(new MyRosterListener(mConn.getRoster()));
+            RosterListener rl = new MyRosterListener(mConn.getRoster(), this);
+            mConn.getRoster().addRosterListener(rl);
             PacketFilter messageFilter = new PacketTypeFilter(Message.class);
             mConn.addPacketListener(new MessageListener(this), messageFilter);
             PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
@@ -132,14 +135,14 @@ public class Client implements PacketListener, Runnable {
         mModel.statusChanged(MyKontalk.Status.DISCONNECTED);
     }
 
-    public void sendText(String xmppID, String recipientJID, String text) {
-        Message m = new Message();
-        m.setPacketID(xmppID);
-        m.setType(Message.Type.chat);
-        m.setTo(recipientJID);
-        m.setBody(text);
-        m.addExtension(new ServerReceiptRequest());
-        sendPacket(m);
+    public void sendMessage(KontalkMessage message) {
+        Message smackMessage = new Message();
+        smackMessage.setPacketID(message.getXMPPID());
+        smackMessage.setType(Message.Type.chat);
+        smackMessage.setTo(message.getJID());
+        smackMessage.setBody(message.getText());
+        smackMessage.addExtension(new ServerReceiptRequest());
+        sendPacket(smackMessage);
     }
 
     public void sendVCardRequest(String jid) {
@@ -194,6 +197,5 @@ public class Client implements PacketListener, Runnable {
             command = c;
             args = a;
         }
-
     }
 }

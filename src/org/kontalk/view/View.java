@@ -107,8 +107,6 @@ public class View {
                 break;
             case CONNECTED:
                 mThreadView.setColor(Color.white);
-                mSendTextField.setEditable(true);
-                mSendButton.setEnabled(true);
                 mStatusBarLabel.setText("Connected");
                 break;
             case DISCONNECTING:
@@ -116,8 +114,6 @@ public class View {
                 break;
             case DISCONNECTED:
                 mThreadView.setColor(Color.lightGray);
-                mSendTextField.setEditable(false);
-                mSendButton.setEnabled(false);
                 mStatusBarLabel.setText("Not connected");
                 break;
             case SHUTTING_DOWN:

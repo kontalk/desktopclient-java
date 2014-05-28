@@ -31,6 +31,7 @@ import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.PGP;
 import org.kontalk.model.Account;
+import org.kontalk.model.KontalkMessage;
 import org.kontalk.model.KontalkThread;
 import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
@@ -151,6 +152,12 @@ public class MyKontalk {
     public void statusChanged(Status status){
         mView.statusChanged(status);
         if (status == Status.CONNECTED) {
+            // send all pending messages
+            for (KontalkMessage m : mMessageList.getMessages()) {
+                if (m.getStatus() == KontalkMessage.Status.PENDING) {
+                    mClient.sendMessage(m);
+                }
+            }
             // send vcard/public key requests for kontalk users with missing key
             // TODO also do this when new user is created from roster
             for (User user : mUserList.getUser()) {
@@ -167,8 +174,8 @@ public class MyKontalk {
         // TODO no group chat support yet
         Set<User> user = thread.getUser();
         for (User oneUser: user) {
-            String xmppID = mMessageList.addTo(thread, oneUser, text, encrypted);
-            mClient.sendText(xmppID, oneUser.getJID(), text);
+            KontalkMessage newMessage = mMessageList.addTo(thread, oneUser, text, encrypted);
+            mClient.sendMessage(newMessage);
         }
     }
 

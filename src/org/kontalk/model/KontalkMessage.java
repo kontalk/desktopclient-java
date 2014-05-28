@@ -173,7 +173,7 @@ public class KontalkMessage extends ChangeSubject implements Comparable<KontalkM
         return mJID;
     }
 
-    String getXMPPID() {
+    public String getXMPPID() {
         return mXMPPID;
     }
 
