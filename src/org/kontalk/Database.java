@@ -54,7 +54,7 @@ public class Database {
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException ex) {
-            LOGGER.log(Level.WARNING, "sqlite-JDBC driver not found", ex);
+            LOGGER.log(Level.SEVERE, "sqlite-JDBC driver not found", ex);
             mModel.shutDown();
         }
 
@@ -64,7 +64,7 @@ public class Database {
         } catch(SQLException ex) {
           // if the error message is "out of memory",
           // it probably means no database file is found
-          LOGGER.log(Level.WARNING, "can't create database connection", ex);
+          LOGGER.log(Level.SEVERE, "can't create database connection", ex);
           mModel.shutDown();
         }
 
@@ -75,10 +75,6 @@ public class Database {
         }
 
         // make sure tables are created
-        createTables();
-    }
-
-    private void createTables() {
         String create = "CREATE TABLE IF NOT EXISTS ";
         try (Statement stat = mConn.createStatement()) {
             stat.executeUpdate(create + User.TABLE + " " + User.CREATE_TABLE);
@@ -95,19 +91,19 @@ public class Database {
                     " " +
                     KonMessage.CREATE_TABLE);
         } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't create tables", ex);
-            System.exit(-1);
+            LOGGER.log(Level.SEVERE, "can't create tables", ex);
+            mModel.shutDown();
         }
     }
 
     public void close() {
-        if(mConn!= null) {
-            try {
-                mConn.close();
-            } catch(SQLException ex) {
-                // connection close failed.
-                System.err.println(ex);
-            }
+        if(mConn == null)
+            return;
+        try {
+            mConn.close();
+        } catch(SQLException ex) {
+            // connection close failed.
+            System.err.println(ex);
         }
     }
 

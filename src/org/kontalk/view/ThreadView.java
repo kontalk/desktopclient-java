@@ -83,11 +83,21 @@ public class ThreadView extends WebScrollPane {
 
     void showThread(KonThread thread) {
 
+        boolean n = false;
         if (!mThreadCache.containsKey(thread.getID())) {
             mThreadCache.put(thread.getID(), new MessageViewList(thread));
+            n = true;
         }
         MessageViewList list = mThreadCache.get(thread.getID());
         this.setViewportView(list);
+
+        if (list.getModelSize() > 0 && n) {
+            // scroll down
+            // TODO doesn't work again
+            list.ensureIndexIsVisible(list.getModelSize() -1);
+            //JScrollBar vertical = this.getVerticalScrollBar();
+            //vertical.setValue(vertical.getMaximum());
+        }
 
         mCurrentThreadID = thread.getID();
     }
@@ -140,10 +150,6 @@ public class ThreadView extends WebScrollPane {
             });
 
             this.update();
-
-            // TODO doesnt work again
-            if (!mListModel.isEmpty())
-                this.ensureIndexIsVisible(mListModel.getSize() -1 );
         }
 
         private void update() {

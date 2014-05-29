@@ -124,7 +124,8 @@ public class Kontalk {
         mUserList.save();
         mThreadList.save();
         mClient.disconnect();
-        Database.getInstance().close();
+        if (Database.getInstance() != null)
+            Database.getInstance().close();
         mConfig.saveToFile();
         System.exit(0);
     }
