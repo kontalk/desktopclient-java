@@ -25,6 +25,7 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.PacketExtension;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.jivesoftware.smack.util.Base64;
 import org.jivesoftware.smackx.ChatState;
 import org.jivesoftware.smackx.packet.DelayInformation;
 import org.kontalk.model.MessageList;
@@ -116,10 +117,12 @@ class MessageListener implements PacketListener {
         // get text from body
         String text = null;
         boolean encrypted;
-        PacketExtension encryption = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
-        if (encryption != null && encryption instanceof E2EEncryption) {
+        PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
+        if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
+            E2EEncryption encryption = (E2EEncryption) encryptionExt;
+            // decrypt later
+            text = Base64.encodeBytes(encryption.getData());
             encrypted = true;
-            LOGGER.info("encryption not supported yet .(");
         } else {
             // just use message body
             encrypted = false;

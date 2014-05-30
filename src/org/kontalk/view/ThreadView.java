@@ -266,7 +266,7 @@ public class ThreadView extends WebScrollPane {
         }
 
         private void update() {
-            switch (mMessage.getStatus()) {
+            switch (mMessage.getReceiptStatus()) {
                 case PENDING :
                     mStatusIconLabel.setIcon(PENDING_ICON);
                     break;

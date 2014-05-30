@@ -26,30 +26,34 @@ import java.security.cert.CertificateException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.Configuration;
-
-import org.kontalk.crypto.PersonalKey;
 import org.bouncycastle.openpgp.PGPException;
+import org.kontalk.KonConfiguration;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
+import org.kontalk.crypto.PersonalKey;
 
 public class Account {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
-    
-    private final Configuration mConfig;
-    private final PersonalKey mKey;
-    
 
-    public Account(Configuration config) throws KonException {
-        mConfig = config;
-        
+    private final static Account INSTANCE = new Account();
+
+    private PersonalKey mKey;
+
+    private Account() {
+    }
+
+    public void reload() throws KonException {
+
+        Configuration config = KonConfiguration.getInstance();
+
         // read key files
-        byte[] publicKeyData = readBytes(mConfig.getString("account.public_key"));
-        byte[] privateKeyData = readBytes(mConfig.getString("account.private_key"));
-        byte[] bridgeCertData = readBytes(mConfig.getString("account.bridge_cert"));
+        byte[] publicKeyData = readBytes(config.getString("account.public_key"));
+        byte[] privateKeyData = readBytes(config.getString("account.private_key"));
+        byte[] bridgeCertData = readBytes(config.getString("account.bridge_cert"));
         //mBridgeKeyData = readBytes(mConfig.getString("account.bridge_key"));
-        
+
         // load key
-        String passphrase = mConfig.getString("account.passphrase");
+        String passphrase = config.getString("account.passphrase");
         try {
              mKey = PersonalKey.load(privateKeyData, publicKeyData, passphrase, bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
@@ -57,11 +61,15 @@ public class Account {
             throw new KonException(ex);
         }
     }
-    
+
     public PersonalKey getPersonalKey() {
         return mKey;
     }
-    
+
+    public static Account getInstance() {
+        return INSTANCE;
+    }
+
     private static byte[] readBytes(String path) throws KonException {
         byte[] bytes = null;
         try {

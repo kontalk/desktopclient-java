@@ -23,7 +23,7 @@ public final class MessageUtils {
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
 
     private MessageUtils() {}
-    
+
     public static String bytesToHex(byte[] bytes) {
         char[] hexChars = new char[bytes.length * 2];
         int v;
@@ -34,5 +34,4 @@ public final class MessageUtils {
         }
         return new String(hexChars);
     }
-
 }

@@ -160,6 +160,15 @@ public class User {
         UserList.getInstance().changed();
     }
 
+
+    public byte[] getKey() {
+        return Base64.decode(mKey);
+    }
+
+    public boolean hasKey() {
+        return mKey != null;
+    }
+
     public String getFingerprint() {
         return mFingerprint;
     }

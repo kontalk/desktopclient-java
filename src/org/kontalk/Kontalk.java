@@ -131,10 +131,10 @@ public class Kontalk {
     }
 
     public void connect() {
-        Account account;
+        Account account = Account.getInstance();
         // TODO new account for each connection?
         try {
-            account = new Account(mConfig);
+            account.reload();
         } catch (KonException ex) {
             // something wrong with the account, tell view
             mView.connectionProblem(ex);
@@ -155,7 +155,7 @@ public class Kontalk {
         if (status == Status.CONNECTED) {
             // send all pending messages
             for (KonMessage m : mMessageList.getMessages()) {
-                if (m.getStatus() == KonMessage.Status.PENDING) {
+                if (m.getReceiptStatus() == KonMessage.Status.PENDING) {
                     mClient.sendMessage(m);
                 }
             }

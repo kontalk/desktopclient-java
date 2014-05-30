@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.Database;
+import org.kontalk.crypto.Coder;
 
 /**
  *
@@ -116,8 +117,14 @@ public class MessageList {
                 receiptID,
                 text,
                 encrypted);
+
+        // TODO lets see what happens
+        Coder.decryptMessage(newMessage);
+
         thread.add(newMessage);
         mMap.put(newMessage.getID(), newMessage);
+
+
     }
 
     public Collection<KonMessage> getMessages() {

@@ -220,6 +220,8 @@ public class Database {
                 stat.setLong(i+1, ((Date) value).getTime());
             } else if (value instanceof Boolean) {
                 stat.setBoolean(i+1, (boolean) value);
+            } else if (value instanceof Enum) {
+                stat.setInt(i+1, ((Enum) value).ordinal());
             } else if (value == null){
                 stat.setNull(i+1, Types.NULL);
             } else {

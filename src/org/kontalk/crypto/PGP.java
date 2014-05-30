@@ -308,7 +308,9 @@ public class PGP {
     	return getUserId(pk, host);
     }
 
-    /** Returns the first master key found in the given public keyring. */
+    /** Returns the first master key found in the given public keyring.
+     *  Return null if no masterkey was found.
+     */
     public static PGPPublicKey getMasterKey(PGPPublicKeyRing publicKeyring) {
         @SuppressWarnings("unchecked")
         Iterator<PGPPublicKey> iter = publicKeyring.getPublicKeys();

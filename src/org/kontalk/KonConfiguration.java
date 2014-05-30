@@ -100,6 +100,4 @@ public class KonConfiguration extends PropertiesConfiguration {
     public static KonConfiguration getInstance() {
         return INSTANCE;
     }
-
-
 }

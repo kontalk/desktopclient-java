@@ -19,6 +19,7 @@
 package org.kontalk.model;
 
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Packet;
 import org.kontalk.Database;
+import org.kontalk.crypto.Coder;
 
 /**
  *
@@ -51,17 +53,22 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
             "jid TEXT NOT NULL, " +
             // optional, but required for receipts
             "xmpp_id TEXT UNIQUE, " +
-            // this is the create/received timestamp
-            // this will not change after insert EVER
+            // unix time, create/received timestamp
             "date INTEGER NOT NULL, " +
+            // boolean, message was seen by me
             "read INTEGER NOT NULL, " +
-            // server receipt status
-            "status INTEGER NOT NULL, " +
+            // enum, server receipt status
+            "receipt_status INTEGER NOT NULL, " +
             // receipt id
             "receipt_id TEXT UNIQUE, " +
 
             "content BLOB, " +
-            "encrypted INTEGER NOT NULL, " +
+            // enum, encryption status
+            "encryption_status INTEGER NOT NULL, " +
+            // enum, can only tell if signed after encryption attempt
+            "signing_status INTEGER, " +
+            // encryption and signing errors
+            "security_errors INTEGER, " +
 
             "FOREIGN KEY (thread_id) REFERENCES thread (_id), " +
             "FOREIGN KEY (user_id) REFERENCES user (_id) " +
@@ -75,10 +82,12 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
     private final String mXMPPID;
     private final Date mDate;
     private boolean mRead;
-    private Status mStatus;
+    private Status mReceiptStatus;
     private String mReceiptID;
-    private final String mText;
-    private final boolean mEncrypted;
+    private String mText;
+    private Coder.Encryption mEncryption;
+    private Coder.Signing mSigning;
+    private final EnumSet<Coder.Error> mSecurityErrors;
 
     /**
      * Used when sending a new message
@@ -94,10 +103,18 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         mXMPPID = Packet.nextID();
         mDate = new Date(); // "now"
         mRead = false;
-        mStatus = Status.PENDING;
+        mReceiptStatus = Status.PENDING;
         mReceiptID = null;
         mText = text;
-        mEncrypted = encrypted;
+        // if we want encryption we also want signing, doesn't hurt
+        if (encrypted) {
+            mEncryption = Coder.Encryption.ENCRYPTED;
+            mSigning = Coder.Signing.SIGNED;
+        } else {
+            mEncryption = Coder.Encryption.NOT;
+            mSigning = Coder.Signing.NOT;
+        }
+        mSecurityErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();
     }
@@ -120,10 +137,15 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         mXMPPID = xmppID;
         mDate = date;
         mRead = false;
-        mStatus = Status.IN;
+        mReceiptStatus = Status.IN;
         mReceiptID = receiptID;
         mText = text;
-        mEncrypted = encrypted;
+        if (encrypted)
+            mEncryption = Coder.Encryption.ENCRYPTED;
+        else
+            mEncryption = Coder.Encryption.NOT;
+        mSigning = null; // we don't know yet
+        mSecurityErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();
     }
@@ -151,10 +173,13 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         mXMPPID = xmppID;
         mDate = date;
         mRead = read;
-        mStatus = status;
+        mReceiptStatus = status;
         mReceiptID = receiptID;
         mText = text;
-        mEncrypted = encrypted;
+        // TODO
+        mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
+        //mEncryptionStatus = encryptionStatus;
+        mSecurityErrors = null;
     }
 
     public int getID() {
@@ -185,8 +210,8 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         return mDate;
     }
 
-    public Status getStatus() {
-        return mStatus;
+    public Status getReceiptStatus() {
+        return mReceiptStatus;
     }
 
     String getReceiptID() {
@@ -197,8 +222,47 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         return mText;
     }
 
+    public void setText(String text) {
+        mText = text;
+    }
+
+    // TODO
     public boolean isEncrypted() {
-        return mEncrypted;
+        return mEncryption == Coder.Encryption.ENCRYPTED ||
+                mEncryption == Coder.Encryption.DECRYPTED;
+    }
+
+    public Coder.Encryption getEncryption() {
+        return mEncryption;
+    }
+
+    public void setSigning(Coder.Signing signing) {
+        if (signing == mSigning)
+            return;
+        if (signing == Coder.Signing.NOT)
+            assert mSigning == null;
+        if (signing == Coder.Signing.SIGNED)
+            assert mSigning == null;
+        if (signing == Coder.Signing.VERIFIED)
+            assert mSigning == Coder.Signing.SIGNED;
+        mSigning = signing;
+    }
+
+    public void addSecurityError(Coder.Error error) {
+        mSecurityErrors.add(error);
+    }
+
+    public EnumSet<Coder.Error> getSecurityErrors() {
+        // better return a copy
+        return mSecurityErrors.clone();
+    }
+
+    public boolean hasSecurityError(Coder.Error error) {
+        return mSecurityErrors.contains(error);
+    }
+
+    public void resetSecurityErrors() {
+        mSecurityErrors.clear();
     }
 
     @Override
@@ -210,19 +274,19 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
 
     void updateBySentReceipt(String receiptID) {
         assert mDir == Direction.OUT;
-        assert mStatus == Status.PENDING;
+        assert mReceiptStatus == Status.PENDING;
         assert mReceiptID == null;
         mReceiptID = receiptID;
-        mStatus = Status.SENT;
+        mReceiptStatus = Status.SENT;
         this.save();
         this.changed();
     }
 
     void updateByReceivedReceipt() {
         assert mDir == Direction.OUT;
-        assert mStatus == Status.SENT;
+        assert mReceiptStatus == Status.SENT;
         assert mReceiptID != null;
-        mStatus = Status.RECEIVED;
+        mReceiptStatus = Status.RECEIVED;
         this.save();
         this.changed();
     }
@@ -231,16 +295,16 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         Database db = Database.getInstance();
         List<Object> values = new LinkedList();
         values.add(mThread.getID());
-        values.add(mDir.ordinal());
+        values.add(mDir);
         values.add(mUser.getID());
         values.add(mJID);
         values.add(mXMPPID);
         values.add(mDate);
         values.add(mRead);
-        values.add(mStatus.ordinal());
+        values.add(mReceiptStatus);
         values.add(mReceiptID);
         values.add(mText);
-        values.add(mEncrypted);
+        values.add(mEncryption);
 
         int id = db.execInsert(TABLE, values);
         if (id < 1) {
@@ -254,7 +318,7 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
        Map<String, Object> set = new HashMap();
        set.put("xmpp_id", mXMPPID);
        set.put("read", mRead);
-       set.put("status", mStatus.ordinal());
+       set.put("status", mReceiptStatus);
        set.put("receipt_id", mReceiptID);
        db.execUpdate(TABLE, set, mID);
     }
