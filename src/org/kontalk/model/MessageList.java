@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -47,6 +48,8 @@ public class MessageList {
         ResultSet resultSet = db.execSelectAll(KonMessage.TABLE);
         KonMessage.Direction[] dirValues = KonMessage.Direction.values();
         KonMessage.Status[] statusValues = KonMessage.Status.values();
+        Coder.Encryption[] encryptionValues = Coder.Encryption.values();
+        Coder.Signing[] signingValues = Coder.Signing.values();
         try {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");
@@ -60,11 +63,16 @@ public class MessageList {
                 String xmppID = resultSet.getString("xmpp_id");
                 Date date = new Date(resultSet.getLong("date"));
                 boolean read = resultSet.getBoolean("read");
-                int statusIndex = resultSet.getInt("status");
+                int statusIndex = resultSet.getInt("receipt_status");
                 KonMessage.Status status = statusValues[statusIndex];
                 String receiptID = resultSet.getString("receipt_id");
                 String text = resultSet.getString("content");
-                boolean encrypted = resultSet.getBoolean("encrypted");
+                int encryptionIndex = resultSet.getInt("encryption_status");
+                Coder.Encryption encryption = encryptionValues[encryptionIndex];
+                int signingIndex = resultSet.getInt("signing_status");
+                Coder.Signing signing = signingValues[signingIndex];
+                int errorFlags = resultSet.getInt("coder_errors");
+                EnumSet<Coder.Error> coderErrors = Database.intToEnumSet(Coder.Error.class, errorFlags);
                 KonMessage newMessage = new KonMessage(id,
                         thread,
                         dir,
@@ -76,7 +84,9 @@ public class MessageList {
                         status,
                         receiptID,
                         text,
-                        encrypted);
+                        encryption,
+                        signing,
+                        coderErrors);
                 thread.add(newMessage);
                 mMap.put(id, newMessage);
             }
@@ -118,13 +128,11 @@ public class MessageList {
                 text,
                 encrypted);
 
-        // TODO lets see what happens
-        Coder.decryptMessage(newMessage);
+        // encrypt and verify message
+        Coder.processMessage(newMessage);
 
         thread.add(newMessage);
         mMap.put(newMessage.getID(), newMessage);
-
-
     }
 
     public Collection<KonMessage> getMessages() {

@@ -61,14 +61,15 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
             "receipt_status INTEGER NOT NULL, " +
             // receipt id
             "receipt_id TEXT UNIQUE, " +
-
+            // message body, de- or encrypted
             "content BLOB, " +
-            // enum, encryption status
+            // enum, determines if content is encrypted
             "encryption_status INTEGER NOT NULL, " +
-            // enum, can only tell if signed after encryption attempt
+            // enum, determines if conent is verified
+            // can only tell if signed after encryption attempt
             "signing_status INTEGER, " +
             // encryption and signing errors
-            "security_errors INTEGER, " +
+            "coder_errors INTEGER, " +
 
             "FOREIGN KEY (thread_id) REFERENCES thread (_id), " +
             "FOREIGN KEY (user_id) REFERENCES user (_id) " +
@@ -87,7 +88,7 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
     private String mText;
     private Coder.Encryption mEncryption;
     private Coder.Signing mSigning;
-    private final EnumSet<Coder.Error> mSecurityErrors;
+    private final EnumSet<Coder.Error> mCoderErrors;
 
     /**
      * Used when sending a new message
@@ -114,7 +115,7 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
             mEncryption = Coder.Encryption.NOT;
             mSigning = Coder.Signing.NOT;
         }
-        mSecurityErrors = EnumSet.noneOf(Coder.Error.class);
+        mCoderErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();
     }
@@ -144,8 +145,9 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
             mEncryption = Coder.Encryption.ENCRYPTED;
         else
             mEncryption = Coder.Encryption.NOT;
-        mSigning = null; // we don't know yet
-        mSecurityErrors = EnumSet.noneOf(Coder.Error.class);
+        // if encrypted we don't know yet
+        mSigning = encrypted ? null : Coder.Signing.NOT ;
+        mCoderErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();
     }
@@ -164,7 +166,9 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
             Status status,
             String receiptID,
             String text,
-            boolean encrypted) {
+            Coder.Encryption encryption,
+            Coder.Signing signing,
+            EnumSet<Coder.Error> coderErrors) {
         mID = id;
         mThread = thread;
         mDir = dir;
@@ -176,10 +180,9 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         mReceiptStatus = status;
         mReceiptID = receiptID;
         mText = text;
-        // TODO
-        mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
-        //mEncryptionStatus = encryptionStatus;
-        mSecurityErrors = null;
+        mEncryption = encryption;
+        mSigning = signing;
+        mCoderErrors = coderErrors;
     }
 
     public int getID() {
@@ -222,10 +225,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         return mText;
     }
 
-    public void setText(String text) {
-        mText = text;
-    }
-
     // TODO
     public boolean isEncrypted() {
         return mEncryption == Coder.Encryption.ENCRYPTED ||
@@ -234,6 +233,13 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
 
     public Coder.Encryption getEncryption() {
         return mEncryption;
+    }
+
+    public void setDecryptedText(String text) {
+        assert mEncryption == Coder.Encryption.ENCRYPTED;
+        mText = text;
+        mEncryption = Coder.Encryption.DECRYPTED;
+        this.save();
     }
 
     public void setSigning(Coder.Signing signing) {
@@ -249,20 +255,22 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
     }
 
     public void addSecurityError(Coder.Error error) {
-        mSecurityErrors.add(error);
+        mCoderErrors.add(error);
+        this.save();
     }
 
     public EnumSet<Coder.Error> getSecurityErrors() {
         // better return a copy
-        return mSecurityErrors.clone();
+        return mCoderErrors.clone();
     }
 
     public boolean hasSecurityError(Coder.Error error) {
-        return mSecurityErrors.contains(error);
+        return mCoderErrors.contains(error);
     }
 
     public void resetSecurityErrors() {
-        mSecurityErrors.clear();
+        mCoderErrors.clear();
+        this.save();
     }
 
     @Override
@@ -305,6 +313,8 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         values.add(mReceiptID);
         values.add(mText);
         values.add(mEncryption);
+        values.add(mSigning);
+        values.add(mCoderErrors);
 
         int id = db.execInsert(TABLE, values);
         if (id < 1) {
@@ -318,8 +328,12 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
        Map<String, Object> set = new HashMap();
        set.put("xmpp_id", mXMPPID);
        set.put("read", mRead);
-       set.put("status", mReceiptStatus);
+       set.put("receipt_status", mReceiptStatus);
        set.put("receipt_id", mReceiptID);
+       set.put("content", mText);
+       set.put("encryption_status", mEncryption);
+       set.put("signing_status", mSigning);
+       set.put("coder_errors", mCoderErrors);
        db.execUpdate(TABLE, set, mID);
     }
 }

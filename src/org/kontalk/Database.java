@@ -27,6 +27,7 @@ import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -222,11 +223,43 @@ public class Database {
                 stat.setBoolean(i+1, (boolean) value);
             } else if (value instanceof Enum) {
                 stat.setInt(i+1, ((Enum) value).ordinal());
-            } else if (value == null){
+            } else if (value instanceof EnumSet) {
+                stat.setInt(i+1, this.enumSetToInt(((EnumSet) value)));
+            } else if (value == null) {
                 stat.setNull(i+1, Types.NULL);
             } else {
                 LOGGER.warning("unknown type: " + value);
             }
+    }
+
+    /**
+     * Encode an enum set to an integer representing a bit array.
+     */
+    private int enumSetToInt(EnumSet enumSet) {
+        int b = 0;
+        for (Object o: enumSet) {
+            b += 1 << ((Enum) o).ordinal();
+        }
+        return b;
+    }
+
+    /**
+     * Get an enum set by parsing an integer which represents a bit array.
+     * Source: http://stackoverflow.com/questions/2199399/storing-enumset-in-a-database
+     * @param <T> type of elements in enum set
+     * @param enumClass enum class to determine the type
+     * @param decoded integer decoded as
+     * @return an enum set containing the enums specified by the integer
+     */
+    public static <T extends Enum<T>> EnumSet<T> intToEnumSet(Class<T> enumClass, int decoded) {
+        EnumSet<T> enumSet = EnumSet.noneOf(enumClass);
+        T[] enums = enumClass.getEnumConstants();
+        while (decoded != 0) {
+            int ordinal = Integer.numberOfTrailingZeros(decoded);
+            enumSet.add(enums[ordinal]);
+            decoded -= Integer.lowestOneBit(decoded);
+        }
+        return enumSet;
     }
 
     public static void initialize(Kontalk model, String filePath) {

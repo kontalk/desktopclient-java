@@ -142,5 +142,5 @@ public class KonConnection extends XMPPConnection {
         LOGGER.log(Level.INFO, "disconnecting ({0})", presence);
         super.disconnect(presence);
     }
-    
+
 }

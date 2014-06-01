@@ -30,9 +30,7 @@ import org.bouncycastle.openpgp.PGPSignatureList;
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.PacketExtension;
 import org.jivesoftware.smack.util.Base64;
-import org.kontalk.client.OutOfBandData;
 import org.kontalk.model.Account;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.User;
@@ -81,8 +79,8 @@ public class Coder {
         //INVALID_TIMESTAMP,
     }
 
-    public static void decryptMessage(KonMessage message) {
-        // TODO
+    public static void processMessage(KonMessage message) {
+        // signing requires also encryption
         if (message.getEncryption() != Encryption.ENCRYPTED) {
             LOGGER.warning("message not encrypted");
             return;
@@ -120,6 +118,7 @@ public class Coder {
         // decrypt
         String decryptedBody = decryptAndVerify(message, myKey, senderKey);
 
+        // parse encrypted CPIM content
         String myUID = myKey.getUserId(null);
         String senderUID = PGP.getUserId(senderKey, null);
         String text = parseCPIM(message, decryptedBody, myUID, senderUID);
@@ -132,7 +131,7 @@ public class Coder {
             // everything went better than expected
             LOGGER.info("decryption successful");
             // TODO really overwrite?
-            message.setText(text);
+            message.setDecryptedText(text);
         } else {
             LOGGER.warning("decryption failed");
         }
@@ -335,14 +334,4 @@ public class Coder {
         return plainText;
     }
 
-    private static void parseText(Message m) {
-
-        // out of band data
-        PacketExtension _media = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
-        if (_media != null && _media instanceof OutOfBandData) {
-            // TODO isn't this the same like for unencrypted messages!?
-
-        }
-
-    }
 }
