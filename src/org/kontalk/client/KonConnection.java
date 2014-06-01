@@ -60,13 +60,14 @@ public class KonConnection extends XMPPConnection {
         // enable SASL
         config.setSASLAuthenticationEnabled(true);
         // we don't need the roster
-        // TODO: why???
+        // TODO yes, we do
         //config.setRosterLoadedAtLogin(false);
         // enable compression
         config.setCompressionEnabled(true);
         // enable encryption
         config.setSecurityMode(SecurityMode.enabled);
         // we will send a custom presence
+        // TODO no, send initial default presence
         //config.setSendPresence(false);
     }
 
