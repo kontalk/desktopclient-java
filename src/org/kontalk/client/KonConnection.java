@@ -67,7 +67,7 @@ public class KonConnection extends XMPPConnection {
         // enable encryption
         config.setSecurityMode(SecurityMode.enabled);
         // we will send a custom presence
-        config.setSendPresence(false);
+        //config.setSendPresence(false);
     }
 
     public KonConnection(EndpointServer server, PrivateKey privateKey, X509Certificate bridgeCert) throws XMPPException {
