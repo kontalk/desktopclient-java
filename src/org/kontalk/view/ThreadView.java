@@ -25,12 +25,17 @@ import com.alee.laf.list.WebListModel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebTextArea;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.TooltipWay;
+import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -42,11 +47,12 @@ import javax.swing.JList;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import org.kontalk.crypto.Coder;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 
 /**
- *
+ * Pane that shows the currently selected thread.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class ThreadView extends WebScrollPane {
@@ -60,6 +66,7 @@ public class ThreadView extends WebScrollPane {
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap();
     private int mCurrentThreadID = -1;
+    private WebCustomTooltip mTip = null;
 
     ThreadView() {
         super(null);
@@ -75,6 +82,15 @@ public class ThreadView extends WebScrollPane {
         DELIVERED_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_delivered.png"));
         CRYPT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_crypt.png"));
         UNENCRYPT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_unencrypt.png"));
+
+        // actions triggered by mouse events
+        this.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (mTip != null)
+                    mTip.closeTooltip();
+            }
+        });
     }
 
     int getCurrentThreadID() {
@@ -106,8 +122,15 @@ public class ThreadView extends WebScrollPane {
         this.getViewport().setBackground(color);
     }
 
-    private void doRepaint() {
-        this.repaint();
+    private void showTooltip(MessageView messageView) {
+        if (mTip != null)
+            mTip.closeTooltip();
+
+        WebCustomTooltip tip = TooltipManager.showOneTimeTooltip(this,
+                this.getMousePosition(),
+                messageView.getTooltipText(),
+                TooltipWay.down);
+        mTip = tip;
     }
 
     /**
@@ -135,7 +158,8 @@ public class ThreadView extends WebScrollPane {
                 public void componentResized(ComponentEvent e) {
                     // cell height may have changed, the list doesn't detect
                     // this, so we have to invalidate the cell size cache
-                    recache();
+                    MessageViewList.this.setFixedCellHeight(1);
+                    MessageViewList.this.setFixedCellHeight(-1);
                 }
             });
 
@@ -167,10 +191,6 @@ public class ThreadView extends WebScrollPane {
             update();
         }
 
-        private void recache() {
-            this.setFixedCellHeight(1);
-            this.setFixedCellHeight(-1);
-        }
     }
 
     /**
@@ -281,9 +301,48 @@ public class ThreadView extends WebScrollPane {
 
         @Override
         public void stateChanged(ChangeEvent e) {
-            update();
+            this.update();
             // need to repaint parent to see changes
-            doRepaint();
+            ThreadView.this.repaint();
+        }
+
+        // catch the event, when a tooltip should be shown for this item and
+        // create a own one
+        @Override
+        public String getToolTipText(MouseEvent event) {
+            ThreadView.this.showTooltip(this);
+            return null;
+        }
+
+        public String getTooltipText() {
+            String encryption = "unknown";
+            switch (mMessage.getEncryption()) {
+                case NOT: encryption = "not encrypted"; break;
+                case ENCRYPTED: encryption = "encrypted"; break;
+                case DECRYPTED: encryption = "decrypted"; break;
+            }
+            String verification = "unknown";
+            switch (mMessage.getSigning()) {
+                case NOT: verification = "not signed"; break;
+                case SIGNED: verification = "signed"; break;
+                case VERIFIED: verification = "verified"; break;
+            }
+            String problems = "unknown";
+            if (mMessage.getSecurityErrors().isEmpty()) {
+                problems = "none";
+            } else {
+              for (Coder.Error error: mMessage.getSecurityErrors()) {
+                  problems += error.toString() + " <br> ";
+              }
+            }
+
+            String html = "<html><body>" +
+                    //"<h3>Header</h3>" +
+                    "<br>" +
+                    "Security: " + encryption + " / " + verification + "<br>" +
+                    "Problems: " + problems;
+
+            return html;
         }
     }
 

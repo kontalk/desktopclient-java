@@ -242,6 +242,10 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         this.save();
     }
 
+    public Coder.Signing getSigning() {
+        return mSigning;
+    }
+
     public void setSigning(Coder.Signing signing) {
         if (signing == mSigning)
             return;

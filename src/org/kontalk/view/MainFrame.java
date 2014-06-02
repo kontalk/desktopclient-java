@@ -157,7 +157,7 @@ public class MainFrame extends WebFrame {
         aboutMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                showAboutDialog();
+                MainFrame.this.showAboutDialog();
             }
         });
         helpMenu.add(aboutMenuItem);

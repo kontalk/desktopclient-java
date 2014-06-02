@@ -102,23 +102,23 @@ public class ConfigurationDialog extends WebDialog {
         cancelButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                dispose();
+                ConfigurationDialog.this.dispose();
             }
         });
         WebButton saveButton = new WebButton("Save");
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                saveConfiguration();
-                dispose();
+                ConfigurationDialog.this.saveConfiguration();
+                ConfigurationDialog.this.dispose();
             }
         });
         WebButton okButton = new WebButton("Save & Connect");
         okButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                saveConfiguration();
-                dispose();
+                ConfigurationDialog.this.saveConfiguration();
+                ConfigurationDialog.this.dispose();
                 viewModel.connect();
             }
         });

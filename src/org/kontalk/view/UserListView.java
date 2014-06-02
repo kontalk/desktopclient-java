@@ -145,7 +145,7 @@ public class UserListView extends WebList implements ChangeListener {
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
                     setSelectedIndex(locationToIndex(e.getPoint()));
-                    showPopupMenu(e);
+                    UserListView.this.showPopupMenu(e);
                 }
             }
             @Override
@@ -240,10 +240,10 @@ public class UserListView extends WebList implements ChangeListener {
         // catch the event, when a tooltip should be shown for this item and
         // create a own one
         @Override
-           public String getToolTipText(MouseEvent event) {
-               showTooltip(this);
-               return null;
-           }
+        public String getToolTipText(MouseEvent event) {
+            UserListView.this.showTooltip(this);
+            return null;
+        }
 
         public String getTooltipText() {
             String isAvailable;
@@ -333,15 +333,15 @@ public class UserListView extends WebList implements ChangeListener {
             cancelButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    dispose();
+                    EditUserDialog.this.dispose();
                 }
             });
             final WebButton saveButton = new WebButton("Save");
             saveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    saveUser();
-                    dispose();
+                    EditUserDialog.this.saveUser();
+                    EditUserDialog.this.dispose();
                 }
             });
 

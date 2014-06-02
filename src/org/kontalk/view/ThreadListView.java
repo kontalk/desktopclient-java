@@ -264,15 +264,15 @@ public class ThreadListView extends WebList implements ChangeListener {
             cancelButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    dispose();
+                    EditThreadDialog.this.dispose();
                 }
             });
             final WebButton saveButton = new WebButton("Save");
             saveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    saveThread();
-                    dispose();
+                    EditThreadDialog.this.saveThread();
+                    EditThreadDialog.this.dispose();
                 }
             });
 
