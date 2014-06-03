@@ -142,6 +142,14 @@ public class User {
         return mLastSeen;
     }
 
+    public boolean getEncrypted() {
+        return mEncrypted;
+    }
+
+    public void setEncrypted(boolean encrypted) {
+        mEncrypted = encrypted;
+    }
+
     public Available getAvailable() {
         return this.mAvailable;
     }

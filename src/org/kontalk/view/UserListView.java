@@ -20,6 +20,7 @@ package org.kontalk.view;
 
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
 import com.alee.laf.list.WebListCellRenderer;
@@ -295,6 +296,7 @@ public class UserListView extends WebList implements ChangeListener {
         private final UserView mUserView;
         private final WebTextField mNameField;
         private final WebTextField mJIDField;
+        WebCheckBox mEncryptionBox;
 
         public EditUserDialog(UserView userView) {
 
@@ -317,6 +319,20 @@ public class UserListView extends WebList implements ChangeListener {
             mNameField.setHideInputPromptOnFocus(false);
             namePanel.add(mNameField, BorderLayout.CENTER);
             groupPanel.add(namePanel);
+            groupPanel.add(new WebSeparator(true, true));
+
+            String hasKey = "<html>Encryption Key: ";
+            if (mUserView.getUser().hasKey()) {
+                hasKey += "Available</html>";
+            } else {
+                hasKey += "<font color='red'>Not Available</font></html>";
+            }
+            groupPanel.add(new WebLabel(hasKey));
+
+            mEncryptionBox = new WebCheckBox("Encryption");
+            mEncryptionBox.setAnimated(false);
+            mEncryptionBox.setSelected(mUserView.getUser().getEncrypted());
+            groupPanel.add(mEncryptionBox);
             groupPanel.add(new WebSeparator(true, true));
 
             groupPanel.add(new WebLabel("JID:"));
@@ -356,6 +372,7 @@ public class UserListView extends WebList implements ChangeListener {
             if (!mNameField.getText().isEmpty()) {
                 mUserView.getUser().setName(mNameField.getText());
             }
+            mUserView.getUser().setEncrypted(mEncryptionBox.isSelected());
             if (!mJIDField.getText().isEmpty()) {
                 mUserView.getUser().setJID(mJIDField.getText());
             }
