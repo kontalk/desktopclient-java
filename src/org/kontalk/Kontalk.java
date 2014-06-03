@@ -20,6 +20,9 @@ package org.kontalk;
 
 import com.alee.laf.WebLookAndFeel;
 import java.io.File;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -49,13 +52,14 @@ public class Kontalk {
         DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN
     }
 
+    private ServerSocket mRun = null;
     private final KonConfiguration mConfig;
     private final Client mClient;
     private final View mView;
     private final UserList mUserList;
     private final ThreadList mThreadList;
     private final MessageList mMessageList;
-    private String mConfigDir;
+    private final String mConfigDir;
 
     static {
         // register provider
@@ -64,6 +68,18 @@ public class Kontalk {
 
     public Kontalk(String[] args){
 
+        // check if already running
+        try{
+            InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
+            mRun = new ServerSocket(9871, 10, addr);
+        }catch(java.net.BindException ex){
+            LOGGER.severe("already running");
+            System.exit(2);
+        }catch(IOException ex){
+            LOGGER.log(Level.WARNING, "can't create socket", ex);
+        }
+
+        // use platform dependent configuration directory
         String homeDir = System.getProperty("user.home");
         if (SystemUtils.IS_OS_WINDOWS) {
             mConfigDir = homeDir + "/Kontalk";
@@ -91,12 +107,14 @@ public class Kontalk {
     public void start() {
         new Thread(mClient).start();
 
-        Database.initialize(this, mConfigDir + "/kontalk_db.sqlite");
+        Database.initialize(this, mConfigDir);
 
         // order matters!
         mUserList.load();
         mThreadList.load();
         mMessageList.load();
+
+        mView.init();
     }
 
     // parse optional arguments
@@ -118,7 +136,7 @@ public class Kontalk {
         }
     }
 
-    public void shutDown(){
+    public void shutDown() {
         LOGGER.info("Shutting down...");
         mView.statusChanged(Status.SHUTTING_DOWN);
         mUserList.save();
@@ -127,6 +145,11 @@ public class Kontalk {
         if (Database.getInstance() != null)
             Database.getInstance().close();
         mConfig.saveToFile();
+        try {
+            mRun.close();
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't close run socket", ex);
+        }
         System.exit(0);
     }
 
