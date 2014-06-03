@@ -119,6 +119,7 @@ public class View {
             case SHUTTING_DOWN:
                 mStatusBarLabel.setText("Shutting down...");
                 mMainFrame.save();
+                mThreadListView.save();
                 break;
             }
     }
@@ -174,6 +175,10 @@ public class View {
        }
        mModel.sendText(thread, mSendTextField.getText());
        mSendTextField.setText("");
+    }
+
+    public void init() {
+        mThreadListView.selectLastThread();
     }
 
 }

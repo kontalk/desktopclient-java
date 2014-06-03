@@ -117,25 +117,6 @@ public class Kontalk {
         mView.init();
     }
 
-    // parse optional arguments
-    private void parseArgs(String[] args){
-        if (args.length == 0)
-            return;
-        if (args.length == 2 && Pattern.matches(".*:\\d*", args[1])){
-            String[] argsegs = args[1].split(Pattern.quote(":"));
-            if (argsegs[0].length() != 0)
-                mConfig.setProperty("server.host", argsegs[0]);
-            if (argsegs[1].length() != 0)
-                mConfig.setProperty("server.port", Integer.valueOf(argsegs[1]));
-            //client.setUsername(args[0]);
-        } else if (args.length == 1 && !Pattern.matches(".*:\\d*", args[0])){
-            //client.setUsername(args[0]);
-        } else {
-            String className = this.getClass().getEnclosingClass().getName();
-            LOGGER.log(Level.WARNING, "Usage: java {0} [USERNAME [SERVER:PORT]]", className);
-        }
-    }
-
     public void shutDown() {
         LOGGER.info("Shutting down...");
         mView.statusChanged(Status.SHUTTING_DOWN);
@@ -200,6 +181,25 @@ public class Kontalk {
         for (User oneUser: user) {
             KonMessage newMessage = mMessageList.addTo(thread, oneUser, text, encrypted);
             mClient.sendMessage(newMessage);
+        }
+    }
+
+    // parse optional arguments
+    private void parseArgs(String[] args){
+        if (args.length == 0)
+            return;
+        if (args.length == 2 && Pattern.matches(".*:\\d*", args[1])){
+            String[] argsegs = args[1].split(Pattern.quote(":"));
+            if (argsegs[0].length() != 0)
+                mConfig.setProperty("server.host", argsegs[0]);
+            if (argsegs[1].length() != 0)
+                mConfig.setProperty("server.port", Integer.valueOf(argsegs[1]));
+            //client.setUsername(args[0]);
+        } else if (args.length == 1 && !Pattern.matches(".*:\\d*", args[0])){
+            //client.setUsername(args[0]);
+        } else {
+            String className = this.getClass().getEnclosingClass().getName();
+            LOGGER.log(Level.WARNING, "Usage: java {0} [USERNAME [SERVER:PORT]]", className);
         }
     }
 

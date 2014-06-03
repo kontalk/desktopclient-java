@@ -51,12 +51,13 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
+import org.kontalk.KonConfiguration;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 
 /**
- *
+ * Show a brief list of every thread.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class ThreadListView extends WebList implements ChangeListener {
@@ -142,10 +143,6 @@ public class ThreadListView extends WebList implements ChangeListener {
         return mListModel.get(this.getSelectedIndex()).getThread();
     }
 
-    private void showPopupMenu(MouseEvent e) {
-           mPopupMenu.show(this, e.getX(), e.getY());
-    }
-
     @Override
     public void stateChanged(ChangeEvent e) {
         mListModel.clear();
@@ -153,6 +150,22 @@ public class ThreadListView extends WebList implements ChangeListener {
             ThreadView newThreadView = new ThreadView(thread);
             mListModel.addElement(newThreadView);
         }
+    }
+
+    void selectLastThread() {
+        int i = KonConfiguration.getInstance().getInt(KonConfiguration.VIEW_SELECTED_THREAD);
+        if (i >= 0)
+            this.setSelectedIndex(i);
+    }
+
+    void save() {
+        KonConfiguration.getInstance().setProperty(
+                KonConfiguration.VIEW_SELECTED_THREAD,
+                this.getSelectedIndex());
+    }
+
+    private void showPopupMenu(MouseEvent e) {
+           mPopupMenu.show(this, e.getX(), e.getY());
     }
 
     private class ThreadView extends WebPanel {
