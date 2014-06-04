@@ -54,6 +54,8 @@ import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 import javax.swing.ScrollPaneConstants;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import org.kontalk.KonConf;
 
 /**
@@ -284,6 +286,14 @@ public class MainFrame extends WebFrame {
             groupPanel.add(new WebLabel("Previously used:"));
             mStatusList = new WebList(stats);
             mStatusList.setMultiplySelectionAllowed(false);
+            mStatusList.addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    if (e.getValueIsAdjusting())
+                        return;
+                    mStatusField.setText(mStatusList.getSelectedValue().toString());
+                }
+            });
             WebScrollPane listScrollPane = new WebScrollPane(mStatusList);
             listScrollPane.setHorizontalScrollBarPolicy(
                     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
