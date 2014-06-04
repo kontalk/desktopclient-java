@@ -49,7 +49,7 @@ public class Kontalk {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
     public enum Status {
-        DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN
+        DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN, FAILED
     }
 
     private ServerSocket mRun = null;

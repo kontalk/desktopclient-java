@@ -43,7 +43,8 @@ import org.kontalk.model.UserList;
 public class View {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
-    final static Color BLUE = new Color(131, 173, 239);
+    final static Color BLUE = new Color(130, 170, 240);
+    final static Color LIGHT_BLUE = new Color(220, 220, 250);
 
     private final Kontalk mModel;
     private final UserListView mUserListView;
@@ -120,6 +121,9 @@ public class View {
                 mStatusBarLabel.setText("Shutting down...");
                 mMainFrame.save();
                 mThreadListView.save();
+                break;
+            case FAILED:
+                mStatusBarLabel.setText("Connecting failed");
                 break;
             }
     }

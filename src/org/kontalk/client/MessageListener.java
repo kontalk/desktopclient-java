@@ -91,17 +91,14 @@ class MessageListener implements PacketListener {
             date = new Date();
         }
 
-        // check if there is a composing notification
+        // process possible chat state notification (XEP-0085)
         PacketExtension chatstate = m.getExtension("http://jabber.org/protocol/chatstates");
         if (chatstate != null) {
-            LOGGER.info("got chatstate: " + chatstate);
-            // TODO
-        }
-
-        // non-active notifications are not to be processed as messages
-        if (chatstate != null && !chatstate.getElementName().equals(ChatState.active.name())) {
-            LOGGER.info("got non-active notification");
-            return;
+            LOGGER.info("got chatstate: " + chatstate.getElementName());
+            // TODO (only) the thread needs to be imformed
+            // thread.processChatState(user, chatStateValue);
+            if (!chatstate.getElementName().equals(ChatState.active.name()))
+                return;
         }
 
         // delivery receipt
@@ -114,19 +111,21 @@ class MessageListener implements PacketListener {
 
         // must be an incoming message
 
-        // get text from body
+        // get text from body or encryption extension
         String text = null;
-        boolean encrypted;
+        boolean encrypted = false;
+        if (m.getBody() != null) {
+            encrypted = false;
+            text = m.getBody();
+        }
         PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
         if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
+            if (m.getBody() != null)
+                LOGGER.warning("message contains encryption and body (ignoring body)");
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
             // decrypt later
             text = Base64.encodeBytes(encryption.getData());
             encrypted = true;
-        } else {
-            // just use message body
-            encrypted = false;
-            text = m.getBody();
         }
 
         // out of band data
@@ -144,6 +143,12 @@ class MessageListener implements PacketListener {
         // TODO why!?
         //if (msgId == null)
         //    msgId = "incoming" + StringUtils.randomString(6);
+
+        // make sure not to save a message without text
+        if (text == null) {
+            LOGGER.warning("can't find any message text in message");
+            return;
+        }
 
         // add message
         MessageList.getInstance().addFrom(m.getFrom(),
@@ -182,7 +187,7 @@ class MessageListener implements PacketListener {
             return;
         }
         if (receipt != null && receipt instanceof AckServerReceipt) {
-            AckServerReceipt ackServerReceipt = (AckServerReceipt) receipt;
+            //AckServerReceipt ackServerReceipt = (AckServerReceipt) receipt;
             // TODO it looks like the packet id is used now to identify the
             // 'received' for this acknowledement, unlike the spec says
             // ignore this for now

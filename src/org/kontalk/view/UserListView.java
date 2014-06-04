@@ -193,6 +193,7 @@ public class UserListView extends WebList implements ChangeListener {
         private final User mUser;
         private final WebLabel mNameLabel;
         private final WebLabel mJIDLabel;
+        private final Color mBackround;
 
         UserView(User user) {
             mUser = user;
@@ -225,6 +226,9 @@ public class UserListView extends WebList implements ChangeListener {
             String name = mUser.getName() != null ? mUser.getName() : "<unknown>";
             mNameLabel.setText(name);
             mJIDLabel.setText(mUser.getJID());
+
+            mBackround = mUser.getAvailable() == User.Available.YES ? View.LIGHT_BLUE : Color.WHITE;
+            this.setBackground(mBackround);
         }
 
         User getUser() {
@@ -235,7 +239,7 @@ public class UserListView extends WebList implements ChangeListener {
             if (isSelected)
                 this.setBackground(View.BLUE);
             else
-                this.setBackground(Color.WHITE);
+                this.setBackground(mBackround);
         }
 
         // catch the event, when a tooltip should be shown for this item and

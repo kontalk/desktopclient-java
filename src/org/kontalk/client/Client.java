@@ -34,6 +34,7 @@ import org.jivesoftware.smack.filter.PacketTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.Presence;
 import org.kontalk.KonConfiguration;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.PersonalKey;
@@ -86,6 +87,7 @@ public class Client implements PacketListener, Runnable {
                         key.getBridgeCertificate());
             } catch (XMPPException | PGPException ex) {
                 LOGGER.log(Level.WARNING, "can't create connection", ex);
+                mModel.statusChanged(Kontalk.Status.FAILED);
                 return;
             }
 
@@ -94,6 +96,7 @@ public class Client implements PacketListener, Runnable {
                 mConn.connect();
             } catch (XMPPException ex) {
                 LOGGER.log(Level.WARNING, "can't connect", ex);
+                mModel.statusChanged(Kontalk.Status.FAILED);
                 return;
             }
 
@@ -116,11 +119,15 @@ public class Client implements PacketListener, Runnable {
             } catch (XMPPException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
                 // TODO: most likely the pgp key is invalid, tell that to user
+                mModel.statusChanged(Kontalk.Status.FAILED);
                 return;
             }
         }
 
         LOGGER.info("Connected!");
+
+        // TODO
+        this.sendPresence();
 
         mModel.statusChanged(Kontalk.Status.CONNECTED);
     }
@@ -142,14 +149,20 @@ public class Client implements PacketListener, Runnable {
         smackMessage.setTo(message.getJID());
         smackMessage.setBody(message.getText());
         smackMessage.addExtension(new ServerReceiptRequest());
-        sendPacket(smackMessage);
+        this.sendPacket(smackMessage);
     }
 
     public void sendVCardRequest(String jid) {
         VCard4 vcard = new VCard4();
         vcard.setType(IQ.Type.GET);
         vcard.setTo(jid);
-        sendPacket(vcard);
+        this.sendPacket(vcard);
+    }
+
+    public void sendPresence() {
+        Presence presence = new Presence(Presence.Type.available);
+        presence.setStatus("busy programing a Kontalk desktop client");
+        this.sendPacket(presence);
     }
 
     synchronized void sendPacket(Packet p) {
