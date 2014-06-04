@@ -53,7 +53,7 @@ public class Kontalk {
     }
 
     private ServerSocket mRun = null;
-    private final KonConfiguration mConfig;
+    private final KonConf mConfig;
     private final Client mClient;
     private final View mView;
     private final UserList mUserList;
@@ -90,7 +90,7 @@ public class Kontalk {
         if (created)
             LOGGER.info("created configuration directory");
 
-        mConfig = KonConfiguration.initialize(mConfigDir + "/kontalk.properties");
+        mConfig = KonConf.initialize(mConfigDir + "/kontalk.properties");
 
         parseArgs(args);
 

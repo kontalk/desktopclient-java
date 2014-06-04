@@ -27,7 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.Configuration;
 import org.bouncycastle.openpgp.PGPException;
-import org.kontalk.KonConfiguration;
+import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.PersonalKey;
@@ -44,7 +44,7 @@ public class Account {
 
     public void reload() throws KonException {
 
-        Configuration config = KonConfiguration.getInstance();
+        Configuration config = KonConf.getInstance();
 
         // read key files
         byte[] publicKeyData = readBytes(config.getString("account.public_key"));

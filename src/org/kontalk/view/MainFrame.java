@@ -20,19 +20,26 @@ package org.kontalk.view;
 
 import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.label.WebVerticalLabel;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
+import com.alee.laf.list.WebList;
 import com.alee.laf.menu.WebMenu;
 import com.alee.laf.menu.WebMenuBar;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
+import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.scroll.WebScrollPane;
+import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
+import com.alee.laf.text.WebTextField;
 import com.alee.managers.hotkey.Hotkey;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -40,11 +47,14 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 import javax.swing.ScrollPaneConstants;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
-import org.kontalk.KonConfiguration;
+import org.kontalk.KonConf;
 
 /**
  *
@@ -58,7 +68,7 @@ public class MainFrame extends WebFrame {
 
     public static enum Tab {THREADS, USER};
 
-    private final KonConfiguration mConf = KonConfiguration.getInstance();
+    private final KonConf mConf = KonConf.getInstance();
     private final WebTabbedPane mTabbedPane;
 
     public MainFrame(final View viewModel,
@@ -71,8 +81,8 @@ public class MainFrame extends WebFrame {
 
         // general view + behaviour
         this.setTitle("Kontalk Java Client");
-        this.setSize(mConf.getInt(KonConfiguration.VIEW_FRAME_WIDTH),
-                mConf.getInt(KonConfiguration.VIEW_FRAME_HEIGHT));
+        this.setSize(mConf.getInt(KonConf.VIEW_FRAME_WIDTH),
+                mConf.getInt(KonConf.VIEW_FRAME_HEIGHT));
 
         if (ICON_IMAGE_URL != null) {
             this.setIconImage(Toolkit.getDefaultToolkit().createImage(ICON_IMAGE_URL));
@@ -94,8 +104,8 @@ public class MainFrame extends WebFrame {
         WebMenuBar menubar = new WebMenuBar();
         this.setJMenuBar(menubar);
 
-        WebMenu fileMenu = new WebMenu("File");
-        fileMenu.setMnemonic(KeyEvent.VK_F);
+        WebMenu konNetMenu = new WebMenu("KonNet");
+        konNetMenu.setMnemonic(KeyEvent.VK_K);
 
         WebMenuItem connectMenuItem = new WebMenuItem("Connect");
         connectMenuItem.setAccelerator(Hotkey.ALT_C);
@@ -106,7 +116,7 @@ public class MainFrame extends WebFrame {
                 viewModel.connect();
             }
         });
-        fileMenu.add(connectMenuItem);
+        konNetMenu.add(connectMenuItem);
 
         WebMenuItem disconnectMenuItem = new WebMenuItem("Disconnect");
         disconnectMenuItem.setAccelerator(Hotkey.ALT_D);
@@ -117,8 +127,21 @@ public class MainFrame extends WebFrame {
                 viewModel.disconnect();
             }
         });
-        fileMenu.add(disconnectMenuItem);
-        fileMenu.addSeparator();
+        konNetMenu.add(disconnectMenuItem);
+        konNetMenu.addSeparator();
+
+        WebMenuItem statusMenuItem = new WebMenuItem("Set status");
+        statusMenuItem.setAccelerator(Hotkey.ALT_S);
+        statusMenuItem.setToolTipText("Set status text send to other user");
+        statusMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                WebDialog statusDialog = new StatusDialog();
+                statusDialog.setVisible(true);
+            }
+        });
+        konNetMenu.add(statusMenuItem);
+        konNetMenu.addSeparator();
 
         WebMenuItem exitMenuItem = new WebMenuItem("Exit");
         exitMenuItem.setAccelerator(Hotkey.ALT_E);
@@ -129,9 +152,9 @@ public class MainFrame extends WebFrame {
                 viewModel.shutDown();
             }
         });
-        fileMenu.add(exitMenuItem);
+        konNetMenu.add(exitMenuItem);
 
-        menubar.add(fileMenu);
+        menubar.add(konNetMenu);
 
         WebMenu optionsMenu = new WebMenu("Options");
         optionsMenu.setMnemonic(KeyEvent.VK_O);
@@ -228,7 +251,86 @@ public class MainFrame extends WebFrame {
     }
 
     void save() {
-        mConf.setProperty(KonConfiguration.VIEW_FRAME_WIDTH, this.getWidth());
-        mConf.setProperty(KonConfiguration.VIEW_FRAME_HEIGHT, this.getHeight());
+        mConf.setProperty(KonConf.VIEW_FRAME_WIDTH, this.getWidth());
+        mConf.setProperty(KonConf.VIEW_FRAME_HEIGHT, this.getHeight());
+    }
+
+    private class StatusDialog extends WebDialog {
+
+        private final WebTextField mStatusField;
+        private final WebList mStatusList;
+
+        StatusDialog() {
+            this.setTitle("Status");
+            this.setResizable(false);
+            this.setModal(true);
+
+            GroupPanel groupPanel = new GroupPanel(10, false);
+            groupPanel.setMargin(5);
+
+            String[] strings = mConf.getStringArray(KonConf.NET_STATUS_LIST);
+            List<String> stats = new ArrayList(Arrays.asList(strings));
+            String currentStatus = "";
+            if (!stats.isEmpty())
+                currentStatus = stats.remove(0);
+
+            stats.remove("");
+
+            groupPanel.add(new WebLabel("Your current status:"));
+            mStatusField = new WebTextField(currentStatus, 30);
+            groupPanel.add(mStatusField);
+            groupPanel.add(new WebSeparator(true, true));
+
+            groupPanel.add(new WebLabel("Previously used:"));
+            mStatusList = new WebList(stats);
+            mStatusList.setMultiplySelectionAllowed(false);
+            WebScrollPane listScrollPane = new WebScrollPane(mStatusList);
+            listScrollPane.setHorizontalScrollBarPolicy(
+                    ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            listScrollPane.setPreferredHeight(100);
+            listScrollPane.setPreferredWidth(0);
+            groupPanel.add(listScrollPane);
+            this.add(groupPanel, BorderLayout.CENTER);
+
+            // buttons
+            WebButton cancelButton = new WebButton("Cancel");
+            cancelButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    StatusDialog.this.dispose();
+                }
+            });
+            final WebButton saveButton = new WebButton("Save");
+            saveButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    StatusDialog.this.saveStatus();
+                    StatusDialog.this.dispose();
+                }
+            });
+
+            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
+            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
+            this.add(buttonPanel, BorderLayout.SOUTH);
+
+            this.pack();
+        }
+
+        private void saveStatus() {
+            String newStatus = mStatusField.getText();
+
+            String[] strings = mConf.getStringArray(KonConf.NET_STATUS_LIST);
+            List<String> stats = new ArrayList(Arrays.asList(strings));
+
+            stats.remove(newStatus);
+
+            stats.add(0, newStatus);
+
+            if (stats.size() > 20)
+                stats = stats.subList(0, 20);
+
+            mConf.setProperty(KonConf.NET_STATUS_LIST, stats.toArray());
+        }
+
     }
 }

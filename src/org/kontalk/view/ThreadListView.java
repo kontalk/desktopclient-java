@@ -51,7 +51,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
-import org.kontalk.KonConfiguration;
+import org.kontalk.KonConf;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
@@ -153,14 +153,14 @@ public class ThreadListView extends WebList implements ChangeListener {
     }
 
     void selectLastThread() {
-        int i = KonConfiguration.getInstance().getInt(KonConfiguration.VIEW_SELECTED_THREAD);
+        int i = KonConf.getInstance().getInt(KonConf.VIEW_SELECTED_THREAD);
         if (i >= 0)
             this.setSelectedIndex(i);
     }
 
     void save() {
-        KonConfiguration.getInstance().setProperty(
-                KonConfiguration.VIEW_SELECTED_THREAD,
+        KonConf.getInstance().setProperty(
+                KonConf.VIEW_SELECTED_THREAD,
                 this.getSelectedIndex());
     }
 

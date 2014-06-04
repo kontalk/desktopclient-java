@@ -31,10 +31,10 @@ import org.kontalk.client.Client;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KonConfiguration extends PropertiesConfiguration {
-    private final static Logger LOGGER = Logger.getLogger(KonConfiguration.class.getName());
+public class KonConf extends PropertiesConfiguration {
+    private final static Logger LOGGER = Logger.getLogger(KonConf.class.getName());
 
-    private static KonConfiguration INSTANCE = null;
+    private static KonConf INSTANCE = null;
 
     public final static String SERV_NET = "server.network";
     public final static String SERV_HOST = "server.host";
@@ -47,16 +47,13 @@ public class KonConfiguration extends PropertiesConfiguration {
     public final static String VIEW_FRAME_HEIGHT = "view.frame.height";
     public final static String VIEW_SELECTED_THREAD = "view.thread";
     public final static String NET_SEND_CHAT_STATE = "net.chatstate";
+    public final static String NET_STATUS_LIST = "net.status_list";
 
     public final static String DEFAULT_SERV_NET = Client.KONTALK_NETWORK;
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
     public final static int DEFAULT_SERV_PORT = 5222;
 
-    private KonConfiguration(String filename) throws ConfigurationException {
-        super(filename);
-    }
-
-    private KonConfiguration() {
+    private KonConf() {
         super();
     }
 
@@ -64,18 +61,21 @@ public class KonConfiguration extends PropertiesConfiguration {
         try {
             this.save();
         } catch (ConfigurationException ex) {
-            LOGGER.log(Level.WARNING, "Can't save configuration", ex);
+            LOGGER.log(Level.WARNING, "can't save configuration", ex);
         }
     }
 
-    static KonConfiguration initialize(String filePath) {
+    static KonConf initialize(String filePath) {
+        INSTANCE = new KonConf();
+        INSTANCE.setListDelimiter((char) 9);
+
         try {
-            INSTANCE = new KonConfiguration(filePath);
+            INSTANCE.load(filePath);
         } catch (ConfigurationException ex) {
             LOGGER.info("Configuration not found. Using default values");
-            INSTANCE = new KonConfiguration();
-            INSTANCE.setFileName(filePath);
         }
+
+        INSTANCE.setFileName(filePath);
 
         // init config
         Map<String, Object> map = new HashMap();
@@ -91,6 +91,7 @@ public class KonConfiguration extends PropertiesConfiguration {
         map.put(VIEW_FRAME_HEIGHT, 650);
         map.put(VIEW_SELECTED_THREAD, -1);
         map.put(NET_SEND_CHAT_STATE, true);
+        map.put(NET_STATUS_LIST, new String[]{""});
 
         for(Entry<String, Object> e : map.entrySet()) {
             if (!INSTANCE.containsKey(e.getKey())) {
@@ -101,7 +102,7 @@ public class KonConfiguration extends PropertiesConfiguration {
         return INSTANCE;
     }
 
-    public static KonConfiguration getInstance() {
+    public static KonConf getInstance() {
         return INSTANCE;
     }
 }

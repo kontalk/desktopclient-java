@@ -37,7 +37,7 @@ import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smackx.ChatState;
 import org.jivesoftware.smackx.packet.ChatStateExtension;
-import org.kontalk.KonConfiguration;
+import org.kontalk.KonConf;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage;
@@ -55,7 +55,7 @@ public class Client implements PacketListener, Runnable {
     public static enum Command {CONNECT, DISCONNECT};
 
     private final Kontalk mModel;
-    private final KonConfiguration mConfig;
+    private final KonConf mConfig;
     private final EndpointServer mServer;
     protected Connection mConn;
 
@@ -64,7 +64,7 @@ public class Client implements PacketListener, Runnable {
 
     public Client(Kontalk model) {
         mModel = model;
-        mConfig = KonConfiguration.getInstance();
+        mConfig = KonConf.getInstance();
         String network = mConfig.getString("server.network");
         String host = mConfig.getString("server.host");
         int port = mConfig.getInt("server.port");
@@ -152,8 +152,8 @@ public class Client implements PacketListener, Runnable {
         smackMessage.setTo(message.getJID());
         smackMessage.setBody(message.getText());
         smackMessage.addExtension(new ServerReceiptRequest());
-        KonConfiguration conf = KonConfiguration.getInstance();
-        if (conf.getBoolean(KonConfiguration.NET_SEND_CHAT_STATE))
+        KonConf conf = KonConf.getInstance();
+        if (conf.getBoolean(KonConf.NET_SEND_CHAT_STATE))
             smackMessage.addExtension(new ChatStateExtension(ChatState.active));
         this.sendPacket(smackMessage);
     }
