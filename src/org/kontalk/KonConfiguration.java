@@ -46,6 +46,7 @@ public class KonConfiguration extends PropertiesConfiguration {
     public final static String VIEW_FRAME_WIDTH = "view.frame.width";
     public final static String VIEW_FRAME_HEIGHT = "view.frame.height";
     public final static String VIEW_SELECTED_THREAD = "view.thread";
+    public final static String NET_SEND_CHAT_STATE = "net.chatstate";
 
     public final static String DEFAULT_SERV_NET = Client.KONTALK_NETWORK;
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
@@ -89,6 +90,7 @@ public class KonConfiguration extends PropertiesConfiguration {
         map.put(VIEW_FRAME_WIDTH, 600);
         map.put(VIEW_FRAME_HEIGHT, 650);
         map.put(VIEW_SELECTED_THREAD, -1);
+        map.put(NET_SEND_CHAT_STATE, true);
 
         for(Entry<String, Object> e : map.entrySet()) {
             if (!INSTANCE.containsKey(e.getKey())) {

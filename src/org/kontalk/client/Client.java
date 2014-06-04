@@ -35,6 +35,8 @@ import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smackx.ChatState;
+import org.jivesoftware.smackx.packet.ChatStateExtension;
 import org.kontalk.KonConfiguration;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.PersonalKey;
@@ -92,6 +94,7 @@ public class Client implements PacketListener, Runnable {
             }
 
             // connect
+            LOGGER.info("connecting...");
             try {
                 mConn.connect();
             } catch (XMPPException ex) {
@@ -124,7 +127,7 @@ public class Client implements PacketListener, Runnable {
             }
         }
 
-        LOGGER.info("Connected!");
+        LOGGER.info("connected!");
 
         // TODO
         this.sendPresence();
@@ -149,6 +152,9 @@ public class Client implements PacketListener, Runnable {
         smackMessage.setTo(message.getJID());
         smackMessage.setBody(message.getText());
         smackMessage.addExtension(new ServerReceiptRequest());
+        KonConfiguration conf = KonConfiguration.getInstance();
+        if (conf.getBoolean(KonConfiguration.NET_SEND_CHAT_STATE))
+            smackMessage.addExtension(new ChatStateExtension(ChatState.active));
         this.sendPacket(smackMessage);
     }
 
@@ -161,7 +167,8 @@ public class Client implements PacketListener, Runnable {
 
     public void sendPresence() {
         Presence presence = new Presence(Presence.Type.available);
-        presence.setStatus("busy programing a Kontalk desktop client");
+        // TODO
+        //presence.setStatus();
         this.sendPacket(presence);
     }
 
