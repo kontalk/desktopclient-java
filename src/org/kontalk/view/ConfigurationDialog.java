@@ -22,6 +22,7 @@ import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
+import com.alee.laf.list.WebList;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
@@ -140,6 +141,10 @@ public class ConfigurationDialog extends WebDialog {
         fileChooser.setSelectedFile(new File(path));
         fileChooser.getWebFileChooser().setCurrentDirectory(System.getProperty("user.dir"));
         return fileChooser;
+    }
+
+    private class List extends WebList {
+
     }
 
     private void saveConfiguration() {

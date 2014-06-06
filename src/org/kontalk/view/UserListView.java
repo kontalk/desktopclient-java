@@ -22,20 +22,15 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
-import com.alee.laf.list.WebList;
-import com.alee.laf.list.WebListCellRenderer;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
-import com.alee.managers.tooltip.TooltipManager;
-import com.alee.managers.tooltip.TooltipWay;
 import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
@@ -44,9 +39,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.logging.Logger;
-import javax.swing.DefaultListModel;
 import javax.swing.JDialog;
-import javax.swing.JList;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -59,24 +52,22 @@ import org.kontalk.model.UserList;
  * Display all known user (aka contacts) in a list.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class UserListView extends WebList implements ChangeListener {
+public class UserListView extends ListView implements ChangeListener {
     private final static Logger LOGGER = Logger.getLogger(UserListView.class.getName());
 
     private final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
             new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");
 
     private final UserList mUserList;
-    private final DefaultListModel<UserView> mListModel = new DefaultListModel();
     private final WebPopupMenu mPopupMenu;
 
     private WebCustomTooltip mTip = null;
 
     UserListView(final View modelView, UserList userList) {
+        super();
+
         mUserList = userList;
         mUserList.addListener(this);
-
-        this.setModel(mListModel);
-        this.setCellRenderer(new UserListRenderer());
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -98,7 +89,8 @@ public class UserListView extends WebList implements ChangeListener {
         editMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                JDialog editUserDialog = new EditUserDialog(mListModel.get(getSelectedIndex()));
+                ListItem p = mListModel.get(getSelectedIndex());
+                JDialog editUserDialog = new EditUserDialog((UserView) p);
                 editUserDialog.setVisible(true);
             }
         });
@@ -167,18 +159,8 @@ public class UserListView extends WebList implements ChangeListener {
     User getSelectedUser() {
         if (getSelectedIndex() == -1)
             return null;
-        return mListModel.get(getSelectedIndex()).getUser();
-    }
-
-    void showTooltip(UserView userView) {
-        if (mTip != null)
-            mTip.closeTooltip();
-
-        WebCustomTooltip tip = TooltipManager.showOneTimeTooltip(this,
-                this.getMousePosition(),
-                userView.getTooltipText(),
-                TooltipWay.down);
-        mTip = tip;
+        ListItem p = mListModel.get(getSelectedIndex());
+        return ((UserView) p).getUser();
     }
 
     private void showPopupMenu(MouseEvent e){
@@ -188,7 +170,7 @@ public class UserListView extends WebList implements ChangeListener {
     /**
      * One item in the contact list representing a user.
      */
-    private class UserView extends WebPanel{
+    private class UserView extends ListItem {
 
         private final User mUser;
         private final WebLabel mNameLabel;
@@ -235,21 +217,7 @@ public class UserListView extends WebList implements ChangeListener {
             return mUser;
         }
 
-        void paintSelected(boolean isSelected){
-            if (isSelected)
-                this.setBackground(View.BLUE);
-            else
-                this.setBackground(mBackround);
-        }
-
-        // catch the event, when a tooltip should be shown for this item and
-        // create a own one
         @Override
-        public String getToolTipText(MouseEvent event) {
-            UserListView.this.showTooltip(this);
-            return null;
-        }
-
         public String getTooltipText() {
             String isAvailable;
             if (mUser.getAvailable() == User.Available.YES)
@@ -274,24 +242,17 @@ public class UserListView extends WebList implements ChangeListener {
 
             return html;
         }
-    }
-
-    private class UserListRenderer extends WebListCellRenderer {
 
         @Override
-        public Component getListCellRendererComponent(JList list,
-                                                Object value,
-                                                int index,
-                                                boolean isSelected,
-                                                boolean hasFocus) {
-            if (value instanceof UserView) {
-                UserView userView = (UserView) value;
-                userView.paintSelected(isSelected);
-                TooltipManager.showTooltips(userView);
-                return userView;
-            } else {
-                return new WebPanel(new WebLabel("ERRROR"));
-            }
+        void resize(int listWidth) {
+        }
+
+        @Override
+        void repaint(boolean isSelected) {
+            if (isSelected)
+                this.setBackground(View.BLUE);
+            else
+                this.setBackground(mBackround);
         }
     }
 
