@@ -22,9 +22,21 @@ import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.button.WebButton;
 import com.alee.managers.hotkey.Hotkey;
+import java.awt.AWTException;
 import java.awt.Color;
+import java.awt.Image;
+import java.awt.MenuItem;
+import java.awt.PopupMenu;
+import java.awt.SystemTray;
+import java.awt.Toolkit;
+import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+import java.net.URL;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.JTextField;
@@ -43,6 +55,8 @@ import org.kontalk.model.UserList;
 public class View {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
+    final static URL ICON_IMAGE_URL = ClassLoader.getSystemResource(
+            "org/kontalk/res/kontalk_.png");
     final static Color BLUE = new Color(130, 170, 240);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
 
@@ -96,6 +110,9 @@ public class View {
         mMainFrame = new MainFrame(this, mUserListView, mThreadListView,
                 mThreadView, mSendTextField, mSendButton, statusBar);
         mMainFrame.setVisible(true);
+
+        // tray
+        this.setTray();
 
         // TODO: always disconnected?
         this.statusChanged(Kontalk.Status.DISCONNECTED);
@@ -183,6 +200,53 @@ public class View {
 
     public void init() {
         mThreadListView.selectLastThread();
+    }
+
+    private void setTray() {
+        TrayIcon trayIcon = null;
+        if (!SystemTray.isSupported()) {
+            LOGGER.info("tray icon not supported");
+            return;
+        }
+
+        // load an image
+        Image image = Toolkit.getDefaultToolkit().createImage(ICON_IMAGE_URL);
+        //image = image.getScaledInstance(22, 22, Image.SCALE_SMOOTH);
+        // create a action listener to listen for default action executed on the tray icon
+        MouseListener listener = new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                mMainFrame.toggleState();
+            }
+        };
+        // create a popup menu
+        PopupMenu popup = new PopupMenu();
+        // create menu item for the default action
+        MenuItem defaultItem = new MenuItem("Quit");
+        popup.add(defaultItem);
+        // ...
+        // construct a TrayIcon
+        trayIcon = new TrayIcon(image, "Kontalk" /*, popup*/);
+        trayIcon.setImageAutoSize(true);
+        trayIcon.addMouseListener(listener);
+        // ...
+        // add the tray image
+        SystemTray tray = SystemTray.getSystemTray();
+        try {
+            tray.add(trayIcon);
+        } catch (AWTException ex) {
+            LOGGER.log(Level.WARNING, "can't add tray icon", ex);
+        }
+
+
+        // ...
+        // some time later
+        // the application state has changed - update the image
+        if (trayIcon != null) {
+            //trayIcon.setImage(updatedImage);
+        }
+        // ...
+
     }
 
 }

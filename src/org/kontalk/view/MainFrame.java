@@ -40,13 +40,14 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.Frame;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.net.URL;
+import java.awt.event.WindowStateListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -64,9 +65,6 @@ import org.kontalk.KonConf;
  */
 public class MainFrame extends WebFrame {
     private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
-
-    private final static URL ICON_IMAGE_URL = ClassLoader.getSystemResource(
-            "org/kontalk/res/kontalk.png");
 
     public static enum Tab {THREADS, USER};
 
@@ -86,8 +84,8 @@ public class MainFrame extends WebFrame {
         this.setSize(mConf.getInt(KonConf.VIEW_FRAME_WIDTH),
                 mConf.getInt(KonConf.VIEW_FRAME_HEIGHT));
 
-        if (ICON_IMAGE_URL != null) {
-            this.setIconImage(Toolkit.getDefaultToolkit().createImage(ICON_IMAGE_URL));
+        if (View.ICON_IMAGE_URL != null) {
+            this.setIconImage(Toolkit.getDefaultToolkit().createImage(View.ICON_IMAGE_URL));
         } else {
             LOGGER.warning("can't find icon image resource");
         }
@@ -99,6 +97,13 @@ public class MainFrame extends WebFrame {
             @Override
             public void windowClosing(WindowEvent e){
                 viewModel.shutDown();
+            }
+        });
+
+        this.addWindowStateListener(new WindowStateListener() {
+            @Override
+            public void windowStateChanged(WindowEvent e) {
+                // TODO tray behaviour?
             }
         });
 
@@ -232,6 +237,21 @@ public class MainFrame extends WebFrame {
         mTabbedPane.setSelectedIndex(tab.ordinal());
     }
 
+    void save() {
+        mConf.setProperty(KonConf.VIEW_FRAME_WIDTH, this.getWidth());
+        mConf.setProperty(KonConf.VIEW_FRAME_HEIGHT, this.getHeight());
+    }
+
+    void toggleState() {
+        if (this.getState() == Frame.NORMAL) {
+            this.setState(Frame.ICONIFIED);
+            this.setVisible(false);
+        } else {
+            this.setState(Frame.NORMAL);
+            this.setVisible(true);
+        }
+    }
+
     private void showAboutDialog() {
         WebPanel aboutPanel = new WebPanel();
         aboutPanel.add(new WebLabel("Kontalk Java Client v0.1"));
@@ -240,8 +260,8 @@ public class MainFrame extends WebFrame {
         linkLabel.setText("Visit kontalk.org");
         aboutPanel.add(linkLabel, BorderLayout.SOUTH);
         ImageIcon icon;
-        if (ICON_IMAGE_URL != null) {
-            icon = new ImageIcon(ICON_IMAGE_URL);
+        if (View.ICON_IMAGE_URL != null) {
+            icon = new ImageIcon(View.ICON_IMAGE_URL);
         } else {
             icon = new ImageIcon();
         }
@@ -250,11 +270,6 @@ public class MainFrame extends WebFrame {
                 "About",
                 WebOptionPane.INFORMATION_MESSAGE,
                 icon);
-    }
-
-    void save() {
-        mConf.setProperty(KonConf.VIEW_FRAME_WIDTH, this.getWidth());
-        mConf.setProperty(KonConf.VIEW_FRAME_HEIGHT, this.getHeight());
     }
 
     private class StatusDialog extends WebDialog {

@@ -27,10 +27,6 @@ import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.FocusAdapter;
-import java.awt.event.FocusEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
@@ -176,7 +172,6 @@ public class ThreadView extends WebScrollPane {
             private final WebLabel mStatusIconLabel;
 
             MessageView(KonMessage message) {
-                super();
                 mMessage = message;
                 mMessage.addListener(this);
 
@@ -241,21 +236,6 @@ public class ThreadView extends WebScrollPane {
                 } else {
                     this.add(messagePanel, BorderLayout.EAST);
                 }
-
-                this.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        System.out.println("EVENT!");
-                    }
-                });
-                this.addFocusListener(new FocusAdapter() {
-
-                    @Override
-                    public void focusGained(FocusEvent e) {
-                        System.out.println("EVENT!");
-                    }
-
-                });
             }
 
             public int getMessageID() {
@@ -274,7 +254,7 @@ public class ThreadView extends WebScrollPane {
                 mTextArea.setSize(width, mTextArea.getPreferredSize().height);
             }
 
-            void update() {
+            private void update() {
                 switch (mMessage.getReceiptStatus()) {
                     case PENDING :
                         mStatusIconLabel.setIcon(PENDING_ICON);
