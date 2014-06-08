@@ -129,7 +129,7 @@ public class MessageList {
                 encrypted);
 
         // encrypt and verify message
-        Coder.processMessage(newMessage);
+        Coder.processInMessage(newMessage);
 
         thread.add(newMessage);
         mMap.put(newMessage.getID(), newMessage);

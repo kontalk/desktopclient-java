@@ -41,6 +41,7 @@ import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.JTextField;
 import javax.swing.ToolTipManager;
+import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.model.KonThread;
@@ -112,13 +113,14 @@ public class View {
         mMainFrame.setVisible(true);
 
         // tray
-        this.setTray();
+        if (KonConf.getInstance().getBoolean(KonConf.MAIN_TRAY))
+            this.setTray();
 
         // TODO: always disconnected?
         this.statusChanged(Kontalk.Status.DISCONNECTED);
     }
 
-    public void statusChanged(Kontalk.Status status) {
+    public final void statusChanged(Kontalk.Status status) {
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText("Connecting...");

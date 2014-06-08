@@ -175,11 +175,14 @@ public class Kontalk {
     }
 
     public void sendText(KonThread thread, String text) {
-        boolean encrypted = false; // TODO
         // TODO no group chat support yet
         Set<User> user = thread.getUser();
         for (User oneUser: user) {
-            KonMessage newMessage = mMessageList.addTo(thread, oneUser, text, encrypted);
+            KonMessage newMessage = mMessageList.addTo(
+                    thread,
+                    oneUser,
+                    text,
+                    oneUser.getEncrypted());
             mClient.sendMessage(newMessage);
         }
     }

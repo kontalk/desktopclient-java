@@ -39,6 +39,7 @@ import org.jivesoftware.smackx.ChatState;
 import org.jivesoftware.smackx.packet.ChatStateExtension;
 import org.kontalk.KonConf;
 import org.kontalk.Kontalk;
+import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage;
 
@@ -150,11 +151,24 @@ public class Client implements PacketListener, Runnable {
         smackMessage.setPacketID(message.getXMPPID());
         smackMessage.setType(Message.Type.chat);
         smackMessage.setTo(message.getJID());
-        smackMessage.setBody(message.getText());
         smackMessage.addExtension(new ServerReceiptRequest());
         KonConf conf = KonConf.getInstance();
         if (conf.getBoolean(KonConf.NET_SEND_CHAT_STATE))
             smackMessage.addExtension(new ChatStateExtension(ChatState.active));
+
+        if (message.getEncryption() == Coder.Encryption.NOT &&
+                message.getSigning() == Coder.Signing.NOT) {
+            smackMessage.setBody(message.getText());
+        } else {
+            byte[] encrypted = Coder.processOutMessage(message);
+            // check also for security errors just to be sure
+            if (encrypted == null || !message.getSecurityErrors().isEmpty()) {
+                LOGGER.warning("encryption failed, not sending message");
+                return;
+            }
+            smackMessage.addExtension(new E2EEncryption(encrypted));
+        }
+
         this.sendPacket(smackMessage);
     }
 

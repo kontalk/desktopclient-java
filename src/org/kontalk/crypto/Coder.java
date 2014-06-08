@@ -6,18 +6,27 @@
 
 package org.kontalk.crypto;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.text.ParseException;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.openpgp.PGPCompressedData;
+import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
+import org.bouncycastle.openpgp.PGPEncryptedData;
+import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
 import org.bouncycastle.openpgp.PGPEncryptedDataList;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPLiteralData;
+import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
 import org.bouncycastle.openpgp.PGPObjectFactory;
 import org.bouncycastle.openpgp.PGPOnePassSignature;
 import org.bouncycastle.openpgp.PGPOnePassSignatureList;
@@ -26,9 +35,14 @@ import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
 import org.bouncycastle.openpgp.PGPSignature;
+import org.bouncycastle.openpgp.PGPSignatureGenerator;
 import org.bouncycastle.openpgp.PGPSignatureList;
+import org.bouncycastle.openpgp.PGPSignatureSubpacketGenerator;
+import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
+import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
+import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.Base64;
 import org.kontalk.model.Account;
@@ -79,9 +93,132 @@ public class Coder {
         //INVALID_TIMESTAMP,
     }
 
-    public static void processMessage(KonMessage message) {
+    /** Buffer size for encryption. It should always be a power of 2. */
+    private static final int BUFFER_SIZE = 1 << 8;
+
+    /**
+     * Creates encrypted and signed message body. Errors that may occur are
+     * saved to the message.
+     * @param message
+     * @return the encrypted and signed text.
+     */
+    public static byte[] processOutMessage(KonMessage message) {
+        if (message.getEncryption() != Encryption.ENCRYPTED ||
+                message.getDir() != KonMessage.Direction.OUT) {
+            LOGGER.warning("message does not want to be encrypted");
+            return null;
+        }
+
+        LOGGER.fine("encrypting message...");
+
+        // clear security errors
+        message.resetSecurityErrors();
+
+        // get my key
+        PersonalKey myKey = Account.getInstance().getPersonalKey();
+
+        // get receiver key
+        PGPPublicKey receiverKey = getKey(message);
+        if (receiverKey == null)
+            return null;
+
+        // secure the message against the most basic attacks using Message/CPIM
+        String from = myKey.getUserId(null);
+        String to = PGP.getUserId(receiverKey, null) + "; ";
+        String mime = "text/plain";
+        CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, message.getText());
+        byte[] plainText = cpim.toByteArray();
+
+        // setup data encryptor & generator
+        BcPGPDataEncryptorBuilder encryptor = new BcPGPDataEncryptorBuilder(PGPEncryptedData.AES_192);
+        encryptor.setWithIntegrityPacket(true);
+        encryptor.setSecureRandom(new SecureRandom());
+
+        // add public key recipients
+        PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
+        //for (PGPPublicKey rcpt : mRecipients)
+        encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(receiverKey));
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ByteArrayInputStream in = new ByteArrayInputStream(plainText);
+        try { // catch all io and pgp exceptions
+
+            OutputStream encryptedOut = encGen.open(out, new byte[BUFFER_SIZE]);
+
+            // setup compressed data generator
+            PGPCompressedDataGenerator compGen = new PGPCompressedDataGenerator(PGPCompressedData.ZIP);
+            OutputStream compressedOut = compGen.open(encryptedOut, new byte[BUFFER_SIZE]);
+
+            // setup signature generator
+            PGPSignatureGenerator sigGen = new PGPSignatureGenerator
+                    (new BcPGPContentSignerBuilder(myKey.getSignKeyPair()
+                        .getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1));
+            sigGen.init(PGPSignature.BINARY_DOCUMENT, myKey.getSignKeyPair().getPrivateKey());
+
+            PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
+            spGen.setSignerUserID(false, myKey.getUserId(null));
+            sigGen.setUnhashedSubpackets(spGen.generate());
+
+            sigGen.generateOnePassVersion(false).encode(compressedOut);
+
+            // Initialize literal data generator
+            PGPLiteralDataGenerator literalGen = new PGPLiteralDataGenerator();
+            OutputStream literalOut = literalGen.open(
+                compressedOut,
+                PGPLiteralData.BINARY,
+                "",
+                new Date(),
+                new byte[BUFFER_SIZE]);
+
+            // read the "in" stream, compress, encrypt and write to the "out" stream
+            // this must be done if clear data is bigger than the buffer size
+            // but there are other ways to optimize...
+            byte[] buf = new byte[BUFFER_SIZE];
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                literalOut.write(buf, 0, len);
+                try {
+                    sigGen.update(buf, 0, len);
+                } catch (SignatureException ex) {
+                        LOGGER.log(Level.WARNING, "can't read data for signature", ex);
+                        message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
+                        return null;
+                }
+            }
+
+            in.close();
+            literalGen.close();
+
+            // gsenerate the signature, compress, encrypt and write to the "out" stream
+            try {
+                sigGen.generate().encode(compressedOut);
+            } catch (SignatureException ex) {
+                LOGGER.log(Level.WARNING, "can't create signature", ex);
+                message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
+                return null;
+            }
+            compGen.close();
+            encGen.close();
+
+        } catch (IOException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't encrypt message", ex);
+            message.addSecurityError(Error.UNKNOWN_ERROR);
+            return null;
+        }
+
+        LOGGER.fine("encryption successful");
+        return out.toByteArray();
+    }
+
+    /**
+     * Decrypts and verifies the body of a message. Errors that may occur are
+     * saved to the message.
+     * @param message
+     */
+    public static void processInMessage(KonMessage message) {
         // signing requires also encryption
-        if (message.getEncryption() != Encryption.ENCRYPTED) {
+        if (message.getEncryption() != Encryption.ENCRYPTED ||
+                message.getDir() != KonMessage.Direction.IN) {
             LOGGER.warning("message not encrypted");
             return;
         }
@@ -94,26 +231,9 @@ public class Coder {
         PersonalKey myKey = Account.getInstance().getPersonalKey();
 
         // get sender key
-        User user = message.getUser();
-        if (!user.hasKey()) {
-            LOGGER.warning("key not found for user, id: "+user.getID());
-            message.addSecurityError(Error.KEY_UNAVAILABLE);
+        PGPPublicKey senderKey = getKey(message);
+        if (senderKey == null)
             return;
-        }
-        PGPPublicKeyRing ring;
-        try {
-            ring = PGP.readPublicKeyring(user.getKey());
-        } catch (IOException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't get keyring", ex);
-            message.addSecurityError(Error.INVALID_KEY);
-            return;
-        }
-        PGPPublicKey senderKey = PGP.getMasterKey(ring);
-        if (senderKey == null) {
-            LOGGER.warning("can't find masterkey in keyring");
-            message.addSecurityError(Error.INVALID_KEY);
-            return;
-        }
 
         // decrypt
         String decryptedBody = decryptAndVerify(message, myKey, senderKey);
@@ -129,12 +249,36 @@ public class Coder {
         // check for errors that occured
         if (message.getSecurityErrors().isEmpty()) {
             // everything went better than expected
-            LOGGER.info("decryption successful");
+            LOGGER.fine("decryption successful");
             // TODO really overwrite?
             message.setDecryptedText(text);
         } else {
             LOGGER.warning("decryption failed");
         }
+    }
+
+    private static PGPPublicKey getKey(KonMessage message) {
+        User user = message.getUser();
+        if (!user.hasKey()) {
+            LOGGER.warning("key not found for user, id: "+user.getID());
+            message.addSecurityError(Error.KEY_UNAVAILABLE);
+            return null;
+        }
+        PGPPublicKeyRing ring;
+        try {
+            ring = PGP.readPublicKeyring(user.getKey());
+        } catch (IOException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't get keyring", ex);
+            message.addSecurityError(Error.INVALID_KEY);
+            return null;
+        }
+        PGPPublicKey senderKey = PGP.getMasterKey(ring);
+        if (senderKey == null) {
+            LOGGER.warning("can't find masterkey in keyring");
+            message.addSecurityError(Error.INVALID_KEY);
+            return null;
+        }
+        return senderKey;
     }
 
     private static String decryptAndVerify(KonMessage message,
@@ -317,17 +461,17 @@ public class Coder {
         String content = cpimMessage.getBody();
         String plainText;
         if (XMPPUtils.XML_XMPP_TYPE.equalsIgnoreCase(mime)) {
-            LOGGER.fine("CPIM body has xml xmpp format");
+            LOGGER.fine("CPIM body has XMPP XML format");
             Message m;
             try {
                 m = XMPPUtils.parseMessageStanza(content);
             } catch (Exception ex) {
-                LOGGER.log(Level.WARNING, "can't parse xmpp xml string", ex);
+                LOGGER.log(Level.WARNING, "can't parse XMPP XML string", ex);
                 return null;
             }
             plainText = m.getBody() != null ? m.getBody() : null;
         } else {
-            LOGGER.fine("CPIM body mime type: "+mime);
+            LOGGER.fine("CPIM body MIME type: "+mime);
             plainText = content;
         }
 

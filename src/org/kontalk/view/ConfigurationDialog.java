@@ -124,6 +124,7 @@ public class ConfigurationDialog extends WebDialog {
 
         private void saveConfiguration() {
             mConf.setProperty(KonConf.MAIN_TRAY, mTrayBox.isSelected());
+            // TODO show/remove tray icon
         }
     }
 
@@ -198,8 +199,6 @@ public class ConfigurationDialog extends WebDialog {
             GroupPanel buttonPanel = new GroupPanel(okButton);
             buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
             this.add(buttonPanel, BorderLayout.SOUTH);
-
-
         }
 
         private void saveConfiguration() {
