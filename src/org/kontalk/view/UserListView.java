@@ -38,7 +38,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
-import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ChangeEvent;
@@ -53,7 +52,6 @@ import org.kontalk.model.UserList;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class UserListView extends ListView implements ChangeListener {
-    private final static Logger LOGGER = Logger.getLogger(UserListView.class.getName());
 
     private final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
             new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");
@@ -241,10 +239,6 @@ public class UserListView extends ListView implements ChangeListener {
                     "";
 
             return html;
-        }
-
-        @Override
-        void resize(int listWidth) {
         }
 
         @Override

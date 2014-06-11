@@ -37,7 +37,7 @@ public class Account {
 
     private final static Account INSTANCE = new Account();
 
-    private PersonalKey mKey;
+    private PersonalKey mKey = null;
 
     private Account() {
     }

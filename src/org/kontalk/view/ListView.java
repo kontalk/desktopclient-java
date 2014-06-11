@@ -17,7 +17,6 @@ import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.logging.Logger;
 import javax.swing.JList;
 
 /**
@@ -25,7 +24,6 @@ import javax.swing.JList;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class ListView extends WebList {
-    private final static Logger LOGGER = Logger.getLogger(ListView.class.getName());
 
     final WebListModel<ListItem> mListModel = new WebListModel();
 
@@ -58,9 +56,9 @@ public class ListView extends WebList {
 
     public abstract class ListItem extends WebPanel {
 
-        abstract void resize(int listWidth);
+        void resize(int listWidth) {};
 
-        abstract void repaint(boolean isSelected);
+        void repaint(boolean isSelected) {};
 
         abstract String getTooltipText();
 

@@ -217,11 +217,6 @@ public class MainFrame extends WebFrame {
 
         // ...right...
         WebPanel rightPanel = new WebPanel();
-//        WebScrollPane threadViewScrollPane = new WebScrollPane(threadView);
-//        threadViewScrollPane.setHorizontalScrollBarPolicy(
-//                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-//        threadViewScrollPane.getVerticalScrollBar().setUnitIncrement(25);
-//        rightPanel.add(threadViewScrollPane, BorderLayout.CENTER);
         rightPanel.add(threadView);
         WebPanel bottomPanel = new WebPanel();
         bottomPanel.add(sendTextField, BorderLayout.CENTER);

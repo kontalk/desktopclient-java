@@ -21,12 +21,12 @@ package org.kontalk.view;
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
 import com.alee.managers.hotkey.Hotkey;
 import java.awt.AWTException;
 import java.awt.Color;
 import java.awt.Image;
-import java.awt.MenuItem;
-import java.awt.PopupMenu;
 import java.awt.SystemTray;
 import java.awt.Toolkit;
 import java.awt.TrayIcon;
@@ -69,6 +69,7 @@ public class View {
     private final WebButton mSendButton;
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
+    private TrayIcon mTrayIcon;
 
     public View(Kontalk model) {
         mModel = model;
@@ -113,8 +114,7 @@ public class View {
         mMainFrame.setVisible(true);
 
         // tray
-        if (KonConf.getInstance().getBoolean(KonConf.MAIN_TRAY))
-            this.setTray();
+        this.setTray();
 
         // TODO: always disconnected?
         this.statusChanged(Kontalk.Status.DISCONNECTED);
@@ -135,6 +135,8 @@ public class View {
             case DISCONNECTED:
                 mThreadView.setColor(Color.lightGray);
                 mStatusBarLabel.setText("Not connected");
+                //if (mTrayIcon != null)
+                //    trayIcon.setImage(updatedImage);
                 break;
             case SHUTTING_DOWN:
                 mStatusBarLabel.setText("Shutting down...");
@@ -204,51 +206,77 @@ public class View {
         mThreadListView.selectLastThread();
     }
 
-    private void setTray() {
-        TrayIcon trayIcon = null;
+    final void setTray() {
+        if (!KonConf.getInstance().getBoolean(KonConf.MAIN_TRAY)) {
+            if (mTrayIcon != null) {
+                // remove tray icon
+                SystemTray tray = SystemTray.getSystemTray();
+                tray.remove(mTrayIcon);
+                mTrayIcon = null;
+            }
+            return;
+        }
+
         if (!SystemTray.isSupported()) {
             LOGGER.info("tray icon not supported");
             return;
         }
 
+        if (mTrayIcon != null)
+            // already set
+            return;
+
         // load an image
         Image image = Toolkit.getDefaultToolkit().createImage(ICON_IMAGE_URL);
         //image = image.getScaledInstance(22, 22, Image.SCALE_SMOOTH);
+
+        // TODO popup menu
+        final WebPopupMenu popup = new WebPopupMenu("Kontalk");
+        WebMenuItem quitItem = new WebMenuItem("Quit");
+        quitItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                View.this.shutDown();
+            }
+        });
+        popup.add(quitItem);
+
+        //final Frame frame = new Frame("");
+        //frame.setVisible(true);
+
         // create a action listener to listen for default action executed on the tray icon
         MouseListener listener = new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-                mMainFrame.toggleState();
+            public void mousePressed(MouseEvent e) {
+                check(e);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.getButton() == MouseEvent.BUTTON1)
+                    mMainFrame.toggleState();
+                else
+                    check(e);
+            }
+            private void check(MouseEvent e) {
+                if (!e.isPopupTrigger())
+                    return;
+
+                // TODDO ugly
+                popup.setLocation(e.getX() - 20, e.getY() - 40);
+                popup.setInvoker(popup);
+                popup.setVisible(true);
             }
         };
-        // create a popup menu
-        PopupMenu popup = new PopupMenu();
-        // create menu item for the default action
-        MenuItem defaultItem = new MenuItem("Quit");
-        popup.add(defaultItem);
-        // ...
-        // construct a TrayIcon
-        trayIcon = new TrayIcon(image, "Kontalk" /*, popup*/);
-        trayIcon.setImageAutoSize(true);
-        trayIcon.addMouseListener(listener);
-        // ...
-        // add the tray image
+
+        mTrayIcon = new TrayIcon(image, "Kontalk" /*, popup*/);
+        mTrayIcon.setImageAutoSize(true);
+        mTrayIcon.addMouseListener(listener);
+
         SystemTray tray = SystemTray.getSystemTray();
         try {
-            tray.add(trayIcon);
+            tray.add(mTrayIcon);
         } catch (AWTException ex) {
             LOGGER.log(Level.WARNING, "can't add tray icon", ex);
         }
-
-
-        // ...
-        // some time later
-        // the application state has changed - update the image
-        if (trayIcon != null) {
-            //trayIcon.setImage(updatedImage);
-        }
-        // ...
-
     }
-
 }

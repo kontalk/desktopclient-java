@@ -162,14 +162,14 @@ public class KonThread extends ChangeSubject {
 
     }
 
-    public boolean add(KonMessage message) {
+    public void add(KonMessage message) {
         if (mSet.contains(message)) {
             LOGGER.warning("message already in thread, ID: " + message.getID());
-            return false;
+            return;
         }
-        boolean contains = mSet.add(message);
-        this.changed();
-        return contains;
+        boolean added = mSet.add(message);
+        if (added)
+            this.changed();
     }
 
     private void insertUser(User user) {

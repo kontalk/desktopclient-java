@@ -124,7 +124,7 @@ public class ConfigurationDialog extends WebDialog {
 
         private void saveConfiguration() {
             mConf.setProperty(KonConf.MAIN_TRAY, mTrayBox.isSelected());
-            // TODO show/remove tray icon
+            mViewModel.setTray();
         }
     }
 

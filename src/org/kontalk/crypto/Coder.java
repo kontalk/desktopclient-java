@@ -116,6 +116,11 @@ public class Coder {
 
         // get my key
         PersonalKey myKey = Account.getInstance().getPersonalKey();
+        if (myKey == null) {
+            LOGGER.warning("can't get personal key");
+            message.addSecurityError(Error.UNKNOWN_ERROR);
+            return null;
+        }
 
         // get receiver key
         PGPPublicKey receiverKey = getKey(message);

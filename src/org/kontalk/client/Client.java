@@ -147,6 +147,10 @@ public class Client implements PacketListener, Runnable {
     }
 
     public void sendMessage(KonMessage message) {
+        if (mConn == null || !mConn.isAuthenticated()) {
+            return;
+        }
+
         Message smackMessage = new Message();
         smackMessage.setPacketID(message.getXMPPID());
         smackMessage.setType(Message.Type.chat);
@@ -192,12 +196,12 @@ public class Client implements PacketListener, Runnable {
             return;
         }
         mConn.sendPacket(p);
-        LOGGER.info("sent packet: " + p.toXML());
+        LOGGER.info("sent packet: "+p.toXML());
     }
 
     @Override
     public void processPacket(Packet packet) {
-        LOGGER.info("Got packet: "+packet.toXML());
+        LOGGER.info("got packet: "+packet.toXML());
     }
 
     @Override

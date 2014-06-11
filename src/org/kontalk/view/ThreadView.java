@@ -29,8 +29,9 @@ import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
-import java.util.logging.Logger;
+import java.util.Set;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
@@ -47,7 +48,6 @@ import org.kontalk.view.ListView.ListItem;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class ThreadView extends WebScrollPane {
-    private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
 
     private static Icon PENDING_ICON;
     private static Icon SENT_ICON;
@@ -90,7 +90,7 @@ public class ThreadView extends WebScrollPane {
 
         if (list.getModelSize() > 0 && n) {
             // scroll down
-            // TODO doesn't work again
+            // TODO doesn't work again (does it?)
             list.ensureIndexIsVisible(list.getModelSize() -1);
             //JScrollBar vertical = this.getVerticalScrollBar();
             //vertical.setValue(vertical.getMaximum());
@@ -143,12 +143,6 @@ public class ThreadView extends WebScrollPane {
                 }
             });
 
-            this.update();
-        }
-
-        private void update() {
-            // TODO performance
-            mListModel.clear();
             // insert messages
             for (KonMessage message: mThread.getMessages()) {
                 MessageView newMessageView = new MessageView(message);
@@ -158,7 +152,20 @@ public class ThreadView extends WebScrollPane {
 
         @Override
         public void stateChanged(ChangeEvent e) {
-            update();
+            // check for new messages to add
+            Set<KonMessage> oldMessages = new HashSet();
+            for (ListItem m : mListModel.getElements())
+                oldMessages.add(((MessageView) m).mMessage);
+
+            for (KonMessage message: mThread.getMessages()) {
+                if (!oldMessages.contains(message)) {
+                    MessageView newMessageView = new MessageView(message);
+                    // always inserted at the end, timestamp of message is
+                    // ignored. Let's call it a feature.
+                    mListModel.addElement(newMessageView);
+                    this.ensureIndexIsVisible(this.getModelSize() -1);
+                }
+            }
         }
 
         /**
@@ -306,11 +313,6 @@ public class ThreadView extends WebScrollPane {
 
                 return html;
             }
-
-            @Override
-            void repaint(boolean isSelected) {
-            }
         }
     }
-
 }
