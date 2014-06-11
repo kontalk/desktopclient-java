@@ -62,7 +62,6 @@ public class MessageList {
                 String jid = resultSet.getString("jid");
                 String xmppID = resultSet.getString("xmpp_id");
                 Date date = new Date(resultSet.getLong("date"));
-                boolean read = resultSet.getBoolean("read");
                 int statusIndex = resultSet.getInt("receipt_status");
                 KonMessage.Status status = statusValues[statusIndex];
                 String receiptID = resultSet.getString("receipt_id");
@@ -80,7 +79,6 @@ public class MessageList {
                         jid,
                         xmppID,
                         date,
-                        read,
                         status,
                         receiptID,
                         text,

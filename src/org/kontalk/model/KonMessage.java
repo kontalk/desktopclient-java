@@ -55,8 +55,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
             "xmpp_id TEXT UNIQUE, " +
             // unix time, create/received timestamp
             "date INTEGER NOT NULL, " +
-            // boolean, message was seen by me
-            "read INTEGER NOT NULL, " +
             // enum, server receipt status
             "receipt_status INTEGER NOT NULL, " +
             // receipt id
@@ -82,7 +80,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
     private final String mJID;
     private final String mXMPPID;
     private final Date mDate;
-    private boolean mRead;
     private Status mReceiptStatus;
     private String mReceiptID;
     private String mText;
@@ -103,7 +100,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         mJID = user.getJID();
         mXMPPID = Packet.nextID();
         mDate = new Date(); // "now"
-        mRead = false;
         mReceiptStatus = Status.PENDING;
         mReceiptID = null;
         mText = text;
@@ -137,7 +133,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         mJID = jid;
         mXMPPID = xmppID;
         mDate = date;
-        mRead = false;
         mReceiptStatus = Status.IN;
         mReceiptID = receiptID;
         mText = text;
@@ -162,7 +157,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
             String jid,
             String xmppID,
             Date date,
-            boolean read,
             Status status,
             String receiptID,
             String text,
@@ -176,7 +170,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         mJID = jid;
         mXMPPID = xmppID;
         mDate = date;
-        mRead = read;
         mReceiptStatus = status;
         mReceiptID = receiptID;
         mText = text;
@@ -312,7 +305,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
         values.add(mJID);
         values.add(mXMPPID);
         values.add(mDate);
-        values.add(mRead);
         values.add(mReceiptStatus);
         values.add(mReceiptID);
         values.add(mText);
@@ -331,7 +323,6 @@ public class KonMessage extends ChangeSubject implements Comparable<KonMessage> 
        Database db = Database.getInstance();
        Map<String, Object> set = new HashMap();
        set.put("xmpp_id", mXMPPID);
-       set.put("read", mRead);
        set.put("receipt_status", mReceiptStatus);
        set.put("receipt_id", mReceiptID);
        set.put("content", mText);
