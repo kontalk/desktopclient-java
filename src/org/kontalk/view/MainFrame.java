@@ -166,9 +166,9 @@ public class MainFrame extends WebFrame {
         WebMenu optionsMenu = new WebMenu("Options");
         optionsMenu.setMnemonic(KeyEvent.VK_O);
 
-        WebMenuItem conConfMenuItem = new WebMenuItem("Configuration");
-        conConfMenuItem.setAccelerator(Hotkey.ALT_N);
-        conConfMenuItem.setToolTipText("Set account configuration");
+        WebMenuItem conConfMenuItem = new WebMenuItem("Preferences");
+        conConfMenuItem.setAccelerator(Hotkey.ALT_P);
+        conConfMenuItem.setToolTipText("Set application preferences");
         conConfMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {

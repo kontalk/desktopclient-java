@@ -61,8 +61,10 @@ public class ConfigurationDialog extends WebDialog {
         WebTabbedPane tabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
         final MainPanel mainPanel = new MainPanel();
         final AccountPanel accountPanel = new AccountPanel();
+        final PrivacyPanel privacyPanel = new PrivacyPanel();
         tabbedPane.addTab("Main", mainPanel);
         tabbedPane.addTab("Account", accountPanel);
+        tabbedPane.addTab("Privacy", privacyPanel);
 
         this.add(tabbedPane, BorderLayout.CENTER);
 
@@ -80,6 +82,7 @@ public class ConfigurationDialog extends WebDialog {
             public void actionPerformed(ActionEvent e) {
                 mainPanel.saveConfiguration();
                 accountPanel.saveConfiguration();
+                privacyPanel.saveConfiguration();
                 ConfigurationDialog.this.dispose();
             }
         });
@@ -212,6 +215,31 @@ public class ConfigurationDialog extends WebDialog {
             mConf.setProperty(KonConf.ACC_BRIDGE_CERT, file.getAbsolutePath());
 
             mConf.setProperty(KonConf.ACC_PASS, passField.getText());
+        }
+    }
+
+    private class PrivacyPanel extends WebPanel {
+
+        WebCheckBox mChatStateBox;
+
+        public PrivacyPanel() {
+            GroupPanel groupPanel = new GroupPanel(10, false);
+            groupPanel.setMargin(5);
+
+            groupPanel.add(new WebLabel("Privacy Settings").setBoldFont());
+            groupPanel.add(new WebSeparator(true, true));
+
+            mChatStateBox = new WebCheckBox("Send chatstate notification");
+            mChatStateBox.setAnimated(false);
+            mChatStateBox.setSelected(mConf.getBoolean(KonConf.NET_SEND_CHAT_STATE));
+
+            groupPanel.add(mChatStateBox);
+
+            this.add(groupPanel);
+        }
+
+        private void saveConfiguration() {
+            mConf.setProperty(KonConf.NET_SEND_CHAT_STATE, mChatStateBox.isSelected());
         }
     }
 }
