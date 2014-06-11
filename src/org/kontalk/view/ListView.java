@@ -17,6 +17,7 @@ import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.text.SimpleDateFormat;
 import javax.swing.JList;
 
 /**
@@ -26,6 +27,9 @@ import javax.swing.JList;
 public class ListView extends WebList {
 
     final WebListModel<ListItem> mListModel = new WebListModel();
+
+    final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
+            new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");
 
     private WebCustomTooltip mTip = null;
 

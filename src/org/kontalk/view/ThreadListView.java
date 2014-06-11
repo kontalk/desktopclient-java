@@ -21,17 +21,13 @@ package org.kontalk.view;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
-import com.alee.laf.list.WebList;
-import com.alee.laf.list.WebListCellRenderer;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
@@ -41,10 +37,8 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
-import java.util.logging.Logger;
-import javax.swing.DefaultListModel;
+import java.util.TreeSet;
 import javax.swing.JDialog;
-import javax.swing.JList;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -52,27 +46,24 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.KonConf;
+import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
+import static org.kontalk.view.ListView.TOOLTIP_DATE_FORMAT;
 
 /**
- * Show a brief list of every thread.
+ * Show a brief list of all threads.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ThreadListView extends WebList implements ChangeListener {
-    private final static Logger LOGGER = Logger.getLogger(ThreadListView.class.getName());
+public class ThreadListView extends ListView implements ChangeListener {
 
     private final ThreadList mThreadList;
-    private final DefaultListModel<ThreadView> mListModel = new DefaultListModel();
     private final WebPopupMenu mPopupMenu;
 
     ThreadListView(final View modelView, ThreadList threadList) {
         mThreadList = threadList;
         mThreadList.addListener(this);
-        this.setModel(mListModel);
-
-        this.setCellRenderer(new ThreadListRenderer());
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -83,7 +74,8 @@ public class ThreadListView extends WebList implements ChangeListener {
         editMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                JDialog editUserDialog = new EditThreadDialog(mListModel.get(getSelectedIndex()));
+                ThreadView t = (ThreadView) mListModel.get(getSelectedIndex());
+                JDialog editUserDialog = new EditThreadDialog(t);
                 editUserDialog.setVisible(true);
             }
         });
@@ -140,7 +132,8 @@ public class ThreadListView extends WebList implements ChangeListener {
     KonThread getSelectedThread() {
         if (this.getSelectedIndex() == -1)
             return null;
-        return mListModel.get(this.getSelectedIndex()).getThread();
+        ThreadView t = (ThreadView) mListModel.get(this.getSelectedIndex());
+        return t.getThread();
     }
 
     @Override
@@ -168,7 +161,7 @@ public class ThreadListView extends WebList implements ChangeListener {
            mPopupMenu.show(this, e.getX(), e.getY());
     }
 
-    private class ThreadView extends WebPanel {
+    private class ThreadView extends ListItem {
 
         private final KonThread mThread;
         private final WebLabel mSubjectLabel;
@@ -197,7 +190,8 @@ public class ThreadListView extends WebList implements ChangeListener {
             return mThread;
         }
 
-        void paintSelected(boolean isSelected){
+        @Override
+        void repaint(boolean isSelected){
             if (isSelected)
                 this.setBackground(View.BLUE);
             else
@@ -218,23 +212,19 @@ public class ThreadListView extends WebList implements ChangeListener {
                nameList.add(user.getName() == null ? "<unknown>" : user.getName());
            mUserLabel.setText(StringUtils.join(nameList, ", "));
         }
-    }
-
-    private class ThreadListRenderer extends WebListCellRenderer {
 
         @Override
-        public Component getListCellRendererComponent(JList list,
-                                                Object value,
-                                                int index,
-                                                boolean isSelected,
-                                                boolean hasFocus) {
-            if (value instanceof ThreadView) {
-                ThreadView threadView = (ThreadView) value;
-                threadView.paintSelected(isSelected);
-                return threadView;
-            } else {
-                return new WebPanel(new WebLabel("ERRROR"));
-            }
+        String getTooltipText() {
+            TreeSet<KonMessage> messageSet = mThread.getMessages();
+            String lastActivity = messageSet.isEmpty() ? "no messages yet" :
+                        TOOLTIP_DATE_FORMAT.format(messageSet.last().getDate());
+
+            String html = "<html><body>" +
+                    "<br>" +
+                    "Last activity: " + lastActivity + "<br>" +
+                    "";
+
+            return html;
         }
     }
 

@@ -100,7 +100,7 @@ public class KonThread extends ChangeSubject {
         mSubject = subject;
     }
 
-    public Set<KonMessage> getMessages() {
+    public TreeSet<KonMessage> getMessages() {
         return mSet;
     }
 
