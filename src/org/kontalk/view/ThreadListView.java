@@ -164,8 +164,7 @@ public class ThreadListView extends ListView implements ChangeListener {
     private class ThreadView extends ListItem {
 
         private final KonThread mThread;
-        private final WebLabel mSubjectLabel;
-        private final WebLabel mUserLabel;
+        private final Color mBackround;
 
         ThreadView(KonThread thread) {
             mThread = thread;
@@ -174,16 +173,28 @@ public class ThreadListView extends ListView implements ChangeListener {
             this.setLayout(new BorderLayout(10, 5));
 
             this.add(new WebLabel(Integer.toString(thread.getID())), BorderLayout.WEST);
-            mSubjectLabel = new WebLabel();
-            mSubjectLabel.setFontSize(14);
-            this.add(mSubjectLabel, BorderLayout.CENTER);
 
-            mUserLabel = new WebLabel();
-            mUserLabel.setForeground(Color.GRAY);
-            mUserLabel.setFontSize(11);
-            this.add(mUserLabel, BorderLayout.SOUTH);
+            WebLabel subjectLabel = new WebLabel();
+            subjectLabel.setFontSize(14);
+            // if too long, draw three dots at the end
+            Dimension size = subjectLabel.getPreferredSize();
+            subjectLabel.setMinimumSize(size);
+            subjectLabel.setPreferredSize(size);
+            String subject = mThread.getSubject() != null ? mThread.getSubject(): "<unnamed>";
+            subjectLabel.setText(subject);
+            this.add(subjectLabel, BorderLayout.CENTER);
 
-            updateView();
+            WebLabel userLabel = new WebLabel();
+            userLabel.setForeground(Color.GRAY);
+            userLabel.setFontSize(11);
+            List<String> nameList = new ArrayList(mThread.getUser().size());
+            for (User user : mThread.getUser())
+                nameList.add(user.getName() == null ? "<unknown>" : user.getName());
+            userLabel.setText(StringUtils.join(nameList, ", "));
+            this.add(userLabel, BorderLayout.SOUTH);
+
+            mBackround = !mThread.getRead() ? View.LIGHT_BLUE : Color.WHITE;
+            this.setBackground(mBackround);
         }
 
         KonThread getThread() {
@@ -195,22 +206,7 @@ public class ThreadListView extends ListView implements ChangeListener {
             if (isSelected)
                 this.setBackground(View.BLUE);
             else
-                this.setBackground(Color.WHITE);
-        }
-
-        private void updateView() {
-           // if too long, draw three dots at the end
-           Dimension size = mSubjectLabel.getPreferredSize();
-           mSubjectLabel.setMinimumSize(size);
-           mSubjectLabel.setPreferredSize(size);
-
-           String subject = mThread.getSubject() != null ? mThread.getSubject(): "<unnamed>";
-           mSubjectLabel.setText(subject);
-
-           List<String> nameList = new ArrayList(mThread.getUser().size());
-           for (User user : mThread.getUser())
-               nameList.add(user.getName() == null ? "<unknown>" : user.getName());
-           mUserLabel.setText(StringUtils.join(nameList, ", "));
+                this.setBackground(mBackround);
         }
 
         @Override
@@ -223,7 +219,6 @@ public class ThreadListView extends ListView implements ChangeListener {
                     "<br>" +
                     "Last activity: " + lastActivity + "<br>" +
                     "";
-
             return html;
         }
     }
@@ -290,7 +285,6 @@ public class ThreadListView extends ListView implements ChangeListener {
             if (!mSubjectField.getText().isEmpty()) {
                 mThreadView.getThread().setSubject(mSubjectField.getText());
             }
-            mThreadView.updateView();
         }
     }
 

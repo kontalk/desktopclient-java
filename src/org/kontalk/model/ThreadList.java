@@ -69,7 +69,8 @@ public class ThreadList extends ChangeSubject {
                 String xmppThreadID = threadRS.getString("xmpp_id");
                 Set<User> userSet = threadUserMapping.get(id);
                 String subject = threadRS.getString("subject");
-                mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject));
+                boolean read = threadRS.getBoolean("read");
+                mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read));
             }
             threadRS.close();
         } catch (SQLException ex) {

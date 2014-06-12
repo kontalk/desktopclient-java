@@ -80,15 +80,15 @@ public class ThreadView extends WebScrollPane {
 
     void showThread(KonThread thread) {
 
-        boolean n = false;
+        boolean isNew = false;
         if (!mThreadCache.containsKey(thread.getID())) {
             mThreadCache.put(thread.getID(), new MessageViewList(thread));
-            n = true;
+            isNew = true;
         }
         MessageViewList list = mThreadCache.get(thread.getID());
         this.setViewportView(list);
 
-        if (list.getModelSize() > 0 && n) {
+        if (list.getModelSize() > 0 && isNew) {
             // scroll down
             // TODO doesn't work again (does it?)
             list.ensureIndexIsVisible(list.getModelSize() -1);

@@ -101,7 +101,6 @@ public class Kontalk {
         mClient = new Client(this);
 
         mView = new View(this);
-
     }
 
     public void start() {

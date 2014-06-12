@@ -188,6 +188,7 @@ public class View {
         if (thread == null)
             return;
 
+        thread.setRead();
         mThreadView.showThread(thread);
     }
 

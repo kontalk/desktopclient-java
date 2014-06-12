@@ -99,7 +99,7 @@ public class MessageList {
             String text,
             boolean encrypted) {
         KonMessage newMessage = new KonMessage(thread, user, text, encrypted);
-        thread.add(newMessage);
+        thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);
         return newMessage;
     }
@@ -129,7 +129,7 @@ public class MessageList {
         // encrypt and verify message
         Coder.processInMessage(newMessage);
 
-        thread.add(newMessage);
+        thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);
     }
 

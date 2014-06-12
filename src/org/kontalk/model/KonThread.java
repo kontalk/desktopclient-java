@@ -43,8 +43,8 @@ public class KonThread extends ChangeSubject {
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "xmpp_id TEXT UNIQUE, " +
             "subject TEXT " +
-            // contains unread messages?
-            "read INTEGER " +
+            // boolean, contains unread messages?
+            "read INTEGER NOT NULL" +
             ")";
 
     // many to many relationship requires additional table for receiver
@@ -76,11 +76,13 @@ public class KonThread extends ChangeSubject {
         mUser = new HashSet();
         mUser.add(user);
         mSubject = null;
+        mRead = true;
 
         Database db = Database.getInstance();
         List<Object> values = new LinkedList();
         values.add(mXMPPID);
         values.add(mSubject);
+        values.add(mRead);
         mID = db.execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert thread");
@@ -93,11 +95,12 @@ public class KonThread extends ChangeSubject {
     /**
      * Used for loading from database
      */
-    KonThread(int id, String xmppID, Set<User> user, String subject) {
+    KonThread(int id, String xmppID, Set<User> user, String subject, boolean read) {
         mID = id;
         mXMPPID = xmppID;
         mUser = user;
         mSubject = subject;
+        mRead = read;
     }
 
     public TreeSet<KonMessage> getMessages() {
@@ -123,12 +126,46 @@ public class KonThread extends ChangeSubject {
     public void setSubject(String subject) {
         mSubject = subject;
         this.save();
+        // no effect (yet)
+        this.changed();
+        ThreadList.getInstance().changed();
+    }
+
+    public boolean getRead() {
+        return mRead;
+    }
+
+    public void setRead() {
+        mRead = true;
+        ThreadList.getInstance().changed();
+    }
+
+    public void addMessage(KonMessage message) {
+        boolean added = this.add(message);
+        if (added) {
+            if (message.getDir() == KonMessage.Direction.IN) {
+                mRead = false;
+                ThreadList.getInstance().changed();
+            }
+            this.changed();
+        }
+    }
+
+    /** Add message to thread without notifying other components */
+    boolean add(KonMessage message) {
+        if (mSet.contains(message)) {
+            LOGGER.warning("message already in thread, ID: " + message.getID());
+            return false;
+        }
+        boolean added = mSet.add(message);
+        return added;
     }
 
     public void save(){
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap();
         set.put("subject", mSubject);
+        set.put("read", mRead);
         db.execUpdate(TABLE, set, mID);
 
         // get receiver for this thread
@@ -160,16 +197,6 @@ public class KonThread extends ChangeSubject {
             db.execDelete(TABLE_RECEIVER, id);
         }
 
-    }
-
-    public void add(KonMessage message) {
-        if (mSet.contains(message)) {
-            LOGGER.warning("message already in thread, ID: " + message.getID());
-            return;
-        }
-        boolean added = mSet.add(message);
-        if (added)
-            this.changed();
     }
 
     private void insertUser(User user) {
