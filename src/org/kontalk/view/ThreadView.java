@@ -90,7 +90,6 @@ public class ThreadView extends WebScrollPane {
 
         if (list.getModelSize() > 0 && isNew) {
             // scroll down
-            // TODO doesn't work again (does it?)
             list.ensureIndexIsVisible(list.getModelSize() -1);
             //JScrollBar vertical = this.getVerticalScrollBar();
             //vertical.setValue(vertical.getMaximum());
@@ -153,18 +152,28 @@ public class ThreadView extends WebScrollPane {
         @Override
         public void stateChanged(ChangeEvent e) {
             // check for new messages to add
-            Set<KonMessage> oldMessages = new HashSet();
-            for (ListItem m : mListModel.getElements())
-                oldMessages.add(((MessageView) m).mMessage);
+            if (mListModel.size() < mThread.getMessages().size()) {
+                Set<KonMessage> oldMessages = new HashSet();
+                for (ListItem m : mListModel.getElements())
+                    oldMessages.add(((MessageView) m).mMessage);
 
-            for (KonMessage message: mThread.getMessages()) {
-                if (!oldMessages.contains(message)) {
-                    MessageView newMessageView = new MessageView(message);
-                    // always inserted at the end, timestamp of message is
-                    // ignored. Let's call it a feature.
-                    mListModel.addElement(newMessageView);
-                    this.ensureIndexIsVisible(this.getModelSize() -1);
+                for (KonMessage message: mThread.getMessages()) {
+                    if (!oldMessages.contains(message)) {
+                        MessageView newMessageView = new MessageView(message);
+                        // always inserted at the end, timestamp of message is
+                        // ignored. Let's call it a feature.
+                        mListModel.addElement(newMessageView);
+                        // TODO doesn't work here somehow
+                        this.ensureIndexIsVisible(mListModel.size() -1);
+                    }
                 }
+            }
+
+            if (ThreadView.this.mCurrentThreadID == mThread.getID()) {
+                // we are seeing this thread right now
+                // avoid loop
+                if (!mThread.isRead())
+                    mThread.setRead();
             }
         }
 

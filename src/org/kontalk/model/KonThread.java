@@ -126,27 +126,23 @@ public class KonThread extends ChangeSubject {
     public void setSubject(String subject) {
         mSubject = subject;
         this.save();
-        // no effect (yet)
         this.changed();
-        ThreadList.getInstance().changed();
     }
 
-    public boolean getRead() {
+    public boolean isRead() {
         return mRead;
     }
 
     public void setRead() {
         mRead = true;
-        ThreadList.getInstance().changed();
+        this.changed();
     }
 
     public void addMessage(KonMessage message) {
         boolean added = this.add(message);
         if (added) {
-            if (message.getDir() == KonMessage.Direction.IN) {
+            if (message.getDir() == KonMessage.Direction.IN)
                 mRead = false;
-                ThreadList.getInstance().changed();
-            }
             this.changed();
         }
     }
