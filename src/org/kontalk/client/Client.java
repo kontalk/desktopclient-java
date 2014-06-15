@@ -18,14 +18,16 @@
 
 package org.kontalk.client;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
-import org.jivesoftware.smack.Connection;
+
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.RosterListener;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.AndFilter;
 import org.jivesoftware.smack.filter.NotFilter;
@@ -35,8 +37,8 @@ import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
-import org.jivesoftware.smackx.ChatState;
-import org.jivesoftware.smackx.packet.ChatStateExtension;
+import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.KonConf;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
@@ -58,7 +60,7 @@ public class Client implements PacketListener, Runnable {
     private final Kontalk mModel;
     private final KonConf mConfig;
     private final EndpointServer mServer;
-    protected Connection mConn;
+    protected KonConnection mConn;
 
     // Limited connection flag.
     //protected boolean mLimited;
@@ -98,11 +100,12 @@ public class Client implements PacketListener, Runnable {
             LOGGER.info("connecting...");
             try {
                 mConn.connect();
-            } catch (XMPPException ex) {
+            } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't connect", ex);
                 mModel.statusChanged(Kontalk.Status.FAILED);
                 return;
             }
+            System.out.println("connected");
 
             // listeners
             RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
@@ -120,7 +123,7 @@ public class Client implements PacketListener, Runnable {
                 // the dummy values are not actually used
                 // server does authentification based purely on the pgp key
                 mConn.login("dummy", "dummy");
-            } catch (XMPPException ex) {
+            } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
                 // TODO: most likely the pgp key is invalid, tell that to user
                 mModel.statusChanged(Kontalk.Status.FAILED);
@@ -191,11 +194,11 @@ public class Client implements PacketListener, Runnable {
     }
 
     synchronized void sendPacket(Packet p) {
-        if (mConn == null || !mConn.isAuthenticated()) {
+        try {
+            mConn.sendPacket(p);
+        } catch (SmackException.NotConnectedException ex) {
             LOGGER.info("can't send packet, not connected.");
-            return;
         }
-        mConn.sendPacket(p);
         LOGGER.info("sent packet: "+p.toXML());
     }
 

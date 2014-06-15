@@ -21,8 +21,7 @@ public class VCardListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(VCardListener.class.getName());
 
     VCardListener() {
-        ProviderManager pm = ProviderManager.getInstance();
-        pm.addIQProvider(VCard4.ELEMENT_NAME, VCard4.NAMESPACE, new VCard4.Provider());
+        ProviderManager.addIQProvider(VCard4.ELEMENT_NAME, VCard4.NAMESPACE, new VCard4.Provider());
     }
 
     @Override

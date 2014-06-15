@@ -18,47 +18,47 @@
 
 package org.kontalk.client;
 
+import java.io.IOException;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import org.jivesoftware.smack.ConnectionConfiguration;
-
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.SASLAuthentication;
-import org.jivesoftware.smack.XMPPConnection;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.Presence;
-//import org.kontalk.Kontalk;
-
-//import android.util.Log;
-import java.util.logging.Level;
+import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 
 
-public class KonConnection extends XMPPConnection {
+public class KonConnection extends XMPPTCPConnection {
     private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
     protected EndpointServer mServer;
 
     private KonConnection(EndpointServer server) throws XMPPException {
         //super(new AndroidConnectionConfiguration(server.getHost(), server.getPort()));
-        super(new ConnectionConfiguration(server.getHost(), server.getPort()));
+        super(new ConnectionConfiguration(
+                server.getHost(),
+                server.getPort(),
+                server.getNetwork()));
 
         mServer = server;
-        // network name
-        config.setServiceName(server.getNetwork());
         // disable reconnection
         config.setReconnectionAllowed(false);
-        // enable SASL
-        config.setSASLAuthenticationEnabled(true);
         // we don't need the roster
         // TODO yes, we do
         //config.setRosterLoadedAtLogin(false);
@@ -94,6 +94,7 @@ public class KonConnection extends XMPPConnection {
             km = kmFactory.getKeyManagers();
 
             // trust managers
+            // TODO
             TrustManager[] tm = new TrustManager[] {
                 new X509TrustManager() {
                     @Override
@@ -112,13 +113,12 @@ public class KonConnection extends XMPPConnection {
                     }
                 }
             };
-            /*
-            TODO builtin keystore
-            TrustManagerFactory tmFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmFactory.init((KeyStore) null);
 
-            tm = tmFactory.getTrustManagers();
-            */
+            //TODO builtin keystore
+//            TrustManagerFactory tmFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+//            tmFactory.init((KeyStore) null);
+//            tm = tmFactory.getTrustManagers();
+
 
             ctx.init(km, tm, null);
             config.setCustomSSLContext(ctx);
@@ -126,22 +126,34 @@ public class KonConnection extends XMPPConnection {
 
             // enable SASL EXTERNAL
             SASLAuthentication.supportSASLMechanism("EXTERNAL");
-        }
-        catch (Exception e) {
-            LOGGER.log(Level.WARNING,"unable to setup SSL connection", e);
+        } catch (NoSuchAlgorithmException |
+                KeyStoreException |
+                IOException |
+                CertificateException |
+                UnrecoverableKeyException |
+                KeyManagementException e) {
+            LOGGER.log(Level.WARNING, "can't setup SSL connection", e);
         }
     }
 
     @Override
     public void disconnect() {
         LOGGER.info("disconnecting (no presence)");
-        super.disconnect();
+        try {
+            super.disconnect();
+        } catch (SmackException.NotConnectedException ex) {
+            LOGGER.info("can't disconnect, not connected");
+        }
     }
 
     @Override
     public synchronized void disconnect(Presence presence) {
         LOGGER.log(Level.INFO, "disconnecting ({0})", presence);
-        super.disconnect(presence);
+        try {
+            super.disconnect(presence);
+        } catch (SmackException.NotConnectedException ex) {
+            LOGGER.info("can't disconnect, not connected");
+        }
     }
 
 }
