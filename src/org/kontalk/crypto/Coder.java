@@ -463,7 +463,7 @@ public class Coder {
 
         // TODO check DateTime (possibly compare it with <delay/>)
 
-        String content = cpimMessage.getBody();
+        String content = cpimMessage.getBody().toString();
         String plainText;
         if (XMPPUtils.XML_XMPP_TYPE.equalsIgnoreCase(mime)) {
             LOGGER.fine("CPIM body has XMPP XML format");
