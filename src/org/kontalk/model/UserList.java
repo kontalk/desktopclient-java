@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
@@ -33,7 +34,7 @@ import org.kontalk.Database;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class UserList extends ChangeSubject {
+public final class UserList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(UserList.class.getName());
 
     private static UserList INSTANCE = null;
@@ -63,7 +64,8 @@ public final class UserList extends ChangeSubject {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load users from db", ex);
         }
-        this.changed();
+        this.setChanged();
+        this.notifyObservers();
     }
 
     public Collection<User> getUser() {
@@ -76,7 +78,8 @@ public final class UserList extends ChangeSubject {
             return null;
         User newUser = new User(jid, name);
         mMap.put(jid, newUser);
-        this.changed();
+        this.setChanged();
+        this.notifyObservers();
         this.save();
         return newUser;
     }
@@ -128,6 +131,11 @@ public final class UserList extends ChangeSubject {
             return;
         }
         mMap.get(jid).setKey(rawKey);
+    }
+
+    public void changed() {
+        this.setChanged();
+        this.notifyObservers();
     }
 
     public static UserList getInstance() {

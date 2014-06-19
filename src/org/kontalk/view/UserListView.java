@@ -37,10 +37,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Observable;
+import java.util.Observer;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.model.User;
@@ -50,7 +50,7 @@ import org.kontalk.model.UserList;
  * Display all known user (aka contacts) in a list.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class UserListView extends ListView implements ChangeListener {
+public final class UserListView extends ListView implements Observer {
 
     private final UserList mUserList;
     private final WebPopupMenu mPopupMenu;
@@ -61,7 +61,7 @@ public final class UserListView extends ListView implements ChangeListener {
         super();
 
         mUserList = userList;
-        mUserList.addListener(this);
+        mUserList.addObserver(this);
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -144,7 +144,7 @@ public final class UserListView extends ListView implements ChangeListener {
     }
 
     @Override
-    public void stateChanged(ChangeEvent e) {
+    public void update(Observable o, Object arg) {
         mListModel.clear();
         for (User oneUser: mUserList.getUser())
             mListModel.addElement(new UserView(oneUser));

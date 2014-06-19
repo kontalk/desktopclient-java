@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Observable;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -32,7 +33,7 @@ import org.kontalk.Database;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class ThreadList extends ChangeSubject {
+public final class ThreadList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(ThreadList.class.getName());
 
     private static ThreadList INSTANCE = null;
@@ -76,7 +77,8 @@ public final class ThreadList extends ChangeSubject {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load threads from db", ex);
         }
-        this.changed();
+        this.setChanged();
+        this.notifyObservers();
     }
 
     public Collection<KonThread> getThreads() {
@@ -97,7 +99,8 @@ public final class ThreadList extends ChangeSubject {
         }
         KonThread newThread = new KonThread(user);
         mMap.put(newThread.getID(), newThread);
-        this.changed();
+        this.setChanged();
+        this.notifyObservers();
         return newThread;
     }
 

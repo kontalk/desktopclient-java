@@ -37,11 +37,11 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.TreeSet;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
@@ -56,14 +56,14 @@ import static org.kontalk.view.ListView.TOOLTIP_DATE_FORMAT;
  * Show a brief list of all threads.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class ThreadListView extends ListView implements ChangeListener {
+public final class ThreadListView extends ListView implements Observer {
 
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;
 
     ThreadListView(final View modelView, ThreadList threadList) {
         mThreadList = threadList;
-        mThreadList.addListener(this);
+        mThreadList.addObserver(this);
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -137,7 +137,7 @@ public final class ThreadListView extends ListView implements ChangeListener {
     }
 
     @Override
-    public void stateChanged(ChangeEvent e) {
+    public void update(Observable o, Object arg) {
         // TODO
         mListModel.clear();
         for (KonThread thread: mThreadList.getThreads()) {
@@ -162,7 +162,7 @@ public final class ThreadListView extends ListView implements ChangeListener {
            mPopupMenu.show(this, e.getX(), e.getY());
     }
 
-    private class ThreadView extends ListItem implements ChangeListener {
+    private class ThreadView extends ListItem implements Observer {
 
         private final KonThread mThread;
         WebLabel mSubjectLabel;
@@ -172,7 +172,7 @@ public final class ThreadListView extends ListView implements ChangeListener {
         ThreadView(KonThread thread) {
             mThread = thread;
 
-            mThread.addListener(this);
+            mThread.addObserver(this);
 
             this.setMargin(5);
             this.setLayout(new BorderLayout(10, 5));
@@ -223,7 +223,7 @@ public final class ThreadListView extends ListView implements ChangeListener {
         }
 
         @Override
-        public void stateChanged(ChangeEvent e) {
+        public void update(Observable o, Object arg) {
             update();
             // need to repaint parent to see changes
             ThreadListView.this.repaint();

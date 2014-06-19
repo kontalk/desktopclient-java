@@ -31,13 +31,13 @@ import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Set;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.ScrollPaneConstants;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
@@ -105,7 +105,7 @@ public final class ThreadView extends WebScrollPane {
     /**
      * View all messages of on thread in a left/right MIM style list.
      */
-    private class MessageViewList extends ListView implements ChangeListener {
+    private class MessageViewList extends ListView implements Observer {
 
         private final KonThread mThread;
 
@@ -113,7 +113,7 @@ public final class ThreadView extends WebScrollPane {
             super();
 
             mThread = thread;
-            mThread.addListener(this);
+            mThread.addObserver(this);
 
             //this.setEditable(false);
             //this.setAutoscrolls(true);
@@ -150,7 +150,7 @@ public final class ThreadView extends WebScrollPane {
         }
 
         @Override
-        public void stateChanged(ChangeEvent e) {
+        public void update(Observable o, Object arg) {
             // check for new messages to add
             if (mListModel.size() < mThread.getMessages().size()) {
                 Set<KonMessage> oldMessages = new HashSet();
@@ -180,7 +180,7 @@ public final class ThreadView extends WebScrollPane {
         /**
          * View for one message. The content is added to a panel inside this panel.
          */
-        private class MessageView extends ListItem implements ChangeListener {
+        private class MessageView extends ListItem implements Observer {
 
             private final KonMessage mMessage;
             private final WebTextArea mTextArea;
@@ -189,7 +189,7 @@ public final class ThreadView extends WebScrollPane {
 
             MessageView(KonMessage message) {
                 mMessage = message;
-                mMessage.addListener(this);
+                mMessage.addObserver(this);
 
                 this.setOpaque(false);
                 this.setMargin(2);
@@ -285,7 +285,7 @@ public final class ThreadView extends WebScrollPane {
             }
 
             @Override
-            public void stateChanged(ChangeEvent e) {
+            public void update(Observable o, Object arg) {
                 this.update();
                 // need to repaint parent to see changes
                 ThreadView.this.repaint();

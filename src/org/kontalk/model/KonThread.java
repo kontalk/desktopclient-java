@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Observable;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
@@ -35,7 +36,7 @@ import org.kontalk.Database;
  * A model for a conversation thread consisting of an ordered list of messages.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class KonThread extends ChangeSubject {
+public final class KonThread extends Observable {
     private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());
 
     public static final String TABLE = "threads";
@@ -126,7 +127,8 @@ public final class KonThread extends ChangeSubject {
     public void setSubject(String subject) {
         mSubject = subject;
         this.save();
-        this.changed();
+        this.setChanged();
+        this.notifyObservers();
     }
 
     public boolean isRead() {
@@ -135,7 +137,8 @@ public final class KonThread extends ChangeSubject {
 
     public void setRead() {
         mRead = true;
-        this.changed();
+        this.setChanged();
+        this.notifyObservers();
     }
 
     public void addMessage(KonMessage message) {
@@ -143,7 +146,8 @@ public final class KonThread extends ChangeSubject {
         if (added) {
             if (message.getDir() == KonMessage.Direction.IN)
                 mRead = false;
-            this.changed();
+            this.setChanged();
+            this.notifyObservers();
         }
     }
 

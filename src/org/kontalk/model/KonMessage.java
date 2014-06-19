@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Packet;
@@ -34,7 +35,7 @@ import org.kontalk.crypto.Coder;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class KonMessage extends ChangeSubject implements Comparable<KonMessage> {
+public final class KonMessage extends Observable implements Comparable<KonMessage> {
     private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     public static enum Direction {IN, OUT};
@@ -284,7 +285,8 @@ public final class KonMessage extends ChangeSubject implements Comparable<KonMes
         mReceiptID = receiptID;
         mReceiptStatus = Status.SENT;
         this.save();
-        this.changed();
+        this.setChanged();
+        this.notifyObservers();
     }
 
     void updateByReceivedReceipt() {
@@ -293,7 +295,8 @@ public final class KonMessage extends ChangeSubject implements Comparable<KonMes
         assert mReceiptID != null;
         mReceiptStatus = Status.RECEIVED;
         this.save();
-        this.changed();
+        this.setChanged();
+        this.notifyObservers();
     }
 
     private int insert(){
