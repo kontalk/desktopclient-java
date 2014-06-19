@@ -65,7 +65,7 @@ import org.kontalk.util.MessageUtils;
 
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
-public class PGP {
+public final class PGP {
 
     /** Security provider: Bouncy Castle. */
     public static final String PROVIDER = "BC";

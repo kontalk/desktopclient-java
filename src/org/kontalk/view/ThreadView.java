@@ -47,7 +47,7 @@ import org.kontalk.view.ListView.ListItem;
  * Pane that shows the currently selected thread.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ThreadView extends WebScrollPane {
+public final class ThreadView extends WebScrollPane {
 
     private static Icon PENDING_ICON;
     private static Icon SENT_ICON;

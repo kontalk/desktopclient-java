@@ -28,7 +28,7 @@ import org.kontalk.KonConf;
  * @version 1.0
  * TODO http port is deprecated
  */
-public class EndpointServer {
+public final class EndpointServer {
     /** Default Kontalk client port. */
     public static final int DEFAULT_PORT = 5222;
 

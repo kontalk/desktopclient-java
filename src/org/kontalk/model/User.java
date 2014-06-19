@@ -39,7 +39,7 @@ import org.kontalk.util.MessageUtils;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class User {
+public final class User {
     private final static Logger LOGGER = Logger.getLogger(User.class.getName());
 
     public static enum Available {UNKNOWN, YES, NO};

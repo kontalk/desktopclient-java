@@ -53,7 +53,7 @@ import org.kontalk.model.UserList;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class View {
+public final class View {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
     final static URL ICON_IMAGE_URL = ClassLoader.getSystemResource(

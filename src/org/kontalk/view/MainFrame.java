@@ -63,7 +63,7 @@ import org.kontalk.KonConf;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class MainFrame extends WebFrame {
+public final class MainFrame extends WebFrame {
     private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
 
     public static enum Tab {THREADS, USER};

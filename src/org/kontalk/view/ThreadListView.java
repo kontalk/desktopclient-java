@@ -56,7 +56,7 @@ import static org.kontalk.view.ListView.TOOLTIP_DATE_FORMAT;
  * Show a brief list of all threads.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ThreadListView extends ListView implements ChangeListener {
+public final class ThreadListView extends ListView implements ChangeListener {
 
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;

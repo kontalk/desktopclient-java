@@ -44,7 +44,7 @@ import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 
 
-public class KonConnection extends XMPPTCPConnection {
+public final class KonConnection extends XMPPTCPConnection {
     private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
     protected EndpointServer mServer;

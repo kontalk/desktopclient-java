@@ -12,7 +12,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
 /**
- *
+ * Extendable class that provides
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class ChangeSubject {

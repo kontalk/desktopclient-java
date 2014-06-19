@@ -41,7 +41,7 @@ import org.kontalk.KonConf;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ConfigurationDialog extends WebDialog {
+public final class ConfigurationDialog extends WebDialog {
 
     private static enum ConfPage {MAIN, ACCOUNT};
 

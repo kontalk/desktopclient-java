@@ -34,7 +34,7 @@ import org.kontalk.crypto.Coder;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KonMessage extends ChangeSubject implements Comparable<KonMessage> {
+public final class KonMessage extends ChangeSubject implements Comparable<KonMessage> {
     private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     public static enum Direction {IN, OUT};

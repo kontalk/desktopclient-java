@@ -24,7 +24,7 @@ import java.util.logging.Logger;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KonException extends Exception {
+public final class KonException extends Exception {
     private final static Logger LOGGER = Logger.getLogger(KonException.class.getName());
 
     public KonException(java.lang.Exception ex) {

@@ -21,7 +21,7 @@ import java.text.SimpleDateFormat;
 import javax.swing.JList;
 
 /**
- *
+ * A generic list view.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class ListView extends WebList {

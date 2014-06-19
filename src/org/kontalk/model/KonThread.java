@@ -35,7 +35,7 @@ import org.kontalk.Database;
  * A model for a conversation thread consisting of an ordered list of messages.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KonThread extends ChangeSubject {
+public final class KonThread extends ChangeSubject {
     private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());
 
     public static final String TABLE = "threads";

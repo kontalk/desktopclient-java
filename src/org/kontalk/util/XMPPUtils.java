@@ -30,7 +30,7 @@ import org.xmlpull.v1.XmlPullParserFactory;
  * XMPP related functions.
  * @author Daniele Ricci
  */
-public class XMPPUtils {
+public final class XMPPUtils {
 
     public static final String XML_XMPP_TYPE = "application/xmpp+xml";
 

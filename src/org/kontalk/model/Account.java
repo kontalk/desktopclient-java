@@ -32,7 +32,7 @@ import org.kontalk.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.PersonalKey;
 
-public class Account {
+public final class Account {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
     private final static Account INSTANCE = new Account();

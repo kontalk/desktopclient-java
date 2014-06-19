@@ -75,7 +75,7 @@ import org.bouncycastle.x509.extension.SubjectKeyIdentifierStructure;
  * @author Daniele Ricci
  * @see https://svn.java.net/svn/sommer~svn/trunk/misc/FoafServer/pgpx509/src/net/java/dev/sommer/foafserver/utils/PgpX509Bridge.java
  */
-public class X509Bridge {
+public final class X509Bridge {
 
     private final static String DN_COMMON_PART_O = "OpenPGP to X.509 Bridge";
 

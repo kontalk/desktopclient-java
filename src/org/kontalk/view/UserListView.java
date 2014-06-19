@@ -50,7 +50,7 @@ import org.kontalk.model.UserList;
  * Display all known user (aka contacts) in a list.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class UserListView extends ListView implements ChangeListener {
+public final class UserListView extends ListView implements ChangeListener {
 
     private final UserList mUserList;
     private final WebPopupMenu mPopupMenu;

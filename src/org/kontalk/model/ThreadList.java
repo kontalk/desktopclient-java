@@ -32,7 +32,7 @@ import org.kontalk.Database;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ThreadList extends ChangeSubject {
+public final class ThreadList extends ChangeSubject {
     private final static Logger LOGGER = Logger.getLogger(ThreadList.class.getName());
 
     private static ThreadList INSTANCE = null;

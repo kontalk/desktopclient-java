@@ -49,7 +49,7 @@ import org.kontalk.model.KonMessage;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class Client implements PacketListener, Runnable {
+public final class Client implements PacketListener, Runnable {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     public final static String KONTALK_NETWORK = "kontalk.net";

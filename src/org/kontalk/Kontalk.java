@@ -45,7 +45,7 @@ import org.kontalk.view.View;
 /**
  * @author Alexander Bikadorov
  */
-public class Kontalk {
+public final class Kontalk {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
     public enum Status {

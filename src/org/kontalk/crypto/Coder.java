@@ -56,7 +56,7 @@ import org.kontalk.util.XMPPUtils;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class Coder {
+public final class Coder {
     private final static Logger LOGGER = Logger.getLogger(Coder.class.getName());
 
     /** Encryption status of a message. */

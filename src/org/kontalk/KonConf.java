@@ -31,7 +31,7 @@ import org.kontalk.client.Client;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class KonConf extends PropertiesConfiguration {
+public final class KonConf extends PropertiesConfiguration {
     private final static Logger LOGGER = Logger.getLogger(KonConf.class.getName());
 
     private static KonConf INSTANCE = null;

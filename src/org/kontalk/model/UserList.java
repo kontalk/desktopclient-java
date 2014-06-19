@@ -33,7 +33,7 @@ import org.kontalk.Database;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class UserList extends ChangeSubject {
+public final class UserList extends ChangeSubject {
     private final static Logger LOGGER = Logger.getLogger(UserList.class.getName());
 
     private static UserList INSTANCE = null;

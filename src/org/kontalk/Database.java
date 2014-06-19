@@ -41,7 +41,7 @@ import org.kontalk.model.User;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class Database {
+public final class Database {
     private final static Logger LOGGER = Logger.getLogger(Database.class.getName());
 
     private static Database INSTANCE = null;

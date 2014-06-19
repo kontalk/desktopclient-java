@@ -33,7 +33,7 @@ import org.kontalk.crypto.Coder;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class MessageList {
+public final class MessageList {
     private final static Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static MessageList INSTANCE;
