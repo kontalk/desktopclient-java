@@ -133,7 +133,6 @@ public final class ConfigurationDialog extends WebDialog {
 
     private class AccountPanel extends WebPanel {
 
-
             private final WebTextField serverField;
             private final WebFileChooserField publicKeyChooser;
             private final WebFileChooserField privateKeyChooser;

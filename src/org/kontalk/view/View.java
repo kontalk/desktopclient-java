@@ -147,6 +147,8 @@ public final class View {
                 mStatusBarLabel.setText("Connecting failed");
                 break;
             }
+        
+        mMainFrame.statusChanged(status);
     }
 
     public void showConfig() {

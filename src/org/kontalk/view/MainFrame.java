@@ -58,6 +58,7 @@ import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.KonConf;
+import org.kontalk.Kontalk;
 
 /**
  *
@@ -69,6 +70,8 @@ public final class MainFrame extends WebFrame {
     public static enum Tab {THREADS, USER};
 
     private final KonConf mConf = KonConf.getInstance();
+    private final WebMenuItem mConnectMenuItem;
+    private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
 
     public MainFrame(final View viewModel,
@@ -89,7 +92,6 @@ public final class MainFrame extends WebFrame {
         } else {
             LOGGER.warning("can't find icon image resource");
         }
-        //this.setResizable(false);
 
         // closing behaviour
         this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -114,27 +116,27 @@ public final class MainFrame extends WebFrame {
         WebMenu konNetMenu = new WebMenu("KonNet");
         konNetMenu.setMnemonic(KeyEvent.VK_K);
 
-        WebMenuItem connectMenuItem = new WebMenuItem("Connect");
-        connectMenuItem.setAccelerator(Hotkey.ALT_C);
-        connectMenuItem.setToolTipText("Connect to Server");
-        connectMenuItem.addActionListener(new ActionListener() {
+        mConnectMenuItem = new WebMenuItem("Connect");
+        mConnectMenuItem.setAccelerator(Hotkey.ALT_C);
+        mConnectMenuItem.setToolTipText("Connect to Server");
+        mConnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 viewModel.connect();
             }
         });
-        konNetMenu.add(connectMenuItem);
+        konNetMenu.add(mConnectMenuItem);
 
-        WebMenuItem disconnectMenuItem = new WebMenuItem("Disconnect");
-        disconnectMenuItem.setAccelerator(Hotkey.ALT_D);
-        disconnectMenuItem.setToolTipText("Disconnect from Server");
-        disconnectMenuItem.addActionListener(new ActionListener() {
+        mDisconnectMenuItem = new WebMenuItem("Disconnect");
+        mDisconnectMenuItem.setAccelerator(Hotkey.ALT_D);
+        mDisconnectMenuItem.setToolTipText("Disconnect from Server");
+        mDisconnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 viewModel.disconnect();
             }
         });
-        konNetMenu.add(disconnectMenuItem);
+        konNetMenu.add(mDisconnectMenuItem);
         konNetMenu.addSeparator();
 
         WebMenuItem statusMenuItem = new WebMenuItem("Set status");
@@ -244,6 +246,29 @@ public final class MainFrame extends WebFrame {
         } else {
             this.setState(Frame.NORMAL);
             this.setVisible(true);
+        }
+    }
+
+    public final void statusChanged(Kontalk.Status status) {
+        switch (status) {
+            case CONNECTING:
+                mConnectMenuItem.setEnabled(false);
+                break;
+            case CONNECTED:
+                mConnectMenuItem.setEnabled(false);
+                mDisconnectMenuItem.setEnabled(true);
+                break;
+            case DISCONNECTING:
+                mDisconnectMenuItem.setEnabled(false);
+                break;
+            case DISCONNECTED:
+                mConnectMenuItem.setEnabled(true);
+                mDisconnectMenuItem.setEnabled(false);
+                break;
+            case FAILED:
+                mConnectMenuItem.setEnabled(true);
+                mDisconnectMenuItem.setEnabled(false);
+            break;
         }
     }
 

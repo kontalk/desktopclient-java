@@ -52,7 +52,7 @@ import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.XMPPUtils;
 
 /**
- * Static methods for decryption and encryption of an message.
+ * Static methods for decryption and encryption of a message.
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
