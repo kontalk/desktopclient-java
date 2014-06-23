@@ -59,7 +59,6 @@ public final class Client implements PacketListener, Runnable {
 
     private final Kontalk mModel;
     private final KonConf mConfig;
-    private final EndpointServer mServer;
     protected KonConnection mConn;
 
     // Limited connection flag.
@@ -68,10 +67,6 @@ public final class Client implements PacketListener, Runnable {
     public Client(Kontalk model) {
         mModel = model;
         mConfig = KonConf.getInstance();
-        String network = mConfig.getString("server.network");
-        String host = mConfig.getString("server.host");
-        int port = mConfig.getInt("server.port");
-        mServer = new EndpointServer(network, host, port);
         //mLimited = limited;
 
         // open smack debug window when connecting
@@ -80,14 +75,19 @@ public final class Client implements PacketListener, Runnable {
 
     private void connect(PersonalKey key){
 
-       this.disconnect();
-       mModel.statusChanged(Kontalk.Status.CONNECTING);
+        this.disconnect();
+        mModel.statusChanged(Kontalk.Status.CONNECTING);
 
-       synchronized (this) {
+        String network = mConfig.getString("server.network");
+        String host = mConfig.getString("server.host");
+        int port = mConfig.getInt("server.port");
+        EndpointServer Server = new EndpointServer(network, host, port);
+
+        synchronized (this) {
 
             // create connection
             try {
-                mConn = new KonConnection(mServer,
+                mConn = new KonConnection(Server,
                         key.getBridgePrivateKey(),
                         key.getBridgeCertificate());
             } catch (XMPPException | PGPException ex) {
