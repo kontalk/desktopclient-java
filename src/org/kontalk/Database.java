@@ -192,7 +192,7 @@ public final class Database {
 
     public void execDelete(String table, int id){
         try (Statement stat = mConn.createStatement()){
-            stat.executeQuery("DELETE * FROM " + table + " WHERE _id = " + id);
+            stat.executeUpdate("DELETE FROM " + table + " WHERE _id = " + id);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't delete", ex);
         }
