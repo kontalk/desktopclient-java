@@ -89,7 +89,7 @@ public final class View {
         mSendTextField.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                sendText();
+                View.this.sendText();
             }
         });
 
@@ -99,7 +99,7 @@ public final class View {
         mSendButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                sendText();
+                View.this.sendText();
             }
         });
 
@@ -118,6 +118,13 @@ public final class View {
 
         // TODO: always disconnected?
         this.statusChanged(Kontalk.Status.DISCONNECTED);
+    }
+
+    /**
+     * Setup view on startup.
+     */
+    public void init() {
+        mThreadListView.selectLastThread();
     }
 
     public final void statusChanged(Kontalk.Status status) {
@@ -147,7 +154,7 @@ public final class View {
                 mStatusBarLabel.setText("Connecting failed");
                 break;
             }
-        
+
         mMainFrame.statusChanged(status);
     }
 
@@ -157,56 +164,6 @@ public final class View {
 
     public void connectionProblem(KonException ex) {
         this.showConfig("Help Message here");
-    }
-
-    private void showConfig(String helpText) {
-        JDialog configFrame = new ConfigurationDialog(mMainFrame, this, helpText);
-        configFrame.setVisible(true);
-    }
-
-    void shutDown() {
-        mModel.shutDown();
-    }
-
-    void connect() {
-        mModel.connect();
-    }
-
-    void disconnect() {
-        mModel.disconnect();
-    }
-
-    void selectThreadByUser(User user) {
-        if (user == null)
-            return;
-
-        KonThread thread = ThreadList.getInstance().getThreadByUser(user);
-        mThreadListView.selectThread(thread.getID());
-        mMainFrame.selectTab(MainFrame.Tab.THREADS);
-        mThreadView.showThread(thread);
-    }
-
-    void selectedThreadChanged(KonThread thread) {
-        if (thread == null)
-            return;
-
-        thread.setRead();
-        mThreadView.showThread(thread);
-    }
-
-    private void sendText() {
-       KonThread thread = mThreadListView.getSelectedThread();
-       if (thread == null) {
-           // TODO
-           // nothing selected
-           return;
-       }
-       mModel.sendText(thread, mSendTextField.getText());
-       mSendTextField.setText("");
-    }
-
-    public void init() {
-        mThreadListView.selectLastThread();
     }
 
     final void setTray() {
@@ -264,7 +221,7 @@ public final class View {
                 if (!e.isPopupTrigger())
                     return;
 
-                // TODDO ugly
+                // TODO ugly
                 popup.setLocation(e.getX() - 20, e.getY() - 40);
                 popup.setInvoker(popup);
                 popup.setVisible(true);
@@ -281,5 +238,51 @@ public final class View {
         } catch (AWTException ex) {
             LOGGER.log(Level.WARNING, "can't add tray icon", ex);
         }
+    }
+
+    private void showConfig(String helpText) {
+        JDialog configFrame = new ConfigurationDialog(mMainFrame, this, helpText);
+        configFrame.setVisible(true);
+    }
+
+    void shutDown() {
+        mModel.shutDown();
+    }
+
+    void connect() {
+        mModel.connect();
+    }
+
+    void disconnect() {
+        mModel.disconnect();
+    }
+
+    void selectThreadByUser(User user) {
+        if (user == null)
+            return;
+
+        KonThread thread = ThreadList.getInstance().getThreadByUser(user);
+        mThreadListView.selectThread(thread.getID());
+        mMainFrame.selectTab(MainFrame.Tab.THREADS);
+        mThreadView.showThread(thread);
+    }
+
+    void selectedThreadChanged(KonThread thread) {
+        if (thread == null)
+            return;
+
+        thread.setRead();
+        mThreadView.showThread(thread);
+    }
+
+    private void sendText() {
+       KonThread thread = mThreadListView.getSelectedThread();
+       if (thread == null) {
+           // TODO
+           // nothing selected
+           return;
+       }
+       mModel.sendText(thread, mSendTextField.getText());
+       mSendTextField.setText("");
     }
 }
