@@ -36,7 +36,6 @@ import java.util.Observer;
 import java.util.Set;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.ScrollPaneConstants;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.KonMessage;
@@ -49,11 +48,11 @@ import org.kontalk.view.ListView.ListItem;
  */
 public final class ThreadView extends WebScrollPane {
 
-    private static Icon PENDING_ICON;
-    private static Icon SENT_ICON;
-    private static Icon DELIVERED_ICON;
-    private static Icon CRYPT_ICON;
-    private static Icon UNENCRYPT_ICON;
+    private final static Icon PENDING_ICON = View.getIcon("ic_msg_pending.png");;
+    private final static Icon SENT_ICON = View.getIcon("ic_msg_sent.png");
+    private final static Icon DELIVERED_ICON = View.getIcon("ic_msg_delivered.png");
+    private final static Icon CRYPT_ICON = View.getIcon("ic_msg_crypt.png");
+    private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap();
     private int mCurrentThreadID = -1;
@@ -64,14 +63,6 @@ public final class ThreadView extends WebScrollPane {
         this.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.getVerticalScrollBar().setUnitIncrement(25);
-
-        // load icons
-        String iconPath = "org/kontalk/res/";
-        PENDING_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_pending.png"));
-        SENT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_sent.png"));
-        DELIVERED_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_delivered.png"));
-        CRYPT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_crypt.png"));
-        UNENCRYPT_ICON = new ImageIcon(ClassLoader.getSystemResource(iconPath + "ic_msg_unencrypt.png"));
     }
 
     int getCurrentThreadID() {
