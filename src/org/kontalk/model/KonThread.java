@@ -120,6 +120,11 @@ public final class KonThread extends Observable {
         return mUser;
     }
 
+    public void setUser(Set<User> user) {
+        mUser = user;
+        this.notifyObservers();
+    }
+
     public String getSubject() {
         return mSubject;
     }

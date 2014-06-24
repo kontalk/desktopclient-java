@@ -18,12 +18,14 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.list.WebCheckBoxList;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
 import java.awt.BorderLayout;
@@ -36,9 +38,11 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Set;
 import java.util.TreeSet;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
@@ -50,6 +54,7 @@ import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
+import org.kontalk.model.UserList;
 import static org.kontalk.view.ListView.TOOLTIP_DATE_FORMAT;
 
 /**
@@ -246,6 +251,7 @@ public final class ThreadListView extends ListView implements Observer {
 
         private final ThreadView mThreadView;
         private final WebTextField mSubjectField;
+        WebCheckBoxList mParticipantsList;
 
         public EditThreadDialog(ThreadView threadView) {
 
@@ -260,18 +266,21 @@ public final class ThreadListView extends ListView implements Observer {
 
             // editable fields
             groupPanel.add(new WebLabel("Subject:"));
-            mSubjectField = new WebTextField(mThreadView.getThread().getSubject(), 16);
+            mSubjectField = new WebTextField(mThreadView.getThread().getSubject(), 22);
             mSubjectField.setInputPrompt(mThreadView.getThread().getSubject());
             mSubjectField.setHideInputPromptOnFocus(false);
             groupPanel.add(mSubjectField);
             groupPanel.add(new WebSeparator(true, true));
 
-            groupPanel.add(new WebLabel("Add User:"));
-            // TODO
-            groupPanel.add(new WebSeparator(true, true));
+            groupPanel.add(new WebLabel("Participants:"));
+            mParticipantsList = new WebCheckBoxList();
+            mParticipantsList.setVisibleRowCount(10);
+            for (User oneUser : UserList.getInstance().getUser()) {
+                boolean selected = threadView.getThread().getUser().contains(oneUser);
+                mParticipantsList.getCheckBoxListModel().addCheckBoxElement(oneUser, selected);
+            }
 
-            groupPanel.add(new WebLabel("Remove User:"));
-            // TODO
+            groupPanel.add(new WebScrollPane(mParticipantsList));
             groupPanel.add(new WebSeparator(true, true));
 
             this.add(groupPanel, BorderLayout.CENTER);
@@ -304,7 +313,12 @@ public final class ThreadListView extends ListView implements Observer {
             if (!mSubjectField.getText().isEmpty()) {
                 mThreadView.getThread().setSubject(mSubjectField.getText());
             }
+            List participants = mParticipantsList.getCheckedValues();
+            Set<User> threadUser = new HashSet();
+            for (Object o: participants) {
+                threadUser.add((User) o);
+            }
+            mThreadView.getThread().setUser(threadUser);
         }
     }
-
 }

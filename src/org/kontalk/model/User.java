@@ -220,4 +220,9 @@ public final class User {
         db.execUpdate(TABLE, set, mID);
     }
 
+    @Override
+    public String toString() {
+        String userName = mName == null ? "<unnamed> " : mName;
+        return userName + " (" + mJID + ")";
+    }
 }
