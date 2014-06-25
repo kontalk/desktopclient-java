@@ -51,6 +51,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.net.URL;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Icon;
@@ -280,9 +281,17 @@ public final class View {
             return;
 
         KonThread thread = ThreadList.getInstance().getThreadByUser(user);
+        this.showThread(thread);
+    }
+
+    void newThread(Set<User> user) {
+        KonThread thread = ThreadList.getInstance().createNewThread(user);
+        this.showThread(thread);
+    }
+
+    private void showThread(KonThread thread) {
         mThreadListView.selectThread(thread.getID());
         mMainFrame.selectTab(MainFrame.Tab.THREADS);
-        mThreadView.showThread(thread);
     }
 
     void selectedThreadChanged(KonThread thread) {
@@ -304,6 +313,7 @@ public final class View {
        mSendTextField.setText("");
     }
 
+    // TODO not used
     void showNotification() {
 
         final WebDialog dialog = new WebDialog();

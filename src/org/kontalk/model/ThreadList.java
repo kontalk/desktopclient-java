@@ -44,6 +44,8 @@ public final class ThreadList extends Observable {
     }
 
     public void load() {
+        assert mMap.isEmpty();
+
         Database db = Database.getInstance();
         ResultSet receiverRS = db.execSelectAll(KonThread.TABLE_RECEIVER);
         ResultSet threadRS = db.execSelectAll(KonThread.TABLE);
@@ -97,6 +99,12 @@ public final class ThreadList extends Observable {
             if (threadUser.size() == 1 && threadUser.contains(user))
                 return thread;
         }
+        Set<User> userSet = new HashSet();
+        userSet.add(user);
+        return this.createNewThread(userSet);
+    }
+
+    public KonThread createNewThread(Set<User> user) {
         KonThread newThread = new KonThread(user);
         mMap.put(newThread.getID(), newThread);
         this.setChanged();

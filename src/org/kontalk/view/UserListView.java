@@ -37,8 +37,10 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.HashSet;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Set;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
@@ -68,12 +70,15 @@ public final class UserListView extends ListView implements Observer {
         // right click popup menu
         mPopupMenu = new WebPopupMenu();
         // note: actions only work when right click does also selection
-        WebMenuItem newMenuItem = new WebMenuItem("New Contact");
+        WebMenuItem newMenuItem = new WebMenuItem("New Thread");
         newMenuItem.setToolTipText("Creates a new thread for this contact");
         newMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                // TODO
+                ListItem item = mListModel.get(getSelectedIndex());
+                Set<User> user = new HashSet();
+                user.add(((UserView) item).getUser());
+                modelView.newThread(user);
             }
         });
         mPopupMenu.add(newMenuItem);
@@ -83,8 +88,8 @@ public final class UserListView extends ListView implements Observer {
         editMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                ListItem p = mListModel.get(getSelectedIndex());
-                JDialog editUserDialog = new EditUserDialog((UserView) p);
+                ListItem item = mListModel.get(getSelectedIndex());
+                JDialog editUserDialog = new EditUserDialog((UserView) item);
                 editUserDialog.setVisible(true);
             }
         });

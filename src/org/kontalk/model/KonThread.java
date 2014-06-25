@@ -21,7 +21,6 @@ package org.kontalk.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -70,12 +69,11 @@ public final class KonThread extends Observable {
     /**
      * Used when creating a new thread
      */
-    KonThread(User user) {
+    KonThread(Set<User> user) {
         // Kontalk Android client is ignoring it, so set it to null for now
         //mXMPPID = StringUtils.randomString(8);
         mXMPPID = null;
-        mUser = new HashSet();
-        mUser.add(user);
+        mUser = user;
         mSubject = null;
         mRead = true;
 
@@ -90,7 +88,8 @@ public final class KonThread extends Observable {
             return;
         }
 
-        insertUser(user);
+        for (User oneUser : user)
+            this.insertUser(oneUser);
     }
 
     /**
@@ -190,10 +189,7 @@ public final class KonThread extends Observable {
         // add missing user
         for (User user : mUser){
             if (!dbUser.keySet().contains(user.getID())) {
-                List<Object> values = new LinkedList();
-                values.add(mID);
-                values.add(user.getID());
-                db.execInsert(TABLE_RECEIVER, values);
+                this.insertUser(user);
             }
             dbUser.remove(user.getID());
         }
@@ -210,7 +206,10 @@ public final class KonThread extends Observable {
         List<Object> recValues = new LinkedList();
         recValues.add(mID);
         recValues.add(user.getID());
-        db.execInsert(TABLE_RECEIVER, recValues);
+        int id = db.execInsert(TABLE_RECEIVER, recValues);
+        if (id < 1) {
+            LOGGER.warning("couldn't insert receiver");
+        }
     }
 
 }
