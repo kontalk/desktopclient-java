@@ -148,7 +148,7 @@ public final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             // server text field
-            groupPanel.add(new WebLabel("Server:"));
+            groupPanel.add(new WebLabel("Server address:"));
             serverField = new WebTextField(mConf.getString(KonConf.SERV_HOST), 24);
             serverField.setInputPrompt(KonConf.DEFAULT_SERV_HOST);
             serverField.setInputPromptFont(serverField.getFont().deriveFont(Font.ITALIC));
@@ -158,23 +158,23 @@ public final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             // file chooser for key files
-            groupPanel.add(new WebLabel("Choose public key:"));
+            groupPanel.add(new WebLabel("Public key file:"));
             publicKeyChooser = createFileChooser(mConf.getString(KonConf.ACC_PUB_KEY));
             groupPanel.add(publicKeyChooser);
             groupPanel.add(new WebSeparator(true, true));
 
-            groupPanel.add(new WebLabel("Choose private key:"));
+            groupPanel.add(new WebLabel("Private key file:"));
             privateKeyChooser = createFileChooser(mConf.getString(KonConf.ACC_PRIV_KEY));
             groupPanel.add(privateKeyChooser);
             groupPanel.add(new WebSeparator(true, true));
 
-            groupPanel.add(new WebLabel("Choose bridge certificate:"));
+            groupPanel.add(new WebLabel("Bridge certificate file:"));
             bridgeCertChooser = createFileChooser(mConf.getString(KonConf.ACC_BRIDGE_CERT));
             groupPanel.add(bridgeCertChooser);
             groupPanel.add(new WebSeparator(true, true));
 
             // text field for passphrase
-            groupPanel.add(new WebLabel("Passphrase:"));
+            groupPanel.add(new WebLabel("Passphrase for key:"));
             passField = new WebTextField(42);
             if (mConf.getString(KonConf.ACC_PASS).isEmpty()) {
                 passField.setInputPrompt("Enter passphrase...");
