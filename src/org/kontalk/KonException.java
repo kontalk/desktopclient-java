@@ -29,16 +29,16 @@ public final class KonException extends Exception {
     }
 
     private final Error mError;
-    private final Exception mException;
+    private final Class mExceptionClass;
 
     public KonException(Error error, java.lang.Exception ex) {
         super();
-        mException = ex;
         mError = error;
+        mExceptionClass = ex.getClass();
     }
 
-    public Exception getOriginalException() {
-        return mException;
+    public Class getExceptionClass() {
+        return mExceptionClass;
     }
 
     public Error getError() {

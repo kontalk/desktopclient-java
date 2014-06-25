@@ -60,6 +60,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JTextField;
 import javax.swing.ToolTipManager;
+import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
@@ -260,15 +261,17 @@ public final class View {
                 errorText = "Can't load keyfile(s)";
                 break;
             case ACCOUNT_KEY:
-                errorText = "Can't create personal key from key files. "+
-                        "Did you specify the correct files?";
+                errorText = "Can't create personal key from key files. ";
+                if (ex.getExceptionClass().equals(PGPException.class)) {
+                    errorText += "Did you specify the correct passphrase?";
+                }
                 break;
             case CLIENT_CONNECTION:
                 errorText = "Can't create connection";
                 break;
             case CLIENT_CONNECT:
                 errorText = "Can't connect to server.";
-                if (ex.getOriginalException() instanceof ConnectionException) {
+                if (ex.getExceptionClass().equals(ConnectionException.class)) {
                     errorText += " Is the server address correct?";
                 }
                 break;
