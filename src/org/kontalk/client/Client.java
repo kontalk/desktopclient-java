@@ -40,6 +40,7 @@ import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.KonConf;
+import org.kontalk.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
@@ -93,6 +94,7 @@ public final class Client implements PacketListener, Runnable {
             } catch (XMPPException | PGPException ex) {
                 LOGGER.log(Level.WARNING, "can't create connection", ex);
                 mModel.statusChanged(Kontalk.Status.FAILED);
+                mModel.handleException(new KonException(KonException.Error.CLIENT_CONNECTION, ex));
                 return;
             }
 
@@ -103,6 +105,7 @@ public final class Client implements PacketListener, Runnable {
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't connect", ex);
                 mModel.statusChanged(Kontalk.Status.FAILED);
+                mModel.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
                 return;
             }
             System.out.println("connected");
@@ -127,6 +130,7 @@ public final class Client implements PacketListener, Runnable {
                 LOGGER.log(Level.WARNING, "can't login", ex);
                 // TODO: most likely the pgp key is invalid, tell that to user
                 mModel.statusChanged(Kontalk.Status.FAILED);
+                mModel.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
                 return;
             }
         }

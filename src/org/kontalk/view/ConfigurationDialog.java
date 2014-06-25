@@ -48,7 +48,7 @@ public final class ConfigurationDialog extends WebDialog {
     private final KonConf mConf = KonConf.getInstance();
     private final View mViewModel;
 
-    ConfigurationDialog(JFrame owner, final View viewModel, String helpText) {
+    ConfigurationDialog(JFrame owner, final View viewModel) {
         super(owner);
 
         mViewModel = viewModel;

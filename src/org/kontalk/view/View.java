@@ -25,6 +25,7 @@ import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.managers.hotkey.Hotkey;
@@ -59,6 +60,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.JTextField;
 import javax.swing.ToolTipManager;
+import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
@@ -139,52 +141,6 @@ public final class View {
         this.statusChanged(Kontalk.Status.DISCONNECTED);
     }
 
-    /**
-     * Setup view on startup.
-     */
-    public void init() {
-        mThreadListView.selectLastThread();
-    }
-
-    public final void statusChanged(Kontalk.Status status) {
-        switch (status) {
-            case CONNECTING:
-                mStatusBarLabel.setText("Connecting...");
-                break;
-            case CONNECTED:
-                mThreadView.setColor(Color.white);
-                mStatusBarLabel.setText("Connected");
-                break;
-            case DISCONNECTING:
-                mStatusBarLabel.setText("Disconnecting...");
-                break;
-            case DISCONNECTED:
-                mThreadView.setColor(Color.lightGray);
-                mStatusBarLabel.setText("Not connected");
-                //if (mTrayIcon != null)
-                //    trayIcon.setImage(updatedImage);
-                break;
-            case SHUTTING_DOWN:
-                mStatusBarLabel.setText("Shutting down...");
-                mMainFrame.save();
-                mThreadListView.save();
-                break;
-            case FAILED:
-                mStatusBarLabel.setText("Connecting failed");
-                break;
-            }
-
-        mMainFrame.statusChanged(status);
-    }
-
-    public void showConfig() {
-        this.showConfig("Default text here");
-    }
-
-    public void connectionProblem(KonException ex) {
-        this.showConfig("Help Message here");
-    }
-
     final void setTray() {
         if (!KonConf.getInstance().getBoolean(KonConf.MAIN_TRAY)) {
             if (mTrayIcon != null) {
@@ -259,8 +215,73 @@ public final class View {
         }
     }
 
-    private void showConfig(String helpText) {
-        JDialog configFrame = new ConfigurationDialog(mMainFrame, this, helpText);
+    public final void statusChanged(Kontalk.Status status) {
+        switch (status) {
+            case CONNECTING:
+                mStatusBarLabel.setText("Connecting...");
+                break;
+            case CONNECTED:
+                mThreadView.setColor(Color.white);
+                mStatusBarLabel.setText("Connected");
+                break;
+            case DISCONNECTING:
+                mStatusBarLabel.setText("Disconnecting...");
+                break;
+            case DISCONNECTED:
+                mThreadView.setColor(Color.lightGray);
+                mStatusBarLabel.setText("Not connected");
+                //if (mTrayIcon != null)
+                //    trayIcon.setImage(updatedImage);
+                break;
+            case SHUTTING_DOWN:
+                mStatusBarLabel.setText("Shutting down...");
+                mMainFrame.save();
+                mThreadListView.save();
+                break;
+            case FAILED:
+                mStatusBarLabel.setText("Connecting failed");
+                break;
+            }
+
+        mMainFrame.statusChanged(status);
+    }
+
+    /**
+     * Setup view on startup.
+     */
+    public void init() {
+        mThreadListView.selectLastThread();
+    }
+
+    public void handleException(KonException ex) {
+        String errorText = "Uknown error!?";
+        switch(ex.getError()) {
+            case ACCOUNT_FILE:
+                errorText = "Can't load keyfile(s)";
+                break;
+            case ACCOUNT_KEY:
+                errorText = "Can't create personal key from key files. "+
+                        "Did you specify the correct files?";
+                break;
+            case CLIENT_CONNECTION:
+                errorText = "Can't create connection";
+                break;
+            case CLIENT_CONNECT:
+                errorText = "Can't connect to server.";
+                if (ex.getOriginalException() instanceof ConnectionException) {
+                    errorText += " Is the server address correct?";
+                }
+                break;
+            case CLIENT_LOGIN:
+                errorText = "Can't login. Did you provide a valid account?";
+                break;
+        }
+        WebOptionPane.showMessageDialog(mMainFrame, errorText, "Error", WebOptionPane.ERROR_MESSAGE);
+        this.showConfig();
+    }
+
+    void showConfig() {
+        JDialog configFrame = new ConfigurationDialog(mMainFrame, this);
         configFrame.setVisible(true);
     }
 

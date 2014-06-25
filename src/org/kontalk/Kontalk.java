@@ -140,7 +140,7 @@ public final class Kontalk {
             account.reload();
         } catch (KonException ex) {
             // something wrong with the account, tell view
-            mView.connectionProblem(ex);
+            this.handleException(ex);
             return;
         }
         List args = new ArrayList(1);
@@ -184,6 +184,10 @@ public final class Kontalk {
                     oneUser.getEncrypted());
             mClient.sendMessage(newMessage);
         }
+    }
+
+    public void handleException(KonException ex) {
+        mView.handleException(ex);
     }
 
     // parse optional arguments

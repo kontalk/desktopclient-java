@@ -58,7 +58,7 @@ public final class Account {
              mKey = PersonalKey.load(privateKeyData, publicKeyData, passphrase, bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
             LOGGER.log(Level.INFO, "can't load personal key", ex);
-            throw new KonException(ex);
+            throw new KonException(KonException.Error.ACCOUNT_KEY, ex);
         }
     }
 
@@ -76,7 +76,7 @@ public final class Account {
             bytes = Files.readAllBytes(Paths.get(path));
         } catch (IOException ex) {
             LOGGER.warning("can't read key file: "+ex.getLocalizedMessage());
-            throw new KonException(ex);
+            throw new KonException(KonException.Error.ACCOUNT_FILE, ex);
         }
         return bytes;
     }
