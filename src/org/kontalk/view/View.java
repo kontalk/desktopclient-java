@@ -51,10 +51,13 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
+import java.io.IOException;
 import java.net.URL;
+import java.security.cert.CertificateException;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.net.ssl.SSLHandshakeException;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
@@ -262,8 +265,15 @@ public final class View {
                 break;
             case ACCOUNT_KEY:
                 errorText = "Can't create personal key from key files. ";
+                if (ex.getExceptionClass().equals(IOException.class)) {
+                    errorText += " Is the public key file valid?";
+                }
+                if (ex.getExceptionClass().equals(CertificateException.class)) {
+                    // bridge
+                    errorText += " Are all key files valid?";
+                }
                 if (ex.getExceptionClass().equals(PGPException.class)) {
-                    errorText += "Did you specify the correct passphrase?";
+                    errorText += " Is the passphrase correct?";
                 }
                 break;
             case CLIENT_CONNECTION:
@@ -274,9 +284,12 @@ public final class View {
                 if (ex.getExceptionClass().equals(ConnectionException.class)) {
                     errorText += " Is the server address correct?";
                 }
+                if (ex.getExceptionClass().equals(SSLHandshakeException.class)) {
+                    errorText += " The server rejects the key.";
+                }
                 break;
             case CLIENT_LOGIN:
-                errorText = "Can't login. Did you provide a valid account?";
+                errorText = "Can't login to server.";
                 break;
         }
         WebOptionPane.showMessageDialog(mMainFrame, errorText, "Error", WebOptionPane.ERROR_MESSAGE);

@@ -128,7 +128,6 @@ public final class Client implements PacketListener, Runnable {
                 mConn.login("dummy", "dummy");
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
-                // TODO: most likely the pgp key is invalid, tell that to user
                 mModel.statusChanged(Kontalk.Status.FAILED);
                 mModel.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
                 return;

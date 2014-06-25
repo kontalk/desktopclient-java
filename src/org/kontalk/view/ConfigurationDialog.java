@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.filechooser.FilesSelectionListener;
 import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
@@ -29,11 +30,13 @@ import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextField;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.List;
 import javax.swing.JFrame;
 import org.kontalk.KonConf;
 
@@ -92,15 +95,35 @@ public final class ConfigurationDialog extends WebDialog {
         this.add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    private WebFileChooserField createFileChooser(String path){
-        WebFileChooserField fileChooser = new WebFileChooserField (this);
+    private static WebFileChooserField createFileChooser(String path){
+        final WebFileChooserField fileChooser = new WebFileChooserField();
         fileChooser.setPreferredWidth(100);
         fileChooser.setMultiSelectionEnabled(false);
         fileChooser.setShowFileShortName(false);
         fileChooser.setShowRemoveButton(false);
-        //fileChooser.setSelectedFile(File.listRoots()[0]);
-        fileChooser.setSelectedFile(new File(path));
-        fileChooser.getWebFileChooser().setCurrentDirectory(System.getProperty("user.dir"));
+        // TODO does not work?
+        //fileChooser.getWebFileChooser().setFileSelectionMode(JFileChooser.FILES_ONLY);
+        File file = new File(path);
+        if (file.exists()) {
+            fileChooser.setSelectedFile(new File(path));
+        } else {
+            fileChooser.setBorderColor(Color.RED);
+        }
+
+        if (file.getParentFile().exists())
+            fileChooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
+
+        fileChooser.addSelectedFilesListener(new FilesSelectionListener() {
+            @Override
+            public void selectionChanged(List<File> files) {
+                for (File file : files) {
+                    if (file.exists()) {
+                        fileChooser.setBorderColor(Color.BLACK);
+                    }
+                }
+            }
+        });
+
         return fileChooser;
     }
 
@@ -206,12 +229,18 @@ public final class ConfigurationDialog extends WebDialog {
         private void saveConfiguration() {
             mConf.setProperty(KonConf.SERV_HOST, serverField.getText());
 
-            File file = publicKeyChooser.getSelectedFiles().get(0);
-            mConf.setProperty(KonConf.ACC_PUB_KEY, file.getAbsolutePath());
-            file = privateKeyChooser.getSelectedFiles().get(0);
-            mConf.setProperty(KonConf.ACC_PRIV_KEY, file.getAbsolutePath());
-            file = bridgeCertChooser.getSelectedFiles().get(0);
-            mConf.setProperty(KonConf.ACC_BRIDGE_CERT, file.getAbsolutePath());
+            if (!publicKeyChooser.getSelectedFiles().isEmpty()) {
+                File file = publicKeyChooser.getSelectedFiles().get(0);
+                mConf.setProperty(KonConf.ACC_PUB_KEY, file.getAbsolutePath());
+            }
+            if (!privateKeyChooser.getSelectedFiles().isEmpty()) {
+                File file = privateKeyChooser.getSelectedFiles().get(0);
+                mConf.setProperty(KonConf.ACC_PRIV_KEY, file.getAbsolutePath());
+            }
+            if (!bridgeCertChooser.getSelectedFiles().isEmpty()) {
+                File file = bridgeCertChooser.getSelectedFiles().get(0);
+                mConf.setProperty(KonConf.ACC_BRIDGE_CERT, file.getAbsolutePath());
+            }
 
             mConf.setProperty(KonConf.ACC_PASS, passField.getText());
         }

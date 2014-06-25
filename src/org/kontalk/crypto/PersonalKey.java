@@ -181,7 +181,6 @@ public final class PersonalKey {
             if (key.isMasterKey()) {
                 // master (signing) key
                 signPriv = sec.extractPrivateKey(decryptor);
-                // TODO this can fail with wrong passphrase -> send message
             }
             else {
                 // sub (encryption) key
