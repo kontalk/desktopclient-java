@@ -25,6 +25,8 @@ import com.alee.laf.text.WebTextArea;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
+import java.awt.Graphics;
+import java.awt.Image;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.text.SimpleDateFormat;
@@ -36,6 +38,7 @@ import java.util.Observer;
 import java.util.Set;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
+import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.KonMessage;
@@ -53,6 +56,7 @@ public final class ThreadView extends WebScrollPane {
     private final static Icon DELIVERED_ICON = View.getIcon("ic_msg_delivered.png");
     private final static Icon CRYPT_ICON = View.getIcon("ic_msg_crypt.png");
     private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
+    private final static Image BG_IMAGE = View.getImage("thread_bg.png");
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap();
     private int mCurrentThreadID = -1;
@@ -63,6 +67,23 @@ public final class ThreadView extends WebScrollPane {
         this.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.getVerticalScrollBar().setUnitIncrement(25);
+
+        this.setViewport(new JViewport() {
+            @Override
+            public void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                // tiling
+                int iw = BG_IMAGE.getWidth(this);
+                int ih = BG_IMAGE.getHeight(this);
+                if (iw > 0 && ih > 0) {
+                    for (int x = 0; x < getWidth(); x += iw) {
+                        for (int y = 0; y < getHeight(); y += ih) {
+                            g.drawImage(BG_IMAGE, x, y, iw, ih, this);
+                        }
+                    }
+                }
+            }
+        });
     }
 
     int getCurrentThreadID() {
@@ -187,7 +208,12 @@ public final class ThreadView extends WebScrollPane {
                 //this.setBorder(new EmptyBorder(10, 10, 10, 10));
 
                 WebPanel messagePanel = new WebPanel(true);
-                messagePanel.setMargin(1);
+                messagePanel.setWebColoredBackground(false);
+                messagePanel.setMargin(5);
+                if (mMessage.getDir().equals(KonMessage.Direction.IN))
+                    messagePanel.setBackground(Color.WHITE);
+                else
+                    messagePanel.setBackground(View.LIGHT_BLUE);
 
                 // from label
                 if (mMessage.getDir().equals(KonMessage.Direction.IN)) {
@@ -221,7 +247,7 @@ public final class ThreadView extends WebScrollPane {
                 statusPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
                 // icons
                 mStatusIconLabel = new WebLabel();
-                update();
+                this.update();
                 statusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
                 if (message.isEncrypted()) {
