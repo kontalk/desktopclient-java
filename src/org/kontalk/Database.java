@@ -148,7 +148,7 @@ public final class Database {
         insert += StringUtils.join(vList, ", ") + ")";
 
         try (PreparedStatement stat = mConn.prepareStatement(insert,
-                Statement.RETURN_GENERATED_KEYS)){
+                Statement.RETURN_GENERATED_KEYS)) {
             insertValues(stat, values);
             stat.executeUpdate();
             ResultSet keys = stat.getGeneratedKeys();
@@ -179,7 +179,7 @@ public final class Database {
         // note: looks like driver doesn't support "LIMIT"
         //update += " LIMIT 1";
 
-        try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)){
+        try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)) {
             insertValues(stat, keyList, set);
             stat.executeUpdate();
             ResultSet keys = stat.getGeneratedKeys();
@@ -190,8 +190,8 @@ public final class Database {
         }
     }
 
-    public void execDelete(String table, int id){
-        try (Statement stat = mConn.createStatement()){
+    public void execDelete(String table, int id) {
+        try (Statement stat = mConn.createStatement()) {
             stat.executeUpdate("DELETE FROM " + table + " WHERE _id = " + id);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't delete", ex);

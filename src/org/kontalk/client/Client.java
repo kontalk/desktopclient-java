@@ -74,7 +74,7 @@ public final class Client implements PacketListener, Runnable {
         //Connection.DEBUG_ENABLED = true;
     }
 
-    private void connect(PersonalKey key){
+    private void connect(PersonalKey key) {
 
         this.disconnect();
         mModel.statusChanged(Kontalk.Status.CONNECTING);

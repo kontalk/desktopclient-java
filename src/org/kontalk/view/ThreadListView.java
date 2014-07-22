@@ -125,9 +125,9 @@ public final class ThreadListView extends ListView implements Observer {
         });
     }
 
-    void selectThread(int threadID){
+    void selectThread(int threadID) {
         Enumeration e = mListModel.elements();
-        for(Enumeration<ThreadView> threads = e; e.hasMoreElements();){
+        for(Enumeration<ThreadView> threads = e; e.hasMoreElements();) {
             ThreadView threadView = threads.nextElement();
             if (threadView.getThread().getID() == threadID)
                 this.setSelectedValue(threadView);
@@ -207,7 +207,7 @@ public final class ThreadListView extends ListView implements Observer {
         }
 
         @Override
-        void repaint(boolean isSelected){
+        void repaint(boolean isSelected) {
             if (isSelected)
                 this.setBackground(View.BLUE);
             else

@@ -66,16 +66,16 @@ public final class Kontalk {
         PGP.registerProvider();
     }
 
-    public Kontalk(String[] args){
+    public Kontalk(String[] args) {
 
         // check if already running
-        try{
+        try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
             mRun = new ServerSocket(9871, 10, addr);
-        }catch(java.net.BindException ex){
+        } catch(java.net.BindException ex) {
             LOGGER.severe("already running");
             System.exit(2);
-        }catch(IOException ex){
+        } catch(IOException ex) {
             LOGGER.log(Level.WARNING, "can't create socket", ex);
         }
 
@@ -153,7 +153,7 @@ public final class Kontalk {
         mClient.disconnect();
     }
 
-    public void statusChanged(Status status){
+    public void statusChanged(Status status) {
         mView.statusChanged(status);
         if (status == Status.CONNECTED) {
             // send all pending messages
@@ -191,17 +191,17 @@ public final class Kontalk {
     }
 
     // parse optional arguments
-    private void parseArgs(String[] args){
+    private void parseArgs(String[] args) {
         if (args.length == 0)
             return;
-        if (args.length == 2 && Pattern.matches(".*:\\d*", args[1])){
+        if (args.length == 2 && Pattern.matches(".*:\\d*", args[1])) {
             String[] argsegs = args[1].split(Pattern.quote(":"));
             if (argsegs[0].length() != 0)
                 mConfig.setProperty("server.host", argsegs[0]);
             if (argsegs[1].length() != 0)
                 mConfig.setProperty("server.port", Integer.valueOf(argsegs[1]));
             //client.setUsername(args[0]);
-        } else if (args.length == 1 && !Pattern.matches(".*:\\d*", args[0])){
+        } else if (args.length == 1 && !Pattern.matches(".*:\\d*", args[0])) {
             //client.setUsername(args[0]);
         } else {
             String className = this.getClass().getEnclosingClass().getName();

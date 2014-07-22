@@ -95,7 +95,7 @@ public final class ConfigurationDialog extends WebDialog {
         this.add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    private static WebFileChooserField createFileChooser(String path){
+    private static WebFileChooserField createFileChooser(String path) {
         final WebFileChooserField fileChooser = new WebFileChooserField();
         fileChooser.setPreferredWidth(100);
         fileChooser.setMultiSelectionEnabled(false);

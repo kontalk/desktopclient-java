@@ -111,7 +111,7 @@ public final class KonThread extends Observable {
         return mID;
     }
 
-    public String getXMPPID(){
+    public String getXMPPID() {
         return mXMPPID;
     }
 
@@ -166,7 +166,7 @@ public final class KonThread extends Observable {
         return added;
     }
 
-    public void save(){
+    public void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap();
         set.put("subject", mSubject);
@@ -187,7 +187,7 @@ public final class KonThread extends Observable {
         }
 
         // add missing user
-        for (User user : mUser){
+        for (User user : mUser) {
             if (!dbUser.keySet().contains(user.getID())) {
                 this.insertUser(user);
             }

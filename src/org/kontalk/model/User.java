@@ -195,7 +195,7 @@ public final class User {
 
         // if not set use id in key for username
         String id = PGP.getUserId(key, null);
-        if (id != null && id.contains(" (NO COMMENT) ")){
+        if (id != null && id.contains(" (NO COMMENT) ")) {
             String userName = id.substring(0, id.indexOf(" (NO COMMENT) "));
             if (!userName.isEmpty() && mName == null)
                 mName = userName;

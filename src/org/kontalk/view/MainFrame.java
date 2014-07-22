@@ -93,7 +93,7 @@ public final class MainFrame extends WebFrame {
         this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         this.addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosing(WindowEvent e){
+            public void windowClosing(WindowEvent e) {
                 viewModel.shutDown();
             }
         });
@@ -226,7 +226,7 @@ public final class MainFrame extends WebFrame {
         this.add(statusBar, BorderLayout.SOUTH);
     }
 
-    void selectTab(Tab tab){
+    void selectTab(Tab tab) {
         mTabbedPane.setSelectedIndex(tab.ordinal());
     }
 

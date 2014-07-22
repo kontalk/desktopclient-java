@@ -309,7 +309,7 @@ public final class KonMessage extends Observable implements Comparable<KonMessag
         this.notifyObservers();
     }
 
-    private int insert(){
+    private int insert() {
         Database db = Database.getInstance();
         List<Object> values = new LinkedList();
         values.add(mThread.getID());

@@ -162,7 +162,7 @@ public final class UserListView extends ListView implements Observer {
         return ((UserView) p).getUser();
     }
 
-    private void showPopupMenu(MouseEvent e){
+    private void showPopupMenu(MouseEvent e) {
         mPopupMenu.show(this, e.getX(), e.getY());
     }
 
