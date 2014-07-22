@@ -59,13 +59,21 @@ import org.kontalk.util.XMPPUtils;
 public final class Coder {
     private final static Logger LOGGER = Logger.getLogger(Coder.class.getName());
 
-    /** Encryption status of a message. */
+    /**
+     * Encryption status of a message.
+     * Do not modify, only add! Ordinal used in database.
+     */
     public static enum Encryption {NOT, ENCRYPTED, DECRYPTED}
-    /** Signing status of a message. */
+
+    /**
+     * Signing status of a message.
+     * Do not modify, only add! Ordinal used in database.
+     */
     public static enum Signing {NOT, SIGNED, VERIFIED}
 
     /**
      * Errors that can occur during de-/encryption and verification.
+     * Do not modify, only add! Ordinal used in database.
      */
     public static enum Error {
         /** Some unknown error. */

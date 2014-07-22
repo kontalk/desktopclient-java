@@ -42,6 +42,9 @@ import org.kontalk.util.MessageUtils;
 public final class User {
     private final static Logger LOGGER = Logger.getLogger(User.class.getName());
 
+    /**
+     * Availability of one user. Not saved to database.
+     */
     public static enum Available {UNKNOWN, YES, NO};
 
     public final static String TABLE = "user";

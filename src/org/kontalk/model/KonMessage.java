@@ -38,7 +38,16 @@ import org.kontalk.crypto.Coder;
 public final class KonMessage extends Observable implements Comparable<KonMessage> {
     private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
+    /**
+     * Direction (in-, outgoing) of one message.
+     * Do not modify, only add! Ordinal used in database.
+     */
     public static enum Direction {IN, OUT};
+
+    /**
+     * Receipt status of one message.
+     * Do not modify, only add! Ordinal used in database
+     */
     public static enum Status {IN, //ACKNOWLEDGED, // for incoming
                                PENDING, SENT, RECEIVED, // for outgoing
                                ERROR};
@@ -47,6 +56,7 @@ public final class KonMessage extends Observable implements Comparable<KonMessag
     public final static String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "thread_id INTEGER NOT NULL, " +
+            // enum, in- or outgoing
             "direction INTEGER NOT NULL, " +
             // from or to user
             "user_id INTEGER NOT NULL, " +
