@@ -132,7 +132,7 @@ public final class ConfigurationDialog extends WebDialog {
     private class MainPanel extends WebPanel {
 
         WebCheckBox mTrayBox;
-        WebCheckBox mMinimizeTrayBox;
+        WebCheckBox mCloseTrayBox;
 
         public MainPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -141,19 +141,19 @@ public final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebLabel("Main Settings").setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
-            mMinimizeTrayBox = new WebCheckBox("Minimize to tray");
+            mCloseTrayBox = new WebCheckBox("Close to tray");
 
             mTrayBox = new WebCheckBox("Show tray icon");
             mTrayBox.setAnimated(false);
             mTrayBox.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {
-                    mMinimizeTrayBox.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                    mCloseTrayBox.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
                 }
             });
             mTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY));
 
-            GroupPanel buttonPanel = new GroupPanel(10, mTrayBox, mMinimizeTrayBox);
+            GroupPanel buttonPanel = new GroupPanel(10, mTrayBox, mCloseTrayBox);
             groupPanel.add(buttonPanel);
 
             this.add(groupPanel);
