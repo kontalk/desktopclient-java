@@ -114,6 +114,9 @@ public final class Kontalk {
         mMessageList.load();
 
         mView.init();
+
+        if (mConfig.getBoolean(KonConf.MAIN_CONNECT_STARTUP))
+            this.connect();
     }
 
     public void shutDown() {

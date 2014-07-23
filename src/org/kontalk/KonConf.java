@@ -48,6 +48,7 @@ public final class KonConf extends PropertiesConfiguration {
     public final static String VIEW_SELECTED_THREAD = "view.thread";
     public final static String NET_SEND_CHAT_STATE = "net.chatstate";
     public final static String NET_STATUS_LIST = "net.status_list";
+    public final static String MAIN_CONNECT_STARTUP = "main.connect_startup";
     public final static String MAIN_TRAY = "main.tray";
     public final static String MAIN_TRAY_CLOSE = "main.tray_close";
 
@@ -94,6 +95,7 @@ public final class KonConf extends PropertiesConfiguration {
         map.put(VIEW_SELECTED_THREAD, -1);
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_STATUS_LIST, new String[]{""});
+        map.put(MAIN_CONNECT_STARTUP, false);
         map.put(MAIN_TRAY, true);
         map.put(MAIN_TRAY_CLOSE, false);
 

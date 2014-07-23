@@ -131,6 +131,7 @@ public final class ConfigurationDialog extends WebDialog {
 
     private class MainPanel extends WebPanel {
 
+        WebCheckBox mConnectStartupBox;
         WebCheckBox mTrayBox;
         WebCheckBox mCloseTrayBox;
 
@@ -140,6 +141,10 @@ public final class ConfigurationDialog extends WebDialog {
 
             groupPanel.add(new WebLabel("Main Settings").setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
+
+            mConnectStartupBox = new WebCheckBox("Connect on startup");
+            mConnectStartupBox.setSelected(mConf.getBoolean(KonConf.MAIN_CONNECT_STARTUP));
+            groupPanel.add(mConnectStartupBox);
 
             mCloseTrayBox = new WebCheckBox("Close to tray");
             mCloseTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE));
@@ -161,6 +166,7 @@ public final class ConfigurationDialog extends WebDialog {
         }
 
         private void saveConfiguration() {
+            mConf.setProperty(KonConf.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
             mConf.setProperty(KonConf.MAIN_TRAY, mTrayBox.isSelected());
             mConf.setProperty(KonConf.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
             mViewModel.setTray();

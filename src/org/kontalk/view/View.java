@@ -141,7 +141,6 @@ public final class View {
         // tray
         this.setTray();
 
-        // TODO: always disconnected?
         this.statusChanged(Kontalk.Status.DISCONNECTED);
     }
 
