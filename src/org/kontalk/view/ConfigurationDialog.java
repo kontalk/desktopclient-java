@@ -35,6 +35,8 @@ import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.io.File;
 import java.util.List;
 import javax.swing.JFrame;
@@ -130,20 +132,29 @@ public final class ConfigurationDialog extends WebDialog {
     private class MainPanel extends WebPanel {
 
         WebCheckBox mTrayBox;
+        WebCheckBox mMinimizeTrayBox;
 
         public MainPanel() {
-            //"Account configuration"
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
             groupPanel.add(new WebLabel("Main Settings").setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
+            mMinimizeTrayBox = new WebCheckBox("Minimize to tray");
+
             mTrayBox = new WebCheckBox("Show tray icon");
             mTrayBox.setAnimated(false);
+            mTrayBox.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    mMinimizeTrayBox.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                }
+            });
             mTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY));
 
-            groupPanel.add(mTrayBox);
+            GroupPanel buttonPanel = new GroupPanel(10, mTrayBox, mMinimizeTrayBox);
+            groupPanel.add(buttonPanel);
 
             this.add(groupPanel);
         }
@@ -163,7 +174,6 @@ public final class ConfigurationDialog extends WebDialog {
             private final WebTextField passField;
 
         public AccountPanel() {
-            //"Account configuration"
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
