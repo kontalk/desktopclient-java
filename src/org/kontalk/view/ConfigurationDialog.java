@@ -167,11 +167,11 @@ public final class ConfigurationDialog extends WebDialog {
 
     private class AccountPanel extends WebPanel {
 
-            private final WebTextField serverField;
-            private final WebFileChooserField publicKeyChooser;
-            private final WebFileChooserField privateKeyChooser;
-            private final WebFileChooserField bridgeCertChooser;
-            private final WebTextField passField;
+            private final WebTextField mServerField;
+            private final WebFileChooserField mPublicKeyChooser;
+            private final WebFileChooserField mPrivateKeyChooser;
+            private final WebFileChooserField mBridgeCertChooser;
+            private final WebTextField mPassField;
 
         public AccountPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -182,40 +182,40 @@ public final class ConfigurationDialog extends WebDialog {
 
             // server text field
             groupPanel.add(new WebLabel("Server address:"));
-            serverField = new WebTextField(mConf.getString(KonConf.SERV_HOST), 24);
-            serverField.setInputPrompt(KonConf.DEFAULT_SERV_HOST);
-            serverField.setInputPromptFont(serverField.getFont().deriveFont(Font.ITALIC));
-            serverField.setHideInputPromptOnFocus(false);
+            mServerField = new WebTextField(mConf.getString(KonConf.SERV_HOST), 24);
+            mServerField.setInputPrompt(KonConf.DEFAULT_SERV_HOST);
+            mServerField.setInputPromptFont(mServerField.getFont().deriveFont(Font.ITALIC));
+            mServerField.setHideInputPromptOnFocus(false);
 
-            groupPanel.add(serverField);
+            groupPanel.add(mServerField);
             groupPanel.add(new WebSeparator(true, true));
 
             // file chooser for key files
             groupPanel.add(new WebLabel("Public key file:"));
-            publicKeyChooser = createFileChooser(mConf.getString(KonConf.ACC_PUB_KEY));
-            groupPanel.add(publicKeyChooser);
+            mPublicKeyChooser = createFileChooser(mConf.getString(KonConf.ACC_PUB_KEY));
+            groupPanel.add(mPublicKeyChooser);
             groupPanel.add(new WebSeparator(true, true));
 
             groupPanel.add(new WebLabel("Private key file:"));
-            privateKeyChooser = createFileChooser(mConf.getString(KonConf.ACC_PRIV_KEY));
-            groupPanel.add(privateKeyChooser);
+            mPrivateKeyChooser = createFileChooser(mConf.getString(KonConf.ACC_PRIV_KEY));
+            groupPanel.add(mPrivateKeyChooser);
             groupPanel.add(new WebSeparator(true, true));
 
             groupPanel.add(new WebLabel("Bridge certificate file:"));
-            bridgeCertChooser = createFileChooser(mConf.getString(KonConf.ACC_BRIDGE_CERT));
-            groupPanel.add(bridgeCertChooser);
+            mBridgeCertChooser = createFileChooser(mConf.getString(KonConf.ACC_BRIDGE_CERT));
+            groupPanel.add(mBridgeCertChooser);
             groupPanel.add(new WebSeparator(true, true));
 
             // text field for passphrase
             groupPanel.add(new WebLabel("Passphrase for key:"));
-            passField = new WebTextField(42);
+            mPassField = new WebTextField(42);
             if (mConf.getString(KonConf.ACC_PASS).isEmpty()) {
-                passField.setInputPrompt("Enter passphrase...");
-                passField.setHideInputPromptOnFocus(false);
+                mPassField.setInputPrompt("Enter passphrase...");
+                mPassField.setHideInputPromptOnFocus(false);
             } else {
-                passField.setText(mConf.getString(KonConf.ACC_PASS));
+                mPassField.setText(mConf.getString(KonConf.ACC_PASS));
             }
-            groupPanel.add(passField);
+            groupPanel.add(mPassField);
             groupPanel.add(new WebSeparator(true, true));
 
             this.add(groupPanel, BorderLayout.CENTER);
@@ -237,22 +237,22 @@ public final class ConfigurationDialog extends WebDialog {
         }
 
         private void saveConfiguration() {
-            mConf.setProperty(KonConf.SERV_HOST, serverField.getText());
+            mConf.setProperty(KonConf.SERV_HOST, mServerField.getText());
 
-            if (!publicKeyChooser.getSelectedFiles().isEmpty()) {
-                File file = publicKeyChooser.getSelectedFiles().get(0);
+            if (!mPublicKeyChooser.getSelectedFiles().isEmpty()) {
+                File file = mPublicKeyChooser.getSelectedFiles().get(0);
                 mConf.setProperty(KonConf.ACC_PUB_KEY, file.getAbsolutePath());
             }
-            if (!privateKeyChooser.getSelectedFiles().isEmpty()) {
-                File file = privateKeyChooser.getSelectedFiles().get(0);
+            if (!mPrivateKeyChooser.getSelectedFiles().isEmpty()) {
+                File file = mPrivateKeyChooser.getSelectedFiles().get(0);
                 mConf.setProperty(KonConf.ACC_PRIV_KEY, file.getAbsolutePath());
             }
-            if (!bridgeCertChooser.getSelectedFiles().isEmpty()) {
-                File file = bridgeCertChooser.getSelectedFiles().get(0);
+            if (!mBridgeCertChooser.getSelectedFiles().isEmpty()) {
+                File file = mBridgeCertChooser.getSelectedFiles().get(0);
                 mConf.setProperty(KonConf.ACC_BRIDGE_CERT, file.getAbsolutePath());
             }
 
-            mConf.setProperty(KonConf.ACC_PASS, passField.getText());
+            mConf.setProperty(KonConf.ACC_PASS, mPassField.getText());
         }
     }
 
