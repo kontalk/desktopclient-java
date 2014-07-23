@@ -142,6 +142,7 @@ public final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             mCloseTrayBox = new WebCheckBox("Close to tray");
+            mCloseTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE));
 
             mTrayBox = new WebCheckBox("Show tray icon");
             mTrayBox.setAnimated(false);
@@ -161,6 +162,7 @@ public final class ConfigurationDialog extends WebDialog {
 
         private void saveConfiguration() {
             mConf.setProperty(KonConf.MAIN_TRAY, mTrayBox.isSelected());
+            mConf.setProperty(KonConf.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
             mViewModel.setTray();
         }
     }

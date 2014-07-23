@@ -49,6 +49,7 @@ public final class KonConf extends PropertiesConfiguration {
     public final static String NET_SEND_CHAT_STATE = "net.chatstate";
     public final static String NET_STATUS_LIST = "net.status_list";
     public final static String MAIN_TRAY = "main.tray";
+    public final static String MAIN_TRAY_CLOSE = "main.tray_close";
 
     public final static String DEFAULT_SERV_NET = Client.KONTALK_NETWORK;
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
@@ -94,6 +95,7 @@ public final class KonConf extends PropertiesConfiguration {
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_STATUS_LIST, new String[]{""});
         map.put(MAIN_TRAY, true);
+        map.put(MAIN_TRAY_CLOSE, false);
 
         for(Entry<String, Object> e : map.entrySet()) {
             if (!INSTANCE.containsKey(e.getKey())) {

@@ -41,6 +41,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Frame;
+import java.awt.SystemTray;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -94,7 +95,11 @@ public final class MainFrame extends WebFrame {
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                viewModel.shutDown();
+                if (mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE) &&
+                        SystemTray.getSystemTray().getTrayIcons().length > 0)
+                    MainFrame.this.toggleState();
+                else
+                    viewModel.shutDown();
             }
         });
 
