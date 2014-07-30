@@ -65,6 +65,7 @@ import javax.swing.JTextField;
 import javax.swing.ToolTipManager;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
+import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
@@ -257,6 +258,7 @@ public final class View {
     }
 
     public void handleException(KonException ex) {
+        String eol = System.getProperty("line.separator");
         String errorText = "Uknown error!?";
         switch(ex.getError()) {
             case ACCOUNT_FILE:
@@ -289,6 +291,10 @@ public final class View {
                 break;
             case CLIENT_LOGIN:
                 errorText = "Can't login to server.";
+                if (ex.getExceptionClass().equals(SASLErrorException.class)) {
+                    errorText += eol + "The server rejects the account. Is the "
+                            + "specified server correct and the account valid?";
+                }
                 break;
         }
         WebOptionPane.showMessageDialog(mMainFrame, errorText, "Error", WebOptionPane.ERROR_MESSAGE);
