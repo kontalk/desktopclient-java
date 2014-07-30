@@ -267,14 +267,14 @@ public final class View {
             case ACCOUNT_KEY:
                 errorText = "Can't create personal key from key files. ";
                 if (ex.getExceptionClass().equals(IOException.class)) {
-                    errorText += " Is the public key file valid?";
+                    errorText += eol + "Is the public key file valid?";
                 }
                 if (ex.getExceptionClass().equals(CertificateException.class)) {
                     // bridge
-                    errorText += " Are all key files valid?";
+                    errorText += eol + "Are all key files valid?";
                 }
                 if (ex.getExceptionClass().equals(PGPException.class)) {
-                    errorText += " Is the passphrase correct?";
+                    errorText += eol + "Is the passphrase correct?";
                 }
                 break;
             case CLIENT_CONNECTION:
@@ -283,10 +283,10 @@ public final class View {
             case CLIENT_CONNECT:
                 errorText = "Can't connect to server.";
                 if (ex.getExceptionClass().equals(ConnectionException.class)) {
-                    errorText += " Is the server address correct?";
+                    errorText += eol + "Is the server address correct?";
                 }
                 if (ex.getExceptionClass().equals(SSLHandshakeException.class)) {
-                    errorText += " The server rejects the key.";
+                    errorText += eol + "The server rejects the key.";
                 }
                 break;
             case CLIENT_LOGIN:
