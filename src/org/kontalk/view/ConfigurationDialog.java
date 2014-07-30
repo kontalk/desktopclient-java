@@ -112,7 +112,7 @@ public final class ConfigurationDialog extends WebDialog {
             fileChooser.setBorderColor(Color.RED);
         }
 
-        if (file.getParentFile().exists())
+        if (file.getParentFile() != null && file.getParentFile().exists())
             fileChooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
 
         fileChooser.addSelectedFilesListener(new FilesSelectionListener() {
@@ -176,9 +176,7 @@ public final class ConfigurationDialog extends WebDialog {
     private class AccountPanel extends WebPanel {
 
             private final WebTextField mServerField;
-            private final WebFileChooserField mPublicKeyChooser;
-            private final WebFileChooserField mPrivateKeyChooser;
-            private final WebFileChooserField mBridgeCertChooser;
+            private final WebFileChooserField mZipFileChooser;
             private final WebTextField mPassField;
 
         public AccountPanel() {
@@ -199,32 +197,21 @@ public final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             // file chooser for key files
-            groupPanel.add(new WebLabel("Public key file:"));
-            mPublicKeyChooser = createFileChooser(mConf.getString(KonConf.ACC_PUB_KEY));
-            groupPanel.add(mPublicKeyChooser);
-            groupPanel.add(new WebSeparator(true, true));
-
-            groupPanel.add(new WebLabel("Private key file:"));
-            mPrivateKeyChooser = createFileChooser(mConf.getString(KonConf.ACC_PRIV_KEY));
-            groupPanel.add(mPrivateKeyChooser);
-            groupPanel.add(new WebSeparator(true, true));
-
-            groupPanel.add(new WebLabel("Bridge certificate file:"));
-            mBridgeCertChooser = createFileChooser(mConf.getString(KonConf.ACC_BRIDGE_CERT));
-            groupPanel.add(mBridgeCertChooser);
+            groupPanel.add(new WebLabel("Zip archive containing personal key:"));
+            mZipFileChooser = createFileChooser(mConf.getString(KonConf.ACC_ARCHIVE));
+            groupPanel.add(mZipFileChooser);
             groupPanel.add(new WebSeparator(true, true));
 
             // text field for passphrase
-            groupPanel.add(new WebLabel("Passphrase for key:"));
+            groupPanel.add(new WebLabel("Password for key:"));
             mPassField = new WebTextField(42);
             if (mConf.getString(KonConf.ACC_PASS).isEmpty()) {
-                mPassField.setInputPrompt("Enter passphrase...");
+                mPassField.setInputPrompt("Enter password...");
                 mPassField.setHideInputPromptOnFocus(false);
             } else {
                 mPassField.setText(mConf.getString(KonConf.ACC_PASS));
             }
             groupPanel.add(mPassField);
-            groupPanel.add(new WebSeparator(true, true));
 
             this.add(groupPanel, BorderLayout.CENTER);
 
@@ -247,17 +234,9 @@ public final class ConfigurationDialog extends WebDialog {
         private void saveConfiguration() {
             mConf.setProperty(KonConf.SERV_HOST, mServerField.getText());
 
-            if (!mPublicKeyChooser.getSelectedFiles().isEmpty()) {
-                File file = mPublicKeyChooser.getSelectedFiles().get(0);
-                mConf.setProperty(KonConf.ACC_PUB_KEY, file.getAbsolutePath());
-            }
-            if (!mPrivateKeyChooser.getSelectedFiles().isEmpty()) {
-                File file = mPrivateKeyChooser.getSelectedFiles().get(0);
-                mConf.setProperty(KonConf.ACC_PRIV_KEY, file.getAbsolutePath());
-            }
-            if (!mBridgeCertChooser.getSelectedFiles().isEmpty()) {
-                File file = mBridgeCertChooser.getSelectedFiles().get(0);
-                mConf.setProperty(KonConf.ACC_BRIDGE_CERT, file.getAbsolutePath());
+            if (!mZipFileChooser.getSelectedFiles().isEmpty()) {
+                File file = mZipFileChooser.getSelectedFiles().get(0);
+                mConf.setProperty(KonConf.ACC_ARCHIVE, file.getAbsolutePath());
             }
 
             mConf.setProperty(KonConf.ACC_PASS, mPassField.getText());
