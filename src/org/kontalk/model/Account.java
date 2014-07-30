@@ -20,22 +20,26 @@ package org.kontalk.model;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 import org.apache.commons.configuration.Configuration;
+import org.apache.commons.io.IOUtils;
 import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
-import org.kontalk.Kontalk;
 import org.kontalk.crypto.PersonalKey;
 
 public final class Account {
-    private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(Account.class.getName());
+
+    private static final String PUBLIC_KEY_FILENAME = "kontalk-public.asc";
+    private static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
+    private static final String BRIDGE_CERT_FILENAME = "kontalk-login.crt";
 
     private final static Account INSTANCE = new Account();
 
@@ -48,11 +52,20 @@ public final class Account {
 
         Configuration config = KonConf.getInstance();
 
+        byte[] publicKeyData;
+        byte[] privateKeyData;
+        byte[] bridgeCertData;
+
         // read key files
-        byte[] publicKeyData = readBytes(config.getString("account.public_key"));
-        byte[] privateKeyData = readBytes(config.getString("account.private_key"));
-        byte[] bridgeCertData = readBytes(config.getString("account.bridge_cert"));
-        //mBridgeKeyData = readBytes(mConfig.getString("account.bridge_key"));
+        // TODO: copy files to config dir?
+        try (ZipFile zipFile = new ZipFile(config.getString(KonConf.ACC_ARCHIVE))) {
+            publicKeyData = Account.readBytesFromZip(zipFile, PUBLIC_KEY_FILENAME);
+            privateKeyData = Account.readBytesFromZip(zipFile, PRIVATE_KEY_FILENAME);
+            bridgeCertData = Account.readBytesFromZip(zipFile, BRIDGE_CERT_FILENAME);
+        } catch (IOException ex) {
+            LOGGER.warning("can't read from zip archive: "+ex.getLocalizedMessage());
+            throw new KonException(KonException.Error.ACCOUNT_ARCHIVE, ex);
+        }
 
         // load key
         String passphrase = config.getString("account.passphrase");
@@ -76,15 +89,13 @@ public final class Account {
         return INSTANCE;
     }
 
-    private static byte[] readBytes(String path) throws KonException {
-        byte[] bytes = null;
+    private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
+        ZipEntry zipEntry = zipFile.getEntry(filename);
         try {
-            bytes = Files.readAllBytes(Paths.get(path));
+            return IOUtils.toByteArray(zipFile.getInputStream(zipEntry));
         } catch (IOException ex) {
-            LOGGER.warning("can't read key file: "+ex.getLocalizedMessage());
+            LOGGER.warning("can't read key file from archive: "+ex.getLocalizedMessage());
             throw new KonException(KonException.Error.ACCOUNT_FILE, ex);
         }
-        return bytes;
     }
-
 }
