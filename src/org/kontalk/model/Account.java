@@ -63,7 +63,7 @@ public final class Account {
             privateKeyData = Account.readBytesFromZip(zipFile, PRIVATE_KEY_FILENAME);
             bridgeCertData = Account.readBytesFromZip(zipFile, BRIDGE_CERT_FILENAME);
         } catch (IOException ex) {
-            LOGGER.warning("can't read from zip archive: "+ex.getLocalizedMessage());
+            LOGGER.warning("can't open zip archive: "+ex.getLocalizedMessage());
             throw new KonException(KonException.Error.ACCOUNT_ARCHIVE, ex);
         }
 

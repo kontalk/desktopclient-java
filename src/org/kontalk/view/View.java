@@ -261,8 +261,11 @@ public final class View {
         String eol = System.getProperty("line.separator");
         String errorText = "Uknown error!?";
         switch(ex.getError()) {
+            case ACCOUNT_ARCHIVE:
+                errorText = "Can't open key archive.";
+                break;
             case ACCOUNT_FILE:
-                errorText = "Can't load keyfile(s)";
+                errorText = "Can't load keyfile(s) from archive.";
                 break;
             case ACCOUNT_KEY:
                 errorText = "Can't create personal key from key files. ";
