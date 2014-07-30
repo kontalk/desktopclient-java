@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -26,6 +27,7 @@ import java.security.cert.CertificateException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.Configuration;
+import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
@@ -55,7 +57,11 @@ public final class Account {
         // load key
         String passphrase = config.getString("account.passphrase");
         try {
-             mKey = PersonalKey.load(privateKeyData, publicKeyData, passphrase, bridgeCertData);
+             mKey = PersonalKey.load(
+                     new ArmoredInputStream(new ByteArrayInputStream(privateKeyData)),
+                     new ArmoredInputStream(new ByteArrayInputStream(publicKeyData)),
+                     passphrase,
+                     bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
             LOGGER.log(Level.INFO, "can't load personal key", ex);
             throw new KonException(KonException.Error.ACCOUNT_KEY, ex);

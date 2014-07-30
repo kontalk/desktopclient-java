@@ -20,16 +20,13 @@ package org.kontalk.crypto;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Iterator;
-
-import org.kontalk.crypto.PGP.PGPDecryptedKeyPairRing;
-import org.kontalk.crypto.PGP.PGPKeyPairRing;
-import org.kontalk.util.MessageUtils;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPObjectFactory;
@@ -44,6 +41,9 @@ import org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
+import org.kontalk.crypto.PGP.PGPDecryptedKeyPairRing;
+import org.kontalk.crypto.PGP.PGPKeyPairRing;
+import org.kontalk.util.MessageUtils;
 
 /** Personal asymmetric encryption key. */
 public final class PersonalKey {
@@ -103,6 +103,7 @@ public final class PersonalKey {
     	return MessageUtils.bytesToHex(mPair.signKey.getPublicKey().getFingerprint());
     }
 
+    // TODO: unused
     public PGPKeyPairRing storeNetwork(String userId, String network, String name, String passphrase) throws PGPException {
     	// FIXME dummy values
         return store(name,
@@ -129,6 +130,7 @@ public final class PersonalKey {
 
     /**
      * Updates the public key.
+     * TODO: unused
      * @return the public keyring.
      */
     public PGPPublicKeyRing update(byte[] keyData) throws IOException {
@@ -140,7 +142,7 @@ public final class PersonalKey {
 
     /** Creates a {@link PersonalKey} from private and public key byte buffers. */
     @SuppressWarnings("unchecked")
-    public static PersonalKey load(byte[] privateKeyData, byte[] publicKeyData, String passphrase, byte[] bridgeCertData)
+    public static PersonalKey load(InputStream privateKeyData, InputStream publicKeyData, String passphrase, byte[] bridgeCertData)
             throws PGPException, IOException, CertificateException, NoSuchProviderException {
 
         KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
@@ -200,6 +202,7 @@ public final class PersonalKey {
         throw new PGPException("invalid key data");
     }
 
+    // TODO: unused
     public static PersonalKey create() throws IOException {
         try {
             PGPDecryptedKeyPairRing kp = PGP.create();
@@ -215,6 +218,7 @@ public final class PersonalKey {
     /**
      * Searches for the master (signing) key in the given public keyring and
      * signs it with our master key.
+     * TODO: unused
      * @return the same public keyring with the signed key. This is suitable to
      * be imported directly into GnuPG.
      * @see #signPublicKey(PGPPublicKey, String)
