@@ -31,7 +31,6 @@ import java.security.spec.ECGenParameterSpec;
 import java.util.Date;
 import java.util.Iterator;
 
-//import org.kontalk.util.MessageUtils;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPEncryptedData;
@@ -236,56 +235,6 @@ public final class PGP {
 
         return PGPPublicKey.addCertification(pgpPubKey, sGen.generateCertification(pgpPubKey));
     }
-
-//    public static PGPDecryptedKeyPairRing fromParcel(Parcel in) throws PGPException {
-//    	ensureKeyConverter();
-//
-//        // TODO read byte data
-//        PrivateKey privSign = (PrivateKey) in.readSerializable();
-//        PublicKey pubSign = (PublicKey) in.readSerializable();
-//        int algoSign = in.readInt();
-//        Date dateSign = new Date(in.readLong());
-//
-//        PGPPublicKey pubKeySign = sKeyConverter.getPGPPublicKey(algoSign, pubSign, dateSign);
-//        PGPPrivateKey privKeySign = sKeyConverter.getPGPPrivateKey(pubKeySign, privSign);
-//        PGPKeyPair signKp = new PGPKeyPair(pubKeySign, privKeySign);
-//
-//        PrivateKey privEnc = (PrivateKey) in.readSerializable();
-//        PublicKey pubEnc = (PublicKey) in.readSerializable();
-//        int algoEnc = in.readInt();
-//        Date dateEnc = new Date(in.readLong());
-//
-//        PGPPublicKey pubKeyEnc = sKeyConverter.getPGPPublicKey(algoEnc, pubEnc, dateEnc);
-//        PGPPrivateKey privKeyEnc = sKeyConverter.getPGPPrivateKey(pubKeyEnc, privEnc);
-//        PGPKeyPair encryptKp = new PGPKeyPair(pubKeyEnc, privKeyEnc);
-//
-//        return new PGPDecryptedKeyPairRing(signKp, encryptKp);
-//    }
-//
-//    public static void toParcel(PGPDecryptedKeyPairRing pair, Parcel dest)
-//            throws NoSuchProviderException, PGPException {
-//
-//        PrivateKey privSign = convertPrivateKey(pair.signKey.getPrivateKey());
-//        PublicKey pubSign = convertPublicKey(pair.signKey.getPublicKey());
-//        int algoSign = pair.signKey.getPrivateKey().getPublicKeyPacket().getAlgorithm();
-//        Date dateSign = pair.signKey.getPrivateKey().getPublicKeyPacket().getTime();
-//
-//        PrivateKey privEnc = convertPrivateKey(pair.encryptKey.getPrivateKey());
-//        PublicKey pubEnc = convertPublicKey(pair.encryptKey.getPublicKey());
-//        int algoEnc = pair.encryptKey.getPrivateKey().getPublicKeyPacket().getAlgorithm();
-//        Date dateEnc = pair.encryptKey.getPrivateKey().getPublicKeyPacket().getTime();
-//
-//        dest.writeSerializable(privSign);
-//        dest.writeSerializable(pubSign);
-//        dest.writeInt(algoSign);
-//        dest.writeLong(dateSign.getTime());
-//
-//        dest.writeSerializable(privEnc);
-//        dest.writeSerializable(pubEnc);
-//        dest.writeInt(algoEnc);
-//        dest.writeLong(dateEnc.getTime());
-//
-//    }
 
     public static String getFingerprint(PGPPublicKey publicKey) {
     	return MessageUtils.bytesToHex(publicKey.getFingerprint());
