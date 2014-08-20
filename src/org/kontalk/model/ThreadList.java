@@ -53,6 +53,7 @@ public final class ThreadList extends Observable {
         UserList userList = UserList.getInstance();
         try {
             // first, find user for threads
+            // TODO: rewrite
             while (receiverRS.next()) {
                 Integer threadID = receiverRS.getInt("thread_id");
                 Integer userID = receiverRS.getInt("user_id");
@@ -71,6 +72,10 @@ public final class ThreadList extends Observable {
                 int id = threadRS.getInt("_id");
                 String xmppThreadID = threadRS.getString("xmpp_id");
                 Set<User> userSet = threadUserMapping.get(id);
+                if (userSet == null) {
+                    LOGGER.warning("no users found for thread");
+                    userSet = new HashSet();
+                }
                 String subject = threadRS.getString("subject");
                 boolean read = threadRS.getBoolean("read");
                 mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read));
