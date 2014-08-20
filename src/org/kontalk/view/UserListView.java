@@ -24,6 +24,7 @@ import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
@@ -316,6 +317,9 @@ public final class UserListView extends ListView implements Observer {
             saveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    if (!EditUserDialog.this.isConfirmed())
+                        return;
+
                     EditUserDialog.this.saveUser();
                     EditUserDialog.this.dispose();
                 }
@@ -326,6 +330,22 @@ public final class UserListView extends ListView implements Observer {
             this.add(buttonPanel, BorderLayout.SOUTH);
 
             this.pack();
+        }
+
+        private boolean isConfirmed() {
+            if (!mJIDField.getText().equals(mUserView.getUser().getJID())) {
+                String warningText = "Changing the JID is only useful in very "
+                        + " rare cases. Are you sure?";
+                int selectedOption = WebOptionPane.showConfirmDialog(this,
+                        warningText,
+                        "Please Confirm",
+                        WebOptionPane.OK_CANCEL_OPTION,
+                        WebOptionPane.WARNING_MESSAGE);
+                if (selectedOption != WebOptionPane.OK_OPTION) {
+                    return false;
+                }
+            }
+            return true;
         }
 
         private void saveUser() {
