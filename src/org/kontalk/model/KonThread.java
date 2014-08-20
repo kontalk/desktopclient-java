@@ -70,6 +70,7 @@ public final class KonThread extends Observable {
      * Used when creating a new thread
      */
     KonThread(Set<User> user) {
+        assert user != null;
         // Kontalk Android client is ignoring it, so set it to null for now
         //mXMPPID = StringUtils.randomString(8);
         mXMPPID = null;
@@ -96,6 +97,7 @@ public final class KonThread extends Observable {
      * Used for loading from database
      */
     KonThread(int id, String xmppID, Set<User> user, String subject, boolean read) {
+        assert user != null;
         mID = id;
         mXMPPID = xmppID;
         mUser = user;
