@@ -55,7 +55,6 @@ import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.Icon;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
-import javax.swing.ScrollPaneConstants;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -205,13 +204,9 @@ public final class MainFrame extends WebFrame {
         // ...left...
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
 
-        WebScrollPane threadScrollPane = new WebScrollPane(threadList);
-        threadScrollPane.setHorizontalScrollBarPolicy(
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        WebScrollPane threadScrollPane = new ScrollPane(threadList);
         mTabbedPane.addTab("", threadScrollPane);
-        WebScrollPane userScrollPane = new WebScrollPane(userList);
-        userScrollPane.setHorizontalScrollBarPolicy(
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        WebScrollPane userScrollPane = new ScrollPane(userList);
         mTabbedPane.addTab("", userScrollPane);
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
                 new WebVerticalLabel("Threads"));
@@ -222,11 +217,14 @@ public final class MainFrame extends WebFrame {
 
         // ...right...
         WebPanel bottomPanel = new WebPanel();
-        bottomPanel.add(sendTextField, BorderLayout.CENTER);
+        WebScrollPane textFieldScrollPane = new ScrollPane(sendTextField);
+        bottomPanel.add(textFieldScrollPane, BorderLayout.CENTER);
         bottomPanel.add(sendButton, BorderLayout.EAST);
+        bottomPanel.setMinimumSize(new Dimension(0, 32));
         WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT, threadView, bottomPanel);
         splitPane.setResizeWeight(1.0);
         this.add(splitPane, BorderLayout.CENTER);
+
 
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);
@@ -326,9 +324,7 @@ public final class MainFrame extends WebFrame {
                     mStatusField.setText(mStatusList.getSelectedValue().toString());
                 }
             });
-            WebScrollPane listScrollPane = new WebScrollPane(mStatusList);
-            listScrollPane.setHorizontalScrollBarPolicy(
-                    ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            WebScrollPane listScrollPane = new ScrollPane(mStatusList);
             listScrollPane.setPreferredHeight(100);
             listScrollPane.setPreferredWidth(0);
             groupPanel.add(listScrollPane);
