@@ -28,6 +28,7 @@ import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.notification.NotificationListener;
 import com.alee.managers.notification.NotificationManager;
@@ -61,7 +62,6 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
-import javax.swing.JTextField;
 import javax.swing.ToolTipManager;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
@@ -91,7 +91,7 @@ public final class View {
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
     private final ThreadView mThreadView;
-    private final JTextField mSendTextField;
+    private final WebTextArea mSendTextField;
     private final WebButton mSendButton;
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
@@ -110,14 +110,17 @@ public final class View {
         mThreadView = new ThreadView();
 
         // text field
-        mSendTextField = new JTextField();
-        //this.textField.setColumns(25);
-        mSendTextField.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                View.this.sendText();
-            }
-        });
+        mSendTextField = new WebTextArea();
+        mSendTextField.setMargin(5);
+        mSendTextField.setLineWrap(true);
+        mSendTextField.setWrapStyleWord(true);
+        // TODO
+//        mSendTextField.addActionListener(new ActionListener() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                View.this.sendText();
+//            }
+//        });
 
         // send button
         mSendButton = new WebButton("Send");
