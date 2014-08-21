@@ -33,6 +33,7 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.hotkey.Hotkey;
@@ -53,6 +54,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.Icon;
+import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.ScrollPaneConstants;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ListSelectionEvent;
@@ -219,13 +221,12 @@ public final class MainFrame extends WebFrame {
         this.add(mTabbedPane, BorderLayout.WEST);
 
         // ...right...
-        WebPanel rightPanel = new WebPanel();
-        rightPanel.add(threadView);
         WebPanel bottomPanel = new WebPanel();
         bottomPanel.add(sendTextField, BorderLayout.CENTER);
         bottomPanel.add(sendButton, BorderLayout.EAST);
-        rightPanel.add(bottomPanel, BorderLayout.SOUTH);
-        this.add(rightPanel, BorderLayout.CENTER);
+        WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT, threadView, bottomPanel);
+        splitPane.setResizeWeight(1.0);
+        this.add(splitPane, BorderLayout.CENTER);
 
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);
