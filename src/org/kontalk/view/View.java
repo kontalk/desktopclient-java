@@ -30,11 +30,14 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.hotkey.HotkeyData;
 import com.alee.managers.notification.NotificationListener;
 import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.notification.NotificationOption;
 import com.alee.managers.notification.WebNotificationPopup;
 import com.alee.managers.popup.PopupStyle;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.TooltipWay;
 import java.awt.AWTException;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -48,6 +51,8 @@ import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
@@ -91,7 +96,7 @@ public final class View {
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
     private final ThreadView mThreadView;
-    private final WebTextArea mSendTextField;
+    private final WebTextArea mSendTextArea;
     private final WebButton mSendButton;
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
@@ -110,21 +115,15 @@ public final class View {
         mThreadView = new ThreadView();
 
         // text field
-        mSendTextField = new WebTextArea();
-        mSendTextField.setMargin(5);
-        mSendTextField.setLineWrap(true);
-        mSendTextField.setWrapStyleWord(true);
-        // TODO
-//        mSendTextField.addActionListener(new ActionListener() {
-//            @Override
-//            public void actionPerformed(ActionEvent e) {
-//                View.this.sendText();
-//            }
-//        });
+        mSendTextArea = new WebTextArea();
+        mSendTextArea.setMargin(5);
+        mSendTextArea.setLineWrap(true);
+        mSendTextArea.setWrapStyleWord(true);
 
         // send button
         mSendButton = new WebButton("Send");
-        mSendButton.addHotkey(Hotkey.CTRL_S);
+        // for showing the hotkey tooltip
+        TooltipManager.addTooltip(mSendButton, "Send Message");
         mSendButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -139,11 +138,14 @@ public final class View {
 
         // main frame
         mMainFrame = new MainFrame(this, mUserListView, mThreadListView,
-                mThreadView, mSendTextField, mSendButton, statusBar);
+                mThreadView, mSendTextArea, mSendButton, statusBar);
         mMainFrame.setVisible(true);
 
         // tray
         this.setTray();
+
+        // hotkeys
+        this.setHotkeys();
 
         this.statusChanged(Kontalk.Status.DISCONNECTED);
     }
@@ -220,6 +222,38 @@ public final class View {
         } catch (AWTException ex) {
             LOGGER.log(Level.WARNING, "can't add tray icon", ex);
         }
+    }
+
+    void setHotkeys() {
+        final boolean enterSends = KonConf.getInstance().getBoolean(KonConf.MAIN_ENTER_SENDS);
+
+        for (KeyListener l : mSendTextArea.getKeyListeners())
+            mSendTextArea.removeKeyListener(l);
+        mSendTextArea.addKeyListener(new KeyListener() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
+                        e.getModifiersEx() == KeyEvent.CTRL_DOWN_MASK) {
+                    e.consume();
+                    mSendTextArea.append(System.getProperty("line.separator"));
+                }
+                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
+                        e.getModifiers() == 0) {
+                    // only ignore
+                    e.consume();
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {
+            }
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+        });
+
+        mSendButton.removeHotkeys();
+        HotkeyData sendHotkey = enterSends ? Hotkey.ENTER : Hotkey.CTRL_ENTER;
+        mSendButton.addHotkey(sendHotkey, TooltipWay.up);
     }
 
     public final void statusChanged(Kontalk.Status status) {
@@ -357,8 +391,8 @@ public final class View {
            // nothing selected
            return;
        }
-       mModel.sendText(thread, mSendTextField.getText());
-       mSendTextField.setText("");
+       mModel.sendText(thread, mSendTextArea.getText());
+       mSendTextArea.setText("");
     }
 
     // TODO not used
