@@ -52,6 +52,7 @@ public final class KonConf extends PropertiesConfiguration {
     public final static String MAIN_CONNECT_STARTUP = "main.connect_startup";
     public final static String MAIN_TRAY = "main.tray";
     public final static String MAIN_TRAY_CLOSE = "main.tray_close";
+    public final static String MAIN_ENTER_SENDS = "main.enter_sends";
 
     public final static String DEFAULT_SERV_NET = Client.KONTALK_NETWORK;
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
@@ -99,6 +100,7 @@ public final class KonConf extends PropertiesConfiguration {
         map.put(MAIN_CONNECT_STARTUP, false);
         map.put(MAIN_TRAY, true);
         map.put(MAIN_TRAY_CLOSE, false);
+        map.put(MAIN_ENTER_SENDS, true);
 
         for(Entry<String, Object> e : map.entrySet()) {
             if (!INSTANCE.containsKey(e.getKey())) {

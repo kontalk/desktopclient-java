@@ -29,6 +29,7 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextField;
+import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -134,6 +135,7 @@ public final class ConfigurationDialog extends WebDialog {
         WebCheckBox mConnectStartupBox;
         WebCheckBox mTrayBox;
         WebCheckBox mCloseTrayBox;
+        WebCheckBox mEnterSendsBox;
 
         public MainPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -143,10 +145,12 @@ public final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             mConnectStartupBox = new WebCheckBox("Connect on startup");
+            mConnectStartupBox.setSelected(false);
             mConnectStartupBox.setSelected(mConf.getBoolean(KonConf.MAIN_CONNECT_STARTUP));
             groupPanel.add(mConnectStartupBox);
 
             mCloseTrayBox = new WebCheckBox("Close to tray");
+            mCloseTrayBox.setAnimated(false);
             mCloseTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE));
 
             mTrayBox = new WebCheckBox("Show tray icon");
@@ -162,6 +166,14 @@ public final class ConfigurationDialog extends WebDialog {
             GroupPanel buttonPanel = new GroupPanel(10, mTrayBox, mCloseTrayBox);
             groupPanel.add(buttonPanel);
 
+            mEnterSendsBox = new WebCheckBox("Enter key sends");
+            mEnterSendsBox.setAnimated(false);
+            mEnterSendsBox.setSelected(mConf.getBoolean(KonConf.MAIN_ENTER_SENDS));
+            String enterSendsToolText = "Enter key sends text, Control+Enter adds new line "
+                    + "- or vice versa";
+            TooltipManager.addTooltip(mEnterSendsBox, enterSendsToolText);
+            groupPanel.add(mEnterSendsBox);
+
             this.add(groupPanel);
         }
 
@@ -170,6 +182,8 @@ public final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(KonConf.MAIN_TRAY, mTrayBox.isSelected());
             mConf.setProperty(KonConf.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
             mViewModel.setTray();
+            mConf.setProperty(KonConf.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
+            mViewModel.setHotkeys();
         }
     }
 
