@@ -46,6 +46,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
+import javax.swing.event.ListDataEvent;
+import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
@@ -279,6 +281,19 @@ public final class ThreadListView extends ListView implements Observer {
                 boolean selected = threadView.getThread().getUser().contains(oneUser);
                 mParticipantsList.getCheckBoxListModel().addCheckBoxElement(oneUser, selected);
             }
+            final WebButton saveButton = new WebButton("Save");
+            mParticipantsList.getModel().addListDataListener(new ListDataListener() {
+                @Override
+                public void intervalAdded(ListDataEvent e) {
+                }
+                @Override
+                public void intervalRemoved(ListDataEvent e) {
+                }
+                @Override
+                public void contentsChanged(ListDataEvent e) {
+                    saveButton.setEnabled(!mParticipantsList.getCheckedValues().isEmpty());
+                }
+            });
 
             groupPanel.add(new WebScrollPane(mParticipantsList));
             groupPanel.add(new WebSeparator(true, true));
@@ -293,7 +308,7 @@ public final class ThreadListView extends ListView implements Observer {
                     EditThreadDialog.this.dispose();
                 }
             });
-            final WebButton saveButton = new WebButton("Save");
+
             saveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
