@@ -74,7 +74,7 @@ public final class KonMessage extends Observable implements Comparable<KonMessag
             "content BLOB, " +
             // enum, determines if content is encrypted
             "encryption_status INTEGER NOT NULL, " +
-            // enum, determines if conent is verified
+            // enum, determines if content is verified
             // can only tell if signed after encryption attempt
             "signing_status INTEGER, " +
             // encryption and signing errors
@@ -152,7 +152,7 @@ public final class KonMessage extends Observable implements Comparable<KonMessag
         else
             mEncryption = Coder.Encryption.NOT;
         // if encrypted we don't know yet
-        mSigning = encrypted ? null : Coder.Signing.NOT ;
+        mSigning = encrypted ? null : Coder.Signing.NOT;
         mCoderErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();
