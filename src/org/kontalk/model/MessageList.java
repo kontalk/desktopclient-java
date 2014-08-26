@@ -98,7 +98,7 @@ public final class MessageList {
             User user,
             String text,
             boolean encrypted) {
-        KonMessage newMessage = new KonMessage(thread, user, text, encrypted);
+        KonMessage newMessage = new OutMessage(thread, user, text, encrypted);
         thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);
         return newMessage;
@@ -149,7 +149,11 @@ public final class MessageList {
             LOGGER.warning("can't find message with XMPP id: " + xmppID);
             return;
         }
-        message.updateBySentReceipt(receiptID);
+        if (!(message instanceof OutMessage)) {
+            LOGGER.warning("message is not an outgoing message");
+            return;
+        }
+        ((OutMessage)message).updateBySentReceipt(receiptID);
     }
 
     public void updateMsgByReceivedReceipt(String receiptID) {
@@ -163,7 +167,11 @@ public final class MessageList {
             LOGGER.warning("can't find message with receipt id: " + receiptID);
             return;
         }
-        message.updateByReceivedReceipt();
+        if (!(message instanceof OutMessage)) {
+            LOGGER.warning("message is not an outgoing message");
+            return;
+        }
+        ((OutMessage)message).updateByReceivedReceipt();
     }
 
     public static MessageList getInstance() {

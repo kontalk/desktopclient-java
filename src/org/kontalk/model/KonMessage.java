@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.packet.Packet;
 import org.kontalk.Database;
 import org.kontalk.crypto.Coder;
 
@@ -120,35 +119,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mUser = user;
         mJID = jid;
         mXMPPID = xmppID;
-        mCoderErrors = EnumSet.noneOf(Coder.Error.class);
-
-        mID = this.insert();
-    }
-
-    /**
-     * Used when sending a new message
-     */
-    KonMessage(KonThread thread,
-            User user,
-            String text,
-            boolean encrypted) {
-        mThread = thread;
-        mDir = Direction.OUT;
-        mUser = user;
-        mJID = user.getJID();
-        mXMPPID = Packet.nextID();
-        mDate = new Date(); // "now"
-        mReceiptStatus = Status.PENDING;
-        mReceiptID = null;
-        mText = text;
-        // if we want encryption we also want signing, doesn't hurt
-        if (encrypted) {
-            mEncryption = Coder.Encryption.ENCRYPTED;
-            mSigning = Coder.Signing.SIGNED;
-        } else {
-            mEncryption = Coder.Encryption.NOT;
-            mSigning = Coder.Signing.NOT;
-        }
         mCoderErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();
@@ -275,27 +245,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         int idComp = Integer.compare(this.mID, o.mID);
         int dateComp = mDate.compareTo(o.getDate());
         return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
-    }
-
-    void updateBySentReceipt(String receiptID) {
-        assert mDir == Direction.OUT;
-        assert mReceiptStatus == Status.PENDING;
-        assert mReceiptID == null;
-        mReceiptID = receiptID;
-        mReceiptStatus = Status.SENT;
-        this.save();
-        this.setChanged();
-        this.notifyObservers();
-    }
-
-    void updateByReceivedReceipt() {
-        assert mDir == Direction.OUT;
-        assert mReceiptStatus == Status.SENT;
-        assert mReceiptID != null;
-        mReceiptStatus = Status.RECEIVED;
-        this.save();
-        this.setChanged();
-        this.notifyObservers();
     }
 
     private int insert() {
