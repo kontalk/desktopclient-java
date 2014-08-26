@@ -79,8 +79,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // encryption and signing errors
             "coder_errors INTEGER, " +
 
-            "FOREIGN KEY (thread_id) REFERENCES thread (_id), " +
-            "FOREIGN KEY (user_id) REFERENCES user (_id) " +
+            "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
+            "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
     private final int mID;

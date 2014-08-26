@@ -36,6 +36,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.User;
+import org.sqlite.SQLiteConfig;
 
 /**
  *
@@ -62,8 +63,10 @@ public final class Database {
 
         // create database connection
         String filePath = path + "/" + DB_NAME;
+        SQLiteConfig config = new SQLiteConfig();
+        config.enforceForeignKeys(true);
         try {
-          mConn = DriverManager.getConnection("jdbc:sqlite:" + filePath);
+          mConn = DriverManager.getConnection("jdbc:sqlite:" + filePath, config.toProperties());
         } catch(SQLException ex) {
           // if the error message is "out of memory",
           // it probably means no database file is found

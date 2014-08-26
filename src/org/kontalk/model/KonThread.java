@@ -42,7 +42,7 @@ public final class KonThread extends Observable {
     public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "xmpp_id TEXT UNIQUE, " +
-            "subject TEXT " +
+            "subject TEXT, " +
             // boolean, contains unread messages?
             "read INTEGER NOT NULL" +
             ")";
@@ -54,8 +54,8 @@ public final class KonThread extends Observable {
             "thread_id INTEGER NOT NULL, " +
             "user_id INTEGER NOT NULL, " +
             "UNIQUE (thread_id, user_id), " +
-            "FOREIGN KEY (thread_id) REFERENCES thread (_id), " +
-            "FOREIGN KEY (user_id) REFERENCES user (_id) " +
+            "FOREIGN KEY (thread_id) REFERENCES "+TABLE+" (_id), " +
+            "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
     private final TreeSet<KonMessage> mSet = new TreeSet();
