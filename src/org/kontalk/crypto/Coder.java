@@ -46,6 +46,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenera
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.Base64;
 import org.kontalk.model.Account;
+import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.User;
 import org.kontalk.util.CPIMMessage;
@@ -228,7 +229,7 @@ public final class Coder {
      * saved to the message.
      * @param message
      */
-    public static void processInMessage(KonMessage message) {
+    public static void processInMessage(InMessage message) {
         // signing requires also encryption
         if (message.getEncryption() != Encryption.ENCRYPTED ||
                 message.getDir() != KonMessage.Direction.IN) {

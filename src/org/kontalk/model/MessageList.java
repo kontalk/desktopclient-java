@@ -117,7 +117,7 @@ public final class MessageList {
         if (thread == null)
             thread = threadList.getThreadByUser(user);
 
-        KonMessage newMessage = new KonMessage(thread,
+        InMessage newMessage = new InMessage(thread,
                 user,
                 from,
                 xmppID,
@@ -126,7 +126,7 @@ public final class MessageList {
                 text,
                 encrypted);
 
-        // encrypt and verify message
+        // decrypt and verify message
         Coder.processInMessage(newMessage);
 
         thread.addMessage(newMessage);

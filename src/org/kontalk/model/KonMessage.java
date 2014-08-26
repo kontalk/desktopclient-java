@@ -35,7 +35,7 @@ import org.kontalk.crypto.Coder;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class KonMessage extends Observable implements Comparable<KonMessage> {
+public class KonMessage extends Observable implements Comparable<KonMessage> {
     private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
@@ -87,16 +87,43 @@ public final class KonMessage extends Observable implements Comparable<KonMessag
     private final int mID;
     private final KonThread mThread;
     private final Direction mDir;
-    private final User mUser;
-    private final String mJID;
-    private final String mXMPPID;
+
     private final Date mDate;
-    private Status mReceiptStatus;
-    private String mReceiptID;
-    private String mText;
-    private Coder.Encryption mEncryption;
-    private Coder.Signing mSigning;
-    private final EnumSet<Coder.Error> mCoderErrors;
+    protected String mText;
+
+    // TODO
+    protected final User mUser;
+    protected final String mJID;
+    protected final String mXMPPID;
+
+    protected Status mReceiptStatus;
+    protected String mReceiptID;
+
+    protected Coder.Encryption mEncryption;
+    protected Coder.Signing mSigning;
+    protected final EnumSet<Coder.Error> mCoderErrors;
+
+    protected KonMessage(KonThread thread,
+            Direction dir,
+            Date date,
+            String text,
+            User user,
+            String jid,
+            String xmppID) {
+        mThread = thread;
+        mDir = dir;
+
+        mDate = date;
+        mText = text;
+
+        // TODO
+        mUser = user;
+        mJID = jid;
+        mXMPPID = xmppID;
+        mCoderErrors = EnumSet.noneOf(Coder.Error.class);
+
+        mID = this.insert();
+    }
 
     /**
      * Used when sending a new message
@@ -122,37 +149,6 @@ public final class KonMessage extends Observable implements Comparable<KonMessag
             mEncryption = Coder.Encryption.NOT;
             mSigning = Coder.Signing.NOT;
         }
-        mCoderErrors = EnumSet.noneOf(Coder.Error.class);
-
-        mID = this.insert();
-    }
-
-    /**
-     * Used when receiving a new message
-     */
-    KonMessage(KonThread thread,
-            User user,
-            String jid,
-            String xmppID,
-            Date date,
-            String receiptID,
-            String text,
-            boolean encrypted) {
-        mThread = thread;
-        mDir = Direction.IN;
-        mUser = user;
-        mJID = jid;
-        mXMPPID = xmppID;
-        mDate = date;
-        mReceiptStatus = Status.IN;
-        mReceiptID = receiptID;
-        mText = text;
-        if (encrypted)
-            mEncryption = Coder.Encryption.ENCRYPTED;
-        else
-            mEncryption = Coder.Encryption.NOT;
-        // if encrypted we don't know yet
-        mSigning = encrypted ? null : Coder.Signing.NOT;
         mCoderErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();
@@ -237,13 +233,6 @@ public final class KonMessage extends Observable implements Comparable<KonMessag
 
     public Coder.Encryption getEncryption() {
         return mEncryption;
-    }
-
-    public void setDecryptedText(String text) {
-        assert mEncryption == Coder.Encryption.ENCRYPTED;
-        mText = text;
-        mEncryption = Coder.Encryption.DECRYPTED;
-        this.save();
     }
 
     public Coder.Signing getSigning() {
@@ -332,7 +321,7 @@ public final class KonMessage extends Observable implements Comparable<KonMessag
         return id;
     }
 
-    private void save() {
+    protected void save() {
        Database db = Database.getInstance();
        Map<String, Object> set = new HashMap();
        set.put("xmpp_id", mXMPPID);
