@@ -24,7 +24,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
-
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.SmackException;
@@ -37,8 +36,8 @@ import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
-import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.chatstates.ChatState;
+import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
@@ -69,9 +68,6 @@ public final class Client implements PacketListener, Runnable {
         mModel = model;
         mConfig = KonConf.getInstance();
         //mLimited = limited;
-
-        // open smack debug window when connecting
-        //Connection.DEBUG_ENABLED = true;
     }
 
     private void connect(PersonalKey key) {
@@ -117,9 +113,16 @@ public final class Client implements PacketListener, Runnable {
             mConn.addPacketListener(new MessageListener(this), messageFilter);
             PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
             mConn.addPacketListener(new VCardListener(), vCardFilter);
+            PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
+            mConn.addPacketListener(new BlockingCommandListener(), blockingCommandFilter);
              // fallback
-            mConn.addPacketListener(this, new AndFilter(
-                    new NotFilter(messageFilter), new NotFilter(vCardFilter)));
+            mConn.addPacketListener(this,
+                    new AndFilter(
+                            new NotFilter(messageFilter),
+                            new NotFilter(vCardFilter),
+                            new NotFilter(blockingCommandFilter)
+                    )
+            );
 
             // login
             try {
@@ -138,6 +141,8 @@ public final class Client implements PacketListener, Runnable {
 
         // TODO
         this.sendPresence();
+
+        this.sendBlocklistRequest();
 
         mModel.statusChanged(Kontalk.Status.CONNECTED);
     }
@@ -187,6 +192,10 @@ public final class Client implements PacketListener, Runnable {
         vcard.setType(IQ.Type.GET);
         vcard.setTo(jid);
         this.sendPacket(vcard);
+    }
+
+    public void sendBlocklistRequest() {
+        this.sendPacket(BlockingCommand.blocklist());
     }
 
     public void sendPresence() {

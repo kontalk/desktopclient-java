@@ -57,6 +57,8 @@ public final class KonConnection extends XMPPTCPConnection {
                 server.getNetwork()));
 
         mServer = server;
+        // open smack debug window when connecting
+        //config.setDebuggerEnabled(true);
         // disable reconnection
         config.setReconnectionAllowed(false);
         // we don't need the roster

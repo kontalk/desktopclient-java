@@ -137,7 +137,6 @@ public final class MessageList {
         return mMap.values();
     }
 
-
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
         // TODO performance
         KonMessage message = null;
@@ -150,7 +149,7 @@ public final class MessageList {
             return;
         }
         if (!(message instanceof OutMessage)) {
-            LOGGER.warning("message is not an outgoing message");
+            LOGGER.warning("message is not an outgoing message: " + message.getID());
             return;
         }
         ((OutMessage)message).updateBySentReceipt(receiptID);
