@@ -49,10 +49,11 @@ public final class KonRosterListener implements RosterListener {
 
         UserList userList = UserList.getInstance();
         for (RosterEntry entry: mRoster.getEntries()) {
+            if (userList.containsUserWithJID(entry.getUser()))
+                continue;
+
             User newUser = userList.addUser(entry.getUser(), entry.getName());
-            if (newUser != null) {
-                mClient.sendVCardRequest(newUser.getJID());
-            }
+            mClient.sendVCardRequest(newUser.getJID());
         }
     }
 
@@ -68,9 +69,20 @@ public final class KonRosterListener implements RosterListener {
 
     @Override
     public void presenceChanged(Presence p) {
+        LOGGER.info("got presence change: "+p.getXmlns());
+
+        if (p.getFrom() == null || mRoster == null)
+            // dunno why this happens
+            return;
+
+        String jid = p.getFrom();
+        Presence bestPresence = mRoster.getPresence(jid);
+
         // NOTE: a delay extension is sometimes included, don't know why
         // ignoring mode, always null anyway
-        UserList.getInstance().setPresence(p.getFrom(), p.getType(), p.getStatus());
+        UserList.getInstance().setPresence(bestPresence.getFrom(),
+                bestPresence.getType(),
+                bestPresence.getStatus());
     }
 
 }
