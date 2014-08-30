@@ -69,6 +69,7 @@ public final class User {
     private boolean mEncrypted = true;
     private String mKey = null;
     private String mFingerprint = null;
+    private boolean mBlocked = false;
     //private ItemType mType;
 
     /**
@@ -208,6 +209,14 @@ public final class User {
         mFingerprint = MessageUtils.bytesToHex(key.getFingerprint());
         this.save();
         UserList.getInstance().changed();
+    }
+
+    public boolean isBlocked() {
+        return mBlocked;
+    }
+
+    public void setBlocked(boolean blocked) {
+        mBlocked = blocked;
     }
 
     public void save() {
