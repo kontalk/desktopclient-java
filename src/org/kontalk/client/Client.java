@@ -19,6 +19,7 @@
 package org.kontalk.client;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
@@ -53,9 +54,10 @@ public final class Client implements PacketListener, Runnable {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     public final static String KONTALK_NETWORK = "kontalk.net";
-    public final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue();
 
-    public static enum Command {CONNECT, DISCONNECT};
+    private final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue();
+
+    private static enum Command {CONNECT, DISCONNECT};
 
     private final Kontalk mModel;
     private final KonConf mConfig;
@@ -70,7 +72,7 @@ public final class Client implements PacketListener, Runnable {
         //mLimited = limited;
     }
 
-    private void connect(PersonalKey key) {
+    public void connect(PersonalKey key) {
 
         this.disconnect();
         mModel.statusChanged(Kontalk.Status.CONNECTING);
@@ -80,20 +82,43 @@ public final class Client implements PacketListener, Runnable {
         int port = mConfig.getInt("server.port");
         EndpointServer Server = new EndpointServer(network, host, port);
 
+        // create connection
+        try {
+            mConn = new KonConnection(Server,
+                    key.getBridgePrivateKey(),
+                    key.getBridgeCertificate());
+        } catch (XMPPException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't create connection", ex);
+            mModel.statusChanged(Kontalk.Status.FAILED);
+            mModel.handleException(new KonException(KonException.Error.CLIENT_CONNECTION, ex));
+            return;
+        }
+
+        // listeners
+        RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
+        mConn.getRoster().addRosterListener(rl);
+        PacketFilter messageFilter = new PacketTypeFilter(Message.class);
+        mConn.addPacketListener(new MessageListener(this), messageFilter);
+        PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
+        mConn.addPacketListener(new VCardListener(), vCardFilter);
+        PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
+        mConn.addPacketListener(new BlockingCommandListener(), blockingCommandFilter);
+         // fallback
+        mConn.addPacketListener(this,
+                new AndFilter(
+                        new NotFilter(messageFilter),
+                        new NotFilter(vCardFilter),
+                        new NotFilter(blockingCommandFilter)
+                )
+        );
+
+        // continue async
+        List args = new ArrayList(0);
+        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.CONNECT, args));
+    }
+
+    private void connectAsync() {
         synchronized (this) {
-
-            // create connection
-            try {
-                mConn = new KonConnection(Server,
-                        key.getBridgePrivateKey(),
-                        key.getBridgeCertificate());
-            } catch (XMPPException | PGPException ex) {
-                LOGGER.log(Level.WARNING, "can't create connection", ex);
-                mModel.statusChanged(Kontalk.Status.FAILED);
-                mModel.handleException(new KonException(KonException.Error.CLIENT_CONNECTION, ex));
-                return;
-            }
-
             // connect
             LOGGER.info("connecting...");
             try {
@@ -104,25 +129,6 @@ public final class Client implements PacketListener, Runnable {
                 mModel.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
                 return;
             }
-            System.out.println("connected");
-
-            // listeners
-            RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
-            mConn.getRoster().addRosterListener(rl);
-            PacketFilter messageFilter = new PacketTypeFilter(Message.class);
-            mConn.addPacketListener(new MessageListener(this), messageFilter);
-            PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
-            mConn.addPacketListener(new VCardListener(), vCardFilter);
-            PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
-            mConn.addPacketListener(new BlockingCommandListener(), blockingCommandFilter);
-             // fallback
-            mConn.addPacketListener(this,
-                    new AndFilter(
-                            new NotFilter(messageFilter),
-                            new NotFilter(vCardFilter),
-                            new NotFilter(blockingCommandFilter)
-                    )
-            );
 
             // login
             try {
@@ -136,6 +142,8 @@ public final class Client implements PacketListener, Runnable {
                 return;
             }
         }
+
+        // TODO get back to main thread
 
         LOGGER.info("connected!");
 
@@ -238,7 +246,7 @@ public final class Client implements PacketListener, Runnable {
             }
             switch (t.command) {
                 case CONNECT:
-                    this.connect((PersonalKey) t.args.get(0));
+                    this.connectAsync();
                     break;
                 case DISCONNECT:
                     this.disconnect();
@@ -247,12 +255,12 @@ public final class Client implements PacketListener, Runnable {
         }
     }
 
-    public static class Task {
+    private static class Task {
 
         final Command command;
         final List args;
 
-        public Task(Command c, List a) {
+        Task(Command c, List a) {
             command = c;
             args = a;
         }

@@ -22,8 +22,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -145,9 +143,7 @@ public final class Kontalk {
             this.handleException(ex);
             return;
         }
-        List args = new ArrayList(1);
-        args.add(account.getPersonalKey());
-        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.CONNECT, args));
+        mClient.connect(account.getPersonalKey());
     }
 
     public void disconnect() {
