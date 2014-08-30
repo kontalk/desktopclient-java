@@ -23,6 +23,9 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.jivesoftware.smack.util.StringUtils;
+import org.kontalk.model.User;
+import org.kontalk.model.UserList;
 
 /**
  *
@@ -41,6 +44,23 @@ public class BlockingCommandListener implements PacketListener {
         LOGGER.info("got blocking command: "+p.toXML());
 
         // TODO
+        System.out.println("blocked items: "+p.getItems());
+        if (p.getItems() != null) {
+            for (String jid : p.getItems()) {
+                if (StringUtils.isFullJID(jid)) {
+                    LOGGER.info("ignoring blocking of JID with ressource");
+                    return;
+                }
+                if (!UserList.getInstance().containsUserWithJID(jid)) {
+                    LOGGER.info("ignoring blocking of JID not in user list");
+                    return;
+                }
+                User user = UserList.getInstance().getUserByJID(jid);
+                LOGGER.info("blocked user: "+user.getID());
+                user.setBlocked(true);
+            }
+            //UserList.getInstance().changed();
+        }
     }
 
 }
