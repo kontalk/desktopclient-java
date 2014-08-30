@@ -198,6 +198,12 @@ public final class Client implements PacketListener, Runnable {
         this.sendPacket(BlockingCommand.blocklist());
     }
 
+    public void sendBlockingCommand(String jid, boolean blocking) {
+        String command = blocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
+        BlockingCommand blockingCommand = new BlockingCommand(command, jid);
+        this.sendPacket(blockingCommand);
+    }
+
     public void sendPresence() {
         Presence presence = new Presence(Presence.Type.available);
         // TODO

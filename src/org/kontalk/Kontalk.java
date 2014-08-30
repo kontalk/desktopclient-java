@@ -18,7 +18,6 @@
 
 package org.kontalk;
 
-import com.alee.laf.WebLookAndFeel;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
@@ -162,7 +161,8 @@ public final class Kontalk {
             // send all pending messages
             for (KonMessage m : mMessageList.getMessages()) {
                 if (m.getReceiptStatus() == KonMessage.Status.PENDING) {
-                    mClient.sendMessage(m);
+                    // TODO
+                    //mClient.sendMessage(m);
                 }
             }
             // send vcard/public key requests for kontalk users with missing key
@@ -173,6 +173,7 @@ public final class Kontalk {
                         network.equalsIgnoreCase(Client.KONTALK_NETWORK))
                 mClient.sendVCardRequest(user.getJID());
             }
+
         }
     }
 
@@ -191,6 +192,10 @@ public final class Kontalk {
 
     public void handleException(KonException ex) {
         mView.handleException(ex);
+    }
+
+    public void setUserBlocking(User user, boolean blocking) {
+        mClient.sendBlockingCommand(user.getJID(), blocking);
     }
 
     // parse optional arguments
@@ -218,8 +223,6 @@ public final class Kontalk {
     public static void main(String[] args) {
 
         LOGGER.setLevel(Level.ALL);
-
-        WebLookAndFeel.install();
 
         Kontalk model = new Kontalk(args);
         model.start();

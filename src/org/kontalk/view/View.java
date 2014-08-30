@@ -21,6 +21,7 @@ package org.kontalk.view;
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.StyleConstants;
+import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
@@ -104,6 +105,8 @@ public final class View {
 
     public View(Kontalk model) {
         mModel = model;
+
+        WebLookAndFeel.install();
 
         ToolTipManager.sharedInstance().setInitialDelay(200);
 
@@ -393,6 +396,10 @@ public final class View {
        }
        mModel.sendText(thread, mSendTextArea.getText());
        mSendTextArea.setText("");
+    }
+
+    void setUserBlocking(User user, boolean blocking) {
+        mModel.setUserBlocking(user, blocking);
     }
 
     // TODO not used
