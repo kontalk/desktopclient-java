@@ -64,23 +64,29 @@ public final class UserList extends Observable {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load users from db", ex);
         }
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
     }
 
     public Collection<User> getUser() {
             return mMap.values();
     }
 
+    /**
+     * Add a new user.
+     * @param jid
+     * @param name
+     * @return the newly created user
+     */
     public User addUser(String jid, String name) {
         jid = StringUtils.parseBareAddress(jid);
-        if (mMap.containsKey(jid))
+        if (mMap.containsKey(jid)) {
+            LOGGER.warning("user already exists, jid: "+jid);
             return null;
+        }
         User newUser = new User(jid, name);
         mMap.put(jid, newUser);
-        this.setChanged();
-        this.notifyObservers();
         this.save();
+        this.changed();
         return newUser;
     }
 
@@ -100,18 +106,25 @@ public final class UserList extends Observable {
     }
 
     /**
-     * Get the user for a JID.
-     * If no user can be found with the JID a new one is created.
+     * Get the user for a JID or null if the JID can not be found.
+     * Resource is removed for lookup.
      * @param jid
      * @return
      */
     public User getUserByJID(String jid) {
         jid = StringUtils.parseBareAddress(jid);
-        if (mMap.containsKey(jid))
-            return mMap.get(jid);
-        User newUser = new User(jid);
-        mMap.put(jid, newUser);
-        return newUser;
+        return mMap.get(jid);
+    }
+
+    /**
+     * Return whether a user with a specified JID exists.
+     * Resource is removed for lookup.
+     * @param jid
+     * @return
+     */
+    public boolean containsUserWithJID(String jid) {
+        jid = StringUtils.parseBareAddress(jid);
+        return mMap.containsKey(jid);
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {

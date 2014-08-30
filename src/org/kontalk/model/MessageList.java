@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.Database;
 import org.kontalk.crypto.Coder;
 
@@ -111,7 +112,11 @@ public final class MessageList {
             String receiptID,
             String text,
             boolean encrypted) {
-        User user = UserList.getInstance().getUserByJID(from);
+        String jid = StringUtils.parseBareAddress(from);
+        UserList userList = UserList.getInstance();
+        User user = userList.containsUserWithJID(jid) ?
+                userList.getUserByJID(jid) :
+                userList.addUser(jid, null);
         ThreadList threadList = ThreadList.getInstance();
         KonThread thread = threadList.getThreadByXMPPID(xmppThreadID);
         if (thread == null)
