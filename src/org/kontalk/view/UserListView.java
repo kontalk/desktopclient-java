@@ -32,6 +32,7 @@ import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
@@ -55,13 +56,16 @@ import org.kontalk.model.UserList;
  */
 public final class UserListView extends ListView implements Observer {
 
+    private final View mModelView;
     private final UserList mUserList;
-    private final WebPopupMenu mPopupMenu;
+    private final UserPopupMenu mPopupMenu;
 
     private WebCustomTooltip mTip = null;
 
     UserListView(final View modelView, UserList userList) {
         super();
+
+        mModelView = modelView;
 
         mUserList = userList;
         mUserList.addObserver(this);
@@ -69,43 +73,7 @@ public final class UserListView extends ListView implements Observer {
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         // right click popup menu
-        mPopupMenu = new WebPopupMenu();
-        // note: actions only work when right click does also selection
-        WebMenuItem newMenuItem = new WebMenuItem("New Thread");
-        newMenuItem.setToolTipText("Creates a new thread for this contact");
-        newMenuItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent event) {
-                ListItem item = mListModel.get(getSelectedIndex());
-                Set<User> user = new HashSet();
-                user.add(((UserView) item).getUser());
-                modelView.newThread(user);
-            }
-        });
-        mPopupMenu.add(newMenuItem);
-
-        WebMenuItem editMenuItem = new WebMenuItem("Edit Contact");
-        editMenuItem.setToolTipText("Edit this contact");
-        editMenuItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent event) {
-                ListItem item = mListModel.get(getSelectedIndex());
-                JDialog editUserDialog = new EditUserDialog((UserView) item);
-                editUserDialog.setVisible(true);
-            }
-        });
-        mPopupMenu.add(editMenuItem);
-
-        WebMenuItem deleteMenuItem = new WebMenuItem("Delete Contact");
-        deleteMenuItem.setToolTipText("Delete this contact");
-        deleteMenuItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent event) {
-                // TODO delete threads/messages too? android client may add it
-                // to roster again? useful at all? only self created contacts?
-            }
-        });
-        mPopupMenu.add(deleteMenuItem);
+        mPopupMenu = new UserPopupMenu();
 
         // actions triggered by selection
         this.addListSelectionListener(new ListSelectionListener() {
@@ -124,7 +92,7 @@ public final class UserListView extends ListView implements Observer {
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
                 if (e.getClickCount() == 2) {
-                    modelView.selectThreadByUser(getSelectedUser());
+                    mModelView.selectThreadByUser(getSelectedUser());
                 }
             }
             @Override
@@ -151,9 +119,12 @@ public final class UserListView extends ListView implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
+        System.out.println("wtf, update");
         mListModel.clear();
-        for (User oneUser: mUserList.getUser())
+        for (User oneUser: mUserList.getUser()) {
+            System.out.println("wtf, user: "+oneUser.getID());
             mListModel.addElement(new UserView(oneUser));
+        }
     }
 
     User getSelectedUser() {
@@ -164,7 +135,9 @@ public final class UserListView extends ListView implements Observer {
     }
 
     private void showPopupMenu(MouseEvent e) {
-        mPopupMenu.show(this, e.getX(), e.getY());
+        // note: only work when right click does also selection
+        ListItem item = mListModel.get(getSelectedIndex());
+        mPopupMenu.show((UserView) item, this, e.getX(), e.getY());
     }
 
     /**
@@ -232,11 +205,14 @@ public final class UserListView extends ListView implements Observer {
             String lastSeen = mUser.getLastSeen() == null ? "?" :
                     TOOLTIP_DATE_FORMAT.format(mUser.getLastSeen());
 
+            String isBlocked = mUser.isBlocked() ? "YES" : "No";
+
             String html = "<html><body>" +
                     //"<h3>Header</h3>" +
                     "<br>" +
                     "Available: " + isAvailable + "<br>" +
                     "Status: " + status + "<br>" +
+                    "Blocked: " + isBlocked + "<br>" +
                     "Last seen: " + lastSeen + "<br>" +
                     "";
 
@@ -250,6 +226,86 @@ public final class UserListView extends ListView implements Observer {
             else
                 this.setBackground(mBackround);
         }
+    }
+
+    private class UserPopupMenu extends WebPopupMenu {
+
+        UserView mSelectedUserView;
+        WebMenuItem mBlockMenuItem;
+        WebMenuItem mUnblockMenuItem;
+
+        UserPopupMenu() {
+            WebMenuItem newMenuItem = new WebMenuItem("New Thread");
+            newMenuItem.setToolTipText("Creates a new thread for this contact");
+            newMenuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    Set<User> user = new HashSet();
+                    user.add(mSelectedUserView.getUser());
+                    UserListView.this.mModelView.newThread(user);
+                }
+            });
+            this.add(newMenuItem);
+
+            WebMenuItem editMenuItem = new WebMenuItem("Edit Contact");
+            editMenuItem.setToolTipText("Edit this contact");
+            editMenuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    JDialog editUserDialog = new EditUserDialog(mSelectedUserView);
+                    editUserDialog.setVisible(true);
+                }
+            });
+            this.add(editMenuItem);
+
+            mBlockMenuItem = new WebMenuItem("Block Contact");
+            mBlockMenuItem.setToolTipText("Block all messages from this contact");
+            mBlockMenuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    UserListView.this.mModelView.setUserBlocking(mSelectedUserView.getUser(), true);
+                }
+            });
+            this.add(mBlockMenuItem);
+
+            mUnblockMenuItem = new WebMenuItem("Unblock Contact");
+            mUnblockMenuItem.setToolTipText("Unblock this contact");
+            mUnblockMenuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    UserListView.this.mModelView.setUserBlocking(mSelectedUserView.getUser(), false);
+                }
+            });
+            this.add(mUnblockMenuItem);
+
+            WebMenuItem deleteMenuItem = new WebMenuItem("Delete Contact");
+            deleteMenuItem.setToolTipText("Delete this contact");
+            deleteMenuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    // TODO delete threads/messages too? android client may add it
+                    // to roster again? useful at all? only self created contacts?
+                }
+            });
+            this.add(deleteMenuItem);
+        }
+
+        void show(UserView selectedUserView, Component invoker, int x, int y) {
+            mSelectedUserView = selectedUserView;
+
+            if (mSelectedUserView.getUser().isBlocked()) {
+                mBlockMenuItem.setVisible(false);
+                mUnblockMenuItem.setVisible(true);
+            } else {
+                mBlockMenuItem.setVisible(true);
+                mUnblockMenuItem.setVisible(false);
+            }
+
+            // TODO when offline?
+
+            this.show(invoker, x, y);
+        }
+
     }
 
     private class EditUserDialog extends WebDialog {
