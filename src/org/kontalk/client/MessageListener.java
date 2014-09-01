@@ -34,7 +34,7 @@ import org.kontalk.model.MessageList;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-class MessageListener implements PacketListener {
+final class MessageListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(MessageListener.class.getName());
 
     private final Client mClient;

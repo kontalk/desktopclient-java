@@ -16,7 +16,6 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 package org.kontalk.client;
 
 import java.util.logging.Logger;
@@ -31,19 +30,18 @@ import org.kontalk.model.UserList;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class BlockingCommandListener implements PacketListener {
-    private final static Logger LOGGER = Logger.getLogger(BlockingCommand.class.getName());
+final class BlockListListener implements PacketListener {
+    private final static Logger LOGGER = Logger.getLogger(BlockListListener.class.getName());
 
-    public BlockingCommandListener() {
+    public BlockListListener() {
         ProviderManager.addIQProvider(BlockingCommand.BLOCKLIST, BlockingCommand.NAMESPACE, new BlockingCommand.Provider());
     }
 
     @Override
     public void processPacket(Packet packet) {
         BlockingCommand p = (BlockingCommand) packet;
-        LOGGER.info("got blocking command: "+p.toXML());
+        LOGGER.info("got blocklist response: "+p.toXML());
 
-        // TODO
         if (p.getItems() != null) {
             for (String jid : p.getItems()) {
                 if (StringUtils.isFullJID(jid)) {
@@ -61,5 +59,4 @@ public class BlockingCommandListener implements PacketListener {
             UserList.getInstance().changed();
         }
     }
-
 }

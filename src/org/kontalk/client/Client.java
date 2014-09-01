@@ -32,6 +32,7 @@ import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.AndFilter;
 import org.jivesoftware.smack.filter.NotFilter;
 import org.jivesoftware.smack.filter.PacketFilter;
+import org.jivesoftware.smack.filter.PacketIDFilter;
 import org.jivesoftware.smack.filter.PacketTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
@@ -102,7 +103,7 @@ public final class Client implements PacketListener, Runnable {
         PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
         mConn.addPacketListener(new VCardListener(), vCardFilter);
         PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
-        mConn.addPacketListener(new BlockingCommandListener(), blockingCommandFilter);
+        mConn.addPacketListener(new BlockListListener(), blockingCommandFilter);
          // fallback
         mConn.addPacketListener(this,
                 new AndFilter(
@@ -167,6 +168,7 @@ public final class Client implements PacketListener, Runnable {
 
     public void sendMessage(KonMessage message) {
         if (mConn == null || !mConn.isAuthenticated()) {
+            LOGGER.info("not sending message, not connected");
             return;
         }
 
@@ -207,8 +209,18 @@ public final class Client implements PacketListener, Runnable {
     }
 
     public void sendBlockingCommand(String jid, boolean blocking) {
+        if (mConn == null || !mConn.isAuthenticated()) {
+            LOGGER.warning("not sending blocking command, not connected");
+            return;
+        }
+
         String command = blocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
         BlockingCommand blockingCommand = new BlockingCommand(command, jid);
+
+        // add response listener
+        PacketListener blockResponseListener = new BlockResponseListener(mConn, blocking, jid);
+        mConn.addPacketListener(blockResponseListener, new PacketIDFilter(blockingCommand));
+
         this.sendPacket(blockingCommand);
     }
 

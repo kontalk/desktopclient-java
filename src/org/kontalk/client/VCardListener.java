@@ -17,7 +17,7 @@ import org.kontalk.model.UserList;
  *  Listener for vCard4 iq stanzas.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class VCardListener implements PacketListener {
+final class VCardListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(VCardListener.class.getName());
 
     VCardListener() {
