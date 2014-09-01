@@ -44,11 +44,10 @@ public class BlockingCommandListener implements PacketListener {
         LOGGER.info("got blocking command: "+p.toXML());
 
         // TODO
-        System.out.println("blocked items: "+p.getItems());
         if (p.getItems() != null) {
             for (String jid : p.getItems()) {
                 if (StringUtils.isFullJID(jid)) {
-                    LOGGER.info("ignoring blocking of JID with ressource");
+                    LOGGER.info("ignoring blocking of JID with resource");
                     return;
                 }
                 if (!UserList.getInstance().containsUserWithJID(jid)) {
@@ -59,7 +58,7 @@ public class BlockingCommandListener implements PacketListener {
                 LOGGER.info("blocked user: "+user.getID());
                 user.setBlocked(true);
             }
-            //UserList.getInstance().changed();
+            UserList.getInstance().changed();
         }
     }
 

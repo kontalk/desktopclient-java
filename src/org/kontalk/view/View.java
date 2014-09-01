@@ -291,7 +291,7 @@ public final class View {
     }
 
     /**
-     * Setup view on startup.
+     * Setup view on startup after model was initialized.
      */
     public void init() {
         mThreadListView.selectLastThread();

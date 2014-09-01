@@ -119,10 +119,8 @@ public final class UserListView extends ListView implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
-        System.out.println("wtf, update");
         mListModel.clear();
         for (User oneUser: mUserList.getUser()) {
-            System.out.println("wtf, user: "+oneUser.getID());
             mListModel.addElement(new UserView(oneUser));
         }
     }
