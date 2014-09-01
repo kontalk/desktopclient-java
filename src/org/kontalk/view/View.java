@@ -150,7 +150,7 @@ public final class View {
         // hotkeys
         this.setHotkeys();
 
-        this.statusChanged(Kontalk.Status.DISCONNECTED);
+        this.statusChanged();
     }
 
     final void setTray() {
@@ -259,7 +259,12 @@ public final class View {
         mSendButton.addHotkey(sendHotkey, TooltipWay.up);
     }
 
-    public final void statusChanged(Kontalk.Status status) {
+    Kontalk.Status getCurrentStatus() {
+        return mModel.getCurrentStatus();
+    }
+
+    public final void statusChanged() {
+        Kontalk.Status status = mModel.getCurrentStatus();
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText("Connecting...");

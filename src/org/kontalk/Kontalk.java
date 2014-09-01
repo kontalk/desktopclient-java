@@ -57,6 +57,7 @@ public final class Kontalk {
     private final ThreadList mThreadList;
     private final MessageList mMessageList;
     private final String mConfigDir;
+    private Status mCurrentStatus = Status.DISCONNECTED;
 
     static {
         // register provider
@@ -118,7 +119,8 @@ public final class Kontalk {
 
     public void shutDown() {
         LOGGER.info("Shutting down...");
-        mView.statusChanged(Status.SHUTTING_DOWN);
+        mCurrentStatus = Status.SHUTTING_DOWN;
+        mView.statusChanged();
         mUserList.save();
         mThreadList.save();
         mClient.disconnect();
@@ -147,12 +149,18 @@ public final class Kontalk {
     }
 
     public void disconnect() {
-        mView.statusChanged(Status.DISCONNECTING);
+        mCurrentStatus = Status.DISCONNECTING;
+        mView.statusChanged();
         mClient.disconnect();
     }
 
+    public Status getCurrentStatus() {
+        return mCurrentStatus;
+    }
+
     public void statusChanged(Status status) {
-        mView.statusChanged(status);
+        mCurrentStatus = status;
+        mView.statusChanged();
         if (status == Status.CONNECTED) {
             // send all pending messages
             for (KonMessage m : mMessageList.getMessages()) {

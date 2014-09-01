@@ -47,6 +47,7 @@ import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import org.kontalk.Kontalk;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
@@ -299,7 +300,9 @@ public final class UserListView extends ListView implements Observer {
                 mUnblockMenuItem.setVisible(false);
             }
 
-            // TODO when offline?
+            Kontalk.Status status = UserListView.this.mModelView.getCurrentStatus();
+            mBlockMenuItem.setEnabled(status == Kontalk.Status.CONNECTED);
+            mUnblockMenuItem.setEnabled(status == Kontalk.Status.CONNECTED);
 
             this.show(invoker, x, y);
         }
