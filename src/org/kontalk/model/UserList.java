@@ -146,7 +146,7 @@ public final class UserList extends Observable {
         mMap.get(jid).setKey(rawKey);
     }
 
-    public void changed() {
+    public synchronized void changed() {
         this.setChanged();
         this.notifyObservers();
     }
