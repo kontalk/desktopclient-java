@@ -122,7 +122,7 @@ public final class UserListView extends ListView implements Observer {
     public void update(Observable o, Object arg) {
         mListModel.clear();
         for (User oneUser: mUserList.getUser()) {
-            mListModel.addElement(new UserView(oneUser));
+            mListModel.addElement(new UserItemView(oneUser));
         }
     }
 
@@ -130,26 +130,26 @@ public final class UserListView extends ListView implements Observer {
         if (getSelectedIndex() == -1)
             return null;
         ListItem p = mListModel.get(getSelectedIndex());
-        return ((UserView) p).getUser();
+        return ((UserItemView) p).getUser();
     }
 
     private void showPopupMenu(MouseEvent e) {
         // note: only work when right click does also selection
         ListItem item = mListModel.get(getSelectedIndex());
-        mPopupMenu.show((UserView) item, this, e.getX(), e.getY());
+        mPopupMenu.show((UserItemView) item, this, e.getX(), e.getY());
     }
 
     /**
      * One item in the contact list representing a user.
      */
-    private class UserView extends ListItem {
+    private class UserItemView extends ListItem {
 
         private final User mUser;
         private final WebLabel mNameLabel;
         private final WebLabel mJIDLabel;
         private final Color mBackround;
 
-        UserView(User user) {
+        UserItemView(User user) {
             mUser = user;
 
             //this.setPaintFocus(true);
@@ -229,7 +229,7 @@ public final class UserListView extends ListView implements Observer {
 
     private class UserPopupMenu extends WebPopupMenu {
 
-        UserView mSelectedUserView;
+        UserItemView mSelectedUserView;
         WebMenuItem mBlockMenuItem;
         WebMenuItem mUnblockMenuItem;
 
@@ -286,10 +286,11 @@ public final class UserListView extends ListView implements Observer {
                     // to roster again? useful at all? only self created contacts?
                 }
             });
-            this.add(deleteMenuItem);
+            // TODO see above
+            //this.add(deleteMenuItem);
         }
 
-        void show(UserView selectedUserView, Component invoker, int x, int y) {
+        void show(UserItemView selectedUserView, Component invoker, int x, int y) {
             mSelectedUserView = selectedUserView;
 
             if (mSelectedUserView.getUser().isBlocked()) {
@@ -311,12 +312,12 @@ public final class UserListView extends ListView implements Observer {
 
     private class EditUserDialog extends WebDialog {
 
-        private final UserView mUserView;
+        private final UserItemView mUserView;
         private final WebTextField mNameField;
         private final WebTextField mJIDField;
         WebCheckBox mEncryptionBox;
 
-        public EditUserDialog(UserView userView) {
+        public EditUserDialog(UserItemView userView) {
 
             mUserView = userView;
 
