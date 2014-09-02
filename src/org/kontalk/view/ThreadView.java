@@ -91,7 +91,6 @@ public final class ThreadView extends WebScrollPane {
     }
 
     void showThread(KonThread thread) {
-
         boolean isNew = false;
         if (!mThreadCache.containsKey(thread.getID())) {
             mThreadCache.put(thread.getID(), new MessageViewList(thread));
@@ -112,6 +111,14 @@ public final class ThreadView extends WebScrollPane {
 
     void setColor(Color color) {
         this.getViewport().setBackground(color);
+    }
+
+    private void removeThread(int id) {
+        mThreadCache.remove(id);
+        if(mCurrentThreadID == id) {
+            mCurrentThreadID = -1;
+            this.setViewportView(null);
+        }
     }
 
     /**
@@ -163,6 +170,10 @@ public final class ThreadView extends WebScrollPane {
 
         @Override
         public void update(Observable o, Object arg) {
+            if (mThread.isDeleted()) {
+                ThreadView.this.removeThread(mThread.getID());
+            }
+
             // check for new messages to add
             if (mListModel.size() < mThread.getMessages().size()) {
                 Set<KonMessage> oldMessages = new HashSet();
