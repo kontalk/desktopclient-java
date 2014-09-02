@@ -34,7 +34,7 @@ public class OutMessage extends KonMessage{
             User user,
             String text,
             boolean encrypted) {
-        super(thread, Direction.IN, new Date(), text, user, user.getJID(), Packet.nextID());
+        super(thread, Direction.OUT, new Date(), text, user, user.getJID(), Packet.nextID());
 
         mReceiptStatus = KonMessage.Status.PENDING;
         mReceiptID = null;
