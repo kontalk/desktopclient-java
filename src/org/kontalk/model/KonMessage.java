@@ -282,4 +282,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
        set.put("coder_errors", mCoderErrors);
        db.execUpdate(TABLE, set, mID);
     }
+
+    void delete() {
+        Database db = Database.getInstance();
+        db.execDelete(TABLE, mID);
+    }
 }
