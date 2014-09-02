@@ -95,11 +95,11 @@ public final class MessageList {
         }
     }
 
-    public KonMessage addTo(KonThread thread,
+    public OutMessage addTo(KonThread thread,
             User user,
             String text,
             boolean encrypted) {
-        KonMessage newMessage = new OutMessage(thread, user, text, encrypted);
+        OutMessage newMessage = new OutMessage(thread, user, text, encrypted);
         thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);
         return newMessage;
