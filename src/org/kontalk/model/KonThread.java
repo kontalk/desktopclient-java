@@ -65,6 +65,7 @@ public final class KonThread extends Observable {
     private Set<User> mUser;
     private String mSubject;
     private boolean mRead;
+    private boolean mDeleted = false;
 
     /**
      * Used when creating a new thread
@@ -90,7 +91,7 @@ public final class KonThread extends Observable {
         }
 
         for (User oneUser : user)
-            this.insertUser(oneUser);
+            this.insertReceiver(oneUser);
     }
 
     /**
@@ -123,8 +124,7 @@ public final class KonThread extends Observable {
 
     public void setUser(Set<User> user) {
         mUser = user;
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
     }
 
     public String getSubject() {
@@ -134,8 +134,7 @@ public final class KonThread extends Observable {
     public void setSubject(String subject) {
         mSubject = subject;
         this.save();
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
     }
 
     public boolean isRead() {
@@ -144,8 +143,11 @@ public final class KonThread extends Observable {
 
     public void setRead() {
         mRead = true;
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
+    }
+
+    public boolean isDeleted() {
+        return mDeleted;
     }
 
     public void addMessage(KonMessage message) {
@@ -153,8 +155,7 @@ public final class KonThread extends Observable {
         if (added) {
             if (message.getDir() == KonMessage.Direction.IN)
                 mRead = false;
-            this.setChanged();
-            this.notifyObservers();
+            this.changed();
         }
     }
 
@@ -168,7 +169,7 @@ public final class KonThread extends Observable {
         return added;
     }
 
-    public void save() {
+    void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap();
         set.put("subject", mSubject);
@@ -176,34 +177,60 @@ public final class KonThread extends Observable {
         db.execUpdate(TABLE, set, mID);
 
         // get receiver for this thread
+        Map<Integer, Integer> dbReceiver = this.loadReceiver();
+
+        // add missing user
+        for (User user : mUser) {
+            if (!dbReceiver.keySet().contains(user.getID())) {
+                this.insertReceiver(user);
+            }
+            dbReceiver.remove(user.getID());
+        }
+
+        // whats left is too much and can be removed
+        for (int id : dbReceiver.values()) {
+            db.execDelete(TABLE_RECEIVER, id);
+        }
+    }
+
+    void delete() {
+        // delete messages
+        for (KonMessage message : mSet) {
+            boolean deleted = message.delete();
+            if (!deleted) return;
+        }
+
+        Database db = Database.getInstance();
+        // delete receiver
+        Map<Integer, Integer> dbReceiver = this.loadReceiver();
+        for (int id : dbReceiver.values()) {
+            boolean deleted = db.execDelete(TABLE_RECEIVER, id);
+            if (!deleted) return;
+        }
+
+        // delete thread itself
+        db.execDelete(TABLE, mID);
+        mDeleted = true;
+        this.changed();
+    }
+
+    private Map<Integer, Integer> loadReceiver() {
+        Database db = Database.getInstance();
         String where = "thread_id == " + mID;
         ResultSet resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
-        Map<Integer, Integer> dbUser = new HashMap();
+        Map<Integer, Integer> dbReceiver = new HashMap();
         try {
             while (resultSet.next()) {
-                dbUser.put(resultSet.getInt("user_id"), resultSet.getInt("_id"));
+                dbReceiver.put(resultSet.getInt("user_id"), resultSet.getInt("_id"));
             }
             resultSet.close();
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't get receiver", ex);
         }
-
-        // add missing user
-        for (User user : mUser) {
-            if (!dbUser.keySet().contains(user.getID())) {
-                this.insertUser(user);
-            }
-            dbUser.remove(user.getID());
-        }
-
-        // whats left is too much and can be removed
-        for (int id : dbUser.values()) {
-            db.execDelete(TABLE_RECEIVER, id);
-        }
-
+        return dbReceiver;
     }
 
-    private void insertUser(User user) {
+    private void insertReceiver(User user) {
         Database db = Database.getInstance();
         List<Object> recValues = new LinkedList();
         recValues.add(mID);
@@ -212,6 +239,11 @@ public final class KonThread extends Observable {
         if (id < 1) {
             LOGGER.warning("couldn't insert receiver");
         }
+    }
+
+    private synchronized void changed() {
+        this.setChanged();
+        this.notifyObservers();
     }
 
 }
