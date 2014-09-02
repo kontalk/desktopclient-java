@@ -34,6 +34,7 @@ import org.kontalk.model.Account;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageList;
+import org.kontalk.model.OutMessage;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
@@ -185,7 +186,7 @@ public final class Kontalk {
         // TODO no group chat support yet
         Set<User> user = thread.getUser();
         for (User oneUser: user) {
-            KonMessage newMessage = mMessageList.addTo(
+            OutMessage newMessage = mMessageList.addTo(
                     thread,
                     oneUser,
                     text,
