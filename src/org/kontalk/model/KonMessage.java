@@ -289,8 +289,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
        db.execUpdate(TABLE, set, mID);
     }
 
-    void delete() {
+    boolean delete() {
         Database db = Database.getInstance();
-        db.execDelete(TABLE, mID);
+        return db.execDelete(TABLE, mID);
     }
 }
