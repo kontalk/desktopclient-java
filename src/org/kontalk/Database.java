@@ -193,12 +193,15 @@ public final class Database {
         }
     }
 
-    public void execDelete(String table, int id) {
+    public boolean execDelete(String table, int id) {
+        LOGGER.info("deleting id "+id+" from table "+table);
         try (Statement stat = mConn.createStatement()) {
             stat.executeUpdate("DELETE FROM " + table + " WHERE _id = " + id);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't delete", ex);
+            return false;
         }
+        return true;
     }
 
     private void insertValues(PreparedStatement stat,
