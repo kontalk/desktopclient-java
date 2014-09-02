@@ -40,18 +40,20 @@ public class InMessage extends KonMessage {
             String receiptID,
             String text,
             boolean encrypted) {
-        super(thread, Direction.IN, date, text, user, jid, xmppID);
+        super(thread,
+                Direction.IN,
+                date,
+                text,
+                user,
+                jid,
+                xmppID,
+                Status.IN,
+                encrypted);
 
-        Coder.Encryption encryption = encrypted ? Coder.Encryption.ENCRYPTED
-                : Coder.Encryption.NOT;
-        // if encrypted we don't know yet
-        Coder.Signing signing = encrypted ? null : Coder.Signing.NOT;
-
-        mReceiptStatus = Status.IN;
         mReceiptID = receiptID;
 
-        mEncryption = encryption;
-        mSigning = signing;
+        // if encrypted we don't know yet
+        mSigning = encrypted ? null : Coder.Signing.NOT;
     }
 
     public void setDecryptedText(String text) {

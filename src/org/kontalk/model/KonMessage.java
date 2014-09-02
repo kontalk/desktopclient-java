@@ -108,17 +108,23 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             String text,
             User user,
             String jid,
-            String xmppID) {
+            String xmppID,
+            Status status,
+            boolean encrypted) {
         mThread = thread;
         mDir = dir;
 
         mDate = date;
         mText = text;
 
-        // TODO
+        // TODO group message stuff
         mUser = user;
         mJID = jid;
         mXMPPID = xmppID;
+
+        mReceiptStatus = status;
+
+        mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
         mCoderErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();

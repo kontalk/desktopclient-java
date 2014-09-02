@@ -34,17 +34,22 @@ public class OutMessage extends KonMessage{
             User user,
             String text,
             boolean encrypted) {
-        super(thread, Direction.OUT, new Date(), text, user, user.getJID(), Packet.nextID());
+        super(thread,
+                Direction.OUT,
+                new Date(),
+                text,
+                user,
+                user.getJID(),
+                Packet.nextID(),
+                Status.PENDING,
+                encrypted);
 
-        mReceiptStatus = KonMessage.Status.PENDING;
         mReceiptID = null;
 
         // if we want encryption we also want signing, doesn't hurt
         if (encrypted) {
-            mEncryption = Coder.Encryption.ENCRYPTED;
             mSigning = Coder.Signing.SIGNED;
         } else {
-            mEncryption = Coder.Encryption.NOT;
             mSigning = Coder.Signing.NOT;
         }
     }
