@@ -77,7 +77,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // can only tell if signed after encryption attempt
             "signing_status INTEGER, " +
             // encryption and signing errors
-            "coder_errors INTEGER, " +
+            "coder_errors INTEGER NOT NULL, " +
 
             "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
