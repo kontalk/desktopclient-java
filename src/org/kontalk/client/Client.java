@@ -45,7 +45,7 @@ import org.kontalk.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
-import org.kontalk.model.KonMessage;
+import org.kontalk.model.OutMessage;
 
 /**
  *
@@ -166,7 +166,7 @@ public final class Client implements PacketListener, Runnable {
         mModel.statusChanged(Kontalk.Status.DISCONNECTED);
     }
 
-    public void sendMessage(KonMessage message) {
+    public void sendMessage(OutMessage message) {
         if (mConn == null || !mConn.isAuthenticated()) {
             LOGGER.info("not sending message, not connected");
             return;
