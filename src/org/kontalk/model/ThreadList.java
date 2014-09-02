@@ -84,8 +84,7 @@ public final class ThreadList extends Observable {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load threads from db", ex);
         }
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
     }
 
     public Collection<KonThread> getThreads() {
@@ -112,8 +111,7 @@ public final class ThreadList extends Observable {
     public KonThread createNewThread(Set<User> user) {
         KonThread newThread = new KonThread(user);
         mMap.put(newThread.getID(), newThread);
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
         return newThread;
     }
 
@@ -133,6 +131,21 @@ public final class ThreadList extends Observable {
                 return thread;
         }
         return null;
+    }
+
+    public void deleteThreadWithID(int id) {
+        KonThread thread = mMap.remove(id);
+        if (thread == null) {
+            LOGGER.warning("can't delete thread, not found. id: "+id);
+            return;
+        }
+        thread.delete();
+        this.changed();
+    }
+
+    private synchronized void changed() {
+        this.setChanged();
+        this.notifyObservers();
     }
 
     public static ThreadList getInstance() {
