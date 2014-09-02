@@ -24,6 +24,7 @@ import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
@@ -63,7 +64,7 @@ import static org.kontalk.view.ListView.TOOLTIP_DATE_FORMAT;
  * Show a brief list of all threads.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class ThreadListView extends ListView implements Observer {
+final class ThreadListView extends ListView implements Observer {
 
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;
@@ -81,7 +82,7 @@ public final class ThreadListView extends ListView implements Observer {
         editMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                ThreadView t = (ThreadView) mListModel.get(getSelectedIndex());
+                ThreadItemView t = (ThreadItemView) mListModel.get(getSelectedIndex());
                 JDialog editUserDialog = new EditThreadDialog(t);
                 editUserDialog.setVisible(true);
             }
@@ -93,7 +94,16 @@ public final class ThreadListView extends ListView implements Observer {
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                // TODO
+                String warningText = "Permanently delete all messages in this thread?";
+                int selectedOption = WebOptionPane.showConfirmDialog(ThreadListView.this,
+                        warningText,
+                        "Please Confirm",
+                        WebOptionPane.OK_CANCEL_OPTION,
+                        WebOptionPane.WARNING_MESSAGE);
+                if (selectedOption == WebOptionPane.OK_OPTION) {
+                    ThreadItemView threadView = (ThreadItemView) mListModel.get(getSelectedIndex());
+                    mThreadList.deleteThreadWithID(threadView.getThread().getID());
+                }
             }
         });
         mPopupMenu.add(deleteMenuItem);
@@ -129,8 +139,8 @@ public final class ThreadListView extends ListView implements Observer {
 
     void selectThread(int threadID) {
         Enumeration e = mListModel.elements();
-        for(Enumeration<ThreadView> threads = e; e.hasMoreElements();) {
-            ThreadView threadView = threads.nextElement();
+        for(Enumeration<ThreadItemView> threads = e; e.hasMoreElements();) {
+            ThreadItemView threadView = threads.nextElement();
             if (threadView.getThread().getID() == threadID)
                 this.setSelectedValue(threadView);
         }
@@ -139,7 +149,7 @@ public final class ThreadListView extends ListView implements Observer {
     KonThread getSelectedThread() {
         if (this.getSelectedIndex() == -1)
             return null;
-        ThreadView t = (ThreadView) mListModel.get(this.getSelectedIndex());
+        ThreadItemView t = (ThreadItemView) mListModel.get(this.getSelectedIndex());
         return t.getThread();
     }
 
@@ -148,7 +158,7 @@ public final class ThreadListView extends ListView implements Observer {
         // TODO
         mListModel.clear();
         for (KonThread thread: mThreadList.getThreads()) {
-            ThreadView newThreadView = new ThreadView(thread);
+            ThreadItemView newThreadView = new ThreadItemView(thread);
             mListModel.addElement(newThreadView);
         }
     }
@@ -169,14 +179,14 @@ public final class ThreadListView extends ListView implements Observer {
            mPopupMenu.show(this, e.getX(), e.getY());
     }
 
-    private class ThreadView extends ListItem implements Observer {
+    private class ThreadItemView extends ListItem implements Observer {
 
         private final KonThread mThread;
         WebLabel mSubjectLabel;
         WebLabel mUserLabel;
         private Color mBackround;
 
-        ThreadView(KonThread thread) {
+        ThreadItemView(KonThread thread) {
             mThread = thread;
 
             mThread.addObserver(this);
@@ -251,11 +261,11 @@ public final class ThreadListView extends ListView implements Observer {
 
     private class EditThreadDialog extends WebDialog {
 
-        private final ThreadView mThreadView;
+        private final ThreadItemView mThreadView;
         private final WebTextField mSubjectField;
         WebCheckBoxList mParticipantsList;
 
-        public EditThreadDialog(ThreadView threadView) {
+        public EditThreadDialog(ThreadItemView threadView) {
 
             mThreadView = threadView;
 
