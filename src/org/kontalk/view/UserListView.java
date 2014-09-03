@@ -43,7 +43,6 @@ import java.util.HashSet;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
-import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -251,7 +250,7 @@ public final class UserListView extends ListView implements Observer {
             editMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    JDialog editUserDialog = new EditUserDialog(mSelectedUserView);
+                    WebDialog editUserDialog = new EditUserDialog(mSelectedUserView);
                     editUserDialog.setVisible(true);
                 }
             });
@@ -315,9 +314,9 @@ public final class UserListView extends ListView implements Observer {
         private final UserItemView mUserView;
         private final WebTextField mNameField;
         private final WebTextField mJIDField;
-        WebCheckBox mEncryptionBox;
+        private final WebCheckBox mEncryptionBox;
 
-        public EditUserDialog(UserItemView userView) {
+        EditUserDialog(UserItemView userView) {
 
             mUserView = userView;
 
