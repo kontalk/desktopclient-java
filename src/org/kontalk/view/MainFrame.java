@@ -22,6 +22,7 @@ import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.label.WebVerticalLabel;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
 import com.alee.laf.menu.WebMenu;
@@ -60,7 +61,8 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.KonConf;
 import org.kontalk.Kontalk;
-import static org.kontalk.view.View.getImage;
+import org.kontalk.model.User;
+import org.kontalk.model.UserList;
 
 /**
  *
@@ -89,7 +91,7 @@ public final class MainFrame extends WebFrame {
         this.setSize(mConf.getInt(KonConf.VIEW_FRAME_WIDTH),
                 mConf.getInt(KonConf.VIEW_FRAME_HEIGHT));
 
-        this.setIconImage(getImage("kontalk.png"));
+        this.setIconImage(View.getImage("kontalk.png"));
 
         // closing behaviour
         this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -203,13 +205,28 @@ public final class MainFrame extends WebFrame {
 
         // ...left...
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-
-        WebScrollPane threadScrollPane = new ScrollPane(threadList);
-        mTabbedPane.addTab("", threadScrollPane);
-        WebScrollPane userScrollPane = new ScrollPane(userList);
-        mTabbedPane.addTab("", userScrollPane);
+        WebButton newThreadButton = new WebButton("New");
+        newThreadButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // TODO
+            }
+        });
+        WebPanel threadListPanel = this.createListPane(threadList, newThreadButton);
+        mTabbedPane.addTab("", threadListPanel);
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
                 new WebVerticalLabel("Threads"));
+
+        WebButton newUserButton = new WebButton("Add");
+        newUserButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                WebDialog addUserDialog = new AddUserDialog();
+                addUserDialog.setVisible(true);
+            }
+        });
+        WebPanel userListPanel = this.createListPane(userList, newUserButton);
+        mTabbedPane.addTab("", userListPanel);
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
                 new WebVerticalLabel("Contacts"));
         mTabbedPane.setPreferredSize(new Dimension(250, -1));
@@ -225,9 +242,34 @@ public final class MainFrame extends WebFrame {
         splitPane.setResizeWeight(1.0);
         this.add(splitPane, BorderLayout.CENTER);
 
-
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);
+    }
+
+    private WebPanel createListPane(Component list, Component newButton) {
+        Icon clearIcon = View.getIcon("ic_ui_clear.png");
+        WebPanel listPanel = new WebPanel();
+        WebPanel searchPanel = new WebPanel();
+        final WebTextField searchField = new WebTextField();
+        searchField.setInputPrompt("Search...");
+        // TODO
+        //searchField.getDocument().addDocumentListener(listener);
+        WebButton clearSearchButton = new WebButton(clearIcon);
+        clearSearchButton.setUndecorated(true);
+        clearSearchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                searchField.clear();
+            }
+        });
+        searchField.setTrailingComponent(clearSearchButton);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        // TODO
+        //searchPanel.add(newButton, BorderLayout.EAST);
+        listPanel.add(searchPanel, BorderLayout.NORTH);
+        WebScrollPane scrollPane = new ScrollPane(list);
+        listPanel.add(scrollPane, BorderLayout.CENTER);
+        return listPanel;
     }
 
     void selectTab(Tab tab) {
@@ -369,6 +411,72 @@ public final class MainFrame extends WebFrame {
 
             mConf.setProperty(KonConf.NET_STATUS_LIST, stats.toArray());
         }
+    }
 
+    private class AddUserDialog extends WebDialog {
+
+        private final WebTextField mNameField;
+        private final WebTextField mJIDField;
+        private final WebCheckBox mEncryptionBox;
+
+        AddUserDialog() {
+            this.setTitle("Add New Contact");
+            //this.setSize(400, 280);
+            this.setResizable(false);
+            this.setModal(true);
+
+            GroupPanel groupPanel = new GroupPanel(10, false);
+            groupPanel.setMargin(5);
+
+            // editable fields
+            WebPanel namePanel = new WebPanel();
+            namePanel.setLayout(new BorderLayout(10, 5));
+            namePanel.add(new WebLabel("Display Name:"), BorderLayout.WEST);
+            mNameField = new WebTextField();
+            namePanel.add(mNameField, BorderLayout.CENTER);
+            groupPanel.add(namePanel);
+            groupPanel.add(new WebSeparator(true, true));
+
+            mEncryptionBox = new WebCheckBox("Encryption");
+            mEncryptionBox.setAnimated(false);
+            mEncryptionBox.setSelected(true);
+            groupPanel.add(mEncryptionBox);
+            groupPanel.add(new WebSeparator(true, true));
+
+            groupPanel.add(new WebLabel("JID:"));
+            mJIDField = new WebTextField(38);
+            groupPanel.add(mJIDField);
+            groupPanel.add(new WebSeparator(true, true));
+
+            this.add(groupPanel, BorderLayout.CENTER);
+
+            // buttons
+            WebButton cancelButton = new WebButton("Cancel");
+            cancelButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    AddUserDialog.this.dispose();
+                }
+            });
+            final WebButton saveButton = new WebButton("Save");
+            saveButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    AddUserDialog.this.saveUser();
+                    AddUserDialog.this.dispose();
+                }
+            });
+
+            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
+            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
+            this.add(buttonPanel, BorderLayout.SOUTH);
+
+            this.pack();
+        }
+
+        private void saveUser() {
+            User newUser = UserList.getInstance().addUser(mJIDField.getText(), mNameField.getText());
+            newUser.setEncrypted(mEncryptionBox.isSelected());
+        }
     }
 }
