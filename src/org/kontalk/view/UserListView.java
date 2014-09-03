@@ -224,6 +224,12 @@ public final class UserListView extends ListView implements Observer {
             else
                 this.setBackground(mBackround);
         }
+
+        @Override
+        protected boolean contains(String search) {
+            return mUser.getName().toLowerCase().contains(search) ||
+                    mUser.getJID().toLowerCase().contains(search);
+        }
     }
 
     private class UserPopupMenu extends WebPopupMenu {

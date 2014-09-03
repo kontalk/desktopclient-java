@@ -350,6 +350,13 @@ public final class ThreadView extends WebScrollPane {
 
                 return html;
             }
+
+            @Override
+            protected boolean contains(String search) {
+                return mTextArea.getText().toLowerCase().contains(search) ||
+                        mMessage.getUser().getName().toLowerCase().contains(search) ||
+                        mMessage.getJID().toLowerCase().contains(search);
+            }
         }
     }
 }

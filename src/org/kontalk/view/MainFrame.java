@@ -57,6 +57,8 @@ import java.util.logging.Logger;
 import javax.swing.Icon;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.KonConf;
@@ -79,8 +81,8 @@ public final class MainFrame extends WebFrame {
     private final WebTabbedPane mTabbedPane;
 
     public MainFrame(final View viewModel,
-            Component userList,
-            Component threadList,
+            ListView userList,
+            ListView threadList,
             Component threadView,
             Component sendTextField,
             Component sendButton,
@@ -246,12 +248,29 @@ public final class MainFrame extends WebFrame {
         this.add(statusBar, BorderLayout.SOUTH);
     }
 
-    private WebPanel createListPane(Component list, Component newButton) {
+    private WebPanel createListPane(final ListView list, Component newButton) {
         Icon clearIcon = View.getIcon("ic_ui_clear.png");
         WebPanel listPanel = new WebPanel();
         WebPanel searchPanel = new WebPanel();
         final WebTextField searchField = new WebTextField();
         searchField.setInputPrompt("Search...");
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            private void filterList() {
+                list.filter(searchField.getText());
+            }
+        });
         // TODO
         //searchField.getDocument().addDocumentListener(listener);
         WebButton clearSearchButton = new WebButton(clearIcon);

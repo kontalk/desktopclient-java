@@ -241,9 +241,11 @@ final class ThreadListView extends ListView implements Observer {
 
         @Override
         public void update(Observable o, Object arg) {
-            update();
+            this.update();
             // need to repaint parent to see changes
             ThreadListView.this.repaint();
+            // TODO maybe this is better
+            //ThreadListView.this.mListModel.update(this);
         }
 
         private void update() {
@@ -256,6 +258,19 @@ final class ThreadListView extends ListView implements Observer {
             for (User user : mThread.getUser())
                 nameList.add(user.getName() == null ? "<unknown>" : user.getName());
             mUserLabel.setText(StringUtils.join(nameList, ", "));
+        }
+
+        @Override
+        protected boolean contains(String search) {
+            for (User user: mThread.getUser()) {
+                if (user.getName().toLowerCase().contains(search) ||
+                        user.getJID().toLowerCase().contains(search))
+                    return true;
+            }
+            if (mThread.getSubject() != null)
+                return mThread.getSubject().toLowerCase().contains(search);
+            else
+                return false;
         }
     }
 

@@ -1,7 +1,19 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ *  Kontalk Java client
+ *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *
+ *  This program is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 3 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package org.kontalk.view;
@@ -19,14 +31,18 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.text.SimpleDateFormat;
 import javax.swing.JList;
+import javax.swing.event.ListDataEvent;
+import javax.swing.event.ListDataListener;
 
 /**
  * A generic list view.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ListView extends WebList {
+class ListView extends WebList {
 
-    final WebListModel<ListItem> mListModel = new WebListModel();
+    protected final WebListModel<ListItem> mListModel = new WebListModel();
+
+    private final WebListModel<ListItem> mFilteredListModel = new WebListModel();
 
     final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
             new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");
@@ -34,7 +50,22 @@ public class ListView extends WebList {
     private WebCustomTooltip mTip = null;
 
     ListView() {
-        this.setModel(mListModel);
+        mListModel.addListDataListener(new ListDataListener() {
+            @Override
+            public void intervalAdded(ListDataEvent e) {
+                ListView.this.resetFiltering();
+            }
+            @Override
+            public void intervalRemoved(ListDataEvent e) {
+                ListView.this.resetFiltering();
+            }
+            @Override
+            public void contentsChanged(ListDataEvent e) {
+                ListView.this.resetFiltering();
+            }
+        });
+        this.setModel(mFilteredListModel);
+
         this.setCellRenderer(new ListRenderer());
 
         // actions triggered by mouse events
@@ -45,6 +76,18 @@ public class ListView extends WebList {
                     mTip.closeTooltip();
             }
         });
+    }
+
+    void filter(String search) {
+        mFilteredListModel.clear();
+        for (ListItem listItem : mListModel.getElements()) {
+            if (listItem.contains(search.toLowerCase()))
+                mFilteredListModel.addElement(listItem);
+        }
+    }
+
+    private void resetFiltering() {
+        mFilteredListModel.setElements(mListModel.getElements());
     }
 
     private void showTooltip(ListItem messageView) {
@@ -66,14 +109,15 @@ public class ListView extends WebList {
 
         abstract String getTooltipText();
 
-         // catch the event, when a tooltip should be shown for this item and
+        protected abstract boolean contains(String search);
+
+        // catch the event, when a tooltip should be shown for this item and
         // create a own one
         @Override
         public String getToolTipText(MouseEvent event) {
             ListView.this.showTooltip(this);
             return null;
         }
-
     }
 
     private class ListRenderer extends WebListCellRenderer {
