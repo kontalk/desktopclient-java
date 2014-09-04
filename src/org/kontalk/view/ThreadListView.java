@@ -337,6 +337,14 @@ final class ThreadListView extends ListView implements Observer {
             saveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
+                    if (mParticipantsList.getCheckedValues().size() > 1) {
+                        String infoText = "More than one receiver not supported (yet).";
+                        WebOptionPane.showMessageDialog(ThreadListView.this,
+                                infoText,
+                                "Sorry",
+                                WebOptionPane.INFORMATION_MESSAGE);
+                        return;
+                    }
                     EditThreadDialog.this.saveThread();
                     EditThreadDialog.this.dispose();
                 }
