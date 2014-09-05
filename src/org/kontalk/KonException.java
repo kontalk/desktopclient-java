@@ -25,7 +25,16 @@ package org.kontalk;
 public final class KonException extends Exception {
 
     public enum Error {
-        ACCOUNT_KEY, ACCOUNT_ARCHIVE, ACCOUNT_FILE, CLIENT_CONNECTION, CLIENT_CONNECT, CLIENT_LOGIN
+        IMPORT_ARCHIVE,
+        IMPORT_READ_FILE,
+        IMPORT_KEY,
+        IMPORT_CHANGE_PASSWORD,
+        IMPORT_WRITE_FILE,
+        RELOAD_READ_FILE,
+        RELOAD_KEY,
+        CLIENT_CONNECTION,
+        CLIENT_CONNECT,
+        CLIENT_LOGIN
     }
 
     private final Error mError;

@@ -303,55 +303,19 @@ public final class View {
     }
 
     public void handleException(KonException ex) {
-        String eol = System.getProperty("line.separator");
-        String errorText = "Uknown error!?";
-        switch(ex.getError()) {
-            case ACCOUNT_ARCHIVE:
-                errorText = "Can't open key archive.";
-                break;
-            case ACCOUNT_FILE:
-                errorText = "Can't load keyfile(s) from archive.";
-                break;
-            case ACCOUNT_KEY:
-                errorText = "Can't create personal key from key files. ";
-                if (ex.getExceptionClass().equals(IOException.class)) {
-                    errorText += eol + "Is the public key file valid?";
-                }
-                if (ex.getExceptionClass().equals(CertificateException.class)) {
-                    // bridge
-                    errorText += eol + "Are all key files valid?";
-                }
-                if (ex.getExceptionClass().equals(PGPException.class)) {
-                    errorText += eol + "Is the passphrase correct?";
-                }
-                break;
-            case CLIENT_CONNECTION:
-                errorText = "Can't create connection";
-                break;
-            case CLIENT_CONNECT:
-                errorText = "Can't connect to server.";
-                if (ex.getExceptionClass().equals(ConnectionException.class)) {
-                    errorText += eol + "Is the server address correct?";
-                }
-                if (ex.getExceptionClass().equals(SSLHandshakeException.class)) {
-                    errorText += eol + "The server rejects the key.";
-                }
-                break;
-            case CLIENT_LOGIN:
-                errorText = "Can't login to server.";
-                if (ex.getExceptionClass().equals(SASLErrorException.class)) {
-                    errorText += eol + "The server rejects the account. Is the "
-                            + "specified server correct and the account valid?";
-                }
-                break;
-        }
+        String errorText = this.getErrorText(ex);
         WebOptionPane.showMessageDialog(mMainFrame, errorText, "Error", WebOptionPane.ERROR_MESSAGE);
-        this.showConfig();
+        this.showImportWizard();
     }
 
     void showConfig() {
         JDialog configFrame = new ConfigurationDialog(mMainFrame, this);
         configFrame.setVisible(true);
+    }
+
+    void showImportWizard() {
+        JDialog importFrame = new ImportDialog();
+        importFrame.setVisible(true);
     }
 
     void shutDown() {
@@ -409,7 +373,6 @@ public final class View {
 
     // TODO not used
     void showNotification() {
-
         final WebDialog dialog = new WebDialog();
         dialog.setUndecorated(true);
         dialog.setBackground(Color.BLACK);
@@ -476,5 +439,65 @@ public final class View {
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
         }
         return Toolkit.getDefaultToolkit().createImage(imageUrl);
+    }
+
+    static String getErrorText(KonException ex) {
+        String eol = System.getProperty("line.separator");
+        String errorText = "Uknown error!?";
+        switch(ex.getError()) {
+            case IMPORT_ARCHIVE:
+                errorText = "Can't open key archive.";
+                break;
+            case IMPORT_READ_FILE:
+                errorText = "Can't load keyfile(s) from archive.";
+                break;
+            case IMPORT_KEY:
+                errorText = "Can't create personal key from key files. ";
+                if (ex.getExceptionClass().equals(IOException.class)) {
+                    errorText += eol + "Is the public key file valid?";
+                }
+                if (ex.getExceptionClass().equals(CertificateException.class)) {
+                    // bridge
+                    errorText += eol + "Are all key files valid?";
+                }
+                if (ex.getExceptionClass().equals(PGPException.class)) {
+                    errorText += eol + "Is the passphrase correct?";
+                }
+                break;
+            case IMPORT_CHANGE_PASSWORD:
+                errorText = "Can't change password. Internal error!?";
+                break;
+            case IMPORT_WRITE_FILE:
+                errorText = "Can't write key files to configuration directory.";
+                break;
+            case RELOAD_READ_FILE:
+                errorText = "Can't read key files from configuration directory.";
+                errorText += " Please reimport your key.";
+                break;
+            case RELOAD_KEY:
+                errorText = "Can't load key files from configuration directory.";
+                errorText += " Please reimport your key.";
+                break;
+            case CLIENT_CONNECTION:
+                errorText = "Can't create connection";
+                break;
+            case CLIENT_CONNECT:
+                errorText = "Can't connect to server.";
+                if (ex.getExceptionClass().equals(ConnectionException.class)) {
+                    errorText += eol + "Is the server address correct?";
+                }
+                if (ex.getExceptionClass().equals(SSLHandshakeException.class)) {
+                    errorText += eol + "The server rejects the key.";
+                }
+                break;
+            case CLIENT_LOGIN:
+                errorText = "Can't login to server.";
+                if (ex.getExceptionClass().equals(SASLErrorException.class)) {
+                    errorText += eol + "The server rejects the account. Is the "
+                            + "specified server correct and the account valid?";
+                }
+                break;
+        }
+        return errorText;
     }
 }

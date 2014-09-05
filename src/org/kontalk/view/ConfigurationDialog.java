@@ -18,8 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.filechooser.FilesSelectionListener;
-import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.checkbox.WebCheckBox;
@@ -31,15 +29,12 @@ import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.io.File;
-import java.util.List;
 import javax.swing.JFrame;
 import org.kontalk.KonConf;
 
@@ -96,38 +91,6 @@ public final class ConfigurationDialog extends WebDialog {
         GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
-    }
-
-    private static WebFileChooserField createFileChooser(String path) {
-        final WebFileChooserField fileChooser = new WebFileChooserField();
-        fileChooser.setPreferredWidth(100);
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setShowFileShortName(false);
-        fileChooser.setShowRemoveButton(false);
-        // TODO does not work?
-        //fileChooser.getWebFileChooser().setFileSelectionMode(JFileChooser.FILES_ONLY);
-        File file = new File(path);
-        if (file.exists()) {
-            fileChooser.setSelectedFile(new File(path));
-        } else {
-            fileChooser.setBorderColor(Color.RED);
-        }
-
-        if (file.getParentFile() != null && file.getParentFile().exists())
-            fileChooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
-
-        fileChooser.addSelectedFilesListener(new FilesSelectionListener() {
-            @Override
-            public void selectionChanged(List<File> files) {
-                for (File file : files) {
-                    if (file.exists()) {
-                        fileChooser.setBorderColor(Color.BLACK);
-                    }
-                }
-            }
-        });
-
-        return fileChooser;
     }
 
     private class MainPanel extends WebPanel {
@@ -190,8 +153,6 @@ public final class ConfigurationDialog extends WebDialog {
     private class AccountPanel extends WebPanel {
 
             private final WebTextField mServerField;
-            private final WebFileChooserField mZipFileChooser;
-            private final WebTextField mPassField;
 
         public AccountPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -210,22 +171,14 @@ public final class ConfigurationDialog extends WebDialog {
             groupPanel.add(mServerField);
             groupPanel.add(new WebSeparator(true, true));
 
-            // file chooser for key files
-            groupPanel.add(new WebLabel("Zip archive containing personal key:"));
-            mZipFileChooser = createFileChooser(mConf.getString(KonConf.ACC_ARCHIVE));
-            groupPanel.add(mZipFileChooser);
-            groupPanel.add(new WebSeparator(true, true));
-
-            // text field for passphrase
-            groupPanel.add(new WebLabel("Password for key:"));
-            mPassField = new WebTextField(42);
-            if (mConf.getString(KonConf.ACC_PASS).isEmpty()) {
-                mPassField.setInputPrompt("Enter password...");
-                mPassField.setHideInputPromptOnFocus(false);
-            } else {
-                mPassField.setText(mConf.getString(KonConf.ACC_PASS));
-            }
-            groupPanel.add(mPassField);
+            WebButton importButton = new WebButton("Import new Account");
+            importButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    mViewModel.showImportWizard();
+                }
+            });
+            groupPanel.add(importButton);
 
             this.add(groupPanel, BorderLayout.CENTER);
 
@@ -247,13 +200,6 @@ public final class ConfigurationDialog extends WebDialog {
 
         private void saveConfiguration() {
             mConf.setProperty(KonConf.SERV_HOST, mServerField.getText());
-
-            if (!mZipFileChooser.getSelectedFiles().isEmpty()) {
-                File file = mZipFileChooser.getSelectedFiles().get(0);
-                mConf.setProperty(KonConf.ACC_ARCHIVE, file.getAbsolutePath());
-            }
-
-            mConf.setProperty(KonConf.ACC_PASS, mPassField.getText());
         }
     }
 
