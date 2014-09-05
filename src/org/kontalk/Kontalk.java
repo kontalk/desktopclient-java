@@ -46,18 +46,24 @@ import org.kontalk.view.View;
 public final class Kontalk {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
+    private static Kontalk INSTANCE = null;
+
     public enum Status {
         DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN, FAILED
     }
 
-    private ServerSocket mRun = null;
+    private ServerSocket mRun;
+
     private final KonConf mConfig;
+
     private final Client mClient;
     private final View mView;
     private final UserList mUserList;
     private final ThreadList mThreadList;
     private final MessageList mMessageList;
+
     private final String mConfigDir;
+
     private Status mCurrentStatus = Status.DISCONNECTED;
 
     static {
@@ -65,8 +71,7 @@ public final class Kontalk {
         PGP.registerProvider();
     }
 
-    public Kontalk(String[] args) {
-
+    private Kontalk(String[] args) {
         // check if already running
         try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
@@ -100,6 +105,12 @@ public final class Kontalk {
         mClient = new Client(this);
 
         mView = new View(this);
+
+        INSTANCE = this;
+    }
+
+    public String getConfigDir() {
+        return mConfigDir;
     }
 
     public void start() {
@@ -220,6 +231,10 @@ public final class Kontalk {
             String className = this.getClass().getEnclosingClass().getName();
             LOGGER.log(Level.WARNING, "Usage: java {0} [USERNAME [SERVER:PORT]]", className);
         }
+    }
+
+    public static Kontalk getInstance() {
+        return INSTANCE;
     }
 
     /**
