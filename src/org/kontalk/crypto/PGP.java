@@ -30,7 +30,6 @@ import java.security.SignatureException;
 import java.security.spec.ECGenParameterSpec;
 import java.util.Date;
 import java.util.Iterator;
-
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPEncryptedData;
@@ -49,6 +48,7 @@ import org.bouncycastle.openpgp.PGPUserAttributeSubpacketVector;
 import org.bouncycastle.openpgp.PGPUtil;
 import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
+import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
 import org.bouncycastle.openpgp.operator.PGPDigestCalculator;
 import org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
@@ -342,6 +342,31 @@ public final class PGP {
     public static PublicKey convertPublicKey(PGPPublicKey key) throws PGPException {
     	ensureKeyConverter();
     	return sKeyConverter.getPublicKey(key);
+    }
+
+    public static PGPSecretKeyRing copySecretKeyRingWithNewPassword(byte[] privateKeyData,
+            String oldPassphrase, String newPassphrase) throws PGPException, IOException {
+
+        // load the secret key ring
+        KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
+        PGPSecretKeyRing secRing = new PGPSecretKeyRing(privateKeyData, fpr);
+
+        return copySecretKeyRingWithNewPassword(secRing, oldPassphrase, newPassphrase);
+    }
+
+    public static PGPSecretKeyRing copySecretKeyRingWithNewPassword(PGPSecretKeyRing secRing,
+            String oldPassphrase, String newPassphrase) throws PGPException {
+
+        PGPDigestCalculatorProvider sha1CalcProv = new JcaPGPDigestCalculatorProviderBuilder().build();
+        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(sha1CalcProv)
+            .setProvider(PGP.PROVIDER)
+            .build(oldPassphrase.toCharArray());
+
+        PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
+        PBESecretKeyEncryptor encryptor = new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.AES_256, sha1Calc)
+            .setProvider(PROVIDER).build(newPassphrase.toCharArray());
+
+        return PGPSecretKeyRing.copyWithNewPassword(secRing, decryptor, encryptor);
     }
 
 
