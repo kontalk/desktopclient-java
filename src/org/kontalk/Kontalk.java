@@ -149,7 +149,6 @@ public final class Kontalk {
 
     public void connect() {
         Account account = Account.getInstance();
-        // TODO new account for each connection?
         try {
             account.reload();
         } catch (KonException ex) {

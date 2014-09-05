@@ -65,9 +65,8 @@ final class ImportDialog extends WebDialog {
     private ImportPage mCurrentPage;
 
     ImportDialog() {
-
         this.setTitle("Import Wizard");
-        this.setSize(480, 300);
+        this.setSize(420, 260);
 
         this.setResizable(false);
         this.setModal(true);
@@ -287,7 +286,7 @@ final class ImportDialog extends WebDialog {
 
             this.add(groupPanel);
         }
-        
+
     }
 
 }

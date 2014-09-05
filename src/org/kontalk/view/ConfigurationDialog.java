@@ -37,6 +37,9 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import javax.swing.JFrame;
 import org.kontalk.KonConf;
+import org.kontalk.KonException;
+import org.kontalk.crypto.PersonalKey;
+import org.kontalk.model.Account;
 
 /**
  *
@@ -152,7 +155,8 @@ public final class ConfigurationDialog extends WebDialog {
 
     private class AccountPanel extends WebPanel {
 
-            private final WebTextField mServerField;
+        private final WebTextField mServerField;
+        private final WebLabel mFingerprintLabel;
 
         public AccountPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -170,12 +174,16 @@ public final class ConfigurationDialog extends WebDialog {
 
             groupPanel.add(mServerField);
             groupPanel.add(new WebSeparator(true, true));
+            mFingerprintLabel = new WebLabel();
+            this.updateFingerprint();
+            groupPanel.add(mFingerprintLabel);
 
             WebButton importButton = new WebButton("Import new Account");
             importButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     mViewModel.showImportWizard();
+                    AccountPanel.this.updateFingerprint();
                 }
             });
             groupPanel.add(importButton);
@@ -198,9 +206,23 @@ public final class ConfigurationDialog extends WebDialog {
             this.add(buttonPanel, BorderLayout.SOUTH);
         }
 
+        private void updateFingerprint() {
+            try {
+                Account.getInstance().reload();
+            } catch (KonException ex) {
+                // ignore
+            }
+            PersonalKey personalKey = Account.getInstance().getPersonalKey();
+            String fingerprint = "- no key loaded -";
+            if (personalKey != null)
+                fingerprint = personalKey.getFingerprint();
+            mFingerprintLabel.setText("Key fingerprint: "+fingerprint);
+        }
+
         private void saveConfiguration() {
             mConf.setProperty(KonConf.SERV_HOST, mServerField.getText());
         }
+
     }
 
     private class PrivacyPanel extends WebPanel {
