@@ -335,11 +335,13 @@ public final class MainFrame extends WebFrame {
 
     private void showAboutDialog() {
         WebPanel aboutPanel = new WebPanel();
-        aboutPanel.add(new WebLabel("Kontalk Java Client v0.1"));
+        aboutPanel.add(new WebLabel("Kontalk Java Client v0.1"), BorderLayout.NORTH);
         WebLinkLabel linkLabel = new WebLinkLabel();
         linkLabel.setLink("http://www.kontalk.org");
         linkLabel.setText("Visit kontalk.org");
-        aboutPanel.add(linkLabel, BorderLayout.SOUTH);
+        aboutPanel.add(linkLabel, BorderLayout.CENTER);
+        WebLabel soundLabel = new WebLabel("Notification sound by: FxProSound");
+        aboutPanel.add(soundLabel);
         Icon icon = View.getIcon("kontalk.png");
         WebOptionPane.showMessageDialog(this,
                 aboutPanel,
