@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
@@ -34,7 +35,7 @@ import org.kontalk.crypto.Coder;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class MessageList {
+public final class MessageList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static MessageList INSTANCE;
@@ -136,6 +137,9 @@ public final class MessageList {
 
         thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);
+
+        this.setChanged();
+        this.notifyObservers(newMessage);
     }
 
     public Collection<KonMessage> getMessages() {

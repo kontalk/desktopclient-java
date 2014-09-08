@@ -20,33 +20,19 @@ package org.kontalk.view;
 
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
-import com.alee.laf.StyleConstants;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
-import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.notification.NotificationListener;
-import com.alee.managers.notification.NotificationManager;
-import com.alee.managers.notification.NotificationOption;
-import com.alee.managers.notification.WebNotificationPopup;
-import com.alee.managers.popup.PopupStyle;
 import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.TooltipWay;
 import java.awt.AWTException;
-import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.GraphicsConfiguration;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
 import java.awt.Image;
-import java.awt.Rectangle;
 import java.awt.SystemTray;
 import java.awt.Toolkit;
 import java.awt.TrayIcon;
@@ -76,6 +62,7 @@ import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.model.KonThread;
+import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
@@ -87,11 +74,9 @@ import org.kontalk.model.UserList;
 public final class View {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
+    public final static String RES_PATH = "org/kontalk/res/";
     final static Color BLUE = new Color(130, 170, 240);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
-
-    private final static Icon NOTIFICATION_ICON = getIcon("ic_msg_pending.png");
-    private final static String ICON_PATH = "org/kontalk/res/";
 
     private final Kontalk mModel;
     private final UserListView mUserListView;
@@ -149,6 +134,9 @@ public final class View {
 
         // hotkeys
         this.setHotkeys();
+
+        // notifier
+        MessageList.getInstance().addObserver(new Notifier());
 
         this.statusChanged();
     }
@@ -371,69 +359,12 @@ public final class View {
         mModel.setUserBlocking(user, blocking);
     }
 
-    // TODO not used
-    void showNotification() {
-        final WebDialog dialog = new WebDialog();
-        dialog.setUndecorated(true);
-        dialog.setBackground(Color.BLACK);
-        dialog.setBackground(StyleConstants.transparent);
-
-        WebNotificationPopup popup = new WebNotificationPopup(PopupStyle.dark);
-        popup.setIcon(getIcon("kontalk_small.png"));
-        popup.setMargin(10);
-        popup.setDisplayTime(6000);
-        popup.addNotificationListener(new NotificationListener() {
-            @Override
-            public void optionSelected(NotificationOption option) {
-            }
-            @Override
-            public void accepted() {
-            }
-            @Override
-            public void closed() {
-                dialog.dispose();
-            }
-        });
-
-        // content
-        WebPanel panel = new WebPanel();
-        panel.setMargin(10);
-        panel.setOpaque(false);
-        WebLabel title = new WebLabel("A new Message!");
-        title.setFontSize(14);
-        title.setForeground(Color.WHITE);
-        panel.add(title, BorderLayout.NORTH);
-        String text = "this is some message, and some longer text was added";
-        WebLabel message = new WebLabel(text);
-        message.setForeground(Color.WHITE);
-        panel.add(message, BorderLayout.CENTER);
-        popup.setContent(panel);
-
-        //popup.packPopup();
-        dialog.setSize(popup.getPreferredSize());
-
-        // set position on screen
-        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        GraphicsDevice gd = ge.getDefaultScreenDevice();
-        GraphicsConfiguration gc = gd.getDefaultConfiguration();
-        Rectangle screenBounds = gc.getBounds();
-        // get height of the task bar
-        // doesn't work on all environments
-        //Insets toolHeight = toolkit.getScreenInsets(popup.getGraphicsConfiguration());
-        int toolHeight  = 40;
-        dialog.setLocation(screenBounds.width - dialog.getWidth() - 10,
-                screenBounds.height - toolHeight - dialog.getHeight());
-
-        dialog.setVisible(true);
-        NotificationManager.showNotification(dialog, popup);
-    }
-
     static Icon getIcon(String fileName) {
         return new ImageIcon(getImage(fileName));
     }
 
     static Image getImage(String fileName) {
-        URL imageUrl = ClassLoader.getSystemResource(ICON_PATH + fileName);
+        URL imageUrl = ClassLoader.getSystemResource(RES_PATH + fileName);
         if (imageUrl == null) {
             LOGGER.warning("can't find icon image resource");;
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
