@@ -81,7 +81,7 @@ final class MessageListener implements PacketListener {
         if (delay == null) {
             delay = m.getExtension("x", "jabber:x:delay");
         }
-        Date date = null;
+        Date date;
         if (delay != null && delay instanceof DelayInformation) {
                 date = ((DelayInformation) delay).getStamp();
                 // TODO if date is in future set it to 'now'
@@ -167,14 +167,14 @@ final class MessageListener implements PacketListener {
     }
 
     private void processReceipt(Message m, ServerReceipt receipt) {
-        if (receipt != null && receipt instanceof SentServerReceipt) {
+        if (receipt instanceof SentServerReceipt) {
             SentServerReceipt sentServerReceipt = (SentServerReceipt) receipt;
             // update message status and save receipt ID
             MessageList.getInstance().updateMsgBySentReceipt(m.getPacketID(),
                     sentServerReceipt.getId());
             return;
         }
-        if (receipt != null && receipt instanceof ReceivedServerReceipt) {
+        if (receipt instanceof ReceivedServerReceipt) {
             ReceivedServerReceipt receivedServerReceipt = (ReceivedServerReceipt) receipt;
             // HOORAY! our message was received
             MessageList.getInstance().updateMsgByReceivedReceipt(
@@ -185,7 +185,7 @@ final class MessageListener implements PacketListener {
             mClient.sendPacket(ack);
             return;
         }
-        if (receipt != null && receipt instanceof AckServerReceipt) {
+        if (receipt instanceof AckServerReceipt) {
             //AckServerReceipt ackServerReceipt = (AckServerReceipt) receipt;
             // TODO it looks like the packet id is used now to identify the
             // 'received' for this acknowledement, unlike the spec says

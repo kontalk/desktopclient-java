@@ -291,7 +291,7 @@ public final class View {
     }
 
     public void handleException(KonException ex) {
-        String errorText = this.getErrorText(ex);
+        String errorText = getErrorText(ex);
         WebOptionPane.showMessageDialog(mMainFrame, errorText, "Error", WebOptionPane.ERROR_MESSAGE);
         this.showImportWizard();
     }
@@ -366,7 +366,7 @@ public final class View {
     static Image getImage(String fileName) {
         URL imageUrl = ClassLoader.getSystemResource(RES_PATH + fileName);
         if (imageUrl == null) {
-            LOGGER.warning("can't find icon image resource");;
+            LOGGER.warning("can't find icon image resource");
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
         }
         return Toolkit.getDefaultToolkit().createImage(imageUrl);

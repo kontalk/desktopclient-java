@@ -147,8 +147,8 @@ public final class X509Bridge {
          * The X.509 Name to be the subject DN is prepared.
          * The CN is extracted from the Secret Key user ID.
          */
-        Vector<DERObjectIdentifier> x509NameOids = new Vector<DERObjectIdentifier>();
-        Vector<String> x509NameValues = new Vector<String>();
+        Vector<DERObjectIdentifier> x509NameOids = new Vector<>();
+        Vector<String> x509NameValues = new Vector<>();
 
         x509NameOids.add(X509Name.O);
         x509NameValues.add(DN_COMMON_PART_O);
@@ -261,19 +261,20 @@ public final class X509Bridge {
          * Sets the signature algorithm.
          */
         String pubKeyAlgorithm = pubKey.getAlgorithm();
-        if (pubKeyAlgorithm.equals("DSA")) {
-            certGenerator.setSignatureAlgorithm("SHA1WithDSA");
-        }
-        else if (pubKeyAlgorithm.equals("RSA")) {
-            certGenerator.setSignatureAlgorithm("SHA1WithRSAEncryption");
-        }
-        else if (pubKeyAlgorithm.equals("ECDSA")) {
-            // TODO is this even legal?
-            certGenerator.setSignatureAlgorithm("SHA1WithECDSA");
-        }
-        else {
-            throw new RuntimeException(
-                    "Algorithm not recognised: " + pubKeyAlgorithm);
+        switch (pubKeyAlgorithm) {
+            case "DSA":
+                certGenerator.setSignatureAlgorithm("SHA1WithDSA");
+                break;
+            case "RSA":
+                certGenerator.setSignatureAlgorithm("SHA1WithRSAEncryption");
+                break;
+            case "ECDSA":
+                // TODO is this even legal?
+                certGenerator.setSignatureAlgorithm("SHA1WithECDSA");
+                break;
+            default:
+                throw new RuntimeException(
+                        "Algorithm not recognised: " + pubKeyAlgorithm);
         }
 
         /*

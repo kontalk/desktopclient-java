@@ -132,7 +132,6 @@ final class ThreadView extends WebScrollPane {
             super();
 
             mThread = thread;
-            mThread.addObserver(this);
 
             //this.setEditable(false);
             //this.setAutoscrolls(true);
@@ -166,6 +165,8 @@ final class ThreadView extends WebScrollPane {
                 MessageView newMessageView = new MessageView(message);
                 mListModel.addElement(newMessageView);
             }
+
+            mThread.addObserver(this);
         }
 
         @Override
@@ -212,7 +213,6 @@ final class ThreadView extends WebScrollPane {
 
             MessageView(KonMessage message) {
                 mMessage = message;
-                mMessage.addObserver(this);
 
                 this.setOpaque(false);
                 this.setMargin(2);
@@ -280,6 +280,8 @@ final class ThreadView extends WebScrollPane {
                 } else {
                     this.add(messagePanel, BorderLayout.EAST);
                 }
+
+                mMessage.addObserver(this);
             }
 
             public int getMessageID() {

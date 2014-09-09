@@ -71,7 +71,6 @@ class ThreadListView extends ListView implements Observer {
 
     ThreadListView(final View modelView, ThreadList threadList) {
         mThreadList = threadList;
-        mThreadList.addObserver(this);
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -135,6 +134,7 @@ class ThreadListView extends ListView implements Observer {
                 }
             }
         });
+        mThreadList.addObserver(this);
     }
 
     void selectThread(int threadID) {
@@ -189,8 +189,6 @@ class ThreadListView extends ListView implements Observer {
         ThreadItemView(KonThread thread) {
             mThread = thread;
 
-            mThread.addObserver(this);
-
             this.setMargin(5);
             this.setLayout(new BorderLayout(10, 5));
 
@@ -212,6 +210,8 @@ class ThreadListView extends ListView implements Observer {
             this.update();
 
             this.setBackground(mBackround);
+
+            mThread.addObserver(this);
         }
 
         KonThread getThread() {

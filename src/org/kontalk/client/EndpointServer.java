@@ -32,9 +32,9 @@ public final class EndpointServer {
     /** Default Kontalk client port. */
     public static final int DEFAULT_PORT = 5222;
 
-    private String mHost;
-    private int mPort;
-    private String mNetwork;
+    private final String mHost;
+    private final int mPort;
+    private final String mNetwork;
 
     public EndpointServer(String network, String host, int port) {
         mNetwork = network.isEmpty() ? KonConf.DEFAULT_SERV_NET : network;

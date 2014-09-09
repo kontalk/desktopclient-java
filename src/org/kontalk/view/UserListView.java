@@ -44,8 +44,6 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
 import javax.swing.ListSelectionModel;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import org.kontalk.Kontalk;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
@@ -68,23 +66,11 @@ final class UserListView extends ListView implements Observer {
         mModelView = modelView;
 
         mUserList = userList;
-        mUserList.addObserver(this);
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         // right click popup menu
         mPopupMenu = new UserPopupMenu();
-
-        // actions triggered by selection
-        this.addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent e) {
-                if (e.getValueIsAdjusting())
-                    return;
-                // TODO ?
-                //modelView.selectedUserChanged(getSelectedUserID());
-            }
-        });
 
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
@@ -115,6 +101,8 @@ final class UserListView extends ListView implements Observer {
                     mTip.closeTooltip();
             }
         });
+
+        mUserList.addObserver(this);
     }
 
     @Override

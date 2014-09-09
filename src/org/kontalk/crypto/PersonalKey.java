@@ -21,6 +21,8 @@ package org.kontalk.crypto;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.SignatureException;
@@ -208,10 +210,11 @@ public final class PersonalKey {
             PGPDecryptedKeyPairRing kp = PGP.create();
             return new PersonalKey(kp, null);
         }
-        catch (Exception e) {
-            IOException io = new IOException("unable to generate keypair");
-            io.initCause(e);
-            throw io;
+        catch (InvalidAlgorithmParameterException |
+                NoSuchAlgorithmException |
+                NoSuchProviderException |
+                PGPException e) {
+            throw new IOException("unable to generate keypair", e);
         }
     }
 
