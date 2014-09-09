@@ -42,10 +42,10 @@ import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Account;
 
 /**
- *
+ * Dialog for showing and changing all application options.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class ConfigurationDialog extends WebDialog {
+final class ConfigurationDialog extends WebDialog {
 
     private static enum ConfPage {MAIN, ACCOUNT};
 

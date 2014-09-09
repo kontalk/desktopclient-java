@@ -51,10 +51,10 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
 /**
- * Display all known user (aka contacts) in a list.
+ * Display all user (aka contacts) in a brief list.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class UserListView extends ListView implements Observer {
+final class UserListView extends ListView implements Observer {
 
     private final View mModelView;
     private final UserList mUserList;

@@ -42,7 +42,7 @@ import org.kontalk.KonException;
 import org.kontalk.model.Account;
 
 /**
- *
+ * Wizard-like dialog for importing new key files.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class ImportDialog extends WebDialog {

@@ -35,18 +35,16 @@ import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.logging.Logger;
 import javax.swing.Icon;
 import org.kontalk.model.KonMessage;
 import org.kontalk.util.MediaUtils;
 import static org.kontalk.view.View.getIcon;
 
 /**
- *
+ * Inform user about events.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class Notifier implements Observer{
-    private final static Logger LOGGER = Logger.getLogger(Notifier.class.getName());
 
     private final static Icon NOTIFICATION_ICON = getIcon("ic_msg_pending.png");
 

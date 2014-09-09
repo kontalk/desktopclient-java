@@ -35,7 +35,7 @@ import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 
 /**
- * A generic list view.
+ * A generic list view for subclassing.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 class ListView extends WebList {

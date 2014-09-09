@@ -68,7 +68,7 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
 /**
- *
+ * Initialize and control the user interface.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class View {

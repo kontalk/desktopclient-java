@@ -23,10 +23,10 @@ import java.awt.Component;
 import javax.swing.ScrollPaneConstants;
 
 /**
- * A generic scroll pane.
+ * A generic scroll pane for direct usage.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class ScrollPane extends WebScrollPane {
+final class ScrollPane extends WebScrollPane {
 
     public ScrollPane(Component component) {
         super(component);

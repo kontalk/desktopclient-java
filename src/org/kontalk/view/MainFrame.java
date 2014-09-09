@@ -53,7 +53,6 @@ import java.awt.event.WindowStateListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Logger;
 import javax.swing.Icon;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
@@ -70,8 +69,7 @@ import org.kontalk.model.UserList;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class MainFrame extends WebFrame {
-    private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
+final class MainFrame extends WebFrame {
 
     public static enum Tab {THREADS, USER};
 
@@ -80,7 +78,7 @@ public final class MainFrame extends WebFrame {
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
 
-    public MainFrame(final View viewModel,
+    MainFrame(final View viewModel,
             ListView userList,
             ListView threadList,
             Component threadView,
