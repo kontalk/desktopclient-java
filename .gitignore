@@ -1,7 +1,7 @@
 *.class
 
 # EDIT:
-/nbproject/
+nbproject/private/
 kontalk.db
 kontalk.properties
 *.pgp
