@@ -209,6 +209,10 @@ public final class Kontalk {
         mView.handleException(ex);
     }
 
+    public void handleSecurityErrors(KonMessage message) {
+        mView.handleSecurityErrors(message);
+    }
+
     public void setUserBlocking(User user, boolean blocking) {
         mClient.sendBlockingCommand(user.getJID(), blocking);
     }

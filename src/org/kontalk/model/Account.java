@@ -107,7 +107,6 @@ public final class Account {
             throw new KonException(KonException.Error.IMPORT_KEY, ex);
         }
 
-
         // key seems valid. Copy to config dir
         try {
             publicKeyData = key.getEncodedPublicKeyRing();

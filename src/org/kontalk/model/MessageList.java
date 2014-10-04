@@ -29,6 +29,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.Database;
+import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
 
 /**
@@ -134,6 +135,10 @@ public final class MessageList extends Observable {
 
         // decrypt and verify message
         Coder.processInMessage(newMessage);
+
+        if (!newMessage.getSecurityErrors().isEmpty()) {
+            Kontalk.getInstance().handleSecurityErrors(newMessage);
+        }
 
         thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);

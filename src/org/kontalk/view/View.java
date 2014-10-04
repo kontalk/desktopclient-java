@@ -28,6 +28,7 @@ import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyData;
+import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.TooltipWay;
 import java.awt.AWTException;
@@ -61,6 +62,8 @@ import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
+import org.kontalk.crypto.Coder;
+import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
@@ -288,6 +291,31 @@ public final class View {
         String errorText = getErrorText(ex);
         WebOptionPane.showMessageDialog(mMainFrame, errorText, "Error", WebOptionPane.ERROR_MESSAGE);
         this.showImportWizard();
+    }
+
+    public void handleSecurityErrors(KonMessage message) {
+        String errorText = "<html>";
+
+        boolean isOut = message.getDir() == KonMessage.Direction.OUT;
+        errorText += isOut ? "Decryption error:" : "Encryption error:";
+
+        for (Coder.Error error : message.getSecurityErrors()) {
+            errorText += "<br>";
+            switch (error) {
+                case UNKNOWN_ERROR:
+                    errorText += "Unknown error";
+                    break;
+                case KEY_UNAVAILABLE:
+                    errorText += "Key for receiver not found.";
+                    break;
+                default:
+                    errorText += "Unusual coder error: " + error.toString();
+            }
+        }
+
+        errorText += "</html>";
+
+        NotificationManager.showNotification(mThreadView, errorText);
     }
 
     void showConfig() {
