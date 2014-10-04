@@ -102,7 +102,7 @@ final class MainFrame extends WebFrame {
                         SystemTray.getSystemTray().getTrayIcons().length > 0)
                     MainFrame.this.toggleState();
                 else
-                    viewModel.shutDown();
+                    viewModel.callShutDown();
             }
         });
 
@@ -162,7 +162,7 @@ final class MainFrame extends WebFrame {
         exitMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                viewModel.shutDown();
+                viewModel.callShutDown();
             }
         });
         konNetMenu.add(exitMenuItem);
@@ -338,7 +338,7 @@ final class MainFrame extends WebFrame {
         linkLabel.setLink("http://www.kontalk.org");
         linkLabel.setText("Visit kontalk.org");
         aboutPanel.add(linkLabel, BorderLayout.CENTER);
-        WebLabel soundLabel = new WebLabel("Notification sound by: FxProSound");
+        WebLabel soundLabel = new WebLabel("Notification sound by FxProSound");
         aboutPanel.add(soundLabel);
         Icon icon = View.getIcon("kontalk.png");
         WebOptionPane.showMessageDialog(this,

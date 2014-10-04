@@ -143,12 +143,7 @@ public final class View {
 
     final void setTray() {
         if (!KonConf.getInstance().getBoolean(KonConf.MAIN_TRAY)) {
-            if (mTrayIcon != null) {
-                // remove tray icon
-                SystemTray tray = SystemTray.getSystemTray();
-                tray.remove(mTrayIcon);
-                mTrayIcon = null;
-            }
+            this.removeTray();
             return;
         }
 
@@ -171,15 +166,12 @@ public final class View {
         quitItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                View.this.shutDown();
+                View.this.callShutDown();
             }
         });
         popup.add(quitItem);
 
-        //final Frame frame = new Frame("");
-        //frame.setVisible(true);
-
-        // create a action listener to listen for default action executed on the tray icon
+        // create an action listener to listen for default action executed on the tray icon
         MouseListener listener = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -271,9 +263,11 @@ public final class View {
                 //    trayIcon.setImage(updatedImage);
                 break;
             case SHUTTING_DOWN:
-                mStatusBarLabel.setText("Shutting down...");
                 mMainFrame.save();
                 mThreadListView.save();
+                this.removeTray();
+                mMainFrame.setVisible(false);
+                mMainFrame.dispose();
                 break;
             case FAILED:
                 mStatusBarLabel.setText("Connecting failed");
@@ -306,7 +300,7 @@ public final class View {
         importFrame.setVisible(true);
     }
 
-    void shutDown() {
+    void callShutDown() {
         mModel.shutDown();
     }
 
@@ -357,6 +351,14 @@ public final class View {
 
     void setUserBlocking(User user, boolean blocking) {
         mModel.setUserBlocking(user, blocking);
+    }
+
+    private void removeTray() {
+        if (mTrayIcon != null) {
+            SystemTray tray = SystemTray.getSystemTray();
+            tray.remove(mTrayIcon);
+            mTrayIcon = null;
+        }
     }
 
     static Icon getIcon(String fileName) {
