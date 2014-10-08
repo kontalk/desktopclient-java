@@ -290,7 +290,6 @@ public final class View {
     public void handleException(KonException ex) {
         String errorText = getErrorText(ex);
         WebOptionPane.showMessageDialog(mMainFrame, errorText, "Error", WebOptionPane.ERROR_MESSAGE);
-        this.showImportWizard();
     }
 
     public void handleSecurityErrors(KonMessage message) {
@@ -318,14 +317,14 @@ public final class View {
         NotificationManager.showNotification(mThreadView, errorText);
     }
 
+    public void showImportWizard() {
+        JDialog importFrame = new ImportDialog();
+        importFrame.setVisible(true);
+    }
+
     void showConfig() {
         JDialog configFrame = new ConfigurationDialog(mMainFrame, this);
         configFrame.setVisible(true);
-    }
-
-    void showImportWizard() {
-        JDialog importFrame = new ImportDialog();
-        importFrame.setVisible(true);
     }
 
     void callShutDown() {

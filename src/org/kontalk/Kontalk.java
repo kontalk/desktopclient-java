@@ -125,6 +125,12 @@ public final class Kontalk {
 
         mView.init();
 
+        // use password option to determine if account was imported
+        if (mConfig.getString(KonConf.ACC_PASS).isEmpty()) {
+            mView.showImportWizard();
+            return;
+        }
+
         if (mConfig.getBoolean(KonConf.MAIN_CONNECT_STARTUP))
             this.connect();
     }
