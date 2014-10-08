@@ -22,16 +22,19 @@ import com.alee.extended.filechooser.FilesSelectionListener;
 import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.text.WebTextField;
+import com.alee.laf.text.WebPasswordField;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.io.File;
 import java.util.EnumMap;
 import java.util.List;
@@ -57,7 +60,7 @@ final class ImportDialog extends WebDialog {
     private final WebButton mCancelButton;
 
     private final WebFileChooserField mZipFileChooser;
-    private final WebTextField mPassField;
+    private final WebPasswordField mPassField;
 
     private final WebLabel mResultLabel;
     private final WebLabel mErrorLabel;
@@ -72,7 +75,7 @@ final class ImportDialog extends WebDialog {
         this.setModal(true);
 
         mZipFileChooser = createFileChooser(".kontalk-keys.zip");
-        mPassField = new WebTextField(42);
+        mPassField = new WebPasswordField(42);
 
         mResultLabel = new WebLabel();
         mErrorLabel = new WebLabel();
@@ -179,7 +182,7 @@ final class ImportDialog extends WebDialog {
 
     private void checkNextButton() {
         mNextButton.setEnabled(!mZipFileChooser.getSelectedFiles().isEmpty() &&
-                        !mPassField.getText().isEmpty());
+                        !String.valueOf(mPassField.getPassword()).isEmpty());
     }
 
     private void importAccount() {
@@ -188,7 +191,7 @@ final class ImportDialog extends WebDialog {
             return;
         }
         String zipPath = mZipFileChooser.getSelectedFiles().get(0).getAbsolutePath();
-        String password = mPassField.getText();
+        String password = new String(mPassField.getPassword());
 
         String errorText = null;
         try {
@@ -264,8 +267,18 @@ final class ImportDialog extends WebDialog {
                     ImportDialog.this.checkNextButton();
                 }
             });
-
             groupPanel.add(mPassField);
+
+            WebCheckBox showPasswordBox = new WebCheckBox("Show password");
+            showPasswordBox.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    System.out.println("set: "+mPassField.getEchoChar());
+                    boolean selected = e.getStateChange() == ItemEvent.SELECTED;
+                    mPassField.setEchoChar(selected ? (char)0 : '*');
+                }
+            });
+            groupPanel.add(showPasswordBox);
 
             this.add(groupPanel);
         }
