@@ -102,6 +102,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     protected Coder.Signing mSigning;
     protected final EnumSet<Coder.Error> mCoderErrors;
 
+    /**
+     * Used by subclasses
+     */
     protected KonMessage(KonThread thread,
             Direction dir,
             Date date,
@@ -109,8 +112,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             User user,
             String jid,
             String xmppID,
-            Status status,
-            boolean encrypted) {
+            Status status) {
         mThread = thread;
         mDir = dir;
 
@@ -124,7 +126,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         mReceiptStatus = status;
 
-        mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
         mCoderErrors = EnumSet.noneOf(Coder.Error.class);
 
         mID = this.insert();

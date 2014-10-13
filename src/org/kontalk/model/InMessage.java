@@ -19,7 +19,6 @@
 package org.kontalk.model;
 
 import java.util.Date;
-import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
 
 /**
@@ -27,7 +26,6 @@ import org.kontalk.crypto.Coder;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class InMessage extends KonMessage {
-    private final static Logger LOGGER = Logger.getLogger(InMessage.class.getName());
 
     /**
      * Used when receiving a new message
@@ -47,11 +45,12 @@ public class InMessage extends KonMessage {
                 user,
                 jid,
                 xmppID,
-                Status.IN,
-                encrypted);
+                Status.IN);
 
         mReceiptID = receiptID;
 
+        // no decryption attempt yet
+        mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
         // if encrypted we don't know yet
         mSigning = encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT;
     }

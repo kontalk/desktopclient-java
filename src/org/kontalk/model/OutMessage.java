@@ -19,7 +19,6 @@
 package org.kontalk.model;
 
 import java.util.Date;
-import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Packet;
 import org.kontalk.crypto.Coder;
 
@@ -28,7 +27,6 @@ import org.kontalk.crypto.Coder;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class OutMessage extends KonMessage{
-    private final static Logger LOGGER = Logger.getLogger(OutMessage.class.getName());
 
     OutMessage(KonThread thread,
             User user,
@@ -41,11 +39,12 @@ public class OutMessage extends KonMessage{
                 user,
                 user.getJID(),
                 Packet.nextID(),
-                Status.PENDING,
-                encrypted);
+                Status.PENDING);
 
         mReceiptID = null;
 
+        // outgoing messages are never saved encrypted
+        mEncryption = encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT;
         // if we want encryption we also want signing, doesn't hurt
         if (encrypted) {
             mSigning = Coder.Signing.SIGNED;
