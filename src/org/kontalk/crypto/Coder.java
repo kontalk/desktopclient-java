@@ -70,7 +70,7 @@ public final class Coder {
      * Signing status of a message.
      * Do not modify, only add! Ordinal used in database.
      */
-    public static enum Signing {NOT, SIGNED, VERIFIED}
+    public static enum Signing {NOT, SIGNED, VERIFIED, UNKNOWN}
 
     /**
      * Errors that can occur during de-/encryption and verification.

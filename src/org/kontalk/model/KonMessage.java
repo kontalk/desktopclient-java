@@ -75,7 +75,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             "encryption_status INTEGER NOT NULL, " +
             // enum, determines if content is verified
             // can only tell if signed after encryption attempt
-            "signing_status INTEGER, " +
+            "signing_status INTEGER NOT NULL, " +
             // encryption and signing errors
             "coder_errors INTEGER NOT NULL, " +
 
@@ -219,9 +219,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         if (signing == mSigning)
             return;
         if (signing == Coder.Signing.NOT)
-            assert mSigning == null;
+            assert mSigning == Coder.Signing.UNKNOWN;
         if (signing == Coder.Signing.SIGNED)
-            assert mSigning == null;
+            assert mSigning == Coder.Signing.UNKNOWN;
         if (signing == Coder.Signing.VERIFIED)
             assert mSigning == Coder.Signing.SIGNED;
         mSigning = signing;

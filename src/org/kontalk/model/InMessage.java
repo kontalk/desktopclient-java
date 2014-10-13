@@ -53,7 +53,7 @@ public class InMessage extends KonMessage {
         mReceiptID = receiptID;
 
         // if encrypted we don't know yet
-        mSigning = encrypted ? null : Coder.Signing.NOT;
+        mSigning = encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT;
     }
 
     public void setDecryptedText(String text) {
