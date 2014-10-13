@@ -198,7 +198,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mReceiptID;
     }
 
-    public String getText() {
+    public String getBody() {
         return mText;
     }
 

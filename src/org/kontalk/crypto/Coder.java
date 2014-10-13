@@ -140,7 +140,7 @@ public final class Coder {
         String from = myKey.getUserId(null);
         String to = PGP.getUserId(receiverKey, null) + "; ";
         String mime = "text/plain";
-        CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, message.getText());
+        CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, message.getBody());
         byte[] plainText = cpim.toByteArray();
 
         // setup data encryptor & generator
@@ -300,7 +300,7 @@ public final class Coder {
             PGPPublicKey senderKey) {
         // note: the signature is inside the encrypted data
 
-        byte[] encryptedData = Base64.decode(message.getText());
+        byte[] encryptedData = Base64.decode(message.getBody());
 
         PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedData);
 

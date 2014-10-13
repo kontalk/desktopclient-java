@@ -244,9 +244,12 @@ final class ThreadView extends WebScrollPane {
                 }
 
                 // text
-                mTextArea = new WebTextArea(mMessage.getText());
+                boolean encrypted = mMessage.getEncryption() == Coder.Encryption.ENCRYPTED;
+                String text = encrypted ? "[encrypted]" : mMessage.getBody();
+                mTextArea = new WebTextArea(text);
                 mTextArea.setOpaque(false);
                 mTextArea.setFontSize(13);
+                mTextArea.setFontStyle(false, encrypted);
                 // save the width that is requied to show the text in one line
                 mPreferredTextAreaWidth = mTextArea.getPreferredSize().width;
                 mTextArea.setLineWrap(true);

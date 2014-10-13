@@ -183,7 +183,7 @@ public final class Client implements PacketListener, Runnable {
 
         if (message.getEncryption() == Coder.Encryption.NOT &&
                 message.getSigning() == Coder.Signing.NOT) {
-            smackMessage.setBody(message.getText());
+            smackMessage.setBody(message.getBody());
         } else {
             byte[] encrypted = Coder.processOutMessage(message);
             // check also for security errors just to be sure
