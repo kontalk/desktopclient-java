@@ -116,7 +116,13 @@ public final class Kontalk {
     public void start() {
         new Thread(mClient).start();
 
-        Database.initialize(this, mConfigDir);
+        try {
+            Database.initialize(mConfigDir);
+        } catch (KonException ex) {
+            LOGGER.log(Level.SEVERE, "can't initialize database", ex);
+            this.shutDown();
+            return;
+        }
 
         // order matters!
         mUserList.load();

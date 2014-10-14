@@ -48,17 +48,15 @@ public final class Database {
     private static Database INSTANCE = null;
     private final String DB_NAME = "kontalk_db.sqlite";
 
-    private final Kontalk mModel;
     private Connection mConn = null;
 
-    private Database(Kontalk model, String path) {
-        mModel = model;
+    private Database(String path) throws KonException {
         // load the sqlite-JDBC driver using the current class loader
         try {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException ex) {
             LOGGER.log(Level.SEVERE, "sqlite-JDBC driver not found", ex);
-            mModel.shutDown();
+            throw new KonException(KonException.Error.DB, ex);
         }
 
         // create database connection
@@ -71,7 +69,7 @@ public final class Database {
           // if the error message is "out of memory",
           // it probably means no database file is found
           LOGGER.log(Level.SEVERE, "can't create database connection", ex);
-          mModel.shutDown();
+          throw new KonException(KonException.Error.DB, ex);
         }
 
         try {
@@ -98,7 +96,7 @@ public final class Database {
                     KonMessage.CREATE_TABLE);
         } catch (SQLException ex) {
             LOGGER.log(Level.SEVERE, "can't create tables", ex);
-            mModel.shutDown();
+            throw new KonException(KonException.Error.DB, ex);
         }
     }
 
@@ -270,13 +268,14 @@ public final class Database {
         return enumSet;
     }
 
-    public static void initialize(Kontalk model, String path) {
-        INSTANCE = new Database(model, path);
+    public static void initialize(String path) throws KonException {
+        INSTANCE = new Database(path);
     }
 
     public static Database getInstance() {
         if (INSTANCE == null) {
             LOGGER.warning("database not initialized");
+            throw new RuntimeException();
         }
         return INSTANCE;
     }

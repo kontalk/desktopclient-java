@@ -19,12 +19,13 @@
 package org.kontalk;
 
 /**
- * Used to pass exceptions from origin to view.
+ * Application internal exceptions.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class KonException extends Exception {
 
     public enum Error {
+        DB,
         IMPORT_ARCHIVE,
         IMPORT_READ_FILE,
         IMPORT_KEY,
