@@ -112,7 +112,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             User user,
             String jid,
             String xmppID,
-            Status status) {
+            Status status,
+            boolean encrypted) {
         mThread = thread;
         mDir = dir;
 
@@ -127,6 +128,18 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mReceiptStatus = status;
 
         mCoderErrors = EnumSet.noneOf(Coder.Error.class);
+
+        if (dir == Direction.OUT) {
+            // outgoing messages are never saved encrypted
+            mEncryption = encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT;
+            // if we want encryption we also want signing, doesn't hurt
+            mSigning = encrypted ? Coder.Signing.SIGNED : Coder.Signing.NOT;
+        } else {
+            // no decryption attempt yet
+            mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
+            // if encrypted we don't know yet
+            mSigning = encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT;
+        }
 
         mID = this.insert();
     }

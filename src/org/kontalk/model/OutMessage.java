@@ -20,7 +20,6 @@ package org.kontalk.model;
 
 import java.util.Date;
 import org.jivesoftware.smack.packet.Packet;
-import org.kontalk.crypto.Coder;
 
 /**
  *
@@ -39,18 +38,10 @@ public class OutMessage extends KonMessage{
                 user,
                 user.getJID(),
                 Packet.nextID(),
-                Status.PENDING);
+                Status.PENDING,
+                encrypted);
 
         mReceiptID = null;
-
-        // outgoing messages are never saved encrypted
-        mEncryption = encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT;
-        // if we want encryption we also want signing, doesn't hurt
-        if (encrypted) {
-            mSigning = Coder.Signing.SIGNED;
-        } else {
-            mSigning = Coder.Signing.NOT;
-        }
     }
 
     void updateBySentReceipt(String receiptID) {

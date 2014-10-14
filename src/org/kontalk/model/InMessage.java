@@ -45,14 +45,10 @@ public class InMessage extends KonMessage {
                 user,
                 jid,
                 xmppID,
-                Status.IN);
+                Status.IN,
+                encrypted);
 
         mReceiptID = receiptID;
-
-        // no decryption attempt yet
-        mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
-        // if encrypted we don't know yet
-        mSigning = encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT;
     }
 
     public void setDecryptedText(String text) {
