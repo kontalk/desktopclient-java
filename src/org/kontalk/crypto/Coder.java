@@ -112,7 +112,7 @@ public final class Coder {
      * @return the encrypted and signed text.
      */
     public static byte[] processOutMessage(KonMessage message) {
-        if (message.getEncryption() != Encryption.ENCRYPTED ||
+        if (message.getEncryption() != Encryption.DECRYPTED ||
                 message.getDir() != KonMessage.Direction.OUT) {
             LOGGER.warning("message does not want to be encrypted");
             return null;
