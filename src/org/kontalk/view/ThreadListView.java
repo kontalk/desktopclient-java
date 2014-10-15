@@ -165,8 +165,8 @@ class ThreadListView extends ListView implements Observer {
 
     void selectLastThread() {
         int i = KonConf.getInstance().getInt(KonConf.VIEW_SELECTED_THREAD);
-        if (i >= 0)
-            this.setSelectedIndex(i);
+        i = i < 0 ? 0 : i;
+        this.setSelectedIndex(i);
     }
 
     void save() {

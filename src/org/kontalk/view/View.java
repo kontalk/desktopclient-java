@@ -242,6 +242,13 @@ public final class View {
         mSendButton.addHotkey(sendHotkey, TooltipWay.up);
     }
 
+    /**
+     * Setup view on startup after model was initialized.
+     */
+    public void init() {
+        mThreadListView.selectLastThread();
+    }
+
     Kontalk.Status getCurrentStatus() {
         return mModel.getCurrentStatus();
     }
@@ -278,13 +285,6 @@ public final class View {
             }
 
         mMainFrame.statusChanged(status);
-    }
-
-    /**
-     * Setup view on startup after model was initialized.
-     */
-    public void init() {
-        mThreadListView.selectLastThread();
     }
 
     public void handleException(KonException ex) {
