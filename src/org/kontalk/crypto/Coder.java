@@ -444,8 +444,8 @@ public final class Coder {
         CPIMMessage cpimMessage;
         try {
             cpimMessage = CPIMMessage.parse(text);
-        } catch (ParseException pe) {
-            LOGGER.warning("can't find valid CPIM data");
+        } catch (ParseException ex) {
+            LOGGER.log(Level.WARNING, "can't find valid CPIM data", ex);
             message.addSecurityError(Error.INVALID_DATA);
             return null;
         }
@@ -458,8 +458,8 @@ public final class Coder {
         //        !mime.equalsIgnoreCase(XMPPUtils.XML_XMPP_TYPE)) {
         //    LOGGER.warning("MIME type mismatch");
         //}
-        // check that the recipient matches the full uid of the personal key
 
+        // check that the recipient matches the full uid of the personal key
         if (!myUid.equals(cpimMessage.getTo())) {
             LOGGER.warning("destination does not match personal key");
             message.addSecurityError(Error.INVALID_RECIPIENT);
@@ -475,7 +475,7 @@ public final class Coder {
         String content = cpimMessage.getBody().toString();
         String plainText;
         if (XMPPUtils.XML_XMPP_TYPE.equalsIgnoreCase(mime)) {
-            LOGGER.fine("CPIM body has XMPP XML format");
+            LOGGER.info("CPIM body has XMPP XML format");
             Message m;
             try {
                 m = XMPPUtils.parseMessageStanza(content);
@@ -483,9 +483,10 @@ public final class Coder {
                 LOGGER.log(Level.WARNING, "can't parse XMPP XML string", ex);
                 return null;
             }
+            LOGGER.info("decrypted message content: "+m.toXML());
             plainText = m.getBody() != null ? m.getBody() : null;
         } else {
-            LOGGER.fine("CPIM body MIME type: "+mime);
+            LOGGER.info("CPIM body MIME type: "+mime);
             plainText = content;
         }
 
