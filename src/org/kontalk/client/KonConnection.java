@@ -50,7 +50,6 @@ public final class KonConnection extends XMPPTCPConnection {
     protected EndpointServer mServer;
 
     private KonConnection(EndpointServer server) throws XMPPException {
-        //super(new AndroidConnectionConfiguration(server.getHost(), server.getPort()));
         super(new ConnectionConfiguration(
                 server.getHost(),
                 server.getPort(),
@@ -62,14 +61,14 @@ public final class KonConnection extends XMPPTCPConnection {
         // disable reconnection
         config.setReconnectionAllowed(false);
         // we don't need the roster
-        // TODO yes, we do
+        // -> yes, we do
         //config.setRosterLoadedAtLogin(false);
         // enable compression
         config.setCompressionEnabled(true);
         // enable encryption
         config.setSecurityMode(SecurityMode.enabled);
         // we will send a custom presence
-        // TODO no, send initial default presence
+        // -> no, send initial default presence
         //config.setSendPresence(false);
     }
 
@@ -96,7 +95,6 @@ public final class KonConnection extends XMPPTCPConnection {
             km = kmFactory.getKeyManagers();
 
             // trust managers
-            // TODO
             TrustManager[] tm = new TrustManager[] {
                 new X509TrustManager() {
                     @Override
@@ -116,12 +114,6 @@ public final class KonConnection extends XMPPTCPConnection {
                 }
             };
 
-            //TODO builtin keystore
-//            TrustManagerFactory tmFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-//            tmFactory.init((KeyStore) null);
-//            tm = tmFactory.getTrustManagers();
-
-
             ctx.init(km, tm, null);
             config.setCustomSSLContext(ctx);
             //config.setSocketFactory(SSLSocketFactory.getDefault());
@@ -133,8 +125,8 @@ public final class KonConnection extends XMPPTCPConnection {
                 IOException |
                 CertificateException |
                 UnrecoverableKeyException |
-                KeyManagementException e) {
-            LOGGER.log(Level.WARNING, "can't setup SSL connection", e);
+                KeyManagementException ex) {
+            LOGGER.log(Level.WARNING, "can't setup SSL connection", ex);
         }
     }
 
