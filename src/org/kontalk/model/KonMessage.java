@@ -262,7 +262,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mDir);
         values.add(mUser.getID());
         values.add(mJID);
-        values.add(mXMPPID);
+        values.add(mXMPPID.isEmpty() ? null : mXMPPID);
         values.add(mDate);
         values.add(mReceiptStatus);
         values.add(mReceiptID.isEmpty() ? null : mReceiptID);
@@ -283,7 +283,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     protected void save() {
        Database db = Database.getInstance();
        Map<String, Object> set = new HashMap();
-       set.put("xmpp_id", mXMPPID);
+       set.put("xmpp_id", mXMPPID.isEmpty() ? null : mXMPPID);
        set.put("receipt_status", mReceiptStatus);
        set.put("receipt_id", mReceiptID.isEmpty() ? null : mReceiptID);
        set.put("content", mContent.toJSONString());

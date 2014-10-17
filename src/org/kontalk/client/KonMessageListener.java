@@ -128,13 +128,15 @@ final public class KonMessageListener implements PacketListener {
             ServerReceiptRequest req = (ServerReceiptRequest) receiptExt;
             receiptID = req.getId() == null ? "" : req.getId();
         }
-        // TODO why!?
-        //if (msgId == null)
-        //    msgId = "incoming" + StringUtils.randomString(6);
+
+        String xmppID = m.getPacketID() != null ? m.getPacketID() : "";
+        if (xmppID.isEmpty()) {
+            LOGGER.warning("message does not have a XMPP ID");
+        }
 
         // add message
         MessageList.getInstance().addFrom(m.getFrom(),
-                m.getPacketID(),
+                xmppID,
                 m.getThread(),
                 date,
                 receiptID,

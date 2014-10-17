@@ -79,7 +79,7 @@ public final class MessageList extends Observable {
 
                 KonMessage.Builder builder = new KonMessage.Builder(id, thread, dir, user);
                 builder.jid(jid);
-                builder.xmppID(xmppID);
+                builder.xmppID(xmppID == null ? "" : xmppID);
                 builder.date(date);
                 builder.receiptStatus(status);
                 builder.receiptID(receiptID == null ? "" : receiptID);
@@ -154,10 +154,11 @@ public final class MessageList extends Observable {
     }
 
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
+        assert !xmppID.isEmpty();
         // TODO performance
         KonMessage message = null;
         for (KonMessage m : mMap.values()) {
-            if (m.getXMPPID() != null && m.getXMPPID().equals(xmppID))
+            if (m.getXMPPID().equals(xmppID))
                 message = m;
         }
         if (message == null) {
