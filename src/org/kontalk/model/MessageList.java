@@ -68,26 +68,28 @@ public final class MessageList extends Observable {
                 int statusIndex = resultSet.getInt("receipt_status");
                 KonMessage.Status status = statusValues[statusIndex];
                 String receiptID = resultSet.getString("receipt_id");
-                String text = resultSet.getString("content");
+                String jsonContent = resultSet.getString("content");
+                MessageContent content = MessageContent.fromJSONString(jsonContent);
                 int encryptionIndex = resultSet.getInt("encryption_status");
                 Coder.Encryption encryption = encryptionValues[encryptionIndex];
                 int signingIndex = resultSet.getInt("signing_status");
                 Coder.Signing signing = signingValues[signingIndex];
                 int errorFlags = resultSet.getInt("coder_errors");
                 EnumSet<Coder.Error> coderErrors = Database.intToEnumSet(Coder.Error.class, errorFlags);
-                KonMessage newMessage = new KonMessage(id,
-                        thread,
-                        dir,
-                        user,
-                        jid,
-                        xmppID,
-                        date,
-                        status,
-                        receiptID,
-                        text,
-                        encryption,
-                        signing,
-                        coderErrors);
+
+                KonMessage.Builder builder = new KonMessage.Builder(id, thread, dir, user);
+                builder.jid(jid);
+                builder.xmppID(xmppID);
+                builder.date(date);
+                builder.receiptStatus(status);
+                builder.receiptID(receiptID == null ? "" : receiptID);
+                builder.content(content);
+                builder.encryption(encryption);
+                builder.signing(signing);
+                builder.coderErrors(coderErrors);
+
+                KonMessage newMessage = builder.build();
+
                 thread.add(newMessage);
                 mMap.put(id, newMessage);
             }
@@ -101,7 +103,9 @@ public final class MessageList extends Observable {
             User user,
             String text,
             boolean encrypted) {
-        OutMessage newMessage = new OutMessage(thread, user, text, encrypted);
+        // TODO more possible content
+        MessageContent content = new MessageContent(text);
+        OutMessage newMessage = new OutMessage(thread, user, content, encrypted);
         thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);
         return newMessage;
@@ -112,8 +116,7 @@ public final class MessageList extends Observable {
             String xmppThreadID,
             Date date,
             String receiptID,
-            String text,
-            boolean encrypted) {
+            MessageContent content) {
         String jid = StringUtils.parseBareAddress(from);
         UserList userList = UserList.getInstance();
         User user = userList.containsUserWithJID(jid) ?
@@ -130,8 +133,7 @@ public final class MessageList extends Observable {
                 xmppID,
                 date,
                 receiptID,
-                text,
-                encrypted);
+                content);
 
         // decrypt and verify message
         Coder.processInMessage(newMessage);

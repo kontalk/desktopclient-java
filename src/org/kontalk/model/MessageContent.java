@@ -109,7 +109,6 @@ public class MessageContent {
         json.put(JSON_FILE_URL, mFileURL != null ? mFileURL.toJSONString() : null);
         json.put(JSON_ENC_CONTENT, mEncryptedContent);
         json.put(JSON_DEC_CONTENT, mDecryptedContent != null ? mDecryptedContent.toJSONString() : null);
-        System.out.println("content json: "+json.toJSONString());
         return json.toJSONString();
     }
 
@@ -144,7 +143,6 @@ public class MessageContent {
             json.put(JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
             json.put(JSON_ENCRYPTED, mEncrypted);
-            System.out.println("file json: "+json.toJSONString());
             return json.toJSONString();
         }
 

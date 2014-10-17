@@ -69,8 +69,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             "receipt_status INTEGER NOT NULL, " +
             // receipt id
             "receipt_id TEXT UNIQUE, " +
-            // message body, de- or encrypted
-            "content BLOB, " +
+            // message content in JSON format
+            "content TEXT NOT NULL, " +
             // enum, determines if content is encrypted
             "encryption_status INTEGER NOT NULL, " +
             // enum, determines if content is verified
@@ -86,17 +86,15 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     private final int mID;
     private final KonThread mThread;
     private final Direction mDir;
-
-    private final Date mDate;
-    protected String mText;
-
-    // TODO
     protected final User mUser;
+
     protected final String mJID;
     protected final String mXMPPID;
 
+    private final Date mDate;
     protected Status mReceiptStatus;
     protected String mReceiptID;
+    protected final MessageContent mContent;
 
     protected Coder.Encryption mEncryption;
     protected Coder.Signing mSigning;
@@ -108,17 +106,18 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     protected KonMessage(KonThread thread,
             Direction dir,
             Date date,
-            String text,
+            MessageContent content,
             User user,
             String jid,
             String xmppID,
             Status status,
+            String receiptID,
             boolean encrypted) {
         mThread = thread;
         mDir = dir;
 
         mDate = date;
-        mText = text;
+        mContent = content;
 
         // TODO group message stuff
         mUser = user;
@@ -126,6 +125,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mXMPPID = xmppID;
 
         mReceiptStatus = status;
+        mReceiptID = receiptID;
 
         mCoderErrors = EnumSet.noneOf(Coder.Error.class);
 
@@ -147,32 +147,20 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     /**
      * Used when loading from database
      */
-    KonMessage(int id,
-            KonThread thread,
-            Direction dir,
-            User user,
-            String jid,
-            String xmppID,
-            Date date,
-            Status status,
-            String receiptID,
-            String text,
-            Coder.Encryption encryption,
-            Coder.Signing signing,
-            EnumSet<Coder.Error> coderErrors) {
-        mID = id;
-        mThread = thread;
-        mDir = dir;
-        mUser = user;
-        mJID = jid;
-        mXMPPID = xmppID;
-        mDate = date;
-        mReceiptStatus = status;
-        mReceiptID = receiptID;
-        mText = text;
-        mEncryption = encryption;
-        mSigning = signing;
-        mCoderErrors = coderErrors;
+    KonMessage(Builder builder) {
+        mID = builder.mID;
+        mThread = builder.mThread;
+        mDir = builder.mDir;
+        mUser = builder.mUser;
+        mJID = builder.mJID;
+        mXMPPID = builder.mXMPPID;
+        mDate = builder.mDate;
+        mReceiptStatus = builder.mReceiptStatus;
+        mReceiptID = builder.mReceiptID;
+        mContent = builder.mContent;
+        mEncryption = builder.mEncryption;
+        mSigning = builder.mSigning;
+        mCoderErrors = builder.mCoderErrors;
     }
 
     public int getID() {
@@ -211,8 +199,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mReceiptID;
     }
 
-    public String getBody() {
-        return mText;
+    public MessageContent getContent() {
+        return mContent;
     }
 
     // TODO
@@ -277,8 +265,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mXMPPID);
         values.add(mDate);
         values.add(mReceiptStatus);
-        values.add(mReceiptID);
-        values.add(mText);
+        values.add(mReceiptID.isEmpty() ? null : mReceiptID);
+        // i simply don't like to save all possible content explicitly in the
+        // database, so we use JSON here
+        values.add(mContent.toJSONString());
         values.add(mEncryption);
         values.add(mSigning);
         values.add(mCoderErrors);
@@ -295,8 +285,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
        Map<String, Object> set = new HashMap();
        set.put("xmpp_id", mXMPPID);
        set.put("receipt_status", mReceiptStatus);
-       set.put("receipt_id", mReceiptID);
-       set.put("content", mText);
+       set.put("receipt_id", mReceiptID.isEmpty() ? null : mReceiptID);
+       set.put("content", mContent.toJSONString());
        set.put("encryption_status", mEncryption);
        set.put("signing_status", mSigning);
        set.put("coder_errors", mCoderErrors);
@@ -307,4 +297,68 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         Database db = Database.getInstance();
         return db.execDelete(TABLE, mID);
     }
+
+    static class Builder {
+        private final int mID;
+        private final KonThread mThread;
+        private final Direction mDir;
+        protected final User mUser;
+
+        protected String mJID = null;
+        protected String mXMPPID = null;
+
+        private Date mDate = null;
+        protected Status mReceiptStatus = null;
+        protected String mReceiptID = null;
+        protected MessageContent mContent = null;
+
+        protected Coder.Encryption mEncryption = null;
+        protected Coder.Signing mSigning = null;
+        protected EnumSet<Coder.Error> mCoderErrors = null;
+
+        /**
+        * Used when loading from database
+        */
+        Builder(int id,
+                KonThread thread,
+                Direction dir,
+                User user) {
+            mID = id;
+            mThread = thread;
+            mDir = dir;
+            mUser = user;
+        }
+
+        void jid(String jid) { mJID = jid; }
+        void xmppID(String xmppID) { mXMPPID = xmppID; }
+
+        void date(Date date) { mDate = date; }
+        void receiptStatus(Status status) { mReceiptStatus = status; }
+        void receiptID(String id) { mReceiptID = id; }
+        void content(MessageContent content) { mContent = content; }
+
+        void encryption(Coder.Encryption encryption) { mEncryption = encryption; }
+        void signing(Coder.Signing signing) { mSigning = signing; }
+        void coderErrors(EnumSet<Coder.Error> coderErrors) { mCoderErrors = coderErrors; }
+
+        KonMessage build() {
+            if (mJID == null ||
+                    mXMPPID == null ||
+                    mDate == null ||
+                    mReceiptStatus == null ||
+                    mReceiptID == null ||
+                    mContent == null ||
+                    mEncryption == null ||
+                    mSigning == null ||
+                    mCoderErrors == null)
+                throw new IllegalStateException();
+
+            if (mDir == Direction.IN)
+                return new InMessage(this);
+            else
+                return new OutMessage(this);
+
+        }
+    }
+
 }

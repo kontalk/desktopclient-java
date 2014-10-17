@@ -28,18 +28,20 @@ import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smack.util.Base64;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
+import org.kontalk.model.MessageContent;
+import org.kontalk.model.MessageContent.FileURL;
 import org.kontalk.model.MessageList;
 
 /**
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class MessageListener implements PacketListener {
-    private final static Logger LOGGER = Logger.getLogger(MessageListener.class.getName());
+final public class KonMessageListener implements PacketListener {
+    private final static Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
 
     private final Client mClient;
 
-    MessageListener(Client client) {
+    KonMessageListener(Client client) {
         mClient = client;
 
         ProviderManager.addExtensionProvider(SentServerReceipt.ELEMENT_NAME, SentServerReceipt.NAMESPACE, new SentServerReceipt.Provider());
@@ -51,6 +53,7 @@ final class MessageListener implements PacketListener {
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
     }
 
+    // TODO synchronize!?
     @Override
     public void processPacket(Packet packet) {
         org.jivesoftware.smack.packet.Message m = (org.jivesoftware.smack.packet.Message) packet;
@@ -94,7 +97,7 @@ final class MessageListener implements PacketListener {
         PacketExtension chatstate = m.getExtension("http://jabber.org/protocol/chatstates");
         if (chatstate != null) {
             LOGGER.info("got chatstate: " + chatstate.getElementName());
-            // TODO (only) the thread needs to be imformed
+            // TODO the thread needs to be imformed
             // thread.processChatState(user, chatStateValue);
             if (!chatstate.getElementName().equals(ChatState.active.name()))
                 return;
@@ -110,44 +113,24 @@ final class MessageListener implements PacketListener {
 
         // must be an incoming message
 
-        // get text from body or encryption extension
-        String text = null;
-        boolean encrypted = false;
-        if (m.getBody() != null) {
-            encrypted = false;
-            text = m.getBody();
-        }
-        PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
-        if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
-            if (m.getBody() != null)
-                LOGGER.warning("message contains encryption and body (ignoring body)");
-            E2EEncryption encryption = (E2EEncryption) encryptionExt;
-            // decrypt later
-            text = Base64.encodeBytes(encryption.getData());
-            encrypted = true;
-        }
+        // get content/text from body and/or encryption/url extension
+        MessageContent content = parseMessageContent(m);
 
-        // out of band data
-        PacketExtension _media = m.getExtension("x", "jabber:x:oob");
-        if (_media != null && _media instanceof OutOfBandData) {
-            LOGGER.info("out of band data not supported yet .(");
+        // make sure not to save a message without content
+        if (content.isEmpty()) {
+            LOGGER.warning("can't find any content in message");
+            return;
         }
 
         // receipt id
-        String receiptID = null;
+        String receiptID = "";
         if (receiptExt != null && receiptExt instanceof ServerReceiptRequest) {
             ServerReceiptRequest req = (ServerReceiptRequest) receiptExt;
-            receiptID = req.getId();
+            receiptID = req.getId() == null ? "" : req.getId();
         }
         // TODO why!?
         //if (msgId == null)
         //    msgId = "incoming" + StringUtils.randomString(6);
-
-        // make sure not to save a message without text
-        if (text == null) {
-            LOGGER.warning("can't find any message text in message");
-            return;
-        }
 
         // add message
         MessageList.getInstance().addFrom(m.getFrom(),
@@ -155,11 +138,10 @@ final class MessageListener implements PacketListener {
                 m.getThread(),
                 date,
                 receiptID,
-                text,
-                encrypted);
+                content);
 
         // send a 'received' for a request
-        if (receiptID != null) {
+        if (!receiptID.isEmpty()) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
             received.addExtension(new ReceivedServerReceipt(receiptID));
             mClient.sendPacket(received);
@@ -194,6 +176,34 @@ final class MessageListener implements PacketListener {
             return;
         }
         LOGGER.warning("unknown server receipt: " + receipt.toXML());
+    }
+
+    public static MessageContent parseMessageContent(Message m) {
+        // default body
+        String plainText = m.getBody() != null ? m.getBody() : "";
+
+        // encryption extension, decrypted later
+        String encryptedContent = "";
+        PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
+        if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
+            if (m.getBody() != null)
+                LOGGER.warning("message contains encryption and body (ignoring body)");
+            E2EEncryption encryption = (E2EEncryption) encryptionExt;
+            encryptedContent = Base64.encodeBytes(encryption.getData());
+        }
+
+        // Out of Band Data: a URI to a file
+        FileURL fileURL = null;
+        PacketExtension oobExt = m.getExtension("x", "jabber:x:oob");
+        if (oobExt!= null && oobExt instanceof OutOfBandData) {
+            LOGGER.info("Parsing Out of Band Data");
+            OutOfBandData oobData = (OutOfBandData) oobExt;
+            fileURL = new MessageContent.FileURL(oobData.getUrl(),
+                    oobData.getMime(),
+                    oobData.getLength(),
+                    oobData.isEncrypted());
+        }
+        return new MessageContent(plainText, fileURL, encryptedContent);
     }
 
 }

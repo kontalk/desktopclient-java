@@ -45,9 +45,11 @@ import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.Base64;
+import org.kontalk.client.KonMessageListener;
 import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
+import org.kontalk.model.MessageContent;
 import org.kontalk.model.User;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.XMPPUtils;
@@ -140,7 +142,9 @@ public final class Coder {
         String from = myKey.getUserId(null);
         String to = PGP.getUserId(receiverKey, null) + "; ";
         String mime = "text/plain";
-        CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, message.getBody());
+        // TODO encrypt more possible content
+        String text = message.getContent().getPlainText();
+        CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, text);
         byte[] plainText = cpim.toByteArray();
 
         // setup data encryptor & generator
@@ -236,7 +240,7 @@ public final class Coder {
             LOGGER.warning("message not encrypted");
             return;
         }
-        LOGGER.fine("decrypting encrypted message...");
+        LOGGER.info("decrypting encrypted message...");
 
         // clear security errors
         message.resetSecurityErrors();
@@ -255,7 +259,7 @@ public final class Coder {
         // parse encrypted CPIM content
         String myUID = myKey.getUserId(null);
         String senderUID = PGP.getUserId(senderKey, null);
-        String text = parseCPIM(message, decryptedBody, myUID, senderUID);
+        MessageContent decryptedContent = parseCPIM(message, decryptedBody, myUID, senderUID);
 
         // TODO we may have a decrypted message stanza, process it
         //parseText(message);
@@ -263,9 +267,8 @@ public final class Coder {
         // check for errors that occured
         if (message.getSecurityErrors().isEmpty()) {
             // everything went better than expected
-            LOGGER.fine("decryption successful");
-            // TODO really overwrite?
-            message.setDecryptedText(text);
+            LOGGER.info("decryption successful");
+            message.setDecryptedContent(decryptedContent);
         } else {
             LOGGER.warning("decryption failed");
         }
@@ -300,7 +303,8 @@ public final class Coder {
             PGPPublicKey senderKey) {
         // note: the signature is inside the encrypted data
 
-        byte[] encryptedData = Base64.decode(message.getBody());
+        String encryptedContent = message.getContent().getEncryptedContent();
+        byte[] encryptedData = Base64.decode(encryptedContent);
 
         PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedData);
 
@@ -436,7 +440,7 @@ public final class Coder {
     /**
      * Parse and verify CPIM ( https://tools.ietf.org/html/rfc3860 ).
      */
-    private static String parseCPIM(KonMessage message,
+    private static MessageContent parseCPIM(KonMessage message,
             String text,
             String myUid,
             String senderKeyUID) {
@@ -473,7 +477,7 @@ public final class Coder {
         // TODO check DateTime (possibly compare it with <delay/>)
 
         String content = cpimMessage.getBody().toString();
-        String plainText;
+        MessageContent decryptedContent;
         if (XMPPUtils.XML_XMPP_TYPE.equalsIgnoreCase(mime)) {
             LOGGER.info("CPIM body has XMPP XML format");
             Message m;
@@ -484,13 +488,13 @@ public final class Coder {
                 return null;
             }
             LOGGER.info("decrypted message content: "+m.toXML());
-            plainText = m.getBody() != null ? m.getBody() : null;
+            decryptedContent = KonMessageListener.parseMessageContent(m);
         } else {
             LOGGER.info("CPIM body MIME type: "+mime);
-            plainText = content;
+            decryptedContent = new MessageContent(content);
         }
 
-        return plainText;
+        return decryptedContent;
     }
 
 }

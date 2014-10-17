@@ -99,7 +99,7 @@ public final class Client implements PacketListener, Runnable {
         RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
         mConn.getRoster().addRosterListener(rl);
         PacketFilter messageFilter = new PacketTypeFilter(Message.class);
-        mConn.addPacketListener(new MessageListener(this), messageFilter);
+        mConn.addPacketListener(new KonMessageListener(this), messageFilter);
         PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
         mConn.addPacketListener(new VCardListener(), vCardFilter);
         PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
@@ -183,7 +183,8 @@ public final class Client implements PacketListener, Runnable {
 
         if (message.getEncryption() == Coder.Encryption.NOT &&
                 message.getSigning() == Coder.Signing.NOT) {
-            smackMessage.setBody(message.getBody());
+            // TODO send more possible content
+            smackMessage.setBody(message.getContent().getPlainText());
         } else {
             byte[] encrypted = Coder.processOutMessage(message);
             // check also for security errors just to be sure

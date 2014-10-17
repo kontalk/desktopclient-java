@@ -27,26 +27,40 @@ import org.jivesoftware.smack.packet.Packet;
  */
 public class OutMessage extends KonMessage{
 
+    /**
+     * Used when creating new message.
+     * TODO change to builder
+     * @param thread
+     * @param user
+     * @param content
+     * @param encrypted
+     */
     OutMessage(KonThread thread,
             User user,
-            String text,
+            MessageContent content,
             boolean encrypted) {
         super(thread,
                 Direction.OUT,
                 new Date(),
-                text,
+                content,
                 user,
                 user.getJID(),
                 Packet.nextID(),
                 Status.PENDING,
+                "",
                 encrypted);
+    }
 
-        mReceiptID = null;
+    /**
+     * Used when loading from database
+     */
+    OutMessage(KonMessage.Builder builder) {
+        super(builder);
     }
 
     void updateBySentReceipt(String receiptID) {
         assert mReceiptStatus == Status.PENDING;
-        assert mReceiptID == null;
+        assert mReceiptID.isEmpty();
         mReceiptID = receiptID;
         mReceiptStatus = Status.SENT;
         this.save();
@@ -56,7 +70,7 @@ public class OutMessage extends KonMessage{
 
     void updateByReceivedReceipt() {
         assert mReceiptStatus == Status.SENT;
-        assert mReceiptID != null;
+        assert !mReceiptID.isEmpty();
         mReceiptStatus = Status.RECEIVED;
         this.save();
         this.setChanged();

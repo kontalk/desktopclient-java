@@ -28,7 +28,8 @@ import org.kontalk.crypto.Coder;
 public class InMessage extends KonMessage {
 
     /**
-     * Used when receiving a new message
+     * Used when receiving a new message.
+     * TODO change to builder
      */
     InMessage(KonThread thread,
             User user,
@@ -36,24 +37,29 @@ public class InMessage extends KonMessage {
             String xmppID,
             Date date,
             String receiptID,
-            String text,
-            boolean encrypted) {
+            MessageContent content) {
         super(thread,
                 Direction.IN,
                 date,
-                text,
+                content,
                 user,
                 jid,
                 xmppID,
                 Status.IN,
-                encrypted);
-
-        mReceiptID = receiptID;
+                receiptID,
+                !content.getEncryptedContent().isEmpty());
     }
 
-    public void setDecryptedText(String text) {
+    /**
+     * Used when loading from database
+     */
+    InMessage(KonMessage.Builder builder) {
+        super(builder);
+    }
+
+    public void setDecryptedContent(MessageContent decryptedContent) {
         assert mEncryption == Coder.Encryption.ENCRYPTED;
-        mText = text;
+        mContent.setDecryptedContent(decryptedContent);
         mEncryption = Coder.Encryption.DECRYPTED;
         super.save();
     }

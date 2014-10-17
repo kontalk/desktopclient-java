@@ -245,7 +245,8 @@ final class ThreadView extends WebScrollPane {
 
                 // text
                 boolean encrypted = mMessage.getEncryption() == Coder.Encryption.ENCRYPTED;
-                String text = encrypted ? "[encrypted]" : mMessage.getBody();
+                // TODO display all possible content
+                String text = encrypted ? "[encrypted]" : mMessage.getContent().getText();
                 mTextArea = new WebTextArea(text);
                 mTextArea.setOpaque(false);
                 mTextArea.setFontSize(13);
