@@ -188,8 +188,8 @@ public final class Kontalk {
             // send all pending messages
             for (KonMessage m : mMessageList.getMessages()) {
                 if (m.getReceiptStatus() == KonMessage.Status.PENDING) {
-                    // TODO
-                    //mClient.sendMessage(m);
+                    assert m instanceof OutMessage;
+                    mClient.sendMessage((OutMessage) m);
                 }
             }
             // send vcard/public key requests for kontalk users with missing key
