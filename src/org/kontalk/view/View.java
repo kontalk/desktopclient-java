@@ -57,6 +57,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.ToolTipManager;
 import org.bouncycastle.openpgp.PGPException;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.kontalk.KonConf;
@@ -448,6 +449,9 @@ public final class View {
                 }
                 if (ex.getExceptionClass().equals(SSLHandshakeException.class)) {
                     errorText += eol + "The server rejects the key.";
+                }
+                if (ex.getExceptionClass().equals(SmackException.NoResponseException.class)) {
+                    errorText += eol + "The server does not respond.";
                 }
                 break;
             case CLIENT_LOGIN:
