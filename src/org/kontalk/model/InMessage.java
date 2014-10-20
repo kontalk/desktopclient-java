@@ -18,7 +18,7 @@
 
 package org.kontalk.model;
 
-import java.util.Date;
+import java.util.EnumSet;
 import org.kontalk.crypto.Coder;
 
 /**
@@ -27,32 +27,6 @@ import org.kontalk.crypto.Coder;
  */
 public class InMessage extends KonMessage {
 
-    /**
-     * Used when receiving a new message.
-     * TODO change to builder
-     */
-    InMessage(KonThread thread,
-            User user,
-            String jid,
-            String xmppID,
-            Date date,
-            String receiptID,
-            MessageContent content) {
-        super(thread,
-                Direction.IN,
-                date,
-                content,
-                user,
-                jid,
-                xmppID,
-                Status.IN,
-                receiptID,
-                !content.getEncryptedContent().isEmpty());
-    }
-
-    /**
-     * Used when loading from database
-     */
     InMessage(KonMessage.Builder builder) {
         super(builder);
     }
@@ -62,6 +36,42 @@ public class InMessage extends KonMessage {
         mContent.setDecryptedContent(decryptedContent);
         mEncryption = Coder.Encryption.DECRYPTED;
         super.save();
+    }
+
+    static class Builder extends KonMessage.Builder {
+
+        Builder(KonThread thread, User user) {
+            super(-1, thread, Direction.IN, user);
+
+            mReceiptStatus = Status.IN;
+
+            mCoderErrors = EnumSet.noneOf(Coder.Error.class);
+        }
+
+        @Override
+        void content(MessageContent content) {
+            super.content(content);
+
+            boolean encrypted = !content.getEncryptedContent().isEmpty();
+            // no decryption attempt yet
+            mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
+            // if encrypted we don't know yet
+            mSigning = encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT;
+        }
+
+        @Override
+        void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
+        @Override
+        void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
+        @Override
+        void signing(Coder.Signing signing) { throw new UnsupportedOperationException(); }
+        @Override
+        void coderErrors(EnumSet<Coder.Error> coderErrors) { throw new UnsupportedOperationException(); }
+
+        @Override
+        InMessage build() {
+            return new InMessage(this);
+        }
     }
 
 }

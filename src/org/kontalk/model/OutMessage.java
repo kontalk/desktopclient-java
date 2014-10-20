@@ -19,7 +19,9 @@
 package org.kontalk.model;
 
 import java.util.Date;
+import java.util.EnumSet;
 import org.jivesoftware.smack.packet.Packet;
+import org.kontalk.crypto.Coder;
 
 /**
  *
@@ -27,33 +29,6 @@ import org.jivesoftware.smack.packet.Packet;
  */
 public class OutMessage extends KonMessage{
 
-    /**
-     * Used when creating new message.
-     * TODO change to builder
-     * @param thread
-     * @param user
-     * @param content
-     * @param encrypted
-     */
-    OutMessage(KonThread thread,
-            User user,
-            MessageContent content,
-            boolean encrypted) {
-        super(thread,
-                Direction.OUT,
-                new Date(),
-                content,
-                user,
-                user.getJID(),
-                Packet.nextID(),
-                Status.PENDING,
-                "",
-                encrypted);
-    }
-
-    /**
-     * Used when loading from database
-     */
     OutMessage(KonMessage.Builder builder) {
         super(builder);
     }
@@ -75,6 +50,50 @@ public class OutMessage extends KonMessage{
         this.save();
         this.setChanged();
         this.notifyObservers();
+    }
+
+static class Builder extends KonMessage.Builder {
+
+        Builder(KonThread thread, User user, boolean encrypted) {
+            super(-1, thread, Direction.OUT, user);
+
+            mJID = user.getJID();
+            mXMPPID = Packet.nextID();
+            mDate = new Date();
+            mReceiptStatus = Status.PENDING;
+            mReceiptID = "";
+
+            // outgoing messages are never saved encrypted
+            mEncryption = encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT;
+            // if we want encryption we also want signing, doesn't hurt
+            mSigning = encrypted ? Coder.Signing.SIGNED : Coder.Signing.NOT;
+
+            mCoderErrors = EnumSet.noneOf(Coder.Error.class);
+        }
+
+        @Override
+        void jid(String jid) { throw new UnsupportedOperationException(); }
+        @Override
+        void xmppID(String xmppID) { throw new UnsupportedOperationException(); }
+
+        @Override
+        void date(Date date) { throw new UnsupportedOperationException(); }
+        @Override
+        void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
+        @Override
+        void receiptID(String id) { throw new UnsupportedOperationException(); }
+
+        @Override
+        void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
+        @Override
+        void signing(Coder.Signing signing) { throw new UnsupportedOperationException(); }
+        @Override
+        void coderErrors(EnumSet<Coder.Error> coderErrors) { throw new UnsupportedOperationException(); }
+
+        @Override
+        OutMessage build() {
+            return new OutMessage(this);
+        }
     }
 
 }

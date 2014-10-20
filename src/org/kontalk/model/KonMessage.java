@@ -86,10 +86,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     private final int mID;
     private final KonThread mThread;
     private final Direction mDir;
-    protected final User mUser;
+    private final User mUser;
 
-    protected final String mJID;
-    protected final String mXMPPID;
+    private final String mJID;
+    private final String mXMPPID;
 
     private final Date mDate;
     protected Status mReceiptStatus;
@@ -100,57 +100,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     protected Coder.Signing mSigning;
     protected final EnumSet<Coder.Error> mCoderErrors;
 
-    /**
-     * Used by subclasses
-     */
-    protected KonMessage(KonThread thread,
-            Direction dir,
-            Date date,
-            MessageContent content,
-            User user,
-            String jid,
-            String xmppID,
-            Status status,
-            String receiptID,
-            boolean encrypted) {
-        mThread = thread;
-        mDir = dir;
-
-        mDate = date;
-        mContent = content;
-
-        // TODO group message stuff
-        mUser = user;
-        mJID = jid;
-        mXMPPID = xmppID;
-
-        mReceiptStatus = status;
-        mReceiptID = receiptID;
-
-        mCoderErrors = EnumSet.noneOf(Coder.Error.class);
-
-        if (dir == Direction.OUT) {
-            // outgoing messages are never saved encrypted
-            mEncryption = encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT;
-            // if we want encryption we also want signing, doesn't hurt
-            mSigning = encrypted ? Coder.Signing.SIGNED : Coder.Signing.NOT;
-        } else {
-            // no decryption attempt yet
-            mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
-            // if encrypted we don't know yet
-            mSigning = encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT;
-        }
-
-        mID = this.insert();
-    }
-
-    /**
-     * Used when loading from database
-     */
-    KonMessage(Builder builder) {
-        mID = builder.mID;
+    protected KonMessage(Builder builder) {
         mThread = builder.mThread;
         mDir = builder.mDir;
+        // TODO group message stuff
         mUser = builder.mUser;
         mJID = builder.mJID;
         mXMPPID = builder.mXMPPID;
@@ -161,6 +114,47 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mEncryption = builder.mEncryption;
         mSigning = builder.mSigning;
         mCoderErrors = builder.mCoderErrors;
+
+        if (mJID == null ||
+                mXMPPID == null ||
+                mDate == null ||
+                mReceiptStatus == null ||
+                mReceiptID == null ||
+                mContent == null ||
+                mEncryption == null ||
+                mSigning == null ||
+                mCoderErrors == null)
+            throw new IllegalStateException();
+
+        if (builder.mID >= 0)
+            mID = builder.mID;
+        else
+            mID = this.insert();
+    }
+
+    private int insert() {
+        Database db = Database.getInstance();
+        List<Object> values = new LinkedList();
+        values.add(mThread.getID());
+        values.add(mDir);
+        values.add(mUser.getID());
+        values.add(mJID);
+        values.add(mXMPPID.isEmpty() ? null : mXMPPID);
+        values.add(mDate);
+        values.add(mReceiptStatus);
+        values.add(mReceiptID.isEmpty() ? null : mReceiptID);
+        // i simply don't like to save all possible content explicitly in the
+        // database, so we use JSON here
+        values.add(mContent.toJSONString());
+        values.add(mEncryption);
+        values.add(mSigning);
+        values.add(mCoderErrors);
+
+        int id = db.execInsert(TABLE, values);
+        if (id < 1) {
+            LOGGER.log(Level.WARNING, "couldn't insert message");
+        }
+        return id;
     }
 
     public int getID() {
@@ -255,31 +249,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
     }
 
-    private int insert() {
-        Database db = Database.getInstance();
-        List<Object> values = new LinkedList();
-        values.add(mThread.getID());
-        values.add(mDir);
-        values.add(mUser.getID());
-        values.add(mJID);
-        values.add(mXMPPID.isEmpty() ? null : mXMPPID);
-        values.add(mDate);
-        values.add(mReceiptStatus);
-        values.add(mReceiptID.isEmpty() ? null : mReceiptID);
-        // i simply don't like to save all possible content explicitly in the
-        // database, so we use JSON here
-        values.add(mContent.toJSONString());
-        values.add(mEncryption);
-        values.add(mSigning);
-        values.add(mCoderErrors);
-
-        int id = db.execInsert(TABLE, values);
-        if (id < 1) {
-            LOGGER.log(Level.WARNING, "couldn't insert message");
-        }
-        return id;
-    }
-
     protected void save() {
        Database db = Database.getInstance();
        Map<String, Object> set = new HashMap();
@@ -302,12 +271,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         private final int mID;
         private final KonThread mThread;
         private final Direction mDir;
-        protected final User mUser;
+        private final User mUser;
 
         protected String mJID = null;
         protected String mXMPPID = null;
 
-        private Date mDate = null;
+        protected Date mDate = null;
         protected Status mReceiptStatus = null;
         protected String mReceiptID = null;
         protected MessageContent mContent = null;
@@ -342,23 +311,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         void coderErrors(EnumSet<Coder.Error> coderErrors) { mCoderErrors = coderErrors; }
 
         KonMessage build() {
-            if (mJID == null ||
-                    mXMPPID == null ||
-                    mDate == null ||
-                    mReceiptStatus == null ||
-                    mReceiptID == null ||
-                    mContent == null ||
-                    mEncryption == null ||
-                    mSigning == null ||
-                    mCoderErrors == null)
-                throw new IllegalStateException();
-
             if (mDir == Direction.IN)
                 return new InMessage(this);
             else
                 return new OutMessage(this);
-
         }
+
     }
 
 }

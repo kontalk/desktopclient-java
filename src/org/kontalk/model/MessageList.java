@@ -105,7 +105,10 @@ public final class MessageList extends Observable {
             boolean encrypted) {
         // TODO more possible content
         MessageContent content = new MessageContent(text);
-        OutMessage newMessage = new OutMessage(thread, user, content, encrypted);
+        OutMessage.Builder builder = new OutMessage.Builder(thread, user, encrypted);
+        builder.content(content);
+        OutMessage newMessage = builder.build();
+
         thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);
         return newMessage;
@@ -127,13 +130,13 @@ public final class MessageList extends Observable {
         if (thread == null)
             thread = threadList.getThreadByUser(user);
 
-        InMessage newMessage = new InMessage(thread,
-                user,
-                from,
-                xmppID,
-                date,
-                receiptID,
-                content);
+        InMessage.Builder builder = new InMessage.Builder(thread, user);
+        builder.jid(from);
+        builder.xmppID(xmppID);
+        builder.date(date);
+        builder.receiptID(receiptID);
+        builder.content(content);
+        InMessage newMessage = builder.build();
 
         // decrypt and verify message
         Coder.processInMessage(newMessage);
