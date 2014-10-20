@@ -91,7 +91,7 @@ final class UserListView extends ListView implements Observer {
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    setSelectedIndex(locationToIndex(e.getPoint()));
+                    UserListView.this.setSelectedIndex(locationToIndex(e.getPoint()));
                     UserListView.this.showPopupMenu(e);
                 }
             }

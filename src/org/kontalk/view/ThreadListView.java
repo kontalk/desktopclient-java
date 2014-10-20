@@ -129,8 +129,8 @@ class ThreadListView extends ListView implements Observer {
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    setSelectedIndex(locationToIndex(e.getPoint()));
-                    showPopupMenu(e);
+                    ThreadListView.this.setSelectedIndex(locationToIndex(e.getPoint()));
+                    ThreadListView.this.showPopupMenu(e);
                 }
             }
         });
@@ -146,6 +146,7 @@ class ThreadListView extends ListView implements Observer {
         }
     }
 
+    // nullable
     KonThread getSelectedThread() {
         if (this.getSelectedIndex() == -1)
             return null;
@@ -156,11 +157,15 @@ class ThreadListView extends ListView implements Observer {
     @Override
     public void update(Observable o, Object arg) {
         // TODO
+        KonThread currentThread = this.getSelectedThread();
+        int threadID = currentThread != null ? currentThread.getID() : -1;
         mListModel.clear();
         for (KonThread thread: mThreadList.getThreads()) {
             ThreadItemView newThreadView = new ThreadItemView(thread);
             mListModel.addElement(newThreadView);
         }
+        if (threadID >= 0)
+            this.selectThread(threadID);
     }
 
     void selectLastThread() {
