@@ -45,6 +45,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.Base64;
+import org.kontalk.KonException;
 import org.kontalk.client.KonMessageListener;
 import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
@@ -126,9 +127,11 @@ public final class Coder {
         message.resetSecurityErrors();
 
         // get my key
-        PersonalKey myKey = Account.getInstance().getPersonalKey();
-        if (myKey == null) {
-            LOGGER.warning("can't get personal key");
+        PersonalKey myKey;
+        try {
+            myKey = Account.getInstance().getPersonalKey();
+        } catch (KonException ex) {
+            LOGGER.log(Level.WARNING, "can't get personal key", ex);
             message.addSecurityError(Error.UNKNOWN_ERROR);
             return null;
         }
@@ -207,7 +210,7 @@ public final class Coder {
             in.close();
             literalGen.close();
 
-            // gsenerate the signature, compress, encrypt and write to the "out" stream
+            // generate the signature, compress, encrypt and write to the "out" stream
             try {
                 sigGen.generate().encode(compressedOut);
             } catch (SignatureException ex) {
@@ -246,7 +249,14 @@ public final class Coder {
         message.resetSecurityErrors();
 
         // get my key
-        PersonalKey myKey = Account.getInstance().getPersonalKey();
+        PersonalKey myKey;
+        try {
+            myKey = Account.getInstance().getPersonalKey();
+        } catch (KonException ex) {
+            LOGGER.log(Level.WARNING, "can't get personal key", ex);
+            message.addSecurityError(Error.UNKNOWN_ERROR);
+            return;
+        }
 
         // get sender key
         PGPPublicKey senderKey = getKey(message);

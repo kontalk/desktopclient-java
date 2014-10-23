@@ -55,7 +55,13 @@ public final class Account {
     private Account() {
     }
 
-    public void reload() throws KonException {
+    public PersonalKey getPersonalKey() throws KonException {
+        if (mKey == null)
+            mKey = this.load();
+        return mKey;
+    }
+
+    private PersonalKey load() throws KonException {
         // read key files
         byte[] publicKeyData = readBytesFromFile(PUBLIC_KEY_FILENAME);
         byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
@@ -64,7 +70,7 @@ public final class Account {
         // load key
         String passphrase = KonConf.getInstance().getString(KonConf.ACC_PASS);
         try {
-             mKey = PersonalKey.load(
+             return PersonalKey.load(
                      new ArmoredInputStream(new ByteArrayInputStream(privateKeyData)),
                      new ArmoredInputStream(new ByteArrayInputStream(publicKeyData)),
                      passphrase,
@@ -73,10 +79,6 @@ public final class Account {
             LOGGER.log(Level.WARNING, "can't load personal key", ex);
             throw new KonException(KonException.Error.RELOAD_KEY, ex);
         }
-    }
-
-    public PersonalKey getPersonalKey() {
-        return mKey;
     }
 
     public void importAccount(String zipFilePath, String password) throws KonException {

@@ -207,12 +207,12 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void updateFingerprint() {
+            PersonalKey personalKey = null;
             try {
-                Account.getInstance().reload();
+                personalKey = Account.getInstance().getPersonalKey();
             } catch (KonException ex) {
                 // ignore
             }
-            PersonalKey personalKey = Account.getInstance().getPersonalKey();
             String fingerprint = "- no key loaded -";
             if (personalKey != null)
                 fingerprint = personalKey.getFingerprint();

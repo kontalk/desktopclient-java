@@ -30,6 +30,7 @@ import org.apache.commons.lang.SystemUtils;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.PGP;
+import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Account;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
@@ -160,15 +161,15 @@ public final class Kontalk {
     }
 
     public void connect() {
-        Account account = Account.getInstance();
+        PersonalKey key;
         try {
-            account.reload();
+            key = Account.getInstance().getPersonalKey();
         } catch (KonException ex) {
             // something wrong with the account, tell view
             this.handleException(ex);
             return;
         }
-        mClient.connect(account.getPersonalKey());
+        mClient.connect(key);
     }
 
     public void disconnect() {
