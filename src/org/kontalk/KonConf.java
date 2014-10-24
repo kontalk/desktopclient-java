@@ -59,27 +59,19 @@ public final class KonConf extends PropertiesConfiguration {
 
     private KonConf() {
         super();
-    }
 
-    public void saveToFile() {
-        try {
-            this.save();
-        } catch (ConfigurationException ex) {
-            LOGGER.log(Level.WARNING, "can't save configuration", ex);
-        }
-    }
+        String filePath = Kontalk.getInstance().getConfigDir() + "/kontalk.properties";
 
-    static KonConf initialize(String filePath) {
-        INSTANCE = new KonConf();
-        INSTANCE.setListDelimiter((char) 9);
+        // separate list elements by tab character
+        this.setListDelimiter((char) 9);
 
         try {
-            INSTANCE.load(filePath);
+            this.load(filePath);
         } catch (ConfigurationException ex) {
             LOGGER.info("Configuration not found. Using default values");
         }
 
-        INSTANCE.setFileName(filePath);
+        this.setFileName(filePath);
 
         // init config
         Map<String, Object> map = new HashMap();
@@ -102,7 +94,19 @@ public final class KonConf extends PropertiesConfiguration {
                 INSTANCE.setProperty(e.getKey(), e.getValue());
             }
         }
+    }
 
+    public void saveToFile() {
+        try {
+            this.save();
+        } catch (ConfigurationException ex) {
+            LOGGER.log(Level.WARNING, "can't save configuration", ex);
+        }
+    }
+
+    static KonConf initialize() {
+        if (INSTANCE == null)
+            INSTANCE = new KonConf();
         return INSTANCE;
     }
 

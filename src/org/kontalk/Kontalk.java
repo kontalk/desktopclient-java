@@ -95,7 +95,7 @@ public final class Kontalk {
         if (created)
             LOGGER.info("created configuration directory");
 
-        mConfig = KonConf.initialize(mConfigDir + "/kontalk.properties");
+        mConfig = KonConf.initialize();
 
         parseArgs(args);
 
@@ -262,7 +262,6 @@ public final class Kontalk {
 
         Kontalk model = new Kontalk(args);
         model.start();
-        //model.connect();
     }
 
 }
