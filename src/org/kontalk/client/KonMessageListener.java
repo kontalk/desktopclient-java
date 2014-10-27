@@ -29,7 +29,7 @@ import org.jivesoftware.smack.util.Base64;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageContent.FileURL;
+import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageList;
 
 /**
@@ -195,17 +195,17 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // Out of Band Data: a URI to a file
-        FileURL fileURL = null;
+        Attachment attachment = null;
         PacketExtension oobExt = m.getExtension("x", "jabber:x:oob");
         if (oobExt!= null && oobExt instanceof OutOfBandData) {
             LOGGER.info("Parsing Out of Band Data");
             OutOfBandData oobData = (OutOfBandData) oobExt;
-            fileURL = new MessageContent.FileURL(oobData.getUrl(),
-                    oobData.getMime(),
+            attachment = new MessageContent.Attachment(oobData.getUrl(),
+                    oobData.getMime() != null ? oobData.getMime() : "",
                     oobData.getLength(),
                     oobData.isEncrypted());
         }
-        return new MessageContent(plainText, fileURL, encryptedContent);
+        return new MessageContent(plainText, attachment, encryptedContent);
     }
 
 }

@@ -35,36 +35,35 @@ public class MessageContent {
     // plain message text, empty string if not present
     private final String mPlainText;
     // plain file URL, can be null
-    private final FileURL mFileURL;
+    private final Attachment mAttachment;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
     // decrypted message, can be null
     private MessageContent mDecryptedContent;
 
     private final static String JSON_PLAIN_TEXT = "plain_text";
-    private final static String JSON_FILE_URL = "file_url";
+    private final static String JSON_ATTACHMENT = "attachment";
     private final static String JSON_ENC_CONTENT = "encrypted_content";
     private final static String JSON_DEC_CONTENT = "decrypted_content";
-
 
     public MessageContent(String plainText) {
         this(plainText, null, "");
     }
 
     public MessageContent(String plainText,
-            FileURL fileURL,
+            Attachment attachment,
             String encryptedContent) {
         mPlainText = plainText;
-        mFileURL = fileURL;
+        mAttachment = attachment;
         mEncryptedContent = encryptedContent;
     }
 
     private MessageContent(String plainText,
-            FileURL fileURL,
+            Attachment attachment,
             String encryptedContent,
             MessageContent decryptedContent) {
         mPlainText = plainText;
-        mFileURL = fileURL;
+        mAttachment = attachment;
         mEncryptedContent = encryptedContent;
         mDecryptedContent = decryptedContent;
     }
@@ -86,6 +85,12 @@ public class MessageContent {
         return mPlainText;
     }
 
+    // TODO nullable
+    public Attachment getAttachment() {
+        // possible attachment in encrypted content is ignored
+        return mAttachment;
+    }
+
     public String getEncryptedContent() {
         return mEncryptedContent;
     }
@@ -99,42 +104,99 @@ public class MessageContent {
 
     public boolean isEmpty() {
         return mPlainText.isEmpty() &&
-                mFileURL == null &&
+                mAttachment == null &&
                 mEncryptedContent.isEmpty();
     }
 
     String toJSONString() {
         JSONObject json = new JSONObject();
         json.put(JSON_PLAIN_TEXT, mPlainText);
-        json.put(JSON_FILE_URL, mFileURL != null ? mFileURL.toJSONString() : null);
+        json.put(JSON_ATTACHMENT, mAttachment != null ? mAttachment.toJSONString() : null);
         json.put(JSON_ENC_CONTENT, mEncryptedContent);
         json.put(JSON_DEC_CONTENT, mDecryptedContent != null ? mDecryptedContent.toJSONString() : null);
         return json.toJSONString();
     }
 
-    public static class FileURL {
+    static MessageContent fromJSONString(String jsonContent) {
+        Object obj = JSONValue.parse(jsonContent);
+        try {
+            Map map = (Map) obj;
+            String plainText = (String) map.get(JSON_PLAIN_TEXT);
+            String jsonAttachment = (String) map.get(JSON_ATTACHMENT);
+            Attachment attachment = jsonAttachment == null ?
+                    null :
+                    Attachment.fromJSONString(jsonAttachment);
+            String encryptedContent = (String) map.get(JSON_ENC_CONTENT);
+            String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
+            MessageContent decryptedContent = jsonDecryptedContent == null ?
+                    null :
+                    fromJSONString(jsonDecryptedContent);
+            return new MessageContent(plainText,
+                    attachment,
+                    encryptedContent,
+                    decryptedContent);
+        } catch(ClassCastException ex) {
+            LOGGER.log(Level.WARNING, "can't parse JSON message content", ex);
+            return new MessageContent("");
+        }
+    }
+
+    public static class Attachment {
         private final String mURL;
         private final String mMimeType;
         private final long mLength;
         private final boolean mEncrypted;
+        private String mFileName;
 
         private final static String JSON_URL = "url";
         private final static String JSON_MIME_TYPE = "mime_type";
         private final static String JSON_LENGTH = "length";
         private final static String JSON_ENCRYPTED = "encrypted";
+        private final static String JSON_FILE_NAME = "file_name";
 
-        public FileURL(String url,
+        // used for incoming attachments
+        public Attachment(String url,
                 String mimeType,
                 long length,
-                boolean encrypted)  {
-            // URL can't be null
+                boolean encrypted) {
+            this(url, mimeType, length, encrypted, "");
+        }
+
+        // used when loading from database.
+        public Attachment(String url,
+                String mimeType,
+                long length,
+                boolean encrypted,
+                String fileName)  {
+            // URL to file, empty string by default
             mURL = url;
-            // MIME can be null
+            // MIME of file, empty string by default
             mMimeType = mimeType;
-            // length is -1 if not included
+            // size of file, -1 by default
             mLength = length;
             // is file encrypted? false by default
             mEncrypted = encrypted;
+            // file name of downloaded and encrypted file, empty string by default
+            mFileName = fileName;
+        }
+
+        public String getURL() {
+            return mURL;
+        }
+
+        public boolean isEncrypted() {
+            return mEncrypted;
+        }
+
+        /**
+        * Return name of file or empty string if file wasn't downloaded yet.
+        */
+        public String getFileName() {
+            return mFileName;
+        }
+
+        void setFileName(String fileName) {
+            mFileName = fileName;
         }
 
         private String toJSONString() {
@@ -143,47 +205,28 @@ public class MessageContent {
             json.put(JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
             json.put(JSON_ENCRYPTED, mEncrypted);
+            json.put(JSON_FILE_NAME, mFileName);
             return json.toJSONString();
         }
 
-        static FileURL fromJSONString(String jsonFileURL) {
-            Object obj = JSONValue.parse(jsonFileURL);
+        // TODO nullable
+        static Attachment fromJSONString(String jsonAttachment) {
+            Object obj = JSONValue.parse(jsonAttachment);
             try {
                 Map map = (Map) obj;
                 String url = (String) map.get(JSON_URL);
+                assert url != null;
                 String mimeType = (String) map.get(JSON_MIME_TYPE);
+                if (mimeType == null) mimeType = "";
                 long length = (Long) map.get(JSON_LENGTH);
                 boolean encrypted = (Boolean) map.get(JSON_ENCRYPTED);
-                assert url != null;
-                return new FileURL(url, mimeType, length, encrypted);
+                String fileName = (String) map.get(JSON_FILE_NAME);
+                if (fileName == null) fileName = "";
+                return new Attachment(url, mimeType, length, encrypted, fileName);
             } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON file url", ex);
-                return new FileURL("", null, -1, false);
+                return null;
             }
-        }
-    }
-
-    static MessageContent fromJSONString(String jsonContent) {
-        Object obj = JSONValue.parse(jsonContent);
-        try {
-            Map map = (Map) obj;
-            String plainText = (String) map.get(JSON_PLAIN_TEXT);
-            String jsonFileURL = (String) map.get(JSON_FILE_URL);
-            FileURL fileURL = jsonFileURL == null ?
-                    null :
-                    FileURL.fromJSONString(jsonFileURL);
-            String encryptedContent = (String) map.get(JSON_ENC_CONTENT);
-            String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
-            MessageContent decryptedContent = jsonDecryptedContent == null ?
-                    null :
-                    fromJSONString(jsonDecryptedContent);
-            return new MessageContent(plainText,
-                    fileURL,
-                    encryptedContent,
-                    decryptedContent);
-        } catch(ClassCastException ex) {
-            LOGGER.log(Level.WARNING, "can't parse JSON message content", ex);
-            return new MessageContent("");
         }
     }
 }
