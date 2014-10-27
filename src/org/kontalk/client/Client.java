@@ -61,7 +61,6 @@ public final class Client implements PacketListener, Runnable {
     private static enum Command {CONNECT, DISCONNECT};
 
     private final Kontalk mModel;
-    private final KonConf mConfig;
     protected KonConnection mConn;
 
     // Limited connection flag.
@@ -69,7 +68,6 @@ public final class Client implements PacketListener, Runnable {
 
     public Client(Kontalk model) {
         mModel = model;
-        mConfig = KonConf.getInstance();
         //mLimited = limited;
     }
 
@@ -78,9 +76,10 @@ public final class Client implements PacketListener, Runnable {
         this.disconnect();
         mModel.statusChanged(Kontalk.Status.CONNECTING);
 
-        String network = mConfig.getString("server.network");
-        String host = mConfig.getString("server.host");
-        int port = mConfig.getInt("server.port");
+        KonConf config = KonConf.getInstance();
+        String network = config.getString("server.network");
+        String host = config.getString("server.host");
+        int port = config.getInt("server.port");
         EndpointServer Server = new EndpointServer(network, host, port);
 
         // create connection

@@ -60,7 +60,7 @@ public final class KonConf extends PropertiesConfiguration {
     private KonConf() {
         super();
 
-        String filePath = Kontalk.getInstance().getConfigDir() + "/kontalk.properties";
+        String filePath = Kontalk.getConfigDir() + "/kontalk.properties";
 
         // separate list elements by tab character
         this.setListDelimiter((char) 9);
@@ -90,8 +90,8 @@ public final class KonConf extends PropertiesConfiguration {
         map.put(MAIN_ENTER_SENDS, true);
 
         for(Entry<String, Object> e : map.entrySet()) {
-            if (!INSTANCE.containsKey(e.getKey())) {
-                INSTANCE.setProperty(e.getKey(), e.getValue());
+            if (!this.containsKey(e.getKey())) {
+                this.setProperty(e.getKey(), e.getValue());
             }
         }
     }
@@ -104,13 +104,9 @@ public final class KonConf extends PropertiesConfiguration {
         }
     }
 
-    static KonConf initialize() {
+    public static KonConf getInstance() {
         if (INSTANCE == null)
             INSTANCE = new KonConf();
-        return INSTANCE;
-    }
-
-    public static KonConf getInstance() {
         return INSTANCE;
     }
 }

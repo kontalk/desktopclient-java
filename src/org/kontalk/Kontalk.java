@@ -55,21 +55,27 @@ public final class Kontalk {
 
     private ServerSocket mRun;
 
-    private final KonConf mConfig;
-
     private final Client mClient;
     private final View mView;
     private final UserList mUserList;
     private final ThreadList mThreadList;
     private final MessageList mMessageList;
 
-    private final String mConfigDir;
+    private final static String CONFIG_DIR;
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
     static {
         // register provider
         PGP.registerProvider();
+
+        // use platform dependent configuration directory
+        String homeDir = System.getProperty("user.home");
+        if (SystemUtils.IS_OS_WINDOWS) {
+            CONFIG_DIR = homeDir + "/Kontalk";
+        } else {
+            CONFIG_DIR = homeDir + "/.kontalk";
+        }
     }
 
     private Kontalk(String[] args) {
@@ -84,19 +90,11 @@ public final class Kontalk {
             LOGGER.log(Level.WARNING, "can't create socket", ex);
         }
 
-        // use platform dependent configuration directory
-        String homeDir = System.getProperty("user.home");
-        if (SystemUtils.IS_OS_WINDOWS) {
-            mConfigDir = homeDir + "/Kontalk";
-        } else {
-            mConfigDir = homeDir + "/.kontalk";
-        }
-        boolean created = new File(mConfigDir).mkdirs();
+        boolean created = new File(CONFIG_DIR).mkdirs();
         if (created)
             LOGGER.info("created configuration directory");
 
-        mConfig = KonConf.initialize();
-
+        // TODO remove
         parseArgs(args);
 
         mUserList = UserList.getInstance();
@@ -107,18 +105,15 @@ public final class Kontalk {
 
         mView = new View(this);
 
+        // TODO nein, nein, nein!
         INSTANCE = this;
-    }
-
-    public String getConfigDir() {
-        return mConfigDir;
     }
 
     public void start() {
         new Thread(mClient).start();
 
         try {
-            Database.initialize(mConfigDir);
+            Database.initialize(CONFIG_DIR);
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
             this.shutDown();
@@ -133,12 +128,13 @@ public final class Kontalk {
         mView.init();
 
         // use password option to determine if account was imported
-        if (mConfig.getString(KonConf.ACC_PASS).isEmpty()) {
+        KonConf config = KonConf.getInstance();
+        if (config.getString(KonConf.ACC_PASS).isEmpty()) {
             mView.showImportWizard();
             return;
         }
 
-        if (mConfig.getBoolean(KonConf.MAIN_CONNECT_STARTUP))
+        if (config.getBoolean(KonConf.MAIN_CONNECT_STARTUP))
             this.connect();
     }
 
@@ -151,7 +147,7 @@ public final class Kontalk {
         mClient.disconnect();
         if (Database.getInstance() != null)
             Database.getInstance().close();
-        mConfig.saveToFile();
+        KonConf.getInstance().saveToFile();
         try {
             mRun.close();
         } catch (IOException ex) {
@@ -235,11 +231,12 @@ public final class Kontalk {
         if (args.length == 0)
             return;
         if (args.length == 2 && Pattern.matches(".*:\\d*", args[1])) {
+            KonConf config = KonConf.getInstance();
             String[] argsegs = args[1].split(Pattern.quote(":"));
             if (argsegs[0].length() != 0)
-                mConfig.setProperty("server.host", argsegs[0]);
+                config.setProperty("server.host", argsegs[0]);
             if (argsegs[1].length() != 0)
-                mConfig.setProperty("server.port", Integer.valueOf(argsegs[1]));
+                config.setProperty("server.port", Integer.valueOf(argsegs[1]));
             //client.setUsername(args[0]);
         } else if (args.length == 1 && !Pattern.matches(".*:\\d*", args[0])) {
             //client.setUsername(args[0]);
@@ -247,6 +244,10 @@ public final class Kontalk {
             String className = this.getClass().getEnclosingClass().getName();
             LOGGER.log(Level.WARNING, "Usage: java {0} [USERNAME [SERVER:PORT]]", className);
         }
+    }
+
+    public static String getConfigDir() {
+        return CONFIG_DIR;
     }
 
     public static Kontalk getInstance() {

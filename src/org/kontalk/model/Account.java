@@ -152,7 +152,7 @@ public final class Account {
     }
 
     private static byte[] readBytesFromFile(String filename) throws KonException {
-        String configDir = Kontalk.getInstance().getConfigDir();
+        String configDir = Kontalk.getConfigDir();
         byte[] bytes = null;
         try {
             bytes = Files.readAllBytes(new File(configDir, filename).toPath());
@@ -164,7 +164,7 @@ public final class Account {
     }
 
     private static void writeBytesToFile(byte[] bytes, String filename, boolean armored) throws KonException {
-        String configDir = Kontalk.getInstance().getConfigDir();
+        String configDir = Kontalk.getConfigDir();
         try {
             OutputStream outStream = new FileOutputStream(new File(configDir, filename));
             if (armored)
