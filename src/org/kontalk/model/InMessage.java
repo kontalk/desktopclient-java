@@ -19,13 +19,16 @@
 package org.kontalk.model;
 
 import java.util.EnumSet;
+import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.MessageContent.Attachment;
 
 /**
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class InMessage extends KonMessage {
+    private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     InMessage(KonMessage.Builder builder) {
         super(builder);
@@ -35,8 +38,20 @@ public class InMessage extends KonMessage {
         assert mEncryption == Coder.Encryption.ENCRYPTED;
         mContent.setDecryptedContent(decryptedContent);
         mEncryption = Coder.Encryption.DECRYPTED;
-        super.save();
+        this.save();
     }
+
+    public void setAttachmentFileName(String fileName) {
+        Attachment attachment = this.getContent().getAttachment();
+        if (attachment == null) {
+            LOGGER.warning("no attachment!? can't set filename");
+            return;
+        }
+
+        attachment.setFileName(fileName);
+        this.save();
+        this.changed();
+     }
 
     static class Builder extends KonMessage.Builder {
 

@@ -39,8 +39,7 @@ public class OutMessage extends KonMessage{
         mReceiptID = receiptID;
         mReceiptStatus = Status.SENT;
         this.save();
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
     }
 
     void updateByReceivedReceipt() {
@@ -48,8 +47,7 @@ public class OutMessage extends KonMessage{
         assert !mReceiptID.isEmpty();
         mReceiptStatus = Status.RECEIVED;
         this.save();
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
     }
 
 static class Builder extends KonMessage.Builder {

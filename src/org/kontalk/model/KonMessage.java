@@ -267,6 +267,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return db.execDelete(TABLE, mID);
     }
 
+    protected synchronized void changed() {
+        this.setChanged();
+        this.notifyObservers();
+    }
+
     static class Builder {
         private final int mID;
         private final KonThread mThread;
