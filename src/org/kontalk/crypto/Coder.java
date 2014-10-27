@@ -120,6 +120,11 @@ public final class Coder {
     /** Buffer size for encryption. It should always be a power of 2. */
     private static final int BUFFER_SIZE = 1 << 8;
 
+    // please do not instantiate me
+    private Coder() {
+        throw new AssertionError();
+    }
+
     /**
      * Creates encrypted and signed message body. Errors that may occur are
      * saved to the message.
