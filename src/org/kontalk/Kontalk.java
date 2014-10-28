@@ -49,6 +49,8 @@ public final class Kontalk {
 
     private static Kontalk INSTANCE = null;
 
+    private final static String CONFIG_DIR;
+
     public enum Status {
         DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN, FAILED
     }
@@ -57,11 +59,8 @@ public final class Kontalk {
 
     private final Client mClient;
     private final View mView;
-    private final UserList mUserList;
-    private final ThreadList mThreadList;
-    private final MessageList mMessageList;
 
-    private final static String CONFIG_DIR;
+
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
@@ -97,10 +96,6 @@ public final class Kontalk {
         // TODO remove
         parseArgs(args);
 
-        mUserList = UserList.getInstance();
-        mThreadList = ThreadList.getInstance();
-        mMessageList = MessageList.getInstance();
-
         mClient = new Client(this);
 
         mView = new View(this);
@@ -121,9 +116,9 @@ public final class Kontalk {
         }
 
         // order matters!
-        mUserList.load();
-        mThreadList.load();
-        mMessageList.load();
+        UserList.getInstance().load();
+        ThreadList.getInstance().load();
+        MessageList.getInstance().load();
 
         mView.init();
 
@@ -142,8 +137,8 @@ public final class Kontalk {
         LOGGER.info("Shutting down...");
         mCurrentStatus = Status.SHUTTING_DOWN;
         mView.statusChanged();
-        mUserList.save();
-        mThreadList.save();
+        UserList.getInstance().save();
+        ThreadList.getInstance().save();
         mClient.disconnect();
         if (Database.getInstance() != null)
             Database.getInstance().close();
@@ -183,7 +178,7 @@ public final class Kontalk {
         mView.statusChanged();
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (KonMessage m : mMessageList.getMessages()) {
+            for (KonMessage m : MessageList.getInstance().getMessages()) {
                 if (m.getReceiptStatus() == KonMessage.Status.PENDING) {
                     assert m instanceof OutMessage;
                     mClient.sendMessage((OutMessage) m);
@@ -191,7 +186,7 @@ public final class Kontalk {
             }
             // send vcard/public key requests for kontalk users with missing key
             // TODO also do this when new user is created from roster
-            for (User user : mUserList.getUser()) {
+            for (User user : UserList.getInstance().getUser()) {
                 String network = StringUtils.parseServer(user.getJID());
                 if (user.getFingerprint() == null &&
                         network.equalsIgnoreCase(Client.KONTALK_NETWORK))
@@ -205,7 +200,7 @@ public final class Kontalk {
         // TODO no group chat support yet
         Set<User> user = thread.getUser();
         for (User oneUser: user) {
-            OutMessage newMessage = mMessageList.addTo(
+            OutMessage newMessage = MessageList.getInstance().addTo(
                     thread,
                     oneUser,
                     text,
