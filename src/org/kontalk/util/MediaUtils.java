@@ -33,6 +33,8 @@ public class MediaUtils {
 
     public enum Sound{NOTIFICATION}
 
+    private MediaUtils() { throw new AssertionError(); }
+
     public static void playSound(Sound sound) {
         switch (sound) {
             case NOTIFICATION : play("notification.ogg"); break;

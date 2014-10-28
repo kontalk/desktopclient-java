@@ -34,7 +34,7 @@ public final class XMPPUtils {
 
     public static final String XML_XMPP_TYPE = "application/xmpp+xml";
 
-	private XMPPUtils() {}
+	private XMPPUtils() { throw new AssertionError(); }
 
 	private static XmlPullParserFactory _xmlFactory;
 

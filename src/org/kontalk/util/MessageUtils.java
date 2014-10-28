@@ -22,7 +22,7 @@ public final class MessageUtils {
 
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
 
-    private MessageUtils() {}
+    private MessageUtils() { throw new AssertionError(); }
 
     public static String bytesToHex(byte[] bytes) {
         char[] hexChars = new char[bytes.length * 2];
