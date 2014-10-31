@@ -36,7 +36,7 @@ import java.awt.Rectangle;
 import java.util.Observable;
 import java.util.Observer;
 import javax.swing.Icon;
-import org.kontalk.model.KonMessage;
+import org.kontalk.model.InMessage;
 import org.kontalk.util.MediaUtils;
 import static org.kontalk.view.View.getIcon;
 
@@ -53,12 +53,12 @@ final class Notifier implements Observer{
 
     @Override
     public void update(Observable o, Object arg) {
-        if (!(arg instanceof KonMessage))
+        // handle only incoming messages
+        if (!(arg instanceof InMessage))
             return;
+        //KonMessage newMessage = (InMessage) arg;
 
         MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);
-
-        //KonMessage newMessage = (KonMessage) arg;
     }
 
     // TODO not used

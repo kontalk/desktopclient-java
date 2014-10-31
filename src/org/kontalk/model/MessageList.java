@@ -27,13 +27,12 @@ import java.util.HashMap;
 import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.Database;
-import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
 
 /**
- *
+ * Central list of all messages.
+ * TODO move code for operations on messages to something like a 'message center'
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class MessageList extends Observable {
@@ -99,53 +98,11 @@ public final class MessageList extends Observable {
         }
     }
 
-    public OutMessage addTo(KonThread thread,
-            User user,
-            String text,
-            boolean encrypted) {
-        // TODO more possible content
-        MessageContent content = new MessageContent(text);
-        OutMessage.Builder builder = new OutMessage.Builder(thread, user, encrypted);
-        builder.content(content);
-        OutMessage newMessage = builder.build();
-
-        thread.addMessage(newMessage);
-        mMap.put(newMessage.getID(), newMessage);
-        return newMessage;
-    }
-
-    public void addFrom(String from,
-            String xmppID,
-            String xmppThreadID,
-            Date date,
-            String receiptID,
-            MessageContent content) {
-        String jid = StringUtils.parseBareAddress(from);
-        UserList userList = UserList.getInstance();
-        User user = userList.containsUserWithJID(jid) ?
-                userList.getUserByJID(jid) :
-                userList.addUser(jid, null);
-        ThreadList threadList = ThreadList.getInstance();
-        KonThread thread = threadList.getThreadByXMPPID(xmppThreadID);
-        if (thread == null)
-            thread = threadList.getThreadByUser(user);
-
-        InMessage.Builder builder = new InMessage.Builder(thread, user);
-        builder.jid(from);
-        builder.xmppID(xmppID);
-        builder.date(date);
-        builder.receiptID(receiptID);
-        builder.content(content);
-        InMessage newMessage = builder.build();
-
-        // decrypt and verify message
-        Coder.processInMessage(newMessage);
-
-        if (!newMessage.getSecurityErrors().isEmpty()) {
-            Kontalk.getInstance().handleSecurityErrors(newMessage);
+    public void add(KonMessage newMessage) {
+        if (mMap.containsKey(newMessage.getID())) {
+            LOGGER.warning("message already in message list, id: "+newMessage.getID());
+            return;
         }
-
-        thread.addMessage(newMessage);
         mMap.put(newMessage.getID(), newMessage);
 
         this.setChanged();

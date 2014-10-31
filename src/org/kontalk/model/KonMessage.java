@@ -303,17 +303,17 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             mUser = user;
         }
 
-        void jid(String jid) { mJID = jid; }
-        void xmppID(String xmppID) { mXMPPID = xmppID; }
+        public void jid(String jid) { mJID = jid; }
+        public void xmppID(String xmppID) { mXMPPID = xmppID; }
 
-        void date(Date date) { mDate = date; }
-        void receiptStatus(Status status) { mReceiptStatus = status; }
-        void receiptID(String id) { mReceiptID = id; }
-        void content(MessageContent content) { mContent = content; }
+        public void date(Date date) { mDate = date; }
+        public void receiptStatus(Status status) { mReceiptStatus = status; }
+        public void receiptID(String id) { mReceiptID = id; }
+        public void content(MessageContent content) { mContent = content; }
 
-        void encryption(Coder.Encryption encryption) { mEncryption = encryption; }
-        void signing(Coder.Signing signing) { mSigning = signing; }
-        void coderErrors(EnumSet<Coder.Error> coderErrors) { mCoderErrors = coderErrors; }
+        public void encryption(Coder.Encryption encryption) { mEncryption = encryption; }
+        public void signing(Coder.Signing signing) { mSigning = signing; }
+        public void coderErrors(EnumSet<Coder.Error> coderErrors) { mCoderErrors = coderErrors; }
 
         KonMessage build() {
             if (mDir == Direction.IN)

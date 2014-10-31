@@ -28,6 +28,7 @@ import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smack.util.Base64;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
+import org.kontalk.MessageCenter;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageList;
@@ -135,7 +136,7 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // add message
-        MessageList.getInstance().addFrom(m.getFrom(),
+        MessageCenter.getInstance().newInMessage(m.getFrom(),
                 xmppID,
                 m.getThread(),
                 date,

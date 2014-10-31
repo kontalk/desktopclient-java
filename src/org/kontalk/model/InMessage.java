@@ -53,9 +53,9 @@ public class InMessage extends KonMessage {
         this.changed();
      }
 
-    static class Builder extends KonMessage.Builder {
+    public static class Builder extends KonMessage.Builder {
 
-        Builder(KonThread thread, User user) {
+        public Builder(KonThread thread, User user) {
             super(-1, thread, Direction.IN, user);
 
             mReceiptStatus = Status.IN;
@@ -64,7 +64,7 @@ public class InMessage extends KonMessage {
         }
 
         @Override
-        void content(MessageContent content) {
+        public void content(MessageContent content) {
             super.content(content);
 
             boolean encrypted = !content.getEncryptedContent().isEmpty();
@@ -75,16 +75,16 @@ public class InMessage extends KonMessage {
         }
 
         @Override
-        void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
+        public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
         @Override
-        void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
+        public void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
         @Override
-        void signing(Coder.Signing signing) { throw new UnsupportedOperationException(); }
+        public void signing(Coder.Signing signing) { throw new UnsupportedOperationException(); }
         @Override
-        void coderErrors(EnumSet<Coder.Error> coderErrors) { throw new UnsupportedOperationException(); }
+        public void coderErrors(EnumSet<Coder.Error> coderErrors) { throw new UnsupportedOperationException(); }
 
         @Override
-        InMessage build() {
+        public InMessage build() {
             return new InMessage(this);
         }
     }

@@ -60,8 +60,6 @@ public final class Kontalk {
     private final Client mClient;
     private final View mView;
 
-
-
     private Status mCurrentStatus = Status.DISCONNECTED;
 
     static {
@@ -200,7 +198,7 @@ public final class Kontalk {
         // TODO no group chat support yet
         Set<User> user = thread.getUser();
         for (User oneUser: user) {
-            OutMessage newMessage = MessageList.getInstance().addTo(
+            OutMessage newMessage = MessageCenter.getInstance().newOutMessage(
                     thread,
                     oneUser,
                     text,

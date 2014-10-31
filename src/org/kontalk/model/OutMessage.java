@@ -50,9 +50,9 @@ public class OutMessage extends KonMessage{
         this.changed();
     }
 
-static class Builder extends KonMessage.Builder {
+public static class Builder extends KonMessage.Builder {
 
-        Builder(KonThread thread, User user, boolean encrypted) {
+        public Builder(KonThread thread, User user, boolean encrypted) {
             super(-1, thread, Direction.OUT, user);
 
             mJID = user.getJID();
@@ -70,26 +70,26 @@ static class Builder extends KonMessage.Builder {
         }
 
         @Override
-        void jid(String jid) { throw new UnsupportedOperationException(); }
+        public void jid(String jid) { throw new UnsupportedOperationException(); }
         @Override
-        void xmppID(String xmppID) { throw new UnsupportedOperationException(); }
+        public void xmppID(String xmppID) { throw new UnsupportedOperationException(); }
 
         @Override
-        void date(Date date) { throw new UnsupportedOperationException(); }
+        public void date(Date date) { throw new UnsupportedOperationException(); }
         @Override
-        void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
+        public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
         @Override
-        void receiptID(String id) { throw new UnsupportedOperationException(); }
+        public void receiptID(String id) { throw new UnsupportedOperationException(); }
 
         @Override
-        void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
+        public void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
         @Override
-        void signing(Coder.Signing signing) { throw new UnsupportedOperationException(); }
+        public void signing(Coder.Signing signing) { throw new UnsupportedOperationException(); }
         @Override
-        void coderErrors(EnumSet<Coder.Error> coderErrors) { throw new UnsupportedOperationException(); }
+        public void coderErrors(EnumSet<Coder.Error> coderErrors) { throw new UnsupportedOperationException(); }
 
         @Override
-        OutMessage build() {
+        public OutMessage build() {
             return new OutMessage(this);
         }
     }
