@@ -32,7 +32,6 @@ import org.kontalk.crypto.Coder;
 
 /**
  * Central list of all messages.
- * TODO move code for operations on messages to something like a 'message center'
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class MessageList extends Observable {
@@ -113,8 +112,8 @@ public final class MessageList extends Observable {
         return mMap.values();
     }
 
-    public void updateMsgBySentReceipt(String xmppID, String receiptID) {
-        assert !xmppID.isEmpty();
+    // TODO nullable
+    public OutMessage getMessageByXMPPID(String xmppID) {
         // TODO performance
         KonMessage message = null;
         for (KonMessage m : mMap.values()) {
@@ -122,32 +121,39 @@ public final class MessageList extends Observable {
                 message = m;
         }
         if (message == null) {
-            LOGGER.warning("can't find message with XMPP id: " + xmppID);
-            return;
+            LOGGER.warning("can't find message with XMPP ID: " + xmppID);
+            return null;
         }
-        if (!(message instanceof OutMessage)) {
-            LOGGER.warning("message is not an outgoing message: " + message.getID());
-            return;
-        }
-        ((OutMessage)message).updateBySentReceipt(receiptID);
+        return checkOutMessage(message);
     }
 
-    public void updateMsgByReceivedReceipt(String receiptID) {
+    // TODO nullable
+    public OutMessage getMessageByReceiptID(String receiptID) {
+        if (receiptID.isEmpty()) {
+            LOGGER.warning("ignoring empty receipt ID");
+            return null;
+        }
         // TODO performance
         KonMessage message = null;
-        for (KonMessage m : mMap.values()) {
-            if (m.getReceiptID() != null && m.getReceiptID().equals(receiptID))
+        for (KonMessage m : MessageList.getInstance().getMessages()) {
+            if (m.getReceiptID().equals(receiptID)) {
                 message = m;
+            }
         }
         if (message == null) {
             LOGGER.warning("can't find message with receipt id: " + receiptID);
-            return;
+            return null;
         }
+        return checkOutMessage(message);
+    }
+
+    // TODO nullable
+    private OutMessage checkOutMessage(KonMessage message) {
         if (!(message instanceof OutMessage)) {
             LOGGER.warning("message is not an outgoing message");
-            return;
+            return null;
         }
-        ((OutMessage)message).updateByReceivedReceipt();
+        return (OutMessage) message;
     }
 
     public static MessageList getInstance() {
@@ -156,5 +162,4 @@ public final class MessageList extends Observable {
         }
         return INSTANCE;
     }
-
 }

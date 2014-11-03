@@ -31,7 +31,6 @@ import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.kontalk.MessageCenter;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.model.MessageList;
 
 /**
  *
@@ -155,14 +154,28 @@ final public class KonMessageListener implements PacketListener {
         if (receipt instanceof SentServerReceipt) {
             SentServerReceipt sentServerReceipt = (SentServerReceipt) receipt;
             // update message status and save receipt ID
-            MessageList.getInstance().updateMsgBySentReceipt(m.getPacketID(),
-                    sentServerReceipt.getId());
+            String xmppID = m.getPacketID();
+            if (xmppID == null || xmppID.isEmpty()) {
+                LOGGER.warning("message with receipt has invalid XMPP ID: "+xmppID);
+                return;
+            }
+            String receiptID = sentServerReceipt.getId();
+            if (receiptID == null || receiptID.isEmpty()) {
+                LOGGER.warning("message has invalid receipt ID: "+receiptID);
+                return;
+            }
+            MessageCenter.getInstance().updateMsgBySentReceipt(xmppID, receiptID);
             return;
         }
         if (receipt instanceof ReceivedServerReceipt) {
             ReceivedServerReceipt receivedServerReceipt = (ReceivedServerReceipt) receipt;
+            String receiptID = receivedServerReceipt.getId();
+            if (receiptID == null || receiptID.isEmpty()) {
+                LOGGER.warning("message has invalid receipt ID: "+receiptID);
+                return;
+            }
             // HOORAY! our message was received
-            MessageList.getInstance().updateMsgByReceivedReceipt(
+            MessageCenter.getInstance().updateMsgByReceivedReceipt(
                     receivedServerReceipt.getId());
             // send acknowledgment
             Message ack = new Message(m.getFrom(), Message.Type.chat);

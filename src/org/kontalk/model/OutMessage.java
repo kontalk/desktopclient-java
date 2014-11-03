@@ -33,7 +33,7 @@ public class OutMessage extends KonMessage{
         super(builder);
     }
 
-    void updateBySentReceipt(String receiptID) {
+    public void updateBySentReceipt(String receiptID) {
         assert mReceiptStatus == Status.PENDING;
         assert mReceiptID.isEmpty();
         mReceiptID = receiptID;
@@ -42,7 +42,7 @@ public class OutMessage extends KonMessage{
         this.changed();
     }
 
-    void updateByReceivedReceipt() {
+    public void updateByReceivedReceipt() {
         assert mReceiptStatus == Status.SENT;
         assert !mReceiptID.isEmpty();
         mReceiptStatus = Status.RECEIVED;

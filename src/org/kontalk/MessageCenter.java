@@ -19,6 +19,7 @@
 package org.kontalk;
 
 import java.util.Date;
+import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
@@ -35,6 +36,7 @@ import org.kontalk.model.UserList;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class MessageCenter {
+    private final static Logger LOGGER = Logger.getLogger(MessageCenter.class.getName());
 
     private final static MessageCenter INSTANCE = new MessageCenter();
 
@@ -80,6 +82,24 @@ public class MessageCenter {
         Downloader.getInstance().queueDownload(newMessage);
         thread.addMessage(newMessage);
         MessageList.getInstance().add(newMessage);
+    }
+
+    public void updateMsgBySentReceipt(String xmppID, String receiptID) {
+        OutMessage message = MessageList.getInstance().getMessageByXMPPID(xmppID);
+        if (message == null) {
+            LOGGER.warning("can't find message");
+            return;
+        }
+        ((OutMessage) message).updateBySentReceipt(receiptID);
+    }
+
+    public void updateMsgByReceivedReceipt(String receiptID) {
+        OutMessage message = MessageList.getInstance().getMessageByReceiptID(receiptID);
+        if (message == null) {
+            LOGGER.warning("can't find message");
+            return;
+        }
+        ((OutMessage) message).updateByReceivedReceipt();
     }
 
     public static MessageCenter getInstance() {
