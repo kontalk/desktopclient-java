@@ -38,7 +38,13 @@ import org.kontalk.model.UserList;
 public class MessageCenter {
     private final static Logger LOGGER = Logger.getLogger(MessageCenter.class.getName());
 
-    private final static MessageCenter INSTANCE = new MessageCenter();
+    private static MessageCenter INSTANCE = null;
+
+    private Kontalk mModel;
+
+    private MessageCenter(Kontalk model) {
+        mModel = model;
+    }
 
     public OutMessage newOutMessage(KonThread thread,
             User user,
@@ -68,6 +74,7 @@ public class MessageCenter {
         if (thread == null) {
             thread = threadList.getThreadByUser(user);
         }
+
         InMessage.Builder builder = new InMessage.Builder(thread, user);
         builder.jid(from);
         builder.xmppID(xmppID);
@@ -75,12 +82,17 @@ public class MessageCenter {
         builder.receiptID(receiptID);
         builder.content(content);
         InMessage newMessage = builder.build();
+
+        // decrypt content
         Coder.processInMessage(newMessage);
         if (!newMessage.getSecurityErrors().isEmpty()) {
-            Kontalk.getInstance().handleSecurityErrors(newMessage);
+            mModel.handleSecurityErrors(newMessage);
         }
+
+        // download attachment if url is included
         Downloader.getInstance().queueDownload(newMessage);
         thread.addMessage(newMessage);
+
         MessageList.getInstance().add(newMessage);
     }
 
@@ -102,7 +114,19 @@ public class MessageCenter {
         ((OutMessage) message).updateByReceivedReceipt();
     }
 
+    public static void initialize(Kontalk model) {
+        if (INSTANCE != null) {
+            LOGGER.warning("message center already initialized");
+            return;
+        }
+        INSTANCE = new MessageCenter(model);
+    }
+
     public static MessageCenter getInstance() {
+        if (INSTANCE == null) {
+            LOGGER.warning("message center not initialized");
+            throw new IllegalStateException();
+        }
         return INSTANCE;
     }
 }

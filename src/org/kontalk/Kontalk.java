@@ -103,6 +103,8 @@ public final class Kontalk {
     }
 
     public void start() {
+        MessageCenter.initialize(this);
+
         new Thread(mClient).start();
 
         try {
