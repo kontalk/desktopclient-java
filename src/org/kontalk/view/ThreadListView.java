@@ -261,7 +261,7 @@ class ThreadListView extends ListView implements Observer {
 
             List<String> nameList = new ArrayList(mThread.getUser().size());
             for (User user : mThread.getUser())
-                nameList.add(user.getName() == null ? "<unknown>" : user.getName());
+                nameList.add(user.getName().isEmpty() ? "<unknown>" : user.getName());
             mUserLabel.setText(StringUtils.join(nameList, ", "));
         }
 

@@ -183,7 +183,7 @@ public final class Kontalk {
             // TODO also do this when new user is created from roster
             for (User user : UserList.getInstance().getUser()) {
                 String network = StringUtils.parseServer(user.getJID());
-                if (user.getFingerprint() == null &&
+                if (user.getFingerprint().isEmpty() &&
                         network.equalsIgnoreCase(Client.KONTALK_NETWORK))
                 mClient.sendVCardRequest(user.getJID());
             }

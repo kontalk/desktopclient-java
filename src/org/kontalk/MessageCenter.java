@@ -68,7 +68,9 @@ public class MessageCenter {
             MessageContent content) {
         String jid = StringUtils.parseBareAddress(from);
         UserList userList = UserList.getInstance();
-        User user = userList.containsUserWithJID(jid) ? userList.getUserByJID(jid) : userList.addUser(jid, null);
+        User user = userList.containsUserWithJID(jid) ?
+                userList.getUserByJID(jid) :
+                userList.addUser(jid, "");
         ThreadList threadList = ThreadList.getInstance();
         KonThread thread = threadList.getThreadByXMPPID(xmppThreadID);
         if (thread == null) {

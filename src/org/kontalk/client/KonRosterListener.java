@@ -51,8 +51,8 @@ final class KonRosterListener implements RosterListener {
         for (RosterEntry entry: mRoster.getEntries()) {
             if (userList.containsUserWithJID(entry.getUser()))
                 continue;
-
-            User newUser = userList.addUser(entry.getUser(), entry.getName());
+            String name = entry.getName() == null ? "" : entry.getName();
+            User newUser = userList.addUser(entry.getUser(), name);
             mClient.sendVCardRequest(newUser.getJID());
         }
     }

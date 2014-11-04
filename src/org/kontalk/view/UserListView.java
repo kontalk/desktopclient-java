@@ -164,7 +164,7 @@ final class UserListView extends ListView implements Observer {
             mNameLabel.setMinimumSize(size);
             mNameLabel.setPreferredSize(size);
 
-            String name = mUser.getName() != null ? mUser.getName() : "<unknown>";
+            String name = !mUser.getName().isEmpty() ? mUser.getName() : "<unknown>";
             mNameLabel.setText(name);
             mJIDLabel.setText(mUser.getJID());
 
@@ -186,7 +186,7 @@ final class UserListView extends ListView implements Observer {
             else
                 isAvailable = "?";
 
-            String status = mUser.getStatus() == null ? "?" : mUser.getStatus();
+            String status = mUser.getStatus().isEmpty() ? "?" : mUser.getStatus();
 
             String lastSeen = mUser.getLastSeen() == null ? "?" :
                     TOOLTIP_DATE_FORMAT.format(mUser.getLastSeen());

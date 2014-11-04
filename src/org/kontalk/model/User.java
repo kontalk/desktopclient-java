@@ -63,12 +63,12 @@ public final class User {
     private final int mID;
     private String mJID;
     private String mName;
-    private String mStatus = null;
+    private String mStatus = "";
     private Date mLastSeen = null;
     private Available mAvailable = Available.UNKNOWN;
     private boolean mEncrypted = true;
-    private String mKey = null;
-    private String mFingerprint = null;
+    private String mKey = "";
+    private String mFingerprint = "";
     private boolean mBlocked = false;
     //private ItemType mType;
 
@@ -76,7 +76,7 @@ public final class User {
      * Used for incoming messages of unknown user.
      */
     User(String jid) {
-        this(jid, null);
+        this(jid, "");
     }
 
     /**
@@ -142,6 +142,7 @@ public final class User {
         return mStatus;
     }
 
+    // TODO nullable
     public Date getLastSeen() {
         return mLastSeen;
     }
@@ -166,7 +167,7 @@ public final class User {
         if (type == Presence.Type.unavailable) {
             mAvailable = Available.NO;
         }
-        if (status != null) {
+        if (status != null && !status.isEmpty()) {
             mStatus = status;
         }
         UserList.getInstance().changed();
@@ -178,7 +179,7 @@ public final class User {
     }
 
     public boolean hasKey() {
-        return mKey != null;
+        return !mKey.isEmpty();
     }
 
     public String getFingerprint() {
@@ -198,11 +199,11 @@ public final class User {
         String id = PGP.getUserId(key, null);
         if (id != null && id.contains(" (NO COMMENT) ")) {
             String userName = id.substring(0, id.indexOf(" (NO COMMENT) "));
-            if (!userName.isEmpty() && mName == null)
+            if (!userName.isEmpty() && mName.isEmpty())
                 mName = userName;
         }
 
-        if (mKey != null)
+        if (!mKey.isEmpty())
             LOGGER.info("overwriting public key, user id: "+mID);
 
         mKey = Base64.toBase64String(rawKey);
@@ -234,7 +235,7 @@ public final class User {
 
     @Override
     public String toString() {
-        String userName = mName == null ? "<unnamed> " : mName;
+        String userName = mName.isEmpty() ? "<unnamed> " : mName;
         return userName + " (" + mJID + ")";
     }
 }

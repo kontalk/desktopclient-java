@@ -229,7 +229,7 @@ final class ThreadView extends WebScrollPane {
                 // from label
                 if (mMessage.getDir().equals(KonMessage.Direction.IN)) {
                     String from;
-                    if (mMessage.getUser().getName() != null) {
+                    if (!mMessage.getUser().getName().isEmpty()) {
                         from = mMessage.getUser().getName();
                     } else {
                         from = mMessage.getJID();
