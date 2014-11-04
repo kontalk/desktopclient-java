@@ -189,7 +189,7 @@ public final class Client implements PacketListener, Runnable {
             // check also for security errors just to be sure
             if (encrypted == null || !message.getSecurityErrors().isEmpty()) {
                 LOGGER.warning("encryption failed, not sending message");
-                Kontalk.getInstance().handleSecurityErrors(message);
+                mModel.handleSecurityErrors(message);
                 return;
             }
             smackMessage.addExtension(new E2EEncryption(encrypted));

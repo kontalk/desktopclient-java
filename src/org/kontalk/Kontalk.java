@@ -47,8 +47,6 @@ import org.kontalk.view.View;
 public final class Kontalk {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
-    private static Kontalk INSTANCE = null;
-
     private final static String CONFIG_DIR;
 
     public enum Status {
@@ -97,9 +95,6 @@ public final class Kontalk {
         mClient = new Client(this);
 
         mView = new View(this);
-
-        // TODO nein, nein, nein!
-        INSTANCE = this;
     }
 
     public void start() {
@@ -243,10 +238,6 @@ public final class Kontalk {
 
     public static String getConfigDir() {
         return CONFIG_DIR;
-    }
-
-    public static Kontalk getInstance() {
-        return INSTANCE;
     }
 
     /**
