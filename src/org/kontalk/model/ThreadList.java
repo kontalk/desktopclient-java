@@ -36,7 +36,7 @@ import org.kontalk.Database;
 public final class ThreadList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(ThreadList.class.getName());
 
-    private static ThreadList INSTANCE = null;
+    private final static ThreadList INSTANCE = new ThreadList();
 
     private final HashMap<Integer, KonThread> mMap = new HashMap();
 
@@ -115,6 +115,7 @@ public final class ThreadList extends Observable {
         return newThread;
     }
 
+    // TODO nullable
     public KonThread getThreadByID(int id) {
         KonThread thread = mMap.get(id);
         if (thread == null)
@@ -122,12 +123,13 @@ public final class ThreadList extends Observable {
         return thread;
     }
 
+    // TODO nullable
     public KonThread getThreadByXMPPID(String xmppThreadID) {
         if (xmppThreadID == null) {
             return null;
         }
         for (KonThread thread : mMap.values()) {
-            if (thread.getXMPPID().equals(xmppThreadID))
+            if (xmppThreadID.equals(thread.getXMPPID()))
                 return thread;
         }
         return null;
@@ -149,9 +151,6 @@ public final class ThreadList extends Observable {
     }
 
     public static ThreadList getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new ThreadList();
-        }
         return INSTANCE;
     }
 }

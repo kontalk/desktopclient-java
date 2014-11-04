@@ -37,7 +37,7 @@ import org.kontalk.Database;
 public final class UserList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(UserList.class.getName());
 
-    private static UserList INSTANCE = null;
+    private final static UserList INSTANCE = new UserList();
 
     private final HashMap<String, User> mMap = new HashMap();
 
@@ -77,6 +77,7 @@ public final class UserList extends Observable {
      * @param name
      * @return the newly created user
      */
+    // TODO nullable
     public User addUser(String jid, String name) {
         jid = StringUtils.parseBareAddress(jid);
         if (mMap.containsKey(jid)) {
@@ -96,7 +97,9 @@ public final class UserList extends Observable {
         }
     }
 
+    // TODO nullable
     public User getUserByID(int id) {
+        // TODO performance
         for (User user: mMap.values()) {
             if (user.getID() == id)
                 return user;
@@ -111,6 +114,7 @@ public final class UserList extends Observable {
      * @param jid
      * @return
      */
+    // TODO nullable
     public User getUserByJID(String jid) {
         jid = StringUtils.parseBareAddress(jid);
         return mMap.get(jid);
@@ -152,9 +156,6 @@ public final class UserList extends Observable {
     }
 
     public static UserList getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new UserList();
-        }
         return INSTANCE;
     }
 

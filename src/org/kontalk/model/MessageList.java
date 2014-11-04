@@ -37,7 +37,7 @@ import org.kontalk.crypto.Coder;
 public final class MessageList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
-    private static MessageList INSTANCE;
+    private final static MessageList INSTANCE = new MessageList();
 
     private final HashMap<Integer, KonMessage> mMap = new HashMap();
 
@@ -157,9 +157,6 @@ public final class MessageList extends Observable {
     }
 
     public static MessageList getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new MessageList();
-        }
         return INSTANCE;
     }
 }

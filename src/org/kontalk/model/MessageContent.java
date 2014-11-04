@@ -188,7 +188,7 @@ public class MessageContent {
             return mEncrypted;
         }
 
-        /**
+       /**
         * Return name of file or empty string if file wasn't downloaded yet.
         */
         public String getFileName() {

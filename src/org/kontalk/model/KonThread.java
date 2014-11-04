@@ -114,6 +114,7 @@ public final class KonThread extends Observable {
         return mID;
     }
 
+    // TODO nullable
     public String getXMPPID() {
         return mXMPPID;
     }
@@ -159,7 +160,9 @@ public final class KonThread extends Observable {
         }
     }
 
-    /** Add message to thread without notifying other components. */
+    /**
+     * Add message to thread without notifying other components.
+     */
     boolean add(KonMessage message) {
         if (mSet.contains(message)) {
             LOGGER.warning("message already in thread, ID: " + message.getID());
