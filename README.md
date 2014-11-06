@@ -12,10 +12,15 @@ Current features:
 - sending/requesting server receipts according to Kontalk XMPP extension
 
 Dependencies:
-- JDK 1.7
+- JDK 8 / Java 8
+
+--included as git submodule:
 - Kontalk-common-java classes (https://github.com/kontalk/client-common-java)
+
+-- JARS included in project:
 - Smack and Smackx (https://igniterealtime.org/projects/smack/index.jsp)
 - WebLaF (http://weblookandfeel.com)
 - Bouncy Castle (provider and PGP) (https://www.bouncycastle.org/java.html)
 - Apache Commons (configuration, lang and logging) (http://commons.apache.org) 
 - SQLite JDBC (https://bitbucket.org/xerial/sqlite-jdbc)
+- and more...
