@@ -18,6 +18,7 @@
 
 package org.kontalk.client;
 
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.SmackException;
@@ -62,12 +63,12 @@ final class BlockResponseListener implements PacketListener {
             return;
         }
 
-        if (!UserList.getInstance().containsUserWithJID(mJID)) {
+        Optional<User> optUser = UserList.getInstance().getUserByJID(mJID);
+        if (!optUser.isPresent()) {
             LOGGER.info("ignoring block response of JID not in user list");
             return;
         }
-
-        User user = UserList.getInstance().getUserByJID(mJID);
+        User user = optUser.get();
 
         LOGGER.info("set user blocking: "+user.getID()+" "+mBlocking);
         user.setBlocked(mBlocking);

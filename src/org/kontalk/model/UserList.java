@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Observable;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
@@ -77,18 +78,17 @@ public final class UserList extends Observable {
      * @param name
      * @return the newly created user
      */
-    // TODO nullable
-    public User addUser(String jid, String name) {
+    public Optional<User> addUser(String jid, String name) {
         jid = StringUtils.parseBareAddress(jid);
         if (mMap.containsKey(jid)) {
             LOGGER.warning("user already exists, jid: "+jid);
-            return null;
+            return Optional.empty();
         }
         User newUser = new User(jid, name);
         mMap.put(jid, newUser);
         this.save();
         this.changed();
-        return newUser;
+        return Optional.of(newUser);
     }
 
     public void save() {
@@ -97,27 +97,25 @@ public final class UserList extends Observable {
         }
     }
 
-    // TODO nullable
-    public User getUserByID(int id) {
+    public Optional<User> getUserByID(int id) {
         // TODO performance
         for (User user: mMap.values()) {
             if (user.getID() == id)
-                return user;
+                return Optional.of(user);
         }
         LOGGER.warning("can't find user with ID: "+id);
-        return null;
+        return Optional.empty();
     }
 
     /**
-     * Get the user for a JID or null if the JID can not be found.
+     * Get the user for a JID (if the JID can not be found).
      * Resource is removed for lookup.
      * @param jid
      * @return
      */
-    // TODO nullable
-    public User getUserByJID(String jid) {
+    public Optional<User> getUserByJID(String jid) {
         jid = StringUtils.parseBareAddress(jid);
-        return mMap.get(jid);
+        return Optional.ofNullable(mMap.get(jid));
     }
 
     /**

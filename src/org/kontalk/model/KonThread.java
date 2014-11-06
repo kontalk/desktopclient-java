@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
@@ -61,8 +62,10 @@ public final class KonThread extends Observable {
     private final TreeSet<KonMessage> mSet = new TreeSet();
 
     private final int mID;
+    // TODO make notnull
     private final String mXMPPID;
     private Set<User> mUser;
+    // TODO make notnull
     private String mSubject;
     private boolean mRead;
     private boolean mDeleted = false;
@@ -114,9 +117,8 @@ public final class KonThread extends Observable {
         return mID;
     }
 
-    // TODO nullable
-    public String getXMPPID() {
-        return mXMPPID;
+    public Optional<String> getXMPPID() {
+        return Optional.ofNullable(mXMPPID);
     }
 
     public Set<User> getUser() {

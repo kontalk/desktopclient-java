@@ -19,6 +19,7 @@
 package org.kontalk;
 
 import java.util.Date;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.crypto.Coder;
@@ -68,14 +69,17 @@ public class MessageCenter {
             MessageContent content) {
         String jid = StringUtils.parseBareAddress(from);
         UserList userList = UserList.getInstance();
-        User user = userList.containsUserWithJID(jid) ?
+        Optional<User> optUser = userList.containsUserWithJID(jid) ?
                 userList.getUserByJID(jid) :
                 userList.addUser(jid, "");
-        ThreadList threadList = ThreadList.getInstance();
-        KonThread thread = threadList.getThreadByXMPPID(xmppThreadID);
-        if (thread == null) {
-            thread = threadList.getThreadByUser(user);
+        if (!optUser.isPresent()) {
+            LOGGER.warning("can't get user for message");
+            return;
         }
+        User user = optUser.get();
+        ThreadList threadList = ThreadList.getInstance();
+        Optional<KonThread> optThread = threadList.getThreadByXMPPID(xmppThreadID);
+        KonThread thread = optThread.orElse(threadList.getThreadByUser(user));
 
         InMessage.Builder builder = new InMessage.Builder(thread, user);
         builder.jid(from);
@@ -99,21 +103,21 @@ public class MessageCenter {
     }
 
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
-        OutMessage message = MessageList.getInstance().getMessageByXMPPID(xmppID);
-        if (message == null) {
+        Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByXMPPID(xmppID);
+        if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message");
             return;
         }
-        ((OutMessage) message).updateBySentReceipt(receiptID);
+        optMessage.get().updateBySentReceipt(receiptID);
     }
 
     public void updateMsgByReceivedReceipt(String receiptID) {
-        OutMessage message = MessageList.getInstance().getMessageByReceiptID(receiptID);
-        if (message == null) {
+        Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByReceiptID(receiptID);
+        if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message");
             return;
         }
-        ((OutMessage) message).updateByReceivedReceipt();
+        optMessage.get().updateByReceivedReceipt();
     }
 
     public static void initialize(Kontalk model) {

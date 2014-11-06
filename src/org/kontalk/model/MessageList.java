@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Observable;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.Database;
@@ -55,11 +56,21 @@ public final class MessageList extends Observable {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");
                 int threadID = resultSet.getInt("thread_id");
-                KonThread thread = ThreadList.getInstance().getThreadByID(threadID);
+                Optional<KonThread> optThread =
+                        ThreadList.getInstance().getThreadByID(threadID);
+                if (!optThread.isPresent()) {
+                    LOGGER.warning("can't find thread, id:"+threadID);
+                    continue;
+                }
                 int dirIndex = resultSet.getInt("direction");
                 KonMessage.Direction dir = dirValues[dirIndex];
                 int userID = resultSet.getInt("user_id");
-                User user = UserList.getInstance().getUserByID(userID);
+                Optional<User> optUser =
+                        UserList.getInstance().getUserByID(userID);
+                if (!optUser.isPresent()) {
+                    LOGGER.warning("can't find user, id:"+userID);
+                    continue;
+                }
                 String jid = resultSet.getString("jid");
                 String xmppID = resultSet.getString("xmpp_id");
                 Date date = new Date(resultSet.getLong("date"));
@@ -75,7 +86,10 @@ public final class MessageList extends Observable {
                 int errorFlags = resultSet.getInt("coder_errors");
                 EnumSet<Coder.Error> coderErrors = Database.intToEnumSet(Coder.Error.class, errorFlags);
 
-                KonMessage.Builder builder = new KonMessage.Builder(id, thread, dir, user);
+                KonMessage.Builder builder = new KonMessage.Builder(id,
+                        optThread.get(),
+                        dir,
+                        optUser.get());
                 builder.jid(jid);
                 builder.xmppID(xmppID == null ? "" : xmppID);
                 builder.date(date);
@@ -88,7 +102,7 @@ public final class MessageList extends Observable {
 
                 KonMessage newMessage = builder.build();
 
-                thread.add(newMessage);
+                optThread.get().add(newMessage);
                 mMap.put(id, newMessage);
             }
             resultSet.close();
@@ -112,8 +126,7 @@ public final class MessageList extends Observable {
         return mMap.values();
     }
 
-    // TODO nullable
-    public OutMessage getMessageByXMPPID(String xmppID) {
+    public Optional<OutMessage> getMessageByXMPPID(String xmppID) {
         // TODO performance
         KonMessage message = null;
         for (KonMessage m : mMap.values()) {
@@ -122,13 +135,12 @@ public final class MessageList extends Observable {
         }
         if (message == null) {
             LOGGER.warning("can't find message with XMPP ID: " + xmppID);
-            return null;
+            return Optional.empty();
         }
         return checkOutMessage(message);
     }
 
-    // TODO nullable
-    public OutMessage getMessageByReceiptID(String receiptID) {
+    public Optional<OutMessage> getMessageByReceiptID(String receiptID) {
         if (receiptID.isEmpty()) {
             LOGGER.warning("ignoring empty receipt ID");
             return null;
@@ -147,13 +159,12 @@ public final class MessageList extends Observable {
         return checkOutMessage(message);
     }
 
-    // TODO nullable
-    private OutMessage checkOutMessage(KonMessage message) {
+    private Optional<OutMessage> checkOutMessage(KonMessage message) {
         if (!(message instanceof OutMessage)) {
             LOGGER.warning("message is not an outgoing message");
-            return null;
+            return Optional.empty();
         }
-        return (OutMessage) message;
+        return Optional.of((OutMessage) message);
     }
 
     public static MessageList getInstance() {

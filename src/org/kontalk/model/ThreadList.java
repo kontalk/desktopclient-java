@@ -24,6 +24,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Observable;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -57,7 +58,12 @@ public final class ThreadList extends Observable {
             while (receiverRS.next()) {
                 Integer threadID = receiverRS.getInt("thread_id");
                 Integer userID = receiverRS.getInt("user_id");
-                User user = userList.getUserByID(userID);
+                Optional<User> optUser = userList.getUserByID(userID);
+                if (!optUser.isPresent()) {
+                    LOGGER.warning("can't find user");
+                    continue;
+                }
+                User user = optUser.get();
                 if (threadUserMapping.containsKey(threadID)) {
                     threadUserMapping.get(threadID).add(user);
                 } else {
@@ -115,24 +121,22 @@ public final class ThreadList extends Observable {
         return newThread;
     }
 
-    // TODO nullable
-    public KonThread getThreadByID(int id) {
+    public Optional<KonThread> getThreadByID(int id) {
         KonThread thread = mMap.get(id);
         if (thread == null)
             LOGGER.warning("can't find thread with id: "+id);
-        return thread;
+        return Optional.ofNullable(thread);
     }
 
-    // TODO nullable
-    public KonThread getThreadByXMPPID(String xmppThreadID) {
+    public Optional<KonThread> getThreadByXMPPID(String xmppThreadID) {
         if (xmppThreadID == null) {
-            return null;
+            return Optional.empty();
         }
         for (KonThread thread : mMap.values()) {
-            if (xmppThreadID.equals(thread.getXMPPID()))
-                return thread;
+            if (xmppThreadID.equals(thread.getXMPPID().orElse(null)))
+                return Optional.of(thread);
         }
-        return null;
+        return Optional.empty();
     }
 
     public void deleteThreadWithID(int id) {

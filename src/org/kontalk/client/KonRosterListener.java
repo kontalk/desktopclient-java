@@ -19,6 +19,7 @@
 package org.kontalk.client;
 
 import java.util.Collection;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.Roster;
 import org.jivesoftware.smack.RosterEntry;
@@ -52,8 +53,12 @@ final class KonRosterListener implements RosterListener {
             if (userList.containsUserWithJID(entry.getUser()))
                 continue;
             String name = entry.getName() == null ? "" : entry.getName();
-            User newUser = userList.addUser(entry.getUser(), name);
-            mClient.sendVCardRequest(newUser.getJID());
+            Optional<User> optNewUser = userList.addUser(entry.getUser(), name);
+            if (!optNewUser.isPresent()) {
+                LOGGER.warning("can't add user");
+                return;
+            }
+            mClient.sendVCardRequest(optNewUser.get().getJID());
         }
     }
 

@@ -53,6 +53,8 @@ import java.awt.event.WindowStateListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.logging.Logger;
 import javax.swing.Icon;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
@@ -70,6 +72,7 @@ import org.kontalk.model.UserList;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class MainFrame extends WebFrame {
+    private final static Logger LOGGER = Logger.getLogger(MainFrame.class.getName());
 
     public static enum Tab {THREADS, USER};
 
@@ -494,8 +497,14 @@ final class MainFrame extends WebFrame {
         }
 
         private void saveUser() {
-            User newUser = UserList.getInstance().addUser(mJIDField.getText(), mNameField.getText());
-            newUser.setEncrypted(mEncryptionBox.isSelected());
+            Optional<User> optNewUser = UserList.getInstance().addUser(
+                    mJIDField.getText(),
+                    mNameField.getText());
+            if (!optNewUser.isPresent()) {
+                LOGGER.warning("can't add user");
+                return;
+            }
+            optNewUser.get().setEncrypted(mEncryptionBox.isSelected());
         }
     }
 }

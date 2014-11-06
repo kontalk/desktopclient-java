@@ -18,6 +18,7 @@
 
 package org.kontalk.client;
 
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Packet;
@@ -48,11 +49,12 @@ final class BlockListListener implements PacketListener {
                     LOGGER.info("ignoring blocking of JID with resource");
                     return;
                 }
-                if (!UserList.getInstance().containsUserWithJID(jid)) {
+                Optional<User> optUser = UserList.getInstance().getUserByJID(jid);
+                if (!optUser.isPresent()) {
                     LOGGER.info("ignoring blocking of JID not in user list");
                     return;
                 }
-                User user = UserList.getInstance().getUserByJID(jid);
+                User user = optUser.get();
                 LOGGER.info("blocked user: "+user.getID());
                 user.setBlocked(true);
             }
