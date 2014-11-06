@@ -188,8 +188,8 @@ final class UserListView extends ListView implements Observer {
 
             String status = mUser.getStatus().isEmpty() ? "?" : mUser.getStatus();
 
-            String lastSeen = mUser.getLastSeen() == null ? "?" :
-                    TOOLTIP_DATE_FORMAT.format(mUser.getLastSeen());
+            String lastSeen = !mUser.getLastSeen().isPresent() ? "?" :
+                    TOOLTIP_DATE_FORMAT.format(mUser.getLastSeen().get());
 
             String isBlocked = mUser.isBlocked() ? "YES" : "No";
 
