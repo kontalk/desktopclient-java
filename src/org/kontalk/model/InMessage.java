@@ -19,6 +19,7 @@
 package org.kontalk.model;
 
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.MessageContent.Attachment;
@@ -42,13 +43,13 @@ public class InMessage extends KonMessage {
     }
 
     public void setAttachmentFileName(String fileName) {
-        Attachment attachment = this.getContent().getAttachment();
-        if (attachment == null) {
+        Optional<Attachment> optAttachment = this.getContent().getAttachment();
+        if (!optAttachment.isPresent()) {
             LOGGER.warning("no attachment!? can't set filename");
             return;
         }
 
-        attachment.setFileName(fileName);
+        optAttachment.get().setFileName(fileName);
         this.save();
         this.changed();
      }

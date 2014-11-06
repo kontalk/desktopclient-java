@@ -21,6 +21,7 @@ package org.kontalk;
 import java.io.File;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -70,10 +71,11 @@ public class Downloader implements Runnable {
             }
         }
 
-        Attachment attachment = message.getContent().getAttachment();
-        if (attachment == null) {
+        Optional<Attachment> optAttachment = message.getContent().getAttachment();
+        if (!optAttachment.isPresent()) {
             return;
         }
+        Attachment attachment = optAttachment.get();
 
         String path = mClient.download(attachment.getURL(), mBaseDir);
         if (path.isEmpty())
@@ -86,7 +88,7 @@ public class Downloader implements Runnable {
             return;
         }
 
-        //message.setAttachmentFileName(path);
+        message.setAttachmentFileName(new File(path).getName());
     }
 
     @Override

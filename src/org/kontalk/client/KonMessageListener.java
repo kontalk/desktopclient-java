@@ -19,6 +19,7 @@
 package org.kontalk.client;
 
 import java.util.Date;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Message;
@@ -209,17 +210,18 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // Out of Band Data: a URI to a file
-        Attachment attachment = null;
+        Optional<Attachment> optAttachment = Optional.empty();
         PacketExtension oobExt = m.getExtension("x", "jabber:x:oob");
         if (oobExt!= null && oobExt instanceof OutOfBandData) {
             LOGGER.info("Parsing Out of Band Data");
             OutOfBandData oobData = (OutOfBandData) oobExt;
-            attachment = new MessageContent.Attachment(oobData.getUrl(),
+            Attachment attachment = new MessageContent.Attachment(oobData.getUrl(),
                     oobData.getMime() != null ? oobData.getMime() : "",
                     oobData.getLength(),
                     oobData.isEncrypted());
+            optAttachment = Optional.of(attachment);
         }
-        return new MessageContent(plainText, attachment, encryptedContent);
+        return new MessageContent(plainText, optAttachment, encryptedContent);
     }
 
 }
