@@ -222,8 +222,14 @@ public final class KonThread extends Observable {
     private Map<Integer, Integer> loadReceiver() {
         Database db = Database.getInstance();
         String where = "thread_id == " + mID;
-        ResultSet resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
         Map<Integer, Integer> dbReceiver = new HashMap();
+        ResultSet resultSet;
+        try {
+            resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
+        } catch (SQLException ex) {
+            LOGGER.warning("can't get receiver from db");
+            return dbReceiver;
+        }
         try {
             while (resultSet.next()) {
                 dbReceiver.put(resultSet.getInt("user_id"), resultSet.getInt("_id"));

@@ -47,7 +47,13 @@ public final class UserList extends Observable {
 
     public void load() {
         Database db = Database.getInstance();
-        ResultSet resultSet = db.execSelectAll(User.TABLE);
+        ResultSet resultSet;
+        try {
+            resultSet = db.execSelectAll(User.TABLE);
+        } catch (SQLException ex) {
+            Logger.getLogger(UserList.class.getName()).log(Level.SEVERE, null, ex);
+            return;
+        }
         try {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");

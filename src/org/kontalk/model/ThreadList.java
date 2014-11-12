@@ -48,8 +48,15 @@ public final class ThreadList extends Observable {
         assert mMap.isEmpty();
 
         Database db = Database.getInstance();
-        ResultSet receiverRS = db.execSelectAll(KonThread.TABLE_RECEIVER);
-        ResultSet threadRS = db.execSelectAll(KonThread.TABLE);
+        ResultSet receiverRS;
+        ResultSet threadRS;
+        try {
+            receiverRS = db.execSelectAll(KonThread.TABLE_RECEIVER);
+            threadRS = db.execSelectAll(KonThread.TABLE);
+        } catch (SQLException ex) {
+            LOGGER.warning("can't get user from db");
+            return;
+        }
         HashMap<Integer, Set<User>> threadUserMapping = new HashMap();
         UserList userList = UserList.getInstance();
         try {

@@ -47,7 +47,13 @@ public final class MessageList extends Observable {
 
     public void load() {
         Database db = Database.getInstance();
-        ResultSet resultSet = db.execSelectAll(KonMessage.TABLE);
+        ResultSet resultSet;
+        try {
+            resultSet = db.execSelectAll(KonMessage.TABLE);
+        } catch (SQLException ex) {
+            LOGGER.warning("can't get messages from db");
+            return;
+        }
         KonMessage.Direction[] dirValues = KonMessage.Direction.values();
         KonMessage.Status[] statusValues = KonMessage.Status.values();
         Coder.Encryption[] encryptionValues = Coder.Encryption.values();
@@ -113,7 +119,7 @@ public final class MessageList extends Observable {
 
     public void add(KonMessage newMessage) {
         if (mMap.containsKey(newMessage.getID())) {
-            LOGGER.warning("message already in message list, id: "+newMessage.getID());
+            LOGGER.warning("message already in message list, ID: "+newMessage.getID());
             return;
         }
         mMap.put(newMessage.getID(), newMessage);

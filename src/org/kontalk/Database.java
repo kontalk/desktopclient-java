@@ -111,15 +111,15 @@ public final class Database {
         }
     }
 
-    public ResultSet execSelectAll(String table) {
+    public ResultSet execSelectAll(String table) throws SQLException {
         return execSelect("SELECT * FROM " + table);
     }
 
-    public ResultSet execSelectWhereInsecure(String table, String where) {
+    public ResultSet execSelectWhereInsecure(String table, String where) throws SQLException {
         return execSelect("SELECT * FROM " + table + " WHERE " + where);
     }
 
-    private ResultSet execSelect(String select) {
+    private ResultSet execSelect(String select) throws SQLException {
         try {
             PreparedStatement stat = mConn.prepareStatement(select);
             // does not work, i dont care
@@ -128,12 +128,12 @@ public final class Database {
             return resultSet;
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't execute select: " + select, ex);
-            return null;
+            throw ex;
         }
     }
 
     /**
-     *
+     * Add new model to database.
      * @param table table name the values are inserted into
      * @param values arbitrary objects that are inserted
      * @return id value of inserted row, 0 if something went wrong
