@@ -39,9 +39,8 @@ public class MessageContent {
     private final Optional<Attachment> mOptAttachment;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
-    // decrypted message, can be null
-    // TODO make notnull
-    private MessageContent mDecryptedContent;
+    // decrypted message
+    private Optional<MessageContent> mOptDecryptedContent;
 
     private final static String JSON_PLAIN_TEXT = "plain_text";
     private final static String JSON_ATTACHMENT = "attachment";
@@ -58,16 +57,17 @@ public class MessageContent {
         mPlainText = plainText;
         mOptAttachment = optAttachment;
         mEncryptedContent = encryptedContent;
+        mOptDecryptedContent = Optional.empty();
     }
 
     private MessageContent(String plainText,
             Optional<Attachment> optAttachment,
             String encryptedContent,
-            MessageContent decryptedContent) {
+            Optional<MessageContent> optDecryptedContent) {
         mPlainText = plainText;
         mOptAttachment = optAttachment;
         mEncryptedContent = encryptedContent;
-        mDecryptedContent = decryptedContent;
+        mOptDecryptedContent = optDecryptedContent;
     }
 
     /**
@@ -76,8 +76,8 @@ public class MessageContent {
      * plain text either return an empty string.
      */
     public String getText() {
-        if (mDecryptedContent != null)
-            return mDecryptedContent.getPlainText();
+        if (mOptDecryptedContent.isPresent())
+            return mOptDecryptedContent.get().getPlainText();
         else
             return mPlainText;
     }
@@ -87,9 +87,9 @@ public class MessageContent {
     }
 
     public Optional<Attachment> getAttachment() {
-        if (mDecryptedContent != null) {
-            if (mDecryptedContent.getAttachment().isPresent()) {
-                return mDecryptedContent.getAttachment();
+        if (mOptDecryptedContent.isPresent()) {
+            if (mOptDecryptedContent.get().getAttachment().isPresent()) {
+                return mOptDecryptedContent.get().getAttachment();
             }
         }
         return mOptAttachment;
@@ -100,8 +100,8 @@ public class MessageContent {
     }
 
     public void setDecryptedContent(MessageContent decryptedContent) {
-        assert mDecryptedContent == null;
-        mDecryptedContent = decryptedContent;
+        assert !mOptDecryptedContent.isPresent();
+        mOptDecryptedContent = Optional.of(decryptedContent);
         // deleting encrypted data!
         mEncryptedContent = "";
     }
@@ -115,9 +115,13 @@ public class MessageContent {
     String toJSONString() {
         JSONObject json = new JSONObject();
         json.put(JSON_PLAIN_TEXT, mPlainText);
-        json.put(JSON_ATTACHMENT, mOptAttachment.isPresent() ? mOptAttachment.get().toJSONString() : null);
+        json.put(JSON_ATTACHMENT, mOptAttachment.isPresent() ?
+                mOptAttachment.get().toJSONString() :
+                null);
         json.put(JSON_ENC_CONTENT, mEncryptedContent);
-        json.put(JSON_DEC_CONTENT, mDecryptedContent != null ? mDecryptedContent.toJSONString() : null);
+        json.put(JSON_DEC_CONTENT, mOptDecryptedContent.isPresent() ?
+                mOptDecryptedContent.get().toJSONString() :
+                null);
         return json.toJSONString();
     }
 
@@ -133,9 +137,9 @@ public class MessageContent {
 
             String encryptedContent = (String) map.get(JSON_ENC_CONTENT);
             String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
-            MessageContent decryptedContent = jsonDecryptedContent == null ?
-                    null :
-                    fromJSONString(jsonDecryptedContent);
+            Optional<MessageContent> decryptedContent = jsonDecryptedContent == null ?
+                    Optional.<MessageContent>empty() :
+                    Optional.of(fromJSONString(jsonDecryptedContent));
             return new MessageContent(plainText,
                     optAttachment,
                     encryptedContent,
