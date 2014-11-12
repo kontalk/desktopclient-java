@@ -62,14 +62,16 @@ public class Downloader implements Runnable {
     }
 
     private void downloadAsync(InMessage message) {
-        if (mClient == null) {
+        // TODO reuse download client, currently a ssl exception is thrown on
+        // second connected
+        //if (mClient == null) {
             try {
                 mClient = createClient();
             } catch (KonException | PGPException ex) {
                 LOGGER.log(Level.WARNING, "can't create download client", ex);
                 return;
             }
-        }
+        //}
 
         Optional<Attachment> optAttachment = message.getContent().getAttachment();
         if (!optAttachment.isPresent()) {
