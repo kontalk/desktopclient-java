@@ -76,9 +76,8 @@ public class MessageContent {
      * plain text either return an empty string.
      */
     public String getText() {
-        // TODO recursive
         if (mDecryptedContent != null)
-            return mDecryptedContent.getText();
+            return mDecryptedContent.getPlainText();
         else
             return mPlainText;
     }
@@ -88,7 +87,11 @@ public class MessageContent {
     }
 
     public Optional<Attachment> getAttachment() {
-        // possible attachment in encrypted content is ignored
+        if (mDecryptedContent != null) {
+            if (mDecryptedContent.getAttachment().isPresent()) {
+                return mDecryptedContent.getAttachment();
+            }
+        }
         return mOptAttachment;
     }
 
