@@ -36,15 +36,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.conn.ssl.SSLContextBuilder;
+import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-
 
 //import org.kontalk.service.DownloadListener;
 //import org.kontalk.util.InternalTrustStore;
@@ -66,7 +65,7 @@ public class DownloadClient {
     private final X509Certificate mCertificate;
 
     private HttpRequestBase mCurrentRequest;
-    private HttpClient mHTTPClient;
+    private CloseableHttpClient mHTTPClient;
 
     public DownloadClient(PrivateKey privateKey, X509Certificate bridgeCert) {
         mPrivateKey = privateKey;
@@ -92,11 +91,11 @@ public class DownloadClient {
                 return "";
         }
 
-        LOGGER.info("Download file from URL=" + url);
+        LOGGER.info("downloading file from URL=" + url+ "...");
         mCurrentRequest = new HttpGet(url);
 
         // execute request
-        HttpResponse response;
+        CloseableHttpResponse response;
         try {
             response = mHTTPClient.execute(mCurrentRequest);
         } catch (IOException ex) {
@@ -104,47 +103,57 @@ public class DownloadClient {
             return "";
         }
 
-        int code = response.getStatusLine().getStatusCode();
-        // HTTP/1.1 200 OK -- other codes should throw Exceptions
-        if (code != 200) {
-            LOGGER.warning("invalid response: " + code);
-            return "";
-        }
+        try {
+            int code = response.getStatusLine().getStatusCode();
+            // HTTP/1.1 200 OK -- other codes should throw Exceptions
+            if (code != 200) {
+                LOGGER.warning("invalid response code: " + code);
+                return "";
+            }
 
-        Header disp = response.getFirstHeader("Content-Disposition");
-        if (disp == null) {
-            LOGGER.warning("no content header");
-            return "";
-        }
+            Header disp = response.getFirstHeader("Content-Disposition");
+            if (disp == null) {
+                LOGGER.warning("no content header");
+                return "";
+            }
 
-        String name = parseContentDisposition(disp.getValue());
-        // TODO
-        System.out.println("content: "+disp.getValue());
-        if (name == null) {
-            LOGGER.warning("no filename in content: "+disp.getValue());
-            return "";
-        }
+            String name = parseContentDisposition(disp.getValue());
+            // never trust incoming data
+            name = name != null ? new File(name).getName() : "";
+            if (name.isEmpty()) {
+                LOGGER.warning("no filename in content: "+disp.getValue());
+                return "";
+            }
 
-        // TODO should check for content-disposition parsing here
-        // and choose another filename if necessary
-        HttpEntity entity = response.getEntity();
-        if (entity == null) {
-            LOGGER.warning("no entity in response");
-            return "";
-        }
+            // TODO should check for content-disposition parsing here
+            // and choose another filename if necessary
+            HttpEntity entity = response.getEntity();
+            if (entity == null) {
+                LOGGER.warning("no entity in response");
+                return "";
+            }
 
-        // TODO we need to wrap the entity to monitor the download progress
-        File destination = new File(base, name);
-        try (FileOutputStream out = new FileOutputStream(destination)){
-            entity.writeTo(out);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't download file", ex);
-        }
+            // TODO we need to wrap the entity to monitor the download progress
+            File destination = new File(base, name);
+            try (FileOutputStream out = new FileOutputStream(destination)){
+                entity.writeTo(out);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't download file", ex);
+                return "";
+            }
 
-        return destination.getAbsolutePath();
+            LOGGER.info("... download successful!");
+            return destination.getAbsolutePath();
+        } finally {
+            try {
+                response.close();
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't close response", ex);
+            }
+        }
     }
 
-    private static HttpClient createHTTPClient(PrivateKey privateKey, X509Certificate certificate) {
+    private static CloseableHttpClient createHTTPClient(PrivateKey privateKey, X509Certificate certificate) {
         //HttpClientBuilder clientBuilder = HttpClientBuilder.create();
         HttpClientBuilder clientBuilder = HttpClients.custom();
         try {
