@@ -365,7 +365,7 @@ final class MainFrame extends WebFrame {
             groupPanel.setMargin(5);
 
             String[] strings = mConf.getStringArray(KonConf.NET_STATUS_LIST);
-            List<String> stats = new ArrayList(Arrays.asList(strings));
+            List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
             String currentStatus = "";
             if (!stats.isEmpty())
                 currentStatus = stats.remove(0);
@@ -422,7 +422,7 @@ final class MainFrame extends WebFrame {
             String newStatus = mStatusField.getText();
 
             String[] strings = mConf.getStringArray(KonConf.NET_STATUS_LIST);
-            List<String> stats = new ArrayList(Arrays.asList(strings));
+            List<String> stats = new ArrayList<>(Arrays.asList(strings));
 
             stats.remove(newStatus);
 

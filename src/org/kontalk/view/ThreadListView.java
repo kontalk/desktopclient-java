@@ -259,7 +259,7 @@ class ThreadListView extends ListView implements Observer {
             String subject = mThread.getSubject() != null ? mThread.getSubject(): "<unnamed>";
             mSubjectLabel.setText(subject);
 
-            List<String> nameList = new ArrayList(mThread.getUser().size());
+            List<String> nameList = new ArrayList<>(mThread.getUser().size());
             for (User user : mThread.getUser())
                 nameList.add(user.getName().isEmpty() ? "<unknown>" : user.getName());
             mUserLabel.setText(StringUtils.join(nameList, ", "));
@@ -367,7 +367,7 @@ class ThreadListView extends ListView implements Observer {
                 mThreadView.getThread().setSubject(mSubjectField.getText());
             }
             List participants = mParticipantsList.getCheckedValues();
-            Set<User> threadUser = new HashSet();
+            Set<User> threadUser = new HashSet<>();
             for (Object o: participants) {
                 threadUser.add((User) o);
             }

@@ -40,9 +40,9 @@ import javax.swing.event.ListDataListener;
  */
 class ListView extends WebList {
 
-    protected final WebListModel<ListItem> mListModel = new WebListModel();
+    protected final WebListModel<ListItem> mListModel = new WebListModel<>();
 
-    private final WebListModel<ListItem> mFilteredListModel = new WebListModel();
+    private final WebListModel<ListItem> mFilteredListModel = new WebListModel<>();
 
     final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
             new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");

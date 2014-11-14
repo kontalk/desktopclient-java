@@ -81,7 +81,7 @@ final class ImportDialog extends WebDialog {
         mErrorLabel = new WebLabel();
 
         // panels
-        mPanels = new EnumMap(ImportPage.class);
+        mPanels = new EnumMap<>(ImportPage.class);
         mPanels.put(ImportPage.INTRO, new IntroPanel());
         mPanels.put(ImportPage.SETTINGS, new SettingsPanel());
         mPanels.put(ImportPage.RESULT, new ResultPanel());

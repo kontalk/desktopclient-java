@@ -232,7 +232,7 @@ final class UserListView extends ListView implements Observer {
             newMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    Set<User> user = new HashSet();
+                    Set<User> user = new HashSet<>();
                     user.add(mSelectedUserView.getUser());
                     UserListView.this.mModelView.newThread(user);
                 }

@@ -58,7 +58,7 @@ final class ThreadView extends WebScrollPane {
     private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
     private final static Image BG_IMAGE = View.getImage("thread_bg.png");
 
-    private final Map<Integer, MessageViewList> mThreadCache = new HashMap();
+    private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
     private int mCurrentThreadID = -1;
 
     ThreadView() {
@@ -177,7 +177,7 @@ final class ThreadView extends WebScrollPane {
 
             // check for new messages to add
             if (mListModel.size() < mThread.getMessages().size()) {
-                Set<KonMessage> oldMessages = new HashSet();
+                Set<KonMessage> oldMessages = new HashSet<>();
                 for (ListItem m : mListModel.getElements())
                     oldMessages.add(((MessageView) m).mMessage);
 
