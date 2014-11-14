@@ -142,7 +142,7 @@ public final class Database {
         // first column is the id
         String insert = "INSERT INTO " + table + " VALUES (NULL,";
 
-        List vList = new ArrayList(values.size());
+        List<String> vList = new ArrayList<>(values.size());
         while(vList.size() < values.size())
             vList.add("?");
 
@@ -170,9 +170,9 @@ public final class Database {
     public int execUpdate(String table, Map<String, Object> set, int id) {
         String update = "UPDATE OR FAIL " + table + " SET ";
 
-        List<String> keyList = new ArrayList(set.keySet());
+        List<String> keyList = new ArrayList<>(set.keySet());
 
-        List vList = new ArrayList(keyList.size());
+        List<String> vList = new ArrayList<>(keyList.size());
         for (String key : keyList)
             vList.add(key + " = ?");
 

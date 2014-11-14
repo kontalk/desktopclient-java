@@ -56,7 +56,7 @@ public final class Client implements PacketListener, Runnable {
 
     public final static String KONTALK_NETWORK = "kontalk.net";
 
-    private final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue();
+    private final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
     private static enum Command {CONNECT, DISCONNECT};
 

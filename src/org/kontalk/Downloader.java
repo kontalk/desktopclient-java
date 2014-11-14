@@ -41,7 +41,7 @@ public class Downloader implements Runnable {
 
     private static Downloader INSTANCE = null;
 
-    private final LinkedBlockingQueue<InMessage> mQueue = new LinkedBlockingQueue();
+    private final LinkedBlockingQueue<InMessage> mQueue = new LinkedBlockingQueue<>();
 
     private final File mBaseDir;
     private DownloadClient mClient = null;

@@ -74,7 +74,7 @@ public final class KonConf extends PropertiesConfiguration {
         this.setFileName(filePath);
 
         // init config
-        Map<String, Object> map = new HashMap();
+        Map<String, Object> map = new HashMap<>();
         map.put(SERV_NET, DEFAULT_SERV_NET);
         map.put(SERV_HOST, DEFAULT_SERV_HOST);
         map.put(SERV_PORT, DEFAULT_SERV_PORT);
