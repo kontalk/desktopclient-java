@@ -134,7 +134,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     private int insert() {
         Database db = Database.getInstance();
-        List<Object> values = new LinkedList();
+        List<Object> values = new LinkedList<>();
         values.add(mThread.getID());
         values.add(mDir);
         values.add(mUser.getID());
@@ -251,7 +251,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     protected void save() {
        Database db = Database.getInstance();
-       Map<String, Object> set = new HashMap();
+       Map<String, Object> set = new HashMap<>();
        set.put("xmpp_id", mXMPPID.isEmpty() ? null : mXMPPID);
        set.put("receipt_status", mReceiptStatus);
        set.put("receipt_id", mReceiptID.isEmpty() ? null : mReceiptID);

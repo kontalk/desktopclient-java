@@ -40,7 +40,7 @@ public final class MessageList extends Observable {
 
     private final static MessageList INSTANCE = new MessageList();
 
-    private final HashMap<Integer, KonMessage> mMap = new HashMap();
+    private final HashMap<Integer, KonMessage> mMap = new HashMap<>();
 
     private MessageList() {
     }

@@ -88,7 +88,7 @@ public final class User {
         mName = name;
 
         Database db = Database.getInstance();
-        List<Object> values = new LinkedList();
+        List<Object> values = new LinkedList<>();
         values.add(mJID);
         values.add(mName);
         values.add(mStatus);
@@ -222,7 +222,7 @@ public final class User {
 
     public void save() {
         Database db = Database.getInstance();
-        Map<String, Object> set = new HashMap();
+        Map<String, Object> set = new HashMap<>();
         set.put("jid", mJID);
         set.put("name", mName);
         set.put("status", mStatus);

@@ -40,7 +40,7 @@ public final class UserList extends Observable {
 
     private final static UserList INSTANCE = new UserList();
 
-    private final HashMap<String, User> mMap = new HashMap();
+    private final HashMap<String, User> mMap = new HashMap<>();
 
     private UserList() {
     }

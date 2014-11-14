@@ -39,7 +39,7 @@ public final class ThreadList extends Observable {
 
     private final static ThreadList INSTANCE = new ThreadList();
 
-    private final HashMap<Integer, KonThread> mMap = new HashMap();
+    private final HashMap<Integer, KonThread> mMap = new HashMap<>();
 
     private ThreadList() {
     }
@@ -57,7 +57,7 @@ public final class ThreadList extends Observable {
             LOGGER.warning("can't get user from db");
             return;
         }
-        HashMap<Integer, Set<User>> threadUserMapping = new HashMap();
+        HashMap<Integer, Set<User>> threadUserMapping = new HashMap<>();
         UserList userList = UserList.getInstance();
         try {
             // first, find user for threads
@@ -74,7 +74,7 @@ public final class ThreadList extends Observable {
                 if (threadUserMapping.containsKey(threadID)) {
                     threadUserMapping.get(threadID).add(user);
                 } else {
-                    Set<User> userSet = new HashSet();
+                    Set<User> userSet = new HashSet<>();
                     userSet.add(user);
                     threadUserMapping.put(threadID, userSet);
                 }
@@ -87,7 +87,7 @@ public final class ThreadList extends Observable {
                 Set<User> userSet = threadUserMapping.get(id);
                 if (userSet == null) {
                     LOGGER.warning("no users found for thread");
-                    userSet = new HashSet();
+                    userSet = new HashSet<>();
                 }
                 String subject = threadRS.getString("subject");
                 boolean read = threadRS.getBoolean("read");
@@ -116,7 +116,7 @@ public final class ThreadList extends Observable {
             if (threadUser.size() == 1 && threadUser.contains(user))
                 return thread;
         }
-        Set<User> userSet = new HashSet();
+        Set<User> userSet = new HashSet<>();
         userSet.add(user);
         return this.createNewThread(userSet);
     }

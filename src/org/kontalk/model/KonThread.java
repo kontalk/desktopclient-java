@@ -59,7 +59,7 @@ public final class KonThread extends Observable {
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
-    private final TreeSet<KonMessage> mSet = new TreeSet();
+    private final TreeSet<KonMessage> mSet = new TreeSet<>();
 
     private final int mID;
     // TODO make notnull
@@ -83,7 +83,7 @@ public final class KonThread extends Observable {
         mRead = true;
 
         Database db = Database.getInstance();
-        List<Object> values = new LinkedList();
+        List<Object> values = new LinkedList<>();
         values.add(mXMPPID);
         values.add(mSubject);
         values.add(mRead);
@@ -176,7 +176,7 @@ public final class KonThread extends Observable {
 
     void save() {
         Database db = Database.getInstance();
-        Map<String, Object> set = new HashMap();
+        Map<String, Object> set = new HashMap<>();
         set.put("subject", mSubject);
         set.put("read", mRead);
         db.execUpdate(TABLE, set, mID);
@@ -222,7 +222,7 @@ public final class KonThread extends Observable {
     private Map<Integer, Integer> loadReceiver() {
         Database db = Database.getInstance();
         String where = "thread_id == " + mID;
-        Map<Integer, Integer> dbReceiver = new HashMap();
+        Map<Integer, Integer> dbReceiver = new HashMap<>();
         ResultSet resultSet;
         try {
             resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
@@ -243,7 +243,7 @@ public final class KonThread extends Observable {
 
     private void insertReceiver(User user) {
         Database db = Database.getInstance();
-        List<Object> recValues = new LinkedList();
+        List<Object> recValues = new LinkedList<>();
         recValues.add(mID);
         recValues.add(user.getID());
         int id = db.execInsert(TABLE_RECEIVER, recValues);
