@@ -130,7 +130,7 @@ public class MessageContent {
     static MessageContent fromJSONString(String jsonContent) {
         Object obj = JSONValue.parse(jsonContent);
         try {
-            Map map = (Map) obj;
+            Map<?, ?> map = (Map) obj;
             String plainText = (String) map.get(JSON_PLAIN_TEXT);
             String jsonAttachment = (String) map.get(JSON_ATTACHMENT);
             Optional<Attachment> optAttachment = jsonAttachment == null ?
@@ -225,7 +225,7 @@ public class MessageContent {
         static Optional<Attachment> fromJSONString(String jsonAttachment) {
             Object obj = JSONValue.parse(jsonAttachment);
             try {
-                Map map = (Map) obj;
+                Map<?, ?> map = (Map) obj;
                 String url = (String) map.get(JSON_URL);
                 assert url != null;
                 String mimeType = (String) map.get(JSON_MIME_TYPE);

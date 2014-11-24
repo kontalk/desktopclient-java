@@ -125,6 +125,7 @@ class ListView extends WebList {
     private class ListRenderer extends WebListCellRenderer {
 
         @Override
+        @SuppressWarnings("rawtypes")
         public Component getListCellRendererComponent(JList list,
                                                 Object value,
                                                 int index,

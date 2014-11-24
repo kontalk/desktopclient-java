@@ -241,7 +241,7 @@ public final class Database {
     /**
      * Encode an enum set to an integer representing a bit array.
      */
-    private int enumSetToInt(EnumSet enumSet) {
+    private int enumSetToInt(EnumSet<?> enumSet) {
         int b = 0;
         for (Object o: enumSet) {
             b += 1 << ((Enum) o).ordinal();

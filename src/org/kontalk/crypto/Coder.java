@@ -353,7 +353,7 @@ public final class Coder {
             PGPEncryptedDataList encDataList = (PGPEncryptedDataList) o;
 
             // check if secret key matches our encryption keyID
-            Iterator it = encDataList.getEncryptedDataObjects();
+            Iterator<?> it = encDataList.getEncryptedDataObjects();
             PGPPrivateKey sKey = null;
             PGPPublicKeyEncryptedData pbe = null;
             long ourKeyID = myKey.getEncryptKeyPair().getPrivateKey().getKeyID();

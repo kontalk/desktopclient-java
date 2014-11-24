@@ -39,7 +39,7 @@ public final class KonException extends Exception {
     }
 
     private final Error mError;
-    private final Class mExceptionClass;
+    private final Class<?> mExceptionClass;
 
     public KonException(Error error, java.lang.Exception ex) {
         super();
@@ -47,7 +47,7 @@ public final class KonException extends Exception {
         mExceptionClass = ex.getClass();
     }
 
-    public Class getExceptionClass() {
+    public Class<?> getExceptionClass() {
         return mExceptionClass;
     }
 

@@ -366,7 +366,7 @@ class ThreadListView extends ListView implements Observer {
             if (!mSubjectField.getText().isEmpty()) {
                 mThreadView.getThread().setSubject(mSubjectField.getText());
             }
-            List participants = mParticipantsList.getCheckedValues();
+            List<?> participants = mParticipantsList.getCheckedValues();
             Set<User> threadUser = new HashSet<>();
             for (Object o: participants) {
                 threadUser.add((User) o);

@@ -113,7 +113,7 @@ public final class Client implements PacketListener, Runnable {
         );
 
         // continue async
-        List args = new ArrayList(0);
+        List<?> args = new ArrayList<>(0);
         Client.TASK_QUEUE.offer(new Client.Task(Client.Command.CONNECT, args));
     }
 
@@ -271,9 +271,9 @@ public final class Client implements PacketListener, Runnable {
     private static class Task {
 
         final Command command;
-        final List args;
+        final List<?> args;
 
-        Task(Command c, List a) {
+        Task(Command c, List<?> a) {
             command = c;
             args = a;
         }
