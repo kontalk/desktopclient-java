@@ -62,11 +62,10 @@ public final class XMPPUtils {
 
 			if (eventType == XmlPullParser.START_TAG) {
 
-				if ("xmpp".equals(parser.getName()))
+				if ("xmpp".equals(parser.getName())) {
 					in_xmpp = true;
-
-				else if ("message".equals(parser.getName()) && in_xmpp) {
-					msg = (Message) PacketParserUtils.parseMessage(parser);
+                                } else if ("message".equals(parser.getName()) && in_xmpp) {
+					msg = PacketParserUtils.parseMessage(parser);
 				}
 			}
 
