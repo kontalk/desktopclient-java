@@ -112,6 +112,8 @@ public class MessageContent {
                 mEncryptedContent.isEmpty();
     }
 
+    // using legacy lib, raw types extend Object
+    @SuppressWarnings("unchecked")
     String toJSONString() {
         JSONObject json = new JSONObject();
         json.put(JSON_PLAIN_TEXT, mPlainText);
@@ -208,6 +210,8 @@ public class MessageContent {
             mFileName = fileName;
         }
 
+        // using legacy lib, raw types extend Object
+        @SuppressWarnings("unchecked")
         private String toJSONString() {
             JSONObject json = new JSONObject();
             json.put(JSON_URL, mURL);

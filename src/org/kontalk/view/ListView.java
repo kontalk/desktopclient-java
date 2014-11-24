@@ -18,7 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
 import com.alee.laf.list.WebListCellRenderer;
 import com.alee.laf.list.WebListModel;
@@ -49,6 +48,8 @@ class ListView extends WebList {
 
     private WebCustomTooltip mTip = null;
 
+    // using legacy lib, raw types extend Object
+    @SuppressWarnings("unchecked")
     ListView() {
         mListModel.addListDataListener(new ListDataListener() {
             @Override
@@ -64,6 +65,7 @@ class ListView extends WebList {
                 ListView.this.resetFiltering();
             }
         });
+
         this.setModel(mFilteredListModel);
 
         this.setCellRenderer(new ListRenderer());
@@ -128,14 +130,10 @@ class ListView extends WebList {
                                                 int index,
                                                 boolean isSelected,
                                                 boolean hasFocus) {
-            if (value instanceof ListItem) {
-                ListItem panel = (ListItem) value;
-                panel.resize(list.getWidth());
-                panel.repaint(isSelected);
-                return panel;
-            } else {
-                return new WebPanel(new WebLabel("ERRROR"));
-            }
+            ListItem panel = (ListItem) value;
+            panel.resize(list.getWidth());
+            panel.repaint(isSelected);
+            return panel;
         }
     }
 }

@@ -138,9 +138,9 @@ class ThreadListView extends ListView implements Observer {
     }
 
     void selectThread(int threadID) {
-        Enumeration e = mListModel.elements();
-        for(Enumeration<ThreadItemView> threads = e; e.hasMoreElements();) {
-            ThreadItemView threadView = threads.nextElement();
+        Enumeration<ListItem> e = mListModel.elements();
+        for(Enumeration<ListItem> threads = e; e.hasMoreElements();) {
+            ThreadItemView threadView = (ThreadItemView) threads.nextElement();
             if (threadView.getThread().getID() == threadID)
                 this.setSelectedValue(threadView);
         }
