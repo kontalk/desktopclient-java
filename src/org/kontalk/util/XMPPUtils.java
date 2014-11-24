@@ -25,58 +25,58 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
 
-
 /**
  * XMPP related functions.
+ *
  * @author Daniele Ricci
  */
 public final class XMPPUtils {
 
     public static final String XML_XMPP_TYPE = "application/xmpp+xml";
 
-	private XMPPUtils() { throw new AssertionError(); }
+    private XMPPUtils() {
+        throw new AssertionError();
+    }
 
-	private static XmlPullParserFactory _xmlFactory;
+    private static XmlPullParserFactory _xmlFactory;
 
-	private static XmlPullParser getPullParser(String data) throws XmlPullParserException {
-		if (_xmlFactory == null) {
-			_xmlFactory = XmlPullParserFactory.newInstance();
-			_xmlFactory.setNamespaceAware(true);
-		}
+    private static XmlPullParser getPullParser(String data) throws XmlPullParserException {
+        if (_xmlFactory == null) {
+            _xmlFactory = XmlPullParserFactory.newInstance();
+            _xmlFactory.setNamespaceAware(true);
+        }
 
-		XmlPullParser parser = _xmlFactory.newPullParser();
-		parser.setInput(new StringReader(data));
+        XmlPullParser parser = _xmlFactory.newPullParser();
+        parser.setInput(new StringReader(data));
 
-		return parser;
-	}
+        return parser;
+    }
 
-	/** Parses a &lt;xmpp&gt;-wrapped message stanza. */
-	public static Message parseMessageStanza(String data) throws Exception {
+    /**
+     * Parses a &lt;xmpp&gt;-wrapped message stanza.
+     */
+    public static Message parseMessageStanza(String data) throws Exception {
 
-		XmlPullParser parser = getPullParser(data);
-		boolean done = false, in_xmpp = false;
-		Message msg = null;
+        XmlPullParser parser = getPullParser(data);
+        boolean done = false, in_xmpp = false;
+        Message msg = null;
 
-		while (!done) {
-			int eventType = parser.next();
+        while (!done) {
+            int eventType = parser.next();
 
-			if (eventType == XmlPullParser.START_TAG) {
+            if (eventType == XmlPullParser.START_TAG) {
+                if ("xmpp".equals(parser.getName())) {
+                    in_xmpp = true;
+                } else if ("message".equals(parser.getName()) && in_xmpp) {
+                    msg = PacketParserUtils.parseMessage(parser);
+                }
+            } else if (eventType == XmlPullParser.END_TAG) {
+                if ("xmpp".equals(parser.getName())) {
+                    done = true;
+                }
+            }
+        }
 
-				if ("xmpp".equals(parser.getName())) {
-					in_xmpp = true;
-                                } else if ("message".equals(parser.getName()) && in_xmpp) {
-					msg = PacketParserUtils.parseMessage(parser);
-				}
-			}
-
-			else if (eventType == XmlPullParser.END_TAG) {
-
-				if ("xmpp".equals(parser.getName()))
-					done = true;
-			}
-		}
-
-		return msg;
-	}
-
+        return msg;
+    }
 }
