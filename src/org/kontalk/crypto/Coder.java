@@ -361,7 +361,7 @@ public final class Coder {
                 Object i = it.next();
                 if (!(i instanceof PGPPublicKeyEncryptedData))
                     continue;
-                pbe = (PGPPublicKeyEncryptedData) it.next();
+                pbe = (PGPPublicKeyEncryptedData) i;
                 if (pbe.getKeyID() == ourKeyID)
                     sKey = myKey.getEncryptKeyPair().getPrivateKey();
             }
