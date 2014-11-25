@@ -39,7 +39,8 @@ import org.kontalk.model.User;
 import org.sqlite.SQLiteConfig;
 
 /**
- *
+ * Global database for permanently storing all model information.
+ * Uses the JDBC API and SQLite as DBMS.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class Database {
@@ -111,10 +112,19 @@ public final class Database {
         }
     }
 
+    /**
+     * Select all rows from one table.
+     * The returned ResultSet must be closed by the caller after usage!
+     */
     public ResultSet execSelectAll(String table) throws SQLException {
         return execSelect("SELECT * FROM " + table);
     }
 
+    /**
+     * Select rows from one table that match an arbitrary 'where' clause.
+     * Insecure to SQL injections, use with caution!
+     * The returned ResultSet must be closed by the caller after usage!
+     */
     public ResultSet execSelectWhereInsecure(String table, String where) throws SQLException {
         return execSelect("SELECT * FROM " + table + " WHERE " + where);
     }
@@ -124,6 +134,23 @@ public final class Database {
             PreparedStatement stat = mConn.prepareStatement(select);
             // does not work, i dont care
             //stat.closeOnCompletion();
+            ResultSet resultSet = stat.executeQuery();
+            return resultSet;
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't execute select: " + select, ex);
+            throw ex;
+        }
+    }
+
+    /**
+     * Select rows from one table that match a 'where' clause with one 'key' == 'value' condition.
+     * The returned ResultSet must be closed by the caller after usage!
+     */
+    public ResultSet execSelectWhere(String table, String key, Object value) throws SQLException {
+        String select = "SELECT * FROM " + table + " WHERE " + key + " = ?";
+        try {
+            PreparedStatement stat = mConn.prepareStatement(select);
+            setValue(stat, 0, value);
             ResultSet resultSet = stat.executeQuery();
             return resultSet;
         } catch (SQLException ex) {
