@@ -91,6 +91,8 @@ public final class Kontalk {
             Logger.getLogger("").addHandler(fileHandler);
         }
 
+        LOGGER.info("--STARTED--");
+
         // register provider
         PGP.registerProvider();
     }
