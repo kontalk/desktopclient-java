@@ -22,9 +22,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.file.Paths;
 import java.util.Set;
+import java.util.logging.FileHandler;
+import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import java.util.regex.Pattern;
 import org.apache.commons.lang.SystemUtils;
 import org.jivesoftware.smack.util.StringUtils;
@@ -61,16 +65,34 @@ public final class Kontalk {
     private Status mCurrentStatus = Status.DISCONNECTED;
 
     static {
-        // register provider
-        PGP.registerProvider();
-
         // use platform dependent configuration directory
         String homeDir = System.getProperty("user.home");
         if (SystemUtils.IS_OS_WINDOWS) {
-            CONFIG_DIR = homeDir + "/Kontalk";
+            CONFIG_DIR = Paths.get(homeDir,"Kontalk").toString();
         } else {
-            CONFIG_DIR = homeDir + "/.kontalk";
+            CONFIG_DIR = Paths.get(homeDir, ".kontalk").toString();
         }
+
+        // create app directory
+        boolean created = new File(CONFIG_DIR).mkdirs();
+        if (created)
+            LOGGER.info("created configuration directory");
+
+        // log to file
+        String logPath = Paths.get(CONFIG_DIR, "debug.log").toString();
+        Handler fileHandler = null;
+        try {
+            fileHandler = new FileHandler(logPath, 1024*1000, 1, true);
+        } catch (IOException | SecurityException ex) {
+            LOGGER.log(Level.WARNING, "can't log to file", ex);
+        }
+        if (fileHandler != null) {
+            fileHandler.setFormatter(new SimpleFormatter());
+            Logger.getLogger("").addHandler(fileHandler);
+        }
+
+        // register provider
+        PGP.registerProvider();
     }
 
     private Kontalk(String[] args) {
@@ -84,10 +106,6 @@ public final class Kontalk {
         } catch(IOException ex) {
             LOGGER.log(Level.WARNING, "can't create socket", ex);
         }
-
-        boolean created = new File(CONFIG_DIR).mkdirs();
-        if (created)
-            LOGGER.info("created configuration directory");
 
         // TODO remove
         parseArgs(args);
