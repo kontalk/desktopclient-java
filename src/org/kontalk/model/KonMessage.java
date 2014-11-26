@@ -62,12 +62,13 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // full jid with ressource
             "jid TEXT NOT NULL, " +
             // optional, but required for receipts
+            // TODO RFC 6120 says it doesn't have to be unique
             "xmpp_id TEXT UNIQUE, " +
             // unix time, create/received timestamp
             "date INTEGER NOT NULL, " +
             // enum, server receipt status
             "receipt_status INTEGER NOT NULL, " +
-            // receipt id
+            // receipt id (Kontalk XMPP extension based on XEP-0184)
             "receipt_id TEXT UNIQUE, " +
             // message content in JSON format
             "content TEXT NOT NULL, " +
@@ -134,6 +135,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     private int insert() {
         Database db = Database.getInstance();
+
         List<Object> values = new LinkedList<>();
         values.add(mThread.getID());
         values.add(mDir);
@@ -150,11 +152,19 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mSigning);
         values.add(mCoderErrors);
 
-        int id = db.execInsert(TABLE, values);
-        if (id < 1) {
-            LOGGER.log(Level.WARNING, "couldn't insert message");
+        // database contains request and insert as atomic action
+        synchronized (KonMessage.class) {
+            if (!mReceiptID.isEmpty()) {
+                if (db.execCount(TABLE, "receipt_id", mReceiptID) > 0) {
+                    LOGGER.info("db already contains a message with receipt ID: "+mReceiptID);
+                    return -1;
+                }
+            }
+            int id = db.execInsert(TABLE, values);
+            if (id <= 0)
+                LOGGER.log(Level.WARNING, "db, couldn't insert message");
+            return id;
         }
-        return id;
     }
 
     public int getID() {
