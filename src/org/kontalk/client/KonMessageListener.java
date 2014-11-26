@@ -136,15 +136,15 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // add message
-        MessageCenter.getInstance().newInMessage(m.getFrom(),
+        boolean success = MessageCenter.getInstance().newInMessage(m.getFrom(),
                 xmppID,
                 m.getThread(),
                 date,
                 receiptID,
                 content);
 
-        // send a 'received' for a request
-        if (!receiptID.isEmpty()) {
+        // on success, send a 'received' for a request
+        if (success && !receiptID.isEmpty()) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
             received.addExtension(new ReceivedServerReceipt(receiptID));
             mClient.sendPacket(received);

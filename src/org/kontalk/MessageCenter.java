@@ -41,7 +41,7 @@ public class MessageCenter {
 
     private static MessageCenter INSTANCE = null;
 
-    private Kontalk mModel;
+    private final Kontalk mModel;
 
     private MessageCenter(Kontalk model) {
         mModel = model;
@@ -61,12 +61,19 @@ public class MessageCenter {
         return newMessage;
     }
 
-    public void newInMessage(String from,
+    /**
+     * All-in-one method for a new incoming message (except handling server
+     * receipts): Create, save and process the message.
+     * @return true on success or message is a duplicate, false on unexpected failure
+     */
+    public boolean newInMessage(String from,
             String xmppID,
             String xmppThreadID,
             Date date,
             String receiptID,
             MessageContent content) {
+
+        // get model references for this message
         String jid = StringUtils.parseBareAddress(from);
         UserList userList = UserList.getInstance();
         Optional<User> optUser = userList.containsUserWithJID(jid) ?
@@ -74,7 +81,7 @@ public class MessageCenter {
                 userList.addUser(jid, "");
         if (!optUser.isPresent()) {
             LOGGER.warning("can't get user for message");
-            return;
+            return false;
         }
         User user = optUser.get();
         ThreadList threadList = ThreadList.getInstance();
@@ -89,6 +96,11 @@ public class MessageCenter {
         builder.content(content);
         InMessage newMessage = builder.build();
 
+        if (newMessage.getID() == -1) {
+            LOGGER.info("conflicting message in db, dropping this one");
+            return true;
+        }
+
         // decrypt content
         Coder.processInMessage(newMessage);
         if (!newMessage.getSecurityErrors().isEmpty()) {
@@ -97,9 +109,11 @@ public class MessageCenter {
 
         // download attachment if url is included
         Downloader.getInstance().queueDownload(newMessage);
-        thread.addMessage(newMessage);
 
+        thread.addMessage(newMessage);
         MessageList.getInstance().add(newMessage);
+
+        return newMessage.getID() >= -1;
     }
 
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
