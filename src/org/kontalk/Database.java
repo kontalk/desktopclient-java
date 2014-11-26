@@ -143,19 +143,21 @@ public final class Database {
     }
 
     /**
-     * Select rows from one table that match a 'where' clause with one 'key' == 'value' condition.
-     * The returned ResultSet must be closed by the caller after usage!
+     * Get the number of rows in one table that match a WHERE clause
+     * with one 'key' == 'value' condition.
+     * @return number of rows for a SELECT/count query, -1 if something went wrong
      */
-    public ResultSet execSelectWhere(String table, String key, Object value) throws SQLException {
-        String select = "SELECT * FROM " + table + " WHERE " + key + " = ?";
+    public int execCount(String table, String key, Object value) {
+        String select = "SELECT count(*) FROM " + table + " WHERE " + key + " = ?";
         try {
             PreparedStatement stat = mConn.prepareStatement(select);
             setValue(stat, 0, value);
             ResultSet resultSet = stat.executeQuery();
-            return resultSet;
+            resultSet.last();
+            return resultSet.getRow();
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't execute select: " + select, ex);
-            throw ex;
+            return -1;
         }
     }
 
