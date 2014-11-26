@@ -165,7 +165,7 @@ public final class Database {
      * Add new model to database.
      * @param table table name the values are inserted into
      * @param values arbitrary objects that are inserted
-     * @return id value of inserted row, 0 if something went wrong
+     * @return id value of inserted row, -1 if something went wrong
      */
     public int execInsert(String table, List<Object> values) {
         // first column is the id
@@ -185,7 +185,7 @@ public final class Database {
             return keys.getInt(1);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't execute insert: " + insert + " " + values, ex);
-            return 0;
+            return -1;
         }
     }
 
