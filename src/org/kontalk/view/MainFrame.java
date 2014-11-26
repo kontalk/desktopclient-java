@@ -43,6 +43,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Frame;
+import java.awt.GridLayout;
 import java.awt.SystemTray;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -335,12 +336,12 @@ final class MainFrame extends WebFrame {
     }
 
     private void showAboutDialog() {
-        WebPanel aboutPanel = new WebPanel();
-        aboutPanel.add(new WebLabel("Kontalk Java Client v0.1"), BorderLayout.NORTH);
+        WebPanel aboutPanel = new WebPanel(new GridLayout(0, 1, 5, 5));
+        aboutPanel.add(new WebLabel("Kontalk Java Client v0.1"));
         WebLinkLabel linkLabel = new WebLinkLabel();
         linkLabel.setLink("http://www.kontalk.org");
         linkLabel.setText("Visit kontalk.org");
-        aboutPanel.add(linkLabel, BorderLayout.CENTER);
+        aboutPanel.add(linkLabel);
         WebLabel soundLabel = new WebLabel("Notification sound by FxProSound");
         aboutPanel.add(soundLabel);
         Icon icon = View.getIcon("kontalk.png");
