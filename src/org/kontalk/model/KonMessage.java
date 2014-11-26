@@ -163,10 +163,16 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             int id = db.execInsert(TABLE, values);
             if (id <= 0)
                 LOGGER.log(Level.WARNING, "db, couldn't insert message");
-            return id;
+            return -2;
         }
     }
 
+    /**
+     * Database ID. <br>
+     * -1 : a conflicting message is already saved to db <br>
+     * {@literal <} -1 : unexpected error on insertion attempt
+     * @return ID of message in db
+     */
     public int getID() {
         return mID;
     }
