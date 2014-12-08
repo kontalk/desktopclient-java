@@ -153,8 +153,7 @@ public final class Database {
             PreparedStatement stat = mConn.prepareStatement(select);
             setValue(stat, 0, value);
             ResultSet resultSet = stat.executeQuery();
-            resultSet.last();
-            return resultSet.getRow();
+            return resultSet.getInt(1);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't execute select: " + select, ex);
             return -1;
