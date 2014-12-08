@@ -288,9 +288,6 @@ public final class Coder {
         String senderUID = PGP.getUserId(senderKey, null);
         MessageContent decryptedContent = parseCPIM(message, decryptedBody, myUID, senderUID);
 
-        // TODO we may have a decrypted message stanza, process it
-        //parseText(message);
-
         // check for errors that occured
         if (message.getSecurityErrors().isEmpty()) {
             // everything went better than expected
