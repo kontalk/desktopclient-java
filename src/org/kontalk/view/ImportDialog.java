@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileFilter;
 import org.kontalk.KonException;
 import org.kontalk.model.Account;
 
@@ -122,8 +123,21 @@ final class ImportDialog extends WebDialog {
         fileChooser.setMultiSelectionEnabled(false);
         fileChooser.setShowFileShortName(false);
         fileChooser.setShowRemoveButton(false);
-        // TODO does not work?
-        //fileChooser.getWebFileChooser().setFileSelectionMode(JFileChooser.FILES_ONLY);
+        // does not work:
+        // fileChooser.getWebFileChooser().setFileSelectionMode(JFileChooser.FILES_ONLY);
+        // instead:
+        FileFilter fileFilter = new FileFilter() {
+            @Override
+            public boolean accept(File f) {
+                return f.isFile();
+            }
+            @Override
+            public String getDescription() {
+                return "";
+            }
+        };
+
+        fileChooser.getWebFileChooser().setFileFilter(fileFilter);
         File file = new File(path);
         if (file.exists()) {
             fileChooser.setSelectedFile(new File(path));
