@@ -334,12 +334,12 @@ public final class Coder {
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        try { // catch all io and pgp exceptions
+        try { // catch all IO and PGP exceptions
 
             // the first object might be a PGP marker packet
-            Object o = pgpFactory.nextObject();
+            Object o = pgpFactory.nextObject(); // nullable
             if (!(o instanceof PGPEncryptedDataList)) {
-                o = pgpFactory.nextObject();
+                o = pgpFactory.nextObject(); // nullable
             }
 
             if (!(o instanceof PGPEncryptedDataList)) {
@@ -372,7 +372,7 @@ public final class Coder {
 
             PGPObjectFactory plainFactory = new PGPObjectFactory(clear);
 
-            Object object = plainFactory.nextObject();
+            Object object = plainFactory.nextObject(); // nullable
 
             if (!(object instanceof PGPCompressedData)) {
                 LOGGER.warning("data packet not compressed");
@@ -383,19 +383,25 @@ public final class Coder {
             PGPCompressedData cData = (PGPCompressedData) object;
             PGPObjectFactory pgpFact = new PGPObjectFactory(cData.getDataStream());
 
-            object = pgpFact.nextObject();
+            object = pgpFact.nextObject(); // nullable
 
             // the first object could be the signature list
+            // get signature from it
             PGPOnePassSignature ops = null;
             if (object instanceof PGPOnePassSignatureList) {
+                PGPOnePassSignatureList signatureList = (PGPOnePassSignatureList) object;
                 // there is a signature list, so we assume the message is signed
                 // (makes sense)
                 message.setSigning(Signing.SIGNED);
 
-                // TODO out of bound exception possible?
-                ops = ((PGPOnePassSignatureList) object).get(0);
-                ops.init(new BcPGPContentVerifierBuilderProvider(), senderKey);
-                object = pgpFact.nextObject();
+                if (signatureList.isEmpty()) {
+                    LOGGER.warning("signature list is empty");
+                    message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
+                } else {
+                    ops = signatureList.get(0);
+                    ops.init(new BcPGPContentVerifierBuilderProvider(), senderKey);
+                }
+                object = pgpFact.nextObject(); // nullable
             } else {
                 LOGGER.warning("signature list not found");
                 message.setSigning(Signing.NOT);
@@ -421,29 +427,7 @@ public final class Coder {
             }
 
             if (ops != null) {
-                // verify signature
-                object = pgpFact.nextObject();
-
-                if (!(object instanceof PGPSignatureList)) {
-                    LOGGER.warning("invalid signature packet");
-                    message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
-                } else {
-                    // TODO out of bound exception possible?
-                    PGPSignature signature = ((PGPSignatureList) object).get(0);
-                    boolean verified = false;
-                    try {
-                        verified = ops.verify(signature);
-                    } catch (SignatureException ex) {
-                        LOGGER.log(Level.WARNING, "can't verify signature", ex);
-                    }
-                    if (verified) {
-                        // signature verification successful!
-                        message.setSigning(Signing.VERIFIED);
-                    } else {
-                        LOGGER.warning("signature verification failed");
-                        message.addSecurityError(Error.INVALID_SIGNATURE);
-                    }
-                }
+                verifySignature(message, pgpFact, ops);
             }
 
             // verify message integrity
@@ -462,6 +446,39 @@ public final class Coder {
         }
 
         return outputStream.toString();
+    }
+
+    private static void verifySignature(KonMessage message,
+            PGPObjectFactory pgpFact,
+            PGPOnePassSignature ops) throws PGPException, IOException {
+        Object object = pgpFact.nextObject(); // nullable
+        if (!(object instanceof PGPSignatureList)) {
+            LOGGER.warning("invalid signature packet");
+            message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
+            return;
+        }
+
+        PGPSignatureList signatureList = (PGPSignatureList) object;
+        if (signatureList.isEmpty()) {
+            LOGGER.warning("no signature in signature list");
+            message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
+            return;
+        }
+
+        PGPSignature signature = signatureList.get(0);
+        boolean verified = false;
+        try {
+            verified = ops.verify(signature);
+        } catch (SignatureException ex) {
+            LOGGER.log(Level.WARNING, "can't verify signature", ex);
+        }
+        if (verified) {
+            // signature verification successful!
+            message.setSigning(Signing.VERIFIED);
+        } else {
+            LOGGER.warning("signature verification failed");
+            message.addSecurityError(Error.INVALID_SIGNATURE);
+        }
     }
 
     /**
@@ -500,8 +517,7 @@ public final class Coder {
             LOGGER.warning("sender doesn't match sender's key");
             message.addSecurityError(Error.INVALID_SENDER);
         }
-
-        // TODO check DateTime (possibly compare it with <delay/>)
+        // maybe add: check DateTime (possibly compare it with <delay/>)
 
         String content = cpimMessage.getBody().toString();
         MessageContent decryptedContent;
