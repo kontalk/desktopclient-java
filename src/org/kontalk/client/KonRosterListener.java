@@ -64,12 +64,12 @@ final class KonRosterListener implements RosterListener {
 
     @Override
     public void entriesUpdated(Collection<String> addresses) {
-        // TODO
+        LOGGER.info("ignoring entry update in roster");
     }
 
     @Override
     public void entriesDeleted(Collection<String> addresses) {
-        // TODO
+        LOGGER.info("ignoring entry deletion in roster");
     }
 
     @Override
