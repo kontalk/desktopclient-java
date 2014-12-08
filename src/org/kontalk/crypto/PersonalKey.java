@@ -21,8 +21,6 @@ package org.kontalk.crypto;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.SignatureException;
@@ -31,7 +29,6 @@ import java.security.cert.X509Certificate;
 import java.util.Iterator;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyPair;
-import org.bouncycastle.openpgp.PGPObjectFactory;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
@@ -105,14 +102,6 @@ public final class PersonalKey {
     	return MessageUtils.bytesToHex(mPair.signKey.getPublicKey().getFingerprint());
     }
 
-    // TODO: unused
-    public PGPKeyPairRing storeNetwork(String userId, String network, String name, String passphrase) throws PGPException {
-    	// FIXME dummy values
-        return store(name,
-            userId + '@' + network, "NO COMMENT",
-            passphrase);
-    }
-
     public PGPKeyPairRing store(String name, String email, String comment, String passphrase) throws PGPException {
         // name[ (comment)] <[email]>
         StringBuilder userid = new StringBuilder(name);
@@ -128,18 +117,6 @@ public final class PersonalKey {
         userid.append('>');
 
         return PGP.store(mPair, userid.toString(), passphrase);
-    }
-
-    /**
-     * Updates the public key.
-     * TODO: unused
-     * @return the public keyring.
-     */
-    public PGPPublicKeyRing update(byte[] keyData) throws IOException {
-        PGPPublicKeyRing ring = new PGPPublicKeyRing(keyData, new BcKeyFingerprintCalculator());
-        // FIXME should loop through the ring and check for master/subkey
-        mPair.signKey = new PGPKeyPair(ring.getPublicKey(), mPair.signKey.getPrivateKey());
-        return ring;
     }
 
     /** Creates a {@link PersonalKey} from private and public key byte buffers. */
@@ -202,52 +179,6 @@ public final class PersonalKey {
         }
 
         throw new PGPException("invalid key data");
-    }
-
-    // TODO: unused
-    public static PersonalKey create() throws IOException {
-        try {
-            PGPDecryptedKeyPairRing kp = PGP.create();
-            return new PersonalKey(kp, null);
-        }
-        catch (InvalidAlgorithmParameterException |
-                NoSuchAlgorithmException |
-                NoSuchProviderException |
-                PGPException e) {
-            throw new IOException("unable to generate keypair", e);
-        }
-    }
-
-    /**
-     * Searches for the master (signing) key in the given public keyring and
-     * signs it with our master key.
-     * TODO: unused
-     * @return the same public keyring with the signed key. This is suitable to
-     * be imported directly into GnuPG.
-     * @see #signPublicKey(PGPPublicKey, String)
-     */
-    @SuppressWarnings("unchecked")
-    public PGPPublicKeyRing signPublicKey(byte[] publicKeyring, String id)
-            throws PGPException, IOException, SignatureException {
-
-        PGPObjectFactory reader = new PGPObjectFactory(publicKeyring);
-        Object o = reader.nextObject();
-        while (o != null) {
-            if (o instanceof PGPPublicKeyRing) {
-                PGPPublicKeyRing pubRing = (PGPPublicKeyRing) o;
-                Iterator<PGPPublicKey> iter = pubRing.getPublicKeys();
-                while (iter.hasNext()) {
-                    PGPPublicKey pk = iter.next();
-                    if (pk.isMasterKey()) {
-                        PGPPublicKey signed = signPublicKey(pk, id);
-                        return PGPPublicKeyRing.insertPublicKey(pubRing, signed);
-                    }
-                }
-            }
-            o = reader.nextObject();
-        }
-
-        throw new PGPException("invalid keyring data.");
     }
 
     /**
