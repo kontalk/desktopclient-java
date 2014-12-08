@@ -164,7 +164,7 @@ public final class View {
         Image image = getImage("kontalk.png");
         //image = image.getScaledInstance(22, 22, Image.SCALE_SMOOTH);
 
-        // TODO popup menu
+        // popup menu outside of frame, actually not supported
         final WebPopupMenu popup = new WebPopupMenu("Kontalk");
         WebMenuItem quitItem = new WebMenuItem("Quit");
         quitItem.addActionListener(new ActionListener() {
@@ -369,7 +369,6 @@ public final class View {
     private void sendText() {
        KonThread thread = mThreadListView.getSelectedThread();
        if (thread == null) {
-           // TODO
            // nothing selected
            return;
        }

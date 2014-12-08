@@ -50,7 +50,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowStateListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -107,13 +106,6 @@ final class MainFrame extends WebFrame {
                     MainFrame.this.toggleState();
                 else
                     viewModel.callShutDown();
-            }
-        });
-
-        this.addWindowStateListener(new WindowStateListener() {
-            @Override
-            public void windowStateChanged(WindowEvent e) {
-                // TODO tray behaviour?
             }
         });
 
@@ -213,7 +205,7 @@ final class MainFrame extends WebFrame {
         newThreadButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // TODO
+                // TODO new thread button
             }
         });
         WebPanel threadListPanel = this.createListPane(threadList, newThreadButton);
@@ -273,8 +265,6 @@ final class MainFrame extends WebFrame {
                 list.filter(searchField.getText());
             }
         });
-        // TODO
-        //searchField.getDocument().addDocumentListener(listener);
         WebButton clearSearchButton = new WebButton(clearIcon);
         clearSearchButton.setUndecorated(true);
         clearSearchButton.addActionListener(new ActionListener() {
@@ -285,7 +275,7 @@ final class MainFrame extends WebFrame {
         });
         searchField.setTrailingComponent(clearSearchButton);
         searchPanel.add(searchField, BorderLayout.CENTER);
-        // TODO
+        // TODO add new button
         //searchPanel.add(newButton, BorderLayout.EAST);
         listPanel.add(searchPanel, BorderLayout.NORTH);
         WebScrollPane scrollPane = new ScrollPane(list);

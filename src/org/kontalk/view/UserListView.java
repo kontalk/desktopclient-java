@@ -276,10 +276,10 @@ final class UserListView extends ListView implements Observer {
                 @Override
                 public void actionPerformed(ActionEvent event) {
                     // TODO delete threads/messages too? android client may add it
-                    // to roster again? useful at all? only self created contacts?
+                    // to roster again? useful at all? only self-created contacts?
                 }
             });
-            // TODO see above
+            // see above
             //this.add(deleteMenuItem);
         }
 

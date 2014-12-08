@@ -156,7 +156,7 @@ class ThreadListView extends ListView implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
-        // TODO
+        // TODO, performance
         KonThread currentThread = this.getSelectedThread();
         int threadID = currentThread != null ? currentThread.getID() : -1;
         mListModel.clear();
