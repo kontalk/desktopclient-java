@@ -29,7 +29,6 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
-import java.util.regex.Pattern;
 import org.apache.commons.lang.SystemUtils;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.client.Client;
@@ -109,8 +108,7 @@ public final class Kontalk {
             LOGGER.log(Level.WARNING, "can't create socket", ex);
         }
 
-        // TODO remove
-        parseArgs(args);
+        this.parseArgs(args);
 
         mClient = new Client(this);
 
@@ -238,21 +236,9 @@ public final class Kontalk {
 
     // parse optional arguments
     private void parseArgs(String[] args) {
-        if (args.length == 0)
-            return;
-        if (args.length == 2 && Pattern.matches(".*:\\d*", args[1])) {
-            KonConf config = KonConf.getInstance();
-            String[] argsegs = args[1].split(Pattern.quote(":"));
-            if (argsegs[0].length() != 0)
-                config.setProperty("server.host", argsegs[0]);
-            if (argsegs[1].length() != 0)
-                config.setProperty("server.port", Integer.valueOf(argsegs[1]));
-            //client.setUsername(args[0]);
-        } else if (args.length == 1 && !Pattern.matches(".*:\\d*", args[0])) {
-            //client.setUsername(args[0]);
-        } else {
+        if (args.length != 0) {
             String className = this.getClass().getEnclosingClass().getName();
-            LOGGER.log(Level.WARNING, "Usage: java {0} [USERNAME [SERVER:PORT]]", className);
+            LOGGER.log(Level.WARNING, "Usage: java {0} ", className);
         }
     }
 
