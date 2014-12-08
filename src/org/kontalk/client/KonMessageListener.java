@@ -54,13 +54,12 @@ final public class KonMessageListener implements PacketListener {
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
     }
 
-    // TODO synchronize!?
     @Override
     public void processPacket(Packet packet) {
         org.jivesoftware.smack.packet.Message m = (org.jivesoftware.smack.packet.Message) packet;
         if (m.getType() == org.jivesoftware.smack.packet.Message.Type.chat) {
             // somebody has news for us
-            processChatMessage(m);
+            this.processChatMessage(m);
         }
 
         // error message
@@ -88,7 +87,10 @@ final public class KonMessageListener implements PacketListener {
         Date date;
         if (delay != null && delay instanceof DelayInformation) {
                 date = ((DelayInformation) delay).getStamp();
-                // TODO if date is in future set it to 'now'
+                if (date.after(new Date())) {
+                    LOGGER.info("delay date is future (reset to 'now'): "+date);
+                    date = new Date();
+                }
         } else {
             // apparently there was no delay, so use the current time
             date = new Date();
@@ -185,8 +187,7 @@ final public class KonMessageListener implements PacketListener {
             return;
         }
         if (receipt instanceof AckServerReceipt) {
-            //AckServerReceipt ackServerReceipt = (AckServerReceipt) receipt;
-            // TODO it looks like the packet id is used now to identify the
+            // it looks like the packet id is used now to identify the
             // 'received' for this acknowledement, unlike the spec says
             // ignore this for now
             // update: actually we don't have to do anything here
