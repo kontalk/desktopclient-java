@@ -118,6 +118,7 @@ public final class Client implements PacketListener, Runnable {
     }
 
     private void connectAsync() {
+        // TODO unsure if everything is thread-safe
         synchronized (this) {
             // connect
             LOGGER.info("connecting...");
@@ -143,11 +144,8 @@ public final class Client implements PacketListener, Runnable {
             }
         }
 
-        // TODO get back to main thread
-
         LOGGER.info("connected!");
 
-        // TODO
         this.sendPresence();
 
         this.sendBlocklistRequest();
@@ -227,7 +225,7 @@ public final class Client implements PacketListener, Runnable {
 
     public void sendPresence() {
         Presence presence = new Presence(Presence.Type.available);
-        // TODO
+        // TODO presence, priority ...
         //presence.setStatus();
         this.sendPacket(presence);
     }
