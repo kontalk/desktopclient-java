@@ -198,7 +198,6 @@ public final class Kontalk {
                 }
             }
             // send vcard/public key requests for kontalk users with missing key
-            // TODO also do this when new user is created from roster
             for (User user : UserList.getInstance().getUser()) {
                 String network = StringUtils.parseServer(user.getJID());
                 if (user.getFingerprint().isEmpty() &&

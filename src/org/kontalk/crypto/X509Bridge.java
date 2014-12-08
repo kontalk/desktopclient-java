@@ -344,11 +344,6 @@ public final class X509Bridge {
         return cert;
     }
 
-//    public static X509Certificate fromParcel(Parcel in) throws PGPException {
-//        // TODO
-//        return null;
-//    }
-
     public static X509Certificate load(byte[] certData)
     		throws CertificateException, NoSuchProviderException {
 

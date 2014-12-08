@@ -62,8 +62,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // full jid with ressource
             "jid TEXT NOT NULL, " +
             // optional, but required for receipts
-            // TODO RFC 6120 says it doesn't have to be unique
-            "xmpp_id TEXT UNIQUE, " +
+            // Note: RFC 6120 says it doesn't have to be unique
+            "xmpp_id TEXT, " +
             // unix time, create/received timestamp
             "date INTEGER NOT NULL, " +
             // enum, server receipt status
@@ -215,7 +215,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mContent;
     }
 
-    // TODO
+    /**
+     * Return whether a message is (or was) encrypted.
+     * @return true if message is (or was) encrypted, else false
+     */
     public boolean isEncrypted() {
         return mEncryption == Coder.Encryption.ENCRYPTED ||
                 mEncryption == Coder.Encryption.DECRYPTED;
