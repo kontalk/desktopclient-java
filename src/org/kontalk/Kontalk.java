@@ -42,6 +42,7 @@ import org.kontalk.model.OutMessage;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.util.CryptoUtils;
 import org.kontalk.view.View;
 
 /**
@@ -91,6 +92,9 @@ public final class Kontalk {
         }
 
         LOGGER.info("--STARTED--");
+
+        // fix crypto restriction
+        CryptoUtils.removeCryptographyRestrictions();
 
         // register provider
         PGP.registerProvider();
