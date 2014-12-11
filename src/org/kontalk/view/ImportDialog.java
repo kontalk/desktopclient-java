@@ -231,10 +231,10 @@ final class ImportDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             // html tag for word wrap
-            String text = "<html>Welcome to the import wizard. In order to use this "
-                    +"desktop client you need an existing Kontalk account. "
-                    +"Please export the key files from Android and select them "
-                    +"on the next page.</html>";
+            String text = "<html>Welcome to the import wizard. To use the "
+                    + "Kontalk desktop client you need an existing account. "
+                    + "Please export the key files from your Android device and "
+                    + "select them on the next page.</html>";
             groupPanel.add(new WebLabel(text));
 
             this.add(groupPanel);
