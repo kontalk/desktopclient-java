@@ -65,6 +65,14 @@ public final class Kontalk {
     private Status mCurrentStatus = Status.DISCONNECTED;
 
     static {
+        // check java version
+        String jVersion = System.getProperty("java.version");
+        //if (jVersion.startsWith("1.7")) {
+            View.showWrongJavaVersionDialog();
+            LOGGER.severe("java too old: "+jVersion);
+            System.exit(-3);
+        //}
+
         // use platform dependent configuration directory
         String homeDir = System.getProperty("user.home");
         if (SystemUtils.IS_OS_WINDOWS) {
