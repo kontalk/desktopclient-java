@@ -466,7 +466,7 @@ public final class View {
 
     public static void showWrongJavaVersionDialog() {
         String jVersion = System.getProperty("java.version");
-        if (jVersion.length() >= 3);
+        if (jVersion.length() >= 3)
             jVersion = jVersion.substring(2, 3);
         String errorText = "The installed Java version is too old: " + jVersion;
         errorText += System.getProperty("line.separator");
