@@ -25,6 +25,7 @@ import com.alee.laf.button.WebButton;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
+import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyData;
@@ -175,11 +176,16 @@ public final class View {
         });
         popup.add(quitItem);
 
+        // workaround: menu does not disappear when focus is lost
+        final WebDialog hiddenDialog = new WebDialog();
+        hiddenDialog.setUndecorated(true);
+
         // create an action listener to listen for default action executed on the tray icon
         MouseListener listener = new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
-                check(e);
+                // menu must be shown on mouse release
+                //check(e);
             }
             @Override
             public void mouseReleased(MouseEvent e) {
@@ -189,12 +195,14 @@ public final class View {
                     check(e);
             }
             private void check(MouseEvent e) {
-                if (!e.isPopupTrigger())
-                    return;
+//                if (!e.isPopupTrigger())
+//                    return;
 
-                // TODO ugly
+                hiddenDialog.setVisible(true);
+
+                // TODO ugly code
                 popup.setLocation(e.getX() - 20, e.getY() - 40);
-                popup.setInvoker(popup);
+                popup.setInvoker(hiddenDialog);
                 popup.setVisible(true);
             }
         };
