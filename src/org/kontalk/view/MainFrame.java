@@ -327,7 +327,7 @@ final class MainFrame extends WebFrame {
 
     private void showAboutDialog() {
         WebPanel aboutPanel = new WebPanel(new GridLayout(0, 1, 5, 5));
-        aboutPanel.add(new WebLabel("Kontalk Java Client v0.1"));
+        aboutPanel.add(new WebLabel("Kontalk Java Client v" + Kontalk.VERSION));
         WebLinkLabel linkLabel = new WebLinkLabel();
         linkLabel.setLink("http://www.kontalk.org");
         linkLabel.setText("Visit kontalk.org");

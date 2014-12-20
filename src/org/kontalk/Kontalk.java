@@ -51,6 +51,7 @@ import org.kontalk.view.View;
 public final class Kontalk {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
+    public final static String VERSION = "0.01a";
     private final static String CONFIG_DIR;
 
     public enum Status {
