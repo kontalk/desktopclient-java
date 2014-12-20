@@ -100,7 +100,7 @@ public final class Kontalk {
             Logger.getLogger("").addHandler(fileHandler);
         }
 
-        LOGGER.info("--STARTED--");
+        LOGGER.info("--START, version: "+VERSION+"--");
 
         // fix crypto restriction
         CryptoUtils.removeCryptographyRestrictions();
