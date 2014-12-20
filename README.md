@@ -12,7 +12,7 @@ You can get the Android-App v3.0Beta from
 - [Aptoide] (http://kontalk-devteam.store.aptoide.com/app/market/org.kontalk/34/6938705/Kontalk%20Messenger)
 - or the latest apk [here](https://kontalk.raunz.name/files/)
 
-# Current key features:
+## Current key features:
 
 - connecting to Kontalk server with an already existing Kontalk account
 - automatically adding XMPP roster entries from server
@@ -24,11 +24,11 @@ You can get the Android-App v3.0Beta from
 **Note: private key and messages are saved unencrypted and can be read by other
 applications on your computer!**
 
-# Software Dependencies:
+## Software Dependencies
 
 - Java 8 / JDK 8
 
-# Included dependencies
+## Included dependencies
 
 - as GIT submodule:
   Kontalk-common-java classes (https://github.com/kontalk/client-common-java)
