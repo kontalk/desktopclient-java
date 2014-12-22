@@ -149,7 +149,7 @@ public final class MessageList extends Observable {
     public Optional<OutMessage> getMessageByReceiptID(String receiptID) {
         if (receiptID.isEmpty()) {
             LOGGER.warning("ignoring empty receipt ID");
-            return null;
+            return Optional.empty();
         }
         // TODO performance
         KonMessage message = null;
@@ -160,7 +160,7 @@ public final class MessageList extends Observable {
         }
         if (message == null) {
             LOGGER.warning("can't find message with receipt id: " + receiptID);
-            return null;
+            return Optional.empty();
         }
         return checkOutMessage(message);
     }
