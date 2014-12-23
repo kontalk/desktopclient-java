@@ -296,6 +296,21 @@ public final class Database {
         return enumSet;
     }
 
+    /**
+     * Return the value for a specific column as string; the string is empty if
+     * the value is SQL NULL.
+     */
+    public static String getString(ResultSet r, String columnLabel){
+        String s;
+        try {
+            s = r.getString(columnLabel);
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't get string from db", ex);
+            return "";
+        }
+        return s == null ? "" : s;
+    }
+
     public static void initialize(String path) throws KonException {
         INSTANCE = new Database(path);
     }
