@@ -30,6 +30,7 @@ import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
@@ -209,7 +210,7 @@ public final class Database {
         //update += " LIMIT 1";
 
         try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)) {
-            insertValues(stat, keyList, set);
+            this.insertValues(stat, keyList, set);
             stat.executeUpdate();
             ResultSet keys = stat.getGeneratedKeys();
             return keys.getInt(1);
@@ -234,14 +235,14 @@ public final class Database {
             List<String> keys,
             Map<String, Object> map) throws SQLException {
         for (int i = 0; i < keys.size(); i++) {
-            setValue(stat, i, map.get(keys.get(i)));
+            this.setValue(stat, i, map.get(keys.get(i)));
          }
     }
 
     private void insertValues(PreparedStatement stat,
             List<Object> values) throws SQLException {
         for (int i = 0; i < values.size(); i++) {
-            setValue(stat, i, values.get(i));
+            this.setValue(stat, i, values.get(i));
         }
     }
 
@@ -259,6 +260,9 @@ public final class Database {
                 stat.setInt(i+1, ((Enum) value).ordinal());
             } else if (value instanceof EnumSet) {
                 stat.setInt(i+1, this.enumSetToInt(((EnumSet) value)));
+            } else if (value instanceof Optional) {
+                Optional<?> o = (Optional) value;
+                this.setValue(stat, i, o.orElse(null));
             } else if (value == null) {
                 stat.setNull(i+1, Types.NULL);
             } else {
