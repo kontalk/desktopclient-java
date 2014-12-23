@@ -78,11 +78,11 @@ public final class MessageList extends Observable {
                     continue;
                 }
                 String jid = resultSet.getString("jid");
-                String xmppID = resultSet.getString("xmpp_id");
+                String xmppID = Database.getString(resultSet, "xmpp_id");
                 Date date = new Date(resultSet.getLong("date"));
                 int statusIndex = resultSet.getInt("receipt_status");
                 KonMessage.Status status = statusValues[statusIndex];
-                String receiptID = resultSet.getString("receipt_id");
+                String receiptID = Database.getString(resultSet, "receipt_id");
                 String jsonContent = resultSet.getString("content");
                 MessageContent content = MessageContent.fromJSONString(jsonContent);
                 int encryptionIndex = resultSet.getInt("encryption_status");
@@ -97,10 +97,10 @@ public final class MessageList extends Observable {
                         dir,
                         optUser.get());
                 builder.jid(jid);
-                builder.xmppID(xmppID == null ? "" : xmppID);
+                builder.xmppID(xmppID);
                 builder.date(date);
                 builder.receiptStatus(status);
-                builder.receiptID(receiptID == null ? "" : receiptID);
+                builder.receiptID(receiptID);
                 builder.content(content);
                 builder.encryption(encryption);
                 builder.signing(signing);
