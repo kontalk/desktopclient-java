@@ -55,7 +55,7 @@ public final class User {
             "name TEXT, " +
             "status TEXT, " +
             "last_seen INTEGER, " +
-            // send messages encrypted?
+            // boolean, send messages encrypted?
             "encrypted INTEGER NOT NULL, " +
             "public_key TEXT UNIQUE, " +
             "key_fingerprint TEXT UNIQUE" +
@@ -65,6 +65,7 @@ public final class User {
     private String mJID;
     private String mName;
     private String mStatus = "";
+    // TODO make optional
     private Date mLastSeen = null;
     private Available mAvailable = Available.UNKNOWN;
     private boolean mEncrypted = true;
@@ -94,11 +95,11 @@ public final class User {
         values.add(mStatus);
         values.add(mLastSeen);
         values.add(mEncrypted);
-        values.add(mKey);
-        values.add(mFingerprint);
+        values.add(null); // key
+        values.add(null); // fingerprint
         mID = db.execInsert(TABLE, values);
         if (mID < 1)
-            LOGGER.log(Level.WARNING, "couldn't insert user");
+            LOGGER.log(Level.WARNING, "could not insert user");
     }
 
     /**
@@ -228,8 +229,8 @@ public final class User {
         set.put("status", mStatus);
         set.put("last_seen", mLastSeen);
         set.put("encrypted", mEncrypted);
-        set.put("public_key", mKey);
-        set.put("key_fingerprint", mFingerprint);
+        set.put("public_key", mKey.isEmpty() ? null : mKey);
+        set.put("key_fingerprint", mFingerprint.isEmpty() ? null : mFingerprint);
         db.execUpdate(TABLE, set, mID);
     }
 

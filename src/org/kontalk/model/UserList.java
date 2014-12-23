@@ -63,8 +63,8 @@ public final class UserList extends Observable {
                 long l = resultSet.getLong("last_seen");
                 Date lastSeen = l == 0 ? null : new Date(l);
                 boolean encr = resultSet.getBoolean("encrypted");
-                String key = resultSet.getString("public_key");
-                String fp = resultSet.getString("key_fingerprint");
+                String key = Database.getString(resultSet, "public_key");
+                String fp = Database.getString(resultSet, "key_fingerprint");
                 mMap.put(jid, new User(id, jid, name, status, lastSeen, encr, key, fp));
             }
         resultSet.close();
