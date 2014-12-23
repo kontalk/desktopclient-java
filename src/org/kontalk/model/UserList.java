@@ -61,7 +61,9 @@ public final class UserList extends Observable {
                 String name = resultSet.getString("name");
                 String status = resultSet.getString("status");
                 long l = resultSet.getLong("last_seen");
-                Date lastSeen = l == 0 ? null : new Date(l);
+                Optional<Date> lastSeen = l == 0 ?
+                        Optional.<Date>empty() :
+                        Optional.<Date>of(new Date(l));
                 boolean encr = resultSet.getBoolean("encrypted");
                 String key = Database.getString(resultSet, "public_key");
                 String fp = Database.getString(resultSet, "key_fingerprint");

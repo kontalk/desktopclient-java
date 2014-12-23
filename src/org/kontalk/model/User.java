@@ -65,8 +65,7 @@ public final class User {
     private String mJID;
     private String mName;
     private String mStatus = "";
-    // TODO make optional
-    private Date mLastSeen = null;
+    private Optional<Date> mLastSeen = null;
     private Available mAvailable = Available.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
@@ -105,8 +104,14 @@ public final class User {
     /**
      * Used for loading users from database
      */
-    User(int id, String jid, String name, String status, Date lastSeen,
-            boolean encrypted, String publicKey, String fingerprint) {
+    User(int id,
+            String jid,
+            String name,
+            String status,
+            Optional<Date> lastSeen,
+            boolean encrypted,
+            String publicKey,
+            String fingerprint) {
         mID = id;
         mJID = jid;
         mName = name;
@@ -145,7 +150,7 @@ public final class User {
     }
 
     public Optional<Date> getLastSeen() {
-        return Optional.ofNullable(mLastSeen);
+        return mLastSeen;
     }
 
     public boolean getEncrypted() {
@@ -163,7 +168,7 @@ public final class User {
     void setPresence(Presence.Type type, String status) {
         if (type == Presence.Type.available) {
             mAvailable = Available.YES;
-            mLastSeen = new Date();
+            mLastSeen = Optional.of(new Date());
         }
         if (type == Presence.Type.unavailable) {
             mAvailable = Available.NO;
