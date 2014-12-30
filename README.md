@@ -28,6 +28,10 @@ applications on your computer!**
 
 - Java 8 / JDK 8
 
+### For building
+
+- Apache Ant (https://ant.apache.org)
+
 ## Included dependencies
 
 - as GIT submodule:
