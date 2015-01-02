@@ -110,7 +110,7 @@ final public class KonMessageListener implements PacketListener {
         PacketExtension receiptExt = m.getExtension(ServerReceipt.NAMESPACE);
         if (receiptExt != null && receiptExt instanceof ServerReceipt) {
             ServerReceipt serverReceipt = (ServerReceipt) receiptExt;
-            processReceipt(m, serverReceipt);
+            this.processReceipt(m, serverReceipt);
             return;
         }
 
@@ -187,7 +187,7 @@ final public class KonMessageListener implements PacketListener {
             return;
         }
         if (receipt instanceof AckServerReceipt) {
-            // it looks like the packet id is used now to identify the
+            // it looks like the packet ID is used now to identify the
             // 'received' for this acknowledement, unlike the spec says
             // ignore this for now
             // update: actually we don't have to do anything here

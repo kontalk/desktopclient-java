@@ -69,6 +69,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // enum, server receipt status
             "receipt_status INTEGER NOT NULL, " +
             // receipt id (Kontalk XMPP extension based on XEP-0184)
+            // TODO only direction+receipt_id unique!?
             "receipt_id TEXT UNIQUE, " +
             // message content in JSON format
             "content TEXT NOT NULL, " +

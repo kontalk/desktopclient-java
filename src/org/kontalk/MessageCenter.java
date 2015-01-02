@@ -33,6 +33,7 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
 /**
+ * Central message handler as interface between controller and data model.
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
@@ -72,7 +73,6 @@ public class MessageCenter {
             Date date,
             String receiptID,
             MessageContent content) {
-
         // get model references for this message
         String jid = StringUtils.parseBareAddress(from);
         UserList userList = UserList.getInstance();
@@ -118,6 +118,7 @@ public class MessageCenter {
 
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
         Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByXMPPID(xmppID);
+        // TODO check if receiptID is already in DB + react?
         if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message");
             return;
