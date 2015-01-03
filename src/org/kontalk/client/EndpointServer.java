@@ -30,7 +30,7 @@ import org.kontalk.KonConf;
  */
 public final class EndpointServer {
     /** Default Kontalk client port. */
-    public static final int DEFAULT_PORT = 5222;
+    public static final int DEFAULT_PORT = 5999;
 
     private final String mHost;
     private final int mPort;

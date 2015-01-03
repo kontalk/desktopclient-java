@@ -58,7 +58,7 @@ final class BlockResponseListener implements PacketListener {
         }
         IQ p = (IQ) packet;
 
-        if (p.getType() != IQ.Type.RESULT) {
+        if (p.getType() != IQ.Type.result) {
             LOGGER.warning("ignoring block response with IQ type: "+p.getType());
             return;
         }

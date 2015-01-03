@@ -74,7 +74,7 @@ final class KonRosterListener implements RosterListener {
 
     @Override
     public void presenceChanged(Presence p) {
-        LOGGER.info("got presence change: "+p.getFrom()+" "+p.getXmlns());
+        LOGGER.info("got presence change: "+p.getFrom()+" "+p.toXML().toString());
 
         if (p.getFrom() == null || mRoster == null)
             // dunno why this happens

@@ -135,7 +135,7 @@ public final class Client implements PacketListener, Runnable {
             try {
                 // the dummy values are not actually used
                 // server does authentification based purely on the pgp key
-                mConn.login("dummy", "dummy");
+                mConn.login();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
                 mModel.statusChanged(Kontalk.Status.FAILED);
@@ -173,7 +173,8 @@ public final class Client implements PacketListener, Runnable {
         smackMessage.setPacketID(message.getXMPPID());
         smackMessage.setType(Message.Type.chat);
         smackMessage.setTo(message.getJID());
-        smackMessage.addExtension(new ServerReceiptRequest());
+        // TODO
+        //smackMessage.addExtension(new ServerReceiptRequest());
         KonConf conf = KonConf.getInstance();
         if (conf.getBoolean(KonConf.NET_SEND_CHAT_STATE))
             smackMessage.addExtension(new ChatStateExtension(ChatState.active));
@@ -198,7 +199,7 @@ public final class Client implements PacketListener, Runnable {
 
     public void sendVCardRequest(String jid) {
         VCard4 vcard = new VCard4();
-        vcard.setType(IQ.Type.GET);
+        vcard.setType(IQ.Type.get);
         vcard.setTo(jid);
         this.sendPacket(vcard);
     }

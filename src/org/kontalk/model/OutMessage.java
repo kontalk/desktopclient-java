@@ -20,7 +20,7 @@ package org.kontalk.model;
 
 import java.util.Date;
 import java.util.EnumSet;
-import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.crypto.Coder;
 
 /**
@@ -56,7 +56,7 @@ public static class Builder extends KonMessage.Builder {
             super(-1, thread, Direction.OUT, user);
 
             mJID = user.getJID();
-            mXMPPID = Packet.nextID();
+            mXMPPID = StringUtils.randomString(6);
             mDate = new Date();
             mReceiptStatus = Status.PENDING;
             mReceiptID = "";

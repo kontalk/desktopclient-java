@@ -32,12 +32,12 @@ final class VCardListener implements PacketListener {
         byte[] publicKey = p.getPGPKey();
 
         // vcard coming from sync
-        if (p.getType() == IQ.Type.SET) {
+        if (p.getType() == IQ.Type.set) {
             LOGGER.warning("ignoring vcard with type 'set'");
             return;
         }
 
-        if (p.getType() == IQ.Type.RESULT) {
+        if (p.getType() == IQ.Type.result) {
             if (publicKey == null) {
                 LOGGER.warning("got vcard without pgp key included");
                 return;

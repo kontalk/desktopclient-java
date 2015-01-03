@@ -26,7 +26,7 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.PacketExtension;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.jivesoftware.smack.util.Base64;
+import org.jivesoftware.smack.util.stringencoder.Base64;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.kontalk.MessageCenter;
@@ -45,10 +45,6 @@ final public class KonMessageListener implements PacketListener {
     KonMessageListener(Client client) {
         mClient = client;
 
-        ProviderManager.addExtensionProvider(SentServerReceipt.ELEMENT_NAME, SentServerReceipt.NAMESPACE, new SentServerReceipt.Provider());
-        ProviderManager.addExtensionProvider(ReceivedServerReceipt.ELEMENT_NAME, ReceivedServerReceipt.NAMESPACE, new ReceivedServerReceipt.Provider());
-        ProviderManager.addExtensionProvider(ServerReceiptRequest.ELEMENT_NAME, ServerReceiptRequest.NAMESPACE, new ServerReceiptRequest.Provider());
-        ProviderManager.addExtensionProvider(AckServerReceipt.ELEMENT_NAME, AckServerReceipt.NAMESPACE, new AckServerReceipt.Provider());
         ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
         //ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
@@ -107,13 +103,7 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // delivery receipt
-        PacketExtension receiptExt = m.getExtension(ServerReceipt.NAMESPACE);
-        if (receiptExt != null && receiptExt instanceof ServerReceipt) {
-            ServerReceipt serverReceipt = (ServerReceipt) receiptExt;
-            this.processReceipt(m, serverReceipt);
-            return;
-        }
-
+        // TODO
         // must be an incoming message
 
         // get content/text from body and/or encryption/url extension
@@ -127,10 +117,7 @@ final public class KonMessageListener implements PacketListener {
 
         // receipt id
         String receiptID = "";
-        if (receiptExt != null && receiptExt instanceof ServerReceiptRequest) {
-            ServerReceiptRequest req = (ServerReceiptRequest) receiptExt;
-            receiptID = req.getId() == null ? "" : req.getId();
-        }
+        // TODO
 
         String xmppID = m.getPacketID() != null ? m.getPacketID() : "";
         if (xmppID.isEmpty()) {
@@ -146,54 +133,7 @@ final public class KonMessageListener implements PacketListener {
                 content);
 
         // on success, send a 'received' for a request
-        if (success && !receiptID.isEmpty()) {
-            Message received = new Message(m.getFrom(), Message.Type.chat);
-            received.addExtension(new ReceivedServerReceipt(receiptID));
-            mClient.sendPacket(received);
-        }
-    }
-
-    private void processReceipt(Message m, ServerReceipt receipt) {
-        if (receipt instanceof SentServerReceipt) {
-            SentServerReceipt sentServerReceipt = (SentServerReceipt) receipt;
-            // update message status and save receipt ID
-            String xmppID = m.getPacketID();
-            if (xmppID == null || xmppID.isEmpty()) {
-                LOGGER.warning("message with receipt has invalid XMPP ID: "+xmppID);
-                return;
-            }
-            String receiptID = sentServerReceipt.getId();
-            if (receiptID == null || receiptID.isEmpty()) {
-                LOGGER.warning("message has invalid receipt ID: "+receiptID);
-                return;
-            }
-            MessageCenter.getInstance().updateMsgBySentReceipt(xmppID, receiptID);
-            return;
-        }
-        if (receipt instanceof ReceivedServerReceipt) {
-            ReceivedServerReceipt receivedServerReceipt = (ReceivedServerReceipt) receipt;
-            String receiptID = receivedServerReceipt.getId();
-            if (receiptID == null || receiptID.isEmpty()) {
-                LOGGER.warning("message has invalid receipt ID: "+receiptID);
-                return;
-            }
-            // HOORAY! our message was received
-            MessageCenter.getInstance().updateMsgByReceivedReceipt(
-                    receivedServerReceipt.getId());
-            // send acknowledgment
-            Message ack = new Message(m.getFrom(), Message.Type.chat);
-            ack.addExtension(new AckServerReceipt(m.getPacketID()));
-            mClient.sendPacket(ack);
-            return;
-        }
-        if (receipt instanceof AckServerReceipt) {
-            // it looks like the packet ID is used now to identify the
-            // 'received' for this acknowledement, unlike the spec says
-            // ignore this for now
-            // update: actually we don't have to do anything here
-            return;
-        }
-        LOGGER.warning("unknown server receipt: " + receipt.toXML());
+        // TODO
     }
 
     public static MessageContent parseMessageContent(Message m) {
@@ -207,7 +147,7 @@ final public class KonMessageListener implements PacketListener {
             if (m.getBody() != null)
                 LOGGER.warning("message contains encryption and body (ignoring body)");
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
-            encryptedContent = Base64.encodeBytes(encryption.getData());
+            encryptedContent = Base64.encodeToString(encryption.getData());
         }
 
         // Out of Band Data: a URI to a file

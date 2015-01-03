@@ -34,51 +34,83 @@ import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
-import org.jivesoftware.smack.ConnectionConfiguration;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.UnsupportedCallbackException;
+import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
+import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 
 
 public final class KonConnection extends XMPPTCPConnection {
     private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
+    private final static String RESSOURCE = "Kontalk_Desktop";
+    // TODO
+    private final static boolean ACCEPT_ANY_CERTIFICATE = true;
+
     protected EndpointServer mServer;
 
-    private KonConnection(EndpointServer server) throws XMPPException {
-        super(new ConnectionConfiguration(
-                server.getHost(),
-                server.getPort(),
-                server.getNetwork()));
+    public KonConnection(EndpointServer server,
+            PrivateKey privateKey,
+            X509Certificate bridgeCert)
+            throws XMPPException {
+        super(buildConfiguration(
+        RESSOURCE,
+        server,
+        privateKey,
+        bridgeCert,
+        ACCEPT_ANY_CERTIFICATE));
 
         mServer = server;
-        // open smack debug window when connecting
-        //config.setDebuggerEnabled(true);
-        // disable reconnection
-        config.setReconnectionAllowed(false);
-        // we don't need the roster
-        // -> yes, we do
-        //config.setRosterLoadedAtLogin(false);
-        // enable compression
-        config.setCompressionEnabled(true);
-        // enable encryption
-        config.setSecurityMode(SecurityMode.enabled);
-        // we will send a custom presence
-        // -> no, send initial default presence
-        //config.setSendPresence(false);
     }
 
-    public KonConnection(EndpointServer server, PrivateKey privateKey, X509Certificate bridgeCert) throws XMPPException {
-        this(server);
+    private static XMPPTCPConnectionConfiguration buildConfiguration(
+            String resource,
+            EndpointServer server,
+            PrivateKey privateKey,
+            X509Certificate bridgeCert,
+            boolean acceptAnyCertificate) {
+        XMPPTCPConnectionConfiguration.XMPPTCPConnectionConfigurationBuilder builder =
+            XMPPTCPConnectionConfiguration.builder();
 
-        setupSSL(privateKey, bridgeCert);
-    }
+        builder
+            // enable debugging
+            //.setDebuggerEnabled(true)
+            .setHost(server.getHost())
+            .setPort(server.getPort())
+            .setServiceName(server.getNetwork())
+            .setResource(resource)
+            // the dummy value is not actually used
+            .setUsernameAndPassword(null, "dummy")
+            .setCallbackHandler(new CallbackHandler() {
+                @Override
+                public void handle(Callback[] callbacks)
+                        throws IOException, UnsupportedCallbackException {
+                    for (Callback cb : callbacks)
+                        LOGGER.info("got callback!?: " + cb);
+                }
+            })
+            // we need the roster
+            .setRosterLoadedAtLogin(true)
+            // enable compression
+            .setCompressionEnabled(true)
+            // enable encryption
+            .setSecurityMode(SecurityMode.required)
+            // we will send a custom presence
+            // -> no, send initial default presence
+            //.setSendPresence(false)
+            // disable session initiation
+            .setLegacySessionDisabled(true);
 
-    private void setupSSL(PrivateKey privateKey, X509Certificate bridgeCert) {
+        // setup SSL
         try {
             SSLContext ctx = SSLContext.getInstance("TLS");
 
@@ -88,38 +120,46 @@ public final class KonConnection extends XMPPTCPConnection {
             keystore.setKeyEntry("private", privateKey, new char[0], new Certificate[] { bridgeCert });
 
             // key managers
-            KeyManager[] km;
             KeyManagerFactory kmFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
             kmFactory.init(keystore, new char[0]);
 
-            km = kmFactory.getKeyManagers();
+            KeyManager[] km = kmFactory.getKeyManagers();
+
+            // blacklist PLAIN mechanism
+            SASLAuthentication.blacklistSASLMechanism("PLAIN");
 
             // trust managers
-            TrustManager[] tm = new TrustManager[] {
-                new X509TrustManager() {
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return null;
+            TrustManager[] tm;
+            if (acceptAnyCertificate) {
+                tm = new TrustManager[] {
+                    new X509TrustManager() {
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType)
+                            throws CertificateException {
+                        }
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType)
+                            throws CertificateException {
+                        }
                     }
+                };
+            } else {
+                // builtin keystore
+                TrustManagerFactory tmFactory = TrustManagerFactory
+                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+                KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+                tmFactory.init(ks);
 
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] chain, String authType)
-                        throws CertificateException {
-                    }
-
-                    @Override
-                    public void checkClientTrusted(X509Certificate[] chain, String authType)
-                        throws CertificateException {
-                    }
-                }
-            };
+                tm = tmFactory.getTrustManagers();
+            }
 
             ctx.init(km, tm, null);
-            config.setCustomSSLContext(ctx);
-            //config.setSocketFactory(SSLSocketFactory.getDefault());
-
-            // enable SASL EXTERNAL
-            SASLAuthentication.supportSASLMechanism("EXTERNAL");
+            builder.setCustomSSLContext(ctx);
+            // Note: SASL EXTERNAL is already enabled in Smack
         } catch (NoSuchAlgorithmException |
                 KeyStoreException |
                 IOException |
@@ -128,6 +168,11 @@ public final class KonConnection extends XMPPTCPConnection {
                 KeyManagementException ex) {
             LOGGER.log(Level.WARNING, "can't setup SSL connection", ex);
         }
+
+        // hostname verifier needed
+        builder.setHostnameVerifier(new BrowserCompatHostnameVerifier());
+
+        return builder.build();
     }
 
     @Override
@@ -142,7 +187,7 @@ public final class KonConnection extends XMPPTCPConnection {
 
     @Override
     public synchronized void disconnect(Presence presence) {
-        LOGGER.log(Level.INFO, "disconnecting ({0})", presence);
+        LOGGER.log(Level.INFO, "disconnecting ({0})", presence.toXML().toString());
         try {
             super.disconnect(presence);
         } catch (SmackException.NotConnectedException ex) {

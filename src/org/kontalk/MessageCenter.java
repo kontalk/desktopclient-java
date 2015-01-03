@@ -21,7 +21,7 @@ package org.kontalk;
 import java.util.Date;
 import java.util.Optional;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.util.StringUtils;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonThread;
@@ -74,7 +74,7 @@ public class MessageCenter {
             String receiptID,
             MessageContent content) {
         // get model references for this message
-        String jid = StringUtils.parseBareAddress(from);
+        String jid = XmppStringUtils.parseBareAddress(from);
         UserList userList = UserList.getInstance();
         Optional<User> optUser = userList.containsUserWithJID(jid) ?
                 userList.getUserByJID(jid) :

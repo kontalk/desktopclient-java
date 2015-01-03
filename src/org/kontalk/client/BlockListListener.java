@@ -23,7 +23,7 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.jivesoftware.smack.util.StringUtils;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
@@ -45,7 +45,7 @@ final class BlockListListener implements PacketListener {
 
         if (p.getItems() != null) {
             for (String jid : p.getItems()) {
-                if (StringUtils.isFullJID(jid)) {
+                if (XmppStringUtils.isFullJID(jid)) {
                     LOGGER.info("ignoring blocking of JID with resource");
                     return;
                 }

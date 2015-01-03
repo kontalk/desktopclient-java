@@ -31,7 +31,7 @@ import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.util.encoders.Base64;
 import org.jivesoftware.smack.packet.Presence;
-import org.jivesoftware.smack.util.StringUtils;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Database;
 import org.kontalk.crypto.PGP;
 import org.kontalk.util.MessageUtils;
@@ -84,7 +84,7 @@ public final class User {
      * Used for creating new users (eg from roster).
      */
     User(String jid, String name) {
-        mJID = StringUtils.parseBareAddress(jid);
+        mJID = XmppStringUtils.parseBareAddress(jid);
         mName = name;
 
         Database db = Database.getInstance();
@@ -127,7 +127,7 @@ public final class User {
     }
 
     public void setJID(String jid) {
-        mJID = StringUtils.parseBareAddress(jid);
+        mJID = XmppStringUtils.parseBareAddress(jid);
         this.save();
     }
 
