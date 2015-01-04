@@ -25,7 +25,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
-import org.kontalk.client.Client;
 
 /**
  *
@@ -53,9 +52,9 @@ public final class KonConf extends PropertiesConfiguration {
     public final static String MAIN_TRAY_CLOSE = "main.tray_close";
     public final static String MAIN_ENTER_SENDS = "main.enter_sends";
 
-    public final static String DEFAULT_SERV_NET = Client.KONTALK_NETWORK;
+    public final static String DEFAULT_SERV_NET = "kontalk.net";
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
-    public final static int DEFAULT_SERV_PORT = 5222;
+    public final static int DEFAULT_SERV_PORT = 5999;
 
     private KonConf() {
         super();

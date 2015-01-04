@@ -26,11 +26,8 @@ import org.kontalk.KonConf;
  * Defines a server address and features.
  * @author Daniele Ricci
  * @version 1.0
- * TODO http port is deprecated
  */
 public final class EndpointServer {
-    /** Default Kontalk client port. */
-    public static final int DEFAULT_PORT = 5999;
 
     private final String mHost;
     private final int mPort;

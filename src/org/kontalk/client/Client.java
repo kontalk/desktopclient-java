@@ -54,8 +54,6 @@ import org.kontalk.model.OutMessage;
 public final class Client implements PacketListener, Runnable {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
 
-    public final static String KONTALK_NETWORK = "kontalk.net";
-
     private final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
     private static enum Command {CONNECT, DISCONNECT};
@@ -77,9 +75,9 @@ public final class Client implements PacketListener, Runnable {
         mModel.statusChanged(Kontalk.Status.CONNECTING);
 
         KonConf config = KonConf.getInstance();
-        String network = config.getString("server.network");
-        String host = config.getString("server.host");
-        int port = config.getInt("server.port");
+        String network = config.getString(KonConf.SERV_NET, KonConf.DEFAULT_SERV_NET);
+        String host = config.getString(KonConf.SERV_HOST, KonConf.DEFAULT_SERV_HOST);
+        int port = config.getInt(KonConf.SERV_PORT, KonConf.DEFAULT_SERV_PORT);
         EndpointServer Server = new EndpointServer(network, host, port);
 
         // create connection
