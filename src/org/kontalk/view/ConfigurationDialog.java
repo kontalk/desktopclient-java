@@ -37,7 +37,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import javax.swing.JFrame;
+import javax.swing.text.NumberFormatter;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.crypto.PersonalKey;
@@ -169,20 +171,22 @@ final class ConfigurationDialog extends WebDialog {
 
             // server text field
             groupPanel.add(new WebLabel("Server address:"));
-            GroupPanel serverPanel = new GroupPanel(5);
-            mServerField = new WebTextField(mConf.getString(KonConf.SERV_HOST), 24);
+            WebPanel serverPanel = new WebPanel(false);
+            mServerField = new WebTextField(mConf.getString(KonConf.SERV_HOST));
             mServerField.setInputPrompt(KonConf.DEFAULT_SERV_HOST);
             mServerField.setInputPromptFont(mServerField.getFont().deriveFont(Font.ITALIC));
             mServerField.setHideInputPromptOnFocus(false);
             serverPanel.add(mServerField);
-            serverPanel.add(new WebLabel(" Port:"));
             int port = mConf.getInt(KonConf.SERV_PORT, KonConf.DEFAULT_SERV_PORT);
-            // TODO min / max value
-            // SpinnerModel spinnerModel = new SpinnerNumberModel(port, 1, 65535, 1);
-            WebFormattedTextField portField = new WebFormattedTextField(new DecimalFormat("#####"));
-            portField.setColumns(5);
+            NumberFormat format = new DecimalFormat("#####");
+            NumberFormatter formatter = new NumberFormatter(format);
+            formatter.setMinimum(1);
+            formatter.setMaximum(65535);
+            WebFormattedTextField portField = new WebFormattedTextField(formatter);
+            portField.setColumns(4);
             portField.setValue(port);
-            serverPanel.add(portField);
+            serverPanel.add(new GroupPanel(new WebLabel("  Port:"), portField),
+                    BorderLayout.EAST);
             groupPanel.add(serverPanel);
 
             groupPanel.add(new WebSeparator(true, true));
