@@ -160,6 +160,7 @@ final class ConfigurationDialog extends WebDialog {
     private class AccountPanel extends WebPanel {
 
         private final WebTextField mServerField;
+        private final WebFormattedTextField mPortField;
         private final WebLabel mFingerprintLabel;
 
         public AccountPanel() {
@@ -182,10 +183,10 @@ final class ConfigurationDialog extends WebDialog {
             NumberFormatter formatter = new NumberFormatter(format);
             formatter.setMinimum(1);
             formatter.setMaximum(65535);
-            WebFormattedTextField portField = new WebFormattedTextField(formatter);
-            portField.setColumns(4);
-            portField.setValue(port);
-            serverPanel.add(new GroupPanel(new WebLabel("  Port:"), portField),
+            mPortField = new WebFormattedTextField(formatter);
+            mPortField.setColumns(4);
+            mPortField.setValue(port);
+            serverPanel.add(new GroupPanel(new WebLabel("  Port:"), mPortField),
                     BorderLayout.EAST);
             groupPanel.add(serverPanel);
 
@@ -237,6 +238,8 @@ final class ConfigurationDialog extends WebDialog {
 
         private void saveConfiguration() {
             mConf.setProperty(KonConf.SERV_HOST, mServerField.getText());
+            int port = Integer.parseInt(mPortField.getText());
+            mConf.setProperty(KonConf.SERV_PORT, port);
         }
 
     }
