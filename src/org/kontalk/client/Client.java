@@ -75,9 +75,11 @@ public final class Client implements PacketListener, Runnable {
         mModel.statusChanged(Kontalk.Status.CONNECTING);
 
         KonConf config = KonConf.getInstance();
-        String network = config.getString(KonConf.SERV_NET, KonConf.DEFAULT_SERV_NET);
-        String host = config.getString(KonConf.SERV_HOST, KonConf.DEFAULT_SERV_HOST);
-        int port = config.getInt(KonConf.SERV_PORT, KonConf.DEFAULT_SERV_PORT);
+        // tigase: use hostname as network
+        //String network = config.getString(KonConf.SERV_NET);
+        String network = config.getString(KonConf.SERV_HOST);
+        String host = config.getString(KonConf.SERV_HOST);
+        int port = config.getInt(KonConf.SERV_PORT);
         EndpointServer Server = new EndpointServer(network, host, port);
 
         // create connection

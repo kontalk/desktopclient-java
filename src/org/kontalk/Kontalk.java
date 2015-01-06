@@ -214,7 +214,10 @@ public final class Kontalk {
             for (User user : UserList.getInstance().getUser()) {
                 String network = XmppStringUtils.parseDomain(user.getJID());
                 if (user.getFingerprint().isEmpty() &&
-                        network.equalsIgnoreCase(KonConf.DEFAULT_SERV_NET))
+                        // TODO
+                        // network.equalsIgnoreCase(KonConf.SERV_NET))
+                        network.equalsIgnoreCase(KonConf.SERV_HOST))
+
                 mClient.sendVCardRequest(user.getJID());
             }
 

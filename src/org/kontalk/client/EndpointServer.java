@@ -18,8 +18,6 @@
 
 package org.kontalk.client;
 
-import org.kontalk.KonConf;
-
 
 
 /**
@@ -34,8 +32,8 @@ public final class EndpointServer {
     private final String mNetwork;
 
     public EndpointServer(String network, String host, int port) {
-        mNetwork = network.isEmpty() ? KonConf.DEFAULT_SERV_NET : network;
-        mHost = host.isEmpty() ? KonConf.DEFAULT_SERV_HOST : host;
+        mNetwork = network;
+        mHost = host;
         mPort = port;
     }
 

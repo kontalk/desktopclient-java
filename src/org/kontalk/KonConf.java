@@ -37,8 +37,9 @@ public final class KonConf extends PropertiesConfiguration {
 
     private static KonConf INSTANCE = null;
 
-    // All configuration option keys
-    public final static String SERV_NET = "server.network";
+    // all configuration property keys
+    // disable network property for now -> same as server host
+    //public final static String SERV_NET = "server.network";
     public final static String SERV_HOST = "server.host";
     public final static String SERV_PORT = "server.port";
     public final static String ACC_PASS = "account.passphrase";
@@ -52,9 +53,9 @@ public final class KonConf extends PropertiesConfiguration {
     public final static String MAIN_TRAY_CLOSE = "main.tray_close";
     public final static String MAIN_ENTER_SENDS = "main.enter_sends";
 
-    public final static String DEFAULT_SERV_NET = "kontalk.net";
+    //public final static String DEFAULT_SERV_NET = "kontalk.net";
     public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
-    public final static int DEFAULT_SERV_PORT = 5999;
+    public final static int DEFAULT_SERV_PORT = 5222;
 
     private KonConf() {
         super();
@@ -72,9 +73,9 @@ public final class KonConf extends PropertiesConfiguration {
 
         this.setFileName(filePath);
 
-        // init config
+        // init config / set default values for new properties
         Map<String, Object> map = new HashMap<>();
-        map.put(SERV_NET, DEFAULT_SERV_NET);
+        //map.put(SERV_NET, DEFAULT_SERV_NET);
         map.put(SERV_HOST, DEFAULT_SERV_HOST);
         map.put(SERV_PORT, DEFAULT_SERV_PORT);
         map.put(ACC_PASS, "");
