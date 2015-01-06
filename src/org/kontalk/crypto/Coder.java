@@ -28,6 +28,7 @@ import java.security.SignatureException;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
@@ -131,11 +132,11 @@ public final class Coder {
      * @param message
      * @return the encrypted and signed text.
      */
-    public static byte[] processOutMessage(KonMessage message) {
+    public static Optional<byte[]> processOutMessage(KonMessage message) {
         if (message.getEncryption() != Encryption.DECRYPTED ||
                 message.getDir() != KonMessage.Direction.OUT) {
             LOGGER.warning("message does not want to be encrypted");
-            return null;
+            return Optional.empty();
         }
 
         LOGGER.fine("encrypting message...");
@@ -150,13 +151,13 @@ public final class Coder {
         } catch (KonException ex) {
             LOGGER.log(Level.WARNING, "can't get personal key", ex);
             message.addSecurityError(Error.UNKNOWN_ERROR);
-            return null;
+            return Optional.empty();
         }
 
         // get receiver key
         PGPPublicKey receiverKey = getKey(message);
         if (receiverKey == null)
-            return null;
+            return Optional.empty();
 
         // secure the message against the most basic attacks using Message/CPIM
         String from = myKey.getUserId(null);
@@ -220,7 +221,7 @@ public final class Coder {
                 } catch (SignatureException ex) {
                         LOGGER.log(Level.WARNING, "can't read data for signature", ex);
                         message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
-                        return null;
+                        return Optional.empty();
                 }
             }
 
@@ -233,7 +234,7 @@ public final class Coder {
             } catch (SignatureException ex) {
                 LOGGER.log(Level.WARNING, "can't create signature", ex);
                 message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
-                return null;
+                return Optional.empty();
             }
             compGen.close();
             encGen.close();
@@ -241,11 +242,11 @@ public final class Coder {
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't encrypt message", ex);
             message.addSecurityError(Error.UNKNOWN_ERROR);
-            return null;
+            return Optional.empty();
         }
 
         LOGGER.fine("encryption successful");
-        return out.toByteArray();
+        return Optional.of(out.toByteArray());
     }
 
     /**

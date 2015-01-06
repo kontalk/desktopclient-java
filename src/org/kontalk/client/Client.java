@@ -21,6 +21,7 @@ package org.kontalk.client;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -182,14 +183,14 @@ public final class Client implements PacketListener, Runnable {
             // TODO send more possible content
             smackMessage.setBody(message.getContent().getPlainText());
         } else {
-            byte[] encrypted = Coder.processOutMessage(message);
+            Optional<byte[]> encrypted = Coder.processOutMessage(message);
             // check also for security errors just to be sure
-            if (encrypted == null || !message.getSecurityErrors().isEmpty()) {
+            if (!encrypted.isPresent() || !message.getSecurityErrors().isEmpty()) {
                 LOGGER.warning("encryption failed, not sending message");
                 mModel.handleSecurityErrors(message);
                 return;
             }
-            smackMessage.addExtension(new E2EEncryption(encrypted));
+            smackMessage.addExtension(new E2EEncryption(encrypted.get()));
         }
 
         this.sendPacket(smackMessage);
