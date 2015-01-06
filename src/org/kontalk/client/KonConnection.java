@@ -42,7 +42,6 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
@@ -59,8 +58,7 @@ public final class KonConnection extends XMPPTCPConnection {
 
     public KonConnection(EndpointServer server,
             PrivateKey privateKey,
-            X509Certificate bridgeCert)
-            throws XMPPException {
+            X509Certificate bridgeCert) {
         super(buildConfiguration(
         RESSOURCE,
         server,
@@ -88,6 +86,7 @@ public final class KonConnection extends XMPPTCPConnection {
             .setServiceName(server.getNetwork())
             .setResource(resource)
             // the dummy value is not actually used
+            // server does authentification based purely on the pgp key
             .setUsernameAndPassword(null, "dummy")
             .setCallbackHandler(new CallbackHandler() {
                 @Override
@@ -116,7 +115,10 @@ public final class KonConnection extends XMPPTCPConnection {
             // in-memory keystore
             KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             keystore.load(null, null);
-            keystore.setKeyEntry("private", privateKey, new char[0], new Certificate[] { bridgeCert });
+            keystore.setKeyEntry("private",
+                    privateKey,
+                    new char[0],
+                    new Certificate[] { bridgeCert });
 
             // key managers
             KeyManagerFactory kmFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
@@ -191,4 +193,7 @@ public final class KonConnection extends XMPPTCPConnection {
         }
     }
 
+    public String getDestination() {
+        return this.getConfiguration().getServiceName();
+    }
 }

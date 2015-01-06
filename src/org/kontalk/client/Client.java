@@ -80,14 +80,14 @@ public final class Client implements PacketListener, Runnable {
         String network = config.getString(KonConf.SERV_HOST);
         String host = config.getString(KonConf.SERV_HOST);
         int port = config.getInt(KonConf.SERV_PORT);
-        EndpointServer Server = new EndpointServer(network, host, port);
+        EndpointServer server = new EndpointServer(network, host, port);
 
         // create connection
         try {
-            mConn = new KonConnection(Server,
+            mConn = new KonConnection(server,
                     key.getBridgePrivateKey(),
                     key.getBridgeCertificate());
-        } catch (XMPPException | PGPException ex) {
+        } catch (PGPException ex) {
             LOGGER.log(Level.WARNING, "can't create connection", ex);
             mModel.statusChanged(Kontalk.Status.FAILED);
             mModel.handleException(new KonException(KonException.Error.CLIENT_CONNECTION, ex));
@@ -121,7 +121,7 @@ public final class Client implements PacketListener, Runnable {
         // TODO unsure if everything is thread-safe
         synchronized (this) {
             // connect
-            LOGGER.info("connecting...");
+            LOGGER.info("connecting to "+mConn.getDestination()+" ...");
             try {
                 mConn.connect();
             } catch (XMPPException | SmackException | IOException ex) {
@@ -133,8 +133,6 @@ public final class Client implements PacketListener, Runnable {
 
             // login
             try {
-                // the dummy values are not actually used
-                // server does authentification based purely on the pgp key
                 mConn.login();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
