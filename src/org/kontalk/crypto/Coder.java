@@ -282,15 +282,21 @@ public final class Coder {
             return;
 
         // decrypt
-        String decryptedBody = decryptAndVerify(message, myKey, senderKey);
+        Optional<String> decryptedBody = decryptAndVerify(message, myKey, senderKey);
 
-        // parse encrypted CPIM content
-        String myUID = myKey.getUserId(null);
-        String senderUID = PGP.getUserId(senderKey, null);
-        MessageContent decryptedContent = parseCPIM(message, decryptedBody, myUID, senderUID);
+        MessageContent decryptedContent = null;
+        if (decryptedBody.isPresent()) {
+            // parse encrypted CPIM content
+            String myUID = myKey.getUserId(null);
+            String senderUID = PGP.getUserId(senderKey, null);
+            decryptedContent = parseCPIM(message,
+                    decryptedBody.get(),
+                    myUID,
+                    senderUID);
+        }
 
         // check for errors that occured
-        if (message.getSecurityErrors().isEmpty()) {
+        if (decryptedContent != null && message.getSecurityErrors().isEmpty()) {
             // everything went better than expected
             LOGGER.info("decryption successful");
             message.setDecryptedContent(decryptedContent);
@@ -323,7 +329,7 @@ public final class Coder {
         return senderKey;
     }
 
-    private static String decryptAndVerify(KonMessage message,
+    private static Optional<String> decryptAndVerify(KonMessage message,
             PersonalKey myKey,
             PGPPublicKey senderKey) {
         // note: the signature is inside the encrypted data
@@ -346,7 +352,7 @@ public final class Coder {
             if (!(o instanceof PGPEncryptedDataList)) {
                 LOGGER.warning("can't find encrypted data list in data");
                 message.addSecurityError(Error.INVALID_DATA);
-                return null;
+                return Optional.empty();
             }
             PGPEncryptedDataList encDataList = (PGPEncryptedDataList) o;
 
@@ -366,7 +372,7 @@ public final class Coder {
             if (sKey == null || pbe == null) {
                 LOGGER.warning("private key for messsage not found");
                 message.addSecurityError(Error.INVALID_PRIVATE_KEY);
-                return null;
+                return Optional.empty();
             }
 
             InputStream clear = pbe.getDataStream(new BcPublicKeyDataDecryptorFactory(sKey));
@@ -378,7 +384,7 @@ public final class Coder {
             if (!(object instanceof PGPCompressedData)) {
                 LOGGER.warning("data packet not compressed");
                 message.addSecurityError(Error.INVALID_DATA);
-                return null;
+                return Optional.empty();
             }
 
             PGPCompressedData cData = (PGPCompressedData) object;
@@ -411,7 +417,7 @@ public final class Coder {
             if (!(object instanceof PGPLiteralData)) {
                 LOGGER.warning("unknown packet type: " + object.getClass().getName());
                 message.addSecurityError(Error.INVALID_DATA);
-                return null;
+                return Optional.empty();
             }
 
             PGPLiteralData ld = (PGPLiteralData) object;
@@ -446,7 +452,7 @@ public final class Coder {
             message.addSecurityError(Error.UNKNOWN_ERROR);
         }
 
-        return outputStream.toString();
+        return Optional.of(outputStream.toString());
     }
 
     private static void verifySignature(KonMessage message,
