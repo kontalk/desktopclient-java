@@ -39,7 +39,6 @@ import javax.net.ssl.X509TrustManager;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
-import org.apache.http.conn.ssl.BrowserCompatHostnameVerifier;
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.SmackException;
@@ -168,9 +167,6 @@ public final class KonConnection extends XMPPTCPConnection {
                 KeyManagementException ex) {
             LOGGER.log(Level.WARNING, "can't setup SSL connection", ex);
         }
-
-        // hostname verifier needed
-        builder.setHostnameVerifier(new BrowserCompatHostnameVerifier());
 
         return builder.build();
     }
