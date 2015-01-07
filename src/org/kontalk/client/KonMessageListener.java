@@ -139,8 +139,6 @@ final public class KonMessageListener implements PacketListener {
                 xmppID,
                 m.getThread(),
                 date,
-                // TODO
-                "",
                 content);
 
         // on success, send a 'received' for a request

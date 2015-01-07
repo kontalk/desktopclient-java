@@ -82,7 +82,6 @@ public final class MessageList extends Observable {
                 Date date = new Date(resultSet.getLong("date"));
                 int statusIndex = resultSet.getInt("receipt_status");
                 KonMessage.Status status = statusValues[statusIndex];
-                String receiptID = Database.getString(resultSet, "receipt_id");
                 String jsonContent = resultSet.getString("content");
                 MessageContent content = MessageContent.fromJSONString(jsonContent);
                 int encryptionIndex = resultSet.getInt("encryption_status");
@@ -100,7 +99,6 @@ public final class MessageList extends Observable {
                 builder.xmppID(xmppID);
                 builder.date(date);
                 builder.receiptStatus(status);
-                builder.receiptID(receiptID);
                 builder.content(content);
                 builder.encryption(encryption);
                 builder.signing(signing);
@@ -141,25 +139,6 @@ public final class MessageList extends Observable {
         }
         if (message == null) {
             LOGGER.warning("can't find message with XMPP ID: " + xmppID);
-            return Optional.empty();
-        }
-        return checkOutMessage(message);
-    }
-
-    public Optional<OutMessage> getMessageByReceiptID(String receiptID) {
-        if (receiptID.isEmpty()) {
-            LOGGER.warning("ignoring empty receipt ID");
-            return Optional.empty();
-        }
-        // TODO performance
-        KonMessage message = null;
-        for (KonMessage m : MessageList.getInstance().getMessages()) {
-            if (m.getReceiptID().equals(receiptID)) {
-                message = m;
-            }
-        }
-        if (message == null) {
-            LOGGER.warning("can't find message with receipt id: " + receiptID);
             return Optional.empty();
         }
         return checkOutMessage(message);

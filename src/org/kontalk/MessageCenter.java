@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
+import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageList;
@@ -71,7 +72,6 @@ public class MessageCenter {
             String xmppID,
             String xmppThreadID,
             Date date,
-            String receiptID,
             MessageContent content) {
         // get model references for this message
         String jid = XmppStringUtils.parseBareJid(from);
@@ -92,7 +92,6 @@ public class MessageCenter {
         builder.jid(from);
         builder.xmppID(xmppID);
         builder.date(date);
-        builder.receiptID(receiptID);
         builder.content(content);
         InMessage newMessage = builder.build();
 
@@ -117,14 +116,13 @@ public class MessageCenter {
     }
 
     // TODO unused
-    public void updateMsgBySentReceipt(String xmppID, String receiptID) {
+    public void updateMsgBySentReceipt(String xmppID) {
         Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByXMPPID(xmppID);
-        // TODO check if receiptID is already in DB + react?
         if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message");
             return;
         }
-        optMessage.get().updateBySentReceipt(receiptID);
+        optMessage.get().updateByStatus(Status.SENT);
     }
 
     public void updateMsgByDeliveryReceipt(String receiptID) {
@@ -134,7 +132,7 @@ public class MessageCenter {
             LOGGER.warning("can't find message");
             return;
         }
-        optMessage.get().updateByReceivedReceipt();
+        optMessage.get().updateByStatus(Status.RECEIVED);
     }
 
     public static void initialize(Kontalk model) {

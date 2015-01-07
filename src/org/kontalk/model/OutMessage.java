@@ -33,20 +33,13 @@ public class OutMessage extends KonMessage {
         super(builder);
     }
 
-    public void updateBySentReceipt(String receiptID) {
-        assert mReceiptStatus == Status.PENDING;
-        assert mReceiptID.isEmpty();
-        mReceiptID = receiptID;
-        mReceiptStatus = Status.SENT;
-        this.save();
-        this.changed();
-    }
-
-    public void updateByReceivedReceipt() {
+    public void updateByStatus(Status status) {
         // TODO
-        //assert (mReceiptStatus == Status.SENT);
-        //assert (!mReceiptID.isEmpty());
-        mReceiptStatus = Status.RECEIVED;
+//        if (status == Status.SENT)
+//            assert mReceiptStatus == Status.PENDING;
+//        if (status == Status.RECEIVED)
+//            assert mReceiptStatus == Status.SENT;
+        mReceiptStatus = status;
         this.save();
         this.changed();
     }
@@ -60,7 +53,6 @@ public static class Builder extends KonMessage.Builder {
             mXMPPID = StringUtils.randomString(6);
             mDate = new Date();
             mReceiptStatus = Status.PENDING;
-            mReceiptID = "";
 
             // outgoing messages are never saved encrypted
             mEncryption = encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT;
@@ -79,8 +71,6 @@ public static class Builder extends KonMessage.Builder {
         public void date(Date date) { throw new UnsupportedOperationException(); }
         @Override
         public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
-        @Override
-        public void receiptID(String id) { throw new UnsupportedOperationException(); }
 
         @Override
         public void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }

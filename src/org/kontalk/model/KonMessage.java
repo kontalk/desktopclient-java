@@ -49,6 +49,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
      */
     public static enum Status {IN, //ACKNOWLEDGED, // for incoming
                                PENDING, SENT, RECEIVED, // for outgoing
+                               // TODO not used
                                ERROR};
 
     public final static String TABLE = "messages";
@@ -68,9 +69,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             "date INTEGER NOT NULL, " +
             // enum, server receipt status
             "receipt_status INTEGER NOT NULL, " +
-            // receipt id (Kontalk XMPP extension based on XEP-0184)
-            // TODO only direction+receipt_id unique!?
-            "receipt_id TEXT UNIQUE, " +
             // message content in JSON format
             "content TEXT NOT NULL, " +
             // enum, determines if content is encrypted
@@ -95,7 +93,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     private final Date mDate;
     protected Status mReceiptStatus;
-    protected String mReceiptID;
     protected final MessageContent mContent;
 
     protected Coder.Encryption mEncryption;
@@ -111,7 +108,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mXMPPID = builder.mXMPPID;
         mDate = builder.mDate;
         mReceiptStatus = builder.mReceiptStatus;
-        mReceiptID = builder.mReceiptID;
         mContent = builder.mContent;
         mEncryption = builder.mEncryption;
         mSigning = builder.mSigning;
@@ -121,7 +117,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
                 mXMPPID == null ||
                 mDate == null ||
                 mReceiptStatus == null ||
-                mReceiptID == null ||
                 mContent == null ||
                 mEncryption == null ||
                 mSigning == null ||
@@ -145,7 +140,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mXMPPID.isEmpty() ? null : mXMPPID);
         values.add(mDate);
         values.add(mReceiptStatus);
-        values.add(mReceiptID.isEmpty() ? null : mReceiptID);
         // i simply don't like to save all possible content explicitly in the
         // database, so we use JSON here
         values.add(mContent.toJSONString());
@@ -155,12 +149,13 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         // database contains request and insert as atomic action
         synchronized (KonMessage.class) {
-            if (!mReceiptID.isEmpty()) {
-                if (db.execCount(TABLE, "receipt_id", mReceiptID) > 0) {
-                    LOGGER.info("db already contains a message with receipt ID: "+mReceiptID);
-                    return -1;
-                }
-            }
+            // TODO check if the exact same message is already in db
+//            if (!mReceiptID.isEmpty()) {
+//                if (db.execCount(TABLE, "receipt_id", mReceiptID) > 0) {
+//                    LOGGER.info("db already contains a message with receipt ID: "+mReceiptID);
+//                    return -1;
+//                }
+//            }
             int id = db.execInsert(TABLE, values);
             if (id <= 0) {
                 LOGGER.log(Level.WARNING, "db, couldn't insert message");
@@ -206,10 +201,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     public Status getReceiptStatus() {
         return mReceiptStatus;
-    }
-
-    public String getReceiptID() {
-        return mReceiptID;
     }
 
     public MessageContent getContent() {
@@ -276,7 +267,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
        Map<String, Object> set = new HashMap<>();
        set.put("xmpp_id", mXMPPID.isEmpty() ? null : mXMPPID);
        set.put("receipt_status", mReceiptStatus);
-       set.put("receipt_id", mReceiptID.isEmpty() ? null : mReceiptID);
        set.put("content", mContent.toJSONString());
        set.put("encryption_status", mEncryption);
        set.put("signing_status", mSigning);
@@ -305,7 +295,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         protected Date mDate = null;
         protected Status mReceiptStatus = null;
-        protected String mReceiptID = null;
         protected MessageContent mContent = null;
 
         protected Coder.Encryption mEncryption = null;
@@ -330,7 +319,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         public void date(Date date) { mDate = date; }
         public void receiptStatus(Status status) { mReceiptStatus = status; }
-        public void receiptID(String id) { mReceiptID = id; }
         public void content(MessageContent content) { mContent = content; }
 
         public void encryption(Coder.Encryption encryption) { mEncryption = encryption; }
