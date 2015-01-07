@@ -84,7 +84,7 @@ public final class User {
      * Used for creating new users (eg from roster).
      */
     User(String jid, String name) {
-        mJID = XmppStringUtils.parseBareAddress(jid);
+        mJID = XmppStringUtils.parseBareJid(jid);
         mName = name;
 
         Database db = Database.getInstance();
@@ -127,7 +127,7 @@ public final class User {
     }
 
     public void setJID(String jid) {
-        mJID = XmppStringUtils.parseBareAddress(jid);
+        mJID = XmppStringUtils.parseBareJid(jid);
         this.save();
     }
 
