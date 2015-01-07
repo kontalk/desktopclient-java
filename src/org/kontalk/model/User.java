@@ -65,7 +65,7 @@ public final class User {
     private String mJID;
     private String mName;
     private String mStatus = "";
-    private Optional<Date> mLastSeen = null;
+    private Optional<Date> mLastSeen = Optional.empty();
     private Available mAvailable = Available.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
