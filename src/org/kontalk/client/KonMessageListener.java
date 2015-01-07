@@ -105,7 +105,18 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // delivery receipt
-        // TODO
+        DeliveryReceipt receipt = DeliveryReceipt.from(m);
+        if (receipt != null) {
+            // HOORAY! our message was received
+            String receiptID = receipt.getId();
+            if (receiptID == null || receiptID.isEmpty()) {
+                LOGGER.warning("message has invalid receipt ID: "+receiptID);
+            } else {
+                MessageCenter.getInstance().updateMsgByDeliveryReceipt(receiptID);
+            }
+            // we ignore anything else that might be in this message
+            return;
+        }
 
         // must be an incoming message
 

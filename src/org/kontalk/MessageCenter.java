@@ -74,7 +74,7 @@ public class MessageCenter {
             String receiptID,
             MessageContent content) {
         // get model references for this message
-        String jid = XmppStringUtils.parseBareAddress(from);
+        String jid = XmppStringUtils.parseBareJid(from);
         UserList userList = UserList.getInstance();
         Optional<User> optUser = userList.containsUserWithJID(jid) ?
                 userList.getUserByJID(jid) :
@@ -116,6 +116,7 @@ public class MessageCenter {
         return newMessage.getID() >= -1;
     }
 
+    // TODO unused
     public void updateMsgBySentReceipt(String xmppID, String receiptID) {
         Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByXMPPID(xmppID);
         // TODO check if receiptID is already in DB + react?
@@ -126,8 +127,9 @@ public class MessageCenter {
         optMessage.get().updateBySentReceipt(receiptID);
     }
 
-    public void updateMsgByReceivedReceipt(String receiptID) {
-        Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByReceiptID(receiptID);
+    public void updateMsgByDeliveryReceipt(String receiptID) {
+        // note: the receipt ID is equal to the XMPP ID of the received message
+        Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByXMPPID(receiptID);
         if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message");
             return;

@@ -41,6 +41,7 @@ import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.KonConf;
 import org.kontalk.KonException;
 import org.kontalk.Kontalk;
@@ -71,7 +72,6 @@ public final class Client implements PacketListener, Runnable {
     }
 
     public void connect(PersonalKey key) {
-
         this.disconnect();
         mModel.statusChanged(Kontalk.Status.CONNECTING);
 
@@ -172,8 +172,7 @@ public final class Client implements PacketListener, Runnable {
         smackMessage.setPacketID(message.getXMPPID());
         smackMessage.setType(Message.Type.chat);
         smackMessage.setTo(message.getJID());
-        // TODO
-        //smackMessage.addExtension(new ServerReceiptRequest());
+        smackMessage.addExtension(new DeliveryReceiptRequest());
         KonConf conf = KonConf.getInstance();
         if (conf.getBoolean(KonConf.NET_SEND_CHAT_STATE))
             smackMessage.addExtension(new ChatStateExtension(ChatState.active));

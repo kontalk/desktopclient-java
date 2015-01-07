@@ -27,7 +27,7 @@ import org.kontalk.crypto.Coder;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class OutMessage extends KonMessage{
+public class OutMessage extends KonMessage {
 
     OutMessage(KonMessage.Builder builder) {
         super(builder);
@@ -43,8 +43,9 @@ public class OutMessage extends KonMessage{
     }
 
     public void updateByReceivedReceipt() {
-        assert mReceiptStatus == Status.SENT;
-        assert !mReceiptID.isEmpty();
+        // TODO
+        //assert (mReceiptStatus == Status.SENT);
+        //assert (!mReceiptID.isEmpty());
         mReceiptStatus = Status.RECEIVED;
         this.save();
         this.changed();
