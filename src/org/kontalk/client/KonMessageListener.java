@@ -30,6 +30,7 @@ import org.jivesoftware.smack.util.stringencoder.Base64;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
+import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.MessageCenter;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
@@ -132,7 +133,8 @@ final public class KonMessageListener implements PacketListener {
                 content);
 
         // on success, send a 'received' for a request
-        if (success && !xmppID.isEmpty()) {
+        DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);
+        if (request != null && success && !xmppID.isEmpty()) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
             received.addExtension(new DeliveryReceipt(xmppID));
             mClient.sendPacket(received);
