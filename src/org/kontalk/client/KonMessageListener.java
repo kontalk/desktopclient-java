@@ -29,6 +29,7 @@ import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smack.util.stringencoder.Base64;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
+import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.kontalk.MessageCenter;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
@@ -60,7 +61,7 @@ final public class KonMessageListener implements PacketListener {
 
         // error message
         else if (m.getType() == org.jivesoftware.smack.packet.Message.Type.error) {
-            LOGGER.warning("got error message: "+m);
+            LOGGER.warning("got error message: "+m.toXML());
         } else {
             LOGGER.warning("unknown message type: "+m.getType());
         }
@@ -84,7 +85,7 @@ final public class KonMessageListener implements PacketListener {
         if (delay != null && delay instanceof DelayInformation) {
                 date = ((DelayInformation) delay).getStamp();
                 if (date.after(new Date())) {
-                    LOGGER.info("delay date is future (reset to 'now'): "+date);
+                    LOGGER.info("delay date is in future (reset to 'now'): "+date);
                     date = new Date();
                 }
         } else {
@@ -104,6 +105,7 @@ final public class KonMessageListener implements PacketListener {
 
         // delivery receipt
         // TODO
+
         // must be an incoming message
 
         // get content/text from body and/or encryption/url extension
@@ -115,10 +117,6 @@ final public class KonMessageListener implements PacketListener {
             return;
         }
 
-        // receipt id
-        String receiptID = "";
-        // TODO
-
         String xmppID = m.getPacketID() != null ? m.getPacketID() : "";
         if (xmppID.isEmpty()) {
             LOGGER.warning("message does not have a XMPP ID");
@@ -129,11 +127,16 @@ final public class KonMessageListener implements PacketListener {
                 xmppID,
                 m.getThread(),
                 date,
-                receiptID,
+                // TODO
+                "",
                 content);
 
         // on success, send a 'received' for a request
-        // TODO
+        if (success && !xmppID.isEmpty()) {
+            Message received = new Message(m.getFrom(), Message.Type.chat);
+            received.addExtension(new DeliveryReceipt(xmppID));
+            mClient.sendPacket(received);
+        }
     }
 
     public static MessageContent parseMessageContent(Message m) {
