@@ -31,7 +31,7 @@ import org.kontalk.Database;
 import org.kontalk.crypto.Coder;
 
 /**
- *
+ * Base class for incoming and outgoing XMMP messages.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class KonMessage extends Observable implements Comparable<KonMessage> {
@@ -47,10 +47,19 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
      * Receipt status of one message.
      * Do not modify, only add! Ordinal used in database
      */
-    public static enum Status {IN, //ACKNOWLEDGED, // for incoming
-                               PENDING, SENT, RECEIVED, // for outgoing
-                               // TODO not used
-                               ERROR};
+    public static enum Status {
+        /** For all incoming messages. */
+        IN,
+        //ACKNOWLEDGED,
+        /** Outgoing message, message is about to be send. */
+        PENDING,
+        /** Outgoing message, message was handled by server. */
+        SENT,
+        /** Outgoing message, message was received by recipient. */
+        RECEIVED,
+        /** Outgoing message, an error occurred somewhere in the transmission. */
+        ERROR
+    };
 
     public final static String TABLE = "messages";
     public final static String CREATE_TABLE = "( " +

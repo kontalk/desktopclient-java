@@ -48,6 +48,7 @@ import org.kontalk.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 
 /**
@@ -170,6 +171,11 @@ public final class Client implements PacketListener, Runnable {
     }
 
     public void sendMessage(OutMessage message) {
+        // check for correct receipt status and reset it
+        Status status = message.getReceiptStatus();
+        assert status == Status.PENDING || status == Status.ERROR;
+        message.setStatus(Status.PENDING);
+
         if (mConn == null || !mConn.isAuthenticated()) {
             LOGGER.info("not sending message, not connected");
             return;
@@ -193,6 +199,7 @@ public final class Client implements PacketListener, Runnable {
             // check also for security errors just to be sure
             if (!encrypted.isPresent() || !message.getSecurityErrors().isEmpty()) {
                 LOGGER.warning("encryption failed, not sending message");
+                message.setStatus(Status.ERROR);
                 mModel.handleSecurityErrors(message);
                 return;
             }

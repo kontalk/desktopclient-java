@@ -39,7 +39,7 @@ public final class OutMessage extends KonMessage {
         if (status == Status.SENT && mReceiptStatus != Status.PENDING)
             LOGGER.warning("previous status of sent message is wrong: "+mReceiptStatus);
         if (status == Status.RECEIVED && mReceiptStatus != Status.SENT)
-            LOGGER.warning("previous status of sent message is wrong: "+mReceiptStatus);
+            LOGGER.warning("previous status of received message is wrong: "+mReceiptStatus);
         mReceiptStatus = status;
         this.save();
         this.changed();
