@@ -47,6 +47,10 @@ import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 
 
+/**
+ * XMPP Connection to a Kontalk Server.
+ * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ */
 public final class KonConnection extends XMPPTCPConnection {
     private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
@@ -65,6 +69,10 @@ public final class KonConnection extends XMPPTCPConnection {
         privateKey,
         bridgeCert,
         ACCEPT_ANY_CERTIFICATE));
+
+        // enable SM without resumption (XEP-0198)
+        this.setUseStreamManagement(true);
+        this.setUseStreamManagementResumption(false);
 
         mServer = server;
     }

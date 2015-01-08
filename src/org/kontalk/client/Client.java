@@ -39,6 +39,7 @@ import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.tcp.sm.StreamManagementException;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
@@ -144,6 +145,12 @@ public final class Client implements PacketListener, Runnable {
         }
 
         LOGGER.info("connected!");
+
+        try {
+            mConn.addStanzaAcknowledgedListener(new AcknowledgedListener());
+        } catch (StreamManagementException.StreamManagementNotEnabledException ex) {
+            LOGGER.log(Level.WARNING, "stream management not enabled", ex);
+        }
 
         this.sendPresence();
 
