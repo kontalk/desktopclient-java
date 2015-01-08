@@ -44,7 +44,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static enum Direction {IN, OUT};
 
     /**
-     * Receipt status of one message.
+     * Sending status of one message.
      * Do not modify, only add! Ordinal used in database
      */
     public static enum Status {

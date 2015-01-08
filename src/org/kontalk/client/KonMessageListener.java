@@ -63,7 +63,14 @@ final public class KonMessageListener implements PacketListener {
 
         // error message
         else if (m.getType() == org.jivesoftware.smack.packet.Message.Type.error) {
-            LOGGER.warning("got error message: "+m.toXML());
+            LOGGER.warning("got an error message: "+m.toXML());
+            String xmppID = m.getPacketID();
+            if (xmppID == null || xmppID.isEmpty()) {
+                LOGGER.warning("error message has invalid XMPP ID: "+xmppID);
+                return;
+            }
+            MessageCenter.getInstance().setMessageStatus(xmppID, Status.ERROR);
+            // TODO save the error text somewhere
         } else {
             LOGGER.warning("unknown message type: "+m.getType());
         }
