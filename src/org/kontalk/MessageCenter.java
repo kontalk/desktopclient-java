@@ -115,24 +115,18 @@ public class MessageCenter {
         return newMessage.getID() >= -1;
     }
 
-    // TODO unused
-    public void updateMsgBySentReceipt(String xmppID) {
+    /**
+     * Set the receipt status of a message.
+     * @param xmppID XMPP ID of message
+     * @param status new receipt status of message
+     */
+    public void setMessageStatus(String xmppID, Status status) {
         Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByXMPPID(xmppID);
         if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message");
             return;
         }
-        optMessage.get().updateByStatus(Status.SENT);
-    }
-
-    public void updateMsgByDeliveryReceipt(String receiptID) {
-        // note: the receipt ID is equal to the XMPP ID of the received message
-        Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByXMPPID(receiptID);
-        if (!optMessage.isPresent()) {
-            LOGGER.warning("can't find message");
-            return;
-        }
-        optMessage.get().updateByStatus(Status.RECEIVED);
+        optMessage.get().setStatus(status);
     }
 
     public static void initialize(Kontalk model) {

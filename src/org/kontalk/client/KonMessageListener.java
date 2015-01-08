@@ -32,6 +32,7 @@ import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.MessageCenter;
+import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 
@@ -112,7 +113,7 @@ final public class KonMessageListener implements PacketListener {
             if (receiptID == null || receiptID.isEmpty()) {
                 LOGGER.warning("message has invalid receipt ID: "+receiptID);
             } else {
-                MessageCenter.getInstance().updateMsgByDeliveryReceipt(receiptID);
+                MessageCenter.getInstance().setMessageStatus(receiptID, Status.RECEIVED);
             }
             // we ignore anything else that might be in this message
             return;

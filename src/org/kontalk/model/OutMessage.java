@@ -20,25 +20,26 @@ package org.kontalk.model;
 
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.crypto.Coder;
 
 /**
- *
+ * Model for a XMPP message that we are sending.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class OutMessage extends KonMessage {
+public final class OutMessage extends KonMessage {
+    private final static Logger LOGGER = Logger.getLogger(OutMessage.class.getName());
 
     OutMessage(KonMessage.Builder builder) {
         super(builder);
     }
 
-    public void updateByStatus(Status status) {
-        // TODO
-//        if (status == Status.SENT)
-//            assert mReceiptStatus == Status.PENDING;
-//        if (status == Status.RECEIVED)
-//            assert mReceiptStatus == Status.SENT;
+    public void setStatus(Status status) {
+        if (status == Status.SENT && mReceiptStatus != Status.PENDING)
+            LOGGER.warning("previous status of sent message is wrong: "+mReceiptStatus);
+        if (status == Status.RECEIVED && mReceiptStatus != Status.SENT)
+            LOGGER.warning("previous status of sent message is wrong: "+mReceiptStatus);
         mReceiptStatus = status;
         this.save();
         this.changed();
