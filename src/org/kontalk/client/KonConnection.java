@@ -87,8 +87,6 @@ public final class KonConnection extends XMPPTCPConnection {
             XMPPTCPConnectionConfiguration.builder();
 
         builder
-            // enable debugging
-            //.setDebuggerEnabled(true)
             .setHost(server.getHost())
             .setPort(server.getPort())
             .setServiceName(server.getNetwork())
@@ -193,7 +191,7 @@ public final class KonConnection extends XMPPTCPConnection {
 
     @Override
     public synchronized void disconnect(Presence presence) {
-        LOGGER.log(Level.INFO, "disconnecting ({0})", presence.toXML().toString());
+        LOGGER.log(Level.INFO, "disconnecting ({0})", presence.toXML());
         try {
             super.disconnect(presence);
         } catch (SmackException.NotConnectedException ex) {

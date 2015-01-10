@@ -74,6 +74,9 @@ public final class Client implements PacketListener, Runnable {
     public Client(Kontalk model) {
         mModel = model;
         //mLimited = limited;
+
+        // enable debug window
+        //SmackConfiguration.DEBUG_ENABLED = true;
     }
 
     public void connect(PersonalKey key) {
