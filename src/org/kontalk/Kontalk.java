@@ -30,7 +30,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import org.apache.commons.lang.SystemUtils;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.PGP;
 import org.kontalk.crypto.PersonalKey;
@@ -210,15 +209,11 @@ public final class Kontalk {
                     mClient.sendMessage((OutMessage) m);
                 }
             }
-            // send vcard/public key requests for kontalk users with missing key
+            // send public key requests for Kontalk users with missing key
             for (User user : UserList.getInstance().getUser()) {
-                String network = XmppStringUtils.parseDomain(user.getJID());
-                if (user.getFingerprint().isEmpty() &&
-                        // TODO
-                        // network.equalsIgnoreCase(KonConf.SERV_NET))
-                        network.equalsIgnoreCase(KonConf.SERV_HOST))
-
-                mClient.sendVCardRequest(user.getJID());
+                // TODO only for domains that a part of the Kontalk network
+                if (user.getFingerprint().isEmpty())
+                    mClient.sendPublicKeyRequest(user.getJID());
             }
 
         }

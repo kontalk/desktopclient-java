@@ -85,7 +85,7 @@ final class KonRosterListener implements RosterListener {
                 return;
             }
             // send request for public key
-            //mClient.sendPublicKeyRequest(optNewUser.get().getJID());
+            mClient.sendPublicKeyRequest(optNewUser.get().getJID());
         }
     }
 

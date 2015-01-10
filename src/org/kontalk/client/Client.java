@@ -221,6 +221,12 @@ public final class Client implements PacketListener, Runnable {
         this.sendPacket(vcard);
     }
 
+    public void sendPublicKeyRequest(String jid) {
+        PublicKeyPublish publicKeyRequest = new PublicKeyPublish();
+        publicKeyRequest.setTo(jid);
+        this.sendPacket(publicKeyRequest);
+    }
+
     public void sendBlocklistRequest() {
         this.sendPacket(BlockingCommand.blocklist());
     }
