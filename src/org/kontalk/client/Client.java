@@ -52,7 +52,9 @@ import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 
 /**
- *
+ * Network client for an XMPP Kontalk Server.
+ * Note: By default incoming presence subscription requests are automatically
+ * granted by Smack
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class Client implements PacketListener, Runnable {
@@ -97,13 +99,16 @@ public final class Client implements PacketListener, Runnable {
             return;
         }
 
-        // listeners
+        // packet listeners
         RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
         mConn.getRoster().addRosterListener(rl);
+
         PacketFilter messageFilter = new PacketTypeFilter(Message.class);
         mConn.addPacketListener(new KonMessageListener(this), messageFilter);
+
         PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
         mConn.addPacketListener(new VCardListener(), vCardFilter);
+
         PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
         mConn.addPacketListener(new BlockListListener(), blockingCommandFilter);
          // fallback
@@ -153,7 +158,7 @@ public final class Client implements PacketListener, Runnable {
             LOGGER.log(Level.WARNING, "stream management not enabled", ex);
         }
 
-        this.sendPresence();
+        this.sendInitialPresence();
 
         this.sendBlocklistRequest();
 
@@ -236,11 +241,17 @@ public final class Client implements PacketListener, Runnable {
         this.sendPacket(blockingCommand);
     }
 
-    public void sendPresence() {
+    public void sendInitialPresence() {
         Presence presence = new Presence(Presence.Type.available);
         // TODO presence, priority ...
         //presence.setStatus();
         this.sendPacket(presence);
+    }
+
+    public void sendPresenceSubscriptionRequest(String jid) {
+        Presence subscribeRequest = new Presence(Presence.Type.subscribe);
+        subscribeRequest.setTo(jid);
+        this.sendPacket(subscribeRequest);
     }
 
     synchronized void sendPacket(Packet p) {
@@ -254,7 +265,7 @@ public final class Client implements PacketListener, Runnable {
 
     @Override
     public void processPacket(Packet packet) {
-        LOGGER.info("got packet: "+packet.toXML());
+        LOGGER.info("got packet (unhandled): "+packet.toXML());
     }
 
     @Override
