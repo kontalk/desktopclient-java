@@ -55,14 +55,14 @@ final public class KonMessageListener implements PacketListener {
 
     @Override
     public void processPacket(Packet packet) {
-        org.jivesoftware.smack.packet.Message m = (org.jivesoftware.smack.packet.Message) packet;
-        if (m.getType() == org.jivesoftware.smack.packet.Message.Type.chat) {
+        Message m = (Message) packet;
+        if (m.getType() == Message.Type.chat) {
             // somebody has news for us
             this.processChatMessage(m);
         }
 
         // error message
-        else if (m.getType() == org.jivesoftware.smack.packet.Message.Type.error) {
+        else if (m.getType() == Message.Type.error) {
             LOGGER.warning("got an error message: "+m.toXML());
             String xmppID = m.getPacketID();
             if (xmppID == null || xmppID.isEmpty()) {
