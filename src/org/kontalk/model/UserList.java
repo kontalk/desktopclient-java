@@ -87,7 +87,7 @@ public final class UserList extends Observable {
      * @return the newly created user
      */
     public Optional<User> addUser(String jid, String name) {
-        jid = XmppStringUtils.parseBareAddress(jid);
+        jid = XmppStringUtils.parseBareJid(jid);
         if (mMap.containsKey(jid)) {
             LOGGER.warning("user already exists, jid: "+jid);
             return Optional.empty();
@@ -122,7 +122,7 @@ public final class UserList extends Observable {
      * @return
      */
     public Optional<User> getUserByJID(String jid) {
-        jid = XmppStringUtils.parseBareAddress(jid);
+        jid = XmppStringUtils.parseBareJid(jid);
         return Optional.ofNullable(mMap.get(jid));
     }
 
@@ -133,12 +133,12 @@ public final class UserList extends Observable {
      * @return
      */
     public boolean containsUserWithJID(String jid) {
-        jid = XmppStringUtils.parseBareAddress(jid);
+        jid = XmppStringUtils.parseBareJid(jid);
         return mMap.containsKey(jid);
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
-        jid = XmppStringUtils.parseBareAddress(jid);
+        jid = XmppStringUtils.parseBareJid(jid);
         if (!mMap.containsKey(jid)) {
             LOGGER.warning("can't find user with jid: "+jid);
             return;
@@ -148,7 +148,7 @@ public final class UserList extends Observable {
     }
 
     public void setPGPKey(String jid, byte[] rawKey) {
-        jid = XmppStringUtils.parseBareAddress(jid);
+        jid = XmppStringUtils.parseBareJid(jid);
         if (!mMap.containsKey(jid)) {
             LOGGER.warning("can't find user with jid: "+jid);
             return;
