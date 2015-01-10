@@ -39,6 +39,7 @@ import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.RosterPacket;
 import org.jivesoftware.smack.tcp.sm.StreamManagementException;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
@@ -54,7 +55,7 @@ import org.kontalk.model.OutMessage;
 /**
  * Network client for an XMPP Kontalk Server.
  * Note: By default incoming presence subscription requests are automatically
- * granted by Smack
+ * granted by Smack (but Kontalk uses a custom subscription request!?)
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class Client implements PacketListener, Runnable {
@@ -111,12 +112,19 @@ public final class Client implements PacketListener, Runnable {
 
         PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
         mConn.addPacketListener(new BlockListListener(), blockingCommandFilter);
-         // fallback
+
+        PacketFilter publicKeyFilter = new PacketTypeFilter(PublicKeyPublish.class);
+        mConn.addPacketListener(new PublicKeyListener(), publicKeyFilter);
+
+         // fallback listener
         mConn.addPacketListener(this,
                 new AndFilter(
                         new NotFilter(messageFilter),
                         new NotFilter(vCardFilter),
-                        new NotFilter(blockingCommandFilter)
+                        new NotFilter(blockingCommandFilter),
+                        new NotFilter(publicKeyFilter),
+                        // handled by roster listener
+                        new NotFilter(new PacketTypeFilter(RosterPacket.class))
                 )
         );
 
