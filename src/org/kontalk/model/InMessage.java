@@ -25,10 +25,10 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.model.MessageContent.Attachment;
 
 /**
- *
+ * Model for a XMPP message that was sent to us.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class InMessage extends KonMessage {
+public final class InMessage extends KonMessage {
     private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     InMessage(KonMessage.Builder builder) {
