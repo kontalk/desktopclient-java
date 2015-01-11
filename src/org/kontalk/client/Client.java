@@ -30,8 +30,8 @@ import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.AndFilter;
 import org.jivesoftware.smack.filter.NotFilter;
+import org.jivesoftware.smack.filter.OrFilter;
 import org.jivesoftware.smack.filter.PacketFilter;
 import org.jivesoftware.smack.filter.PacketIDFilter;
 import org.jivesoftware.smack.filter.PacketTypeFilter;
@@ -54,8 +54,10 @@ import org.kontalk.model.OutMessage;
 
 /**
  * Network client for an XMPP Kontalk Server.
+ *
  * Note: By default incoming presence subscription requests are automatically
  * granted by Smack (but Kontalk uses a custom subscription request!?)
+ *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class Client implements PacketListener, Runnable {
@@ -66,7 +68,7 @@ public final class Client implements PacketListener, Runnable {
     private static enum Command {CONNECT, DISCONNECT};
 
     private final Kontalk mModel;
-    protected KonConnection mConn;
+    private KonConnection mConn = null;
 
     // Limited connection flag.
     //protected boolean mLimited;
@@ -119,15 +121,22 @@ public final class Client implements PacketListener, Runnable {
         PacketFilter publicKeyFilter = new PacketTypeFilter(PublicKeyPublish.class);
         mConn.addPacketListener(new PublicKeyListener(), publicKeyFilter);
 
+        PacketFilter presenceFilter = new PacketTypeFilter(Presence.class);
+        mConn.addPacketListener(new PresenceListener(this, mConn.getRoster()), presenceFilter);
+
          // fallback listener
         mConn.addPacketListener(this,
-                new AndFilter(
-                        new NotFilter(messageFilter),
-                        new NotFilter(vCardFilter),
-                        new NotFilter(blockingCommandFilter),
-                        new NotFilter(publicKeyFilter),
-                        // handled by roster listener
-                        new NotFilter(new PacketTypeFilter(RosterPacket.class))
+                new NotFilter(
+                        new OrFilter(
+                                messageFilter,
+                                vCardFilter,
+                                blockingCommandFilter,
+                                publicKeyFilter,
+                                vCardFilter,
+                                presenceFilter,
+                                // handled by roster listener
+                                new PacketTypeFilter(RosterPacket.class)
+                        )
                 )
         );
 
@@ -184,6 +193,15 @@ public final class Client implements PacketListener, Runnable {
             }
         }
         mModel.statusChanged(Kontalk.Status.DISCONNECTED);
+    }
+
+    /**
+     * The JID of the user currently logged in.
+     * @return the full JID of the user logged in or an empty string if not
+     * logged in
+     */
+    public String getOwnJID() {
+        return mConn == null || !mConn.isAuthenticated() ? "" : mConn.getUser();
     }
 
     public void sendMessage(OutMessage message) {

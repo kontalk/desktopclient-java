@@ -58,8 +58,6 @@ public final class KonConnection extends XMPPTCPConnection {
     // TODO
     private final static boolean ACCEPT_ANY_CERTIFICATE = true;
 
-    protected EndpointServer mServer;
-
     public KonConnection(EndpointServer server,
             PrivateKey privateKey,
             X509Certificate bridgeCert) {
@@ -73,8 +71,6 @@ public final class KonConnection extends XMPPTCPConnection {
         // enable SM without resumption (XEP-0198)
         this.setUseStreamManagement(true);
         this.setUseStreamManagementResumption(false);
-
-        mServer = server;
     }
 
     private static XMPPTCPConnectionConfiguration buildConfiguration(

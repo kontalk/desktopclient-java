@@ -45,14 +45,14 @@ public class PublicKeyListener implements PacketListener {
         PublicKeyPublish publicKeyPacket = (PublicKeyPublish) packet;
 
         if (publicKeyPacket.getType() == IQ.Type.set) {
-            LOGGER.warning("ignoring publicKeyPacket with type 'set'");
+            LOGGER.warning("ignoring public key packet with type 'set'");
             return;
         }
 
         if (publicKeyPacket.getType() == IQ.Type.result) {
             byte[] keyData = publicKeyPacket.getPublicKey();
             if (keyData == null) {
-                LOGGER.warning("got publicKeyPacket without public key");
+                LOGGER.warning("got public key packet without public key");
                 return;
             }
             UserList.getInstance().setPGPKey(publicKeyPacket.getFrom(), keyData);

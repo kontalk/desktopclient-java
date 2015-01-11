@@ -99,6 +99,11 @@ final class KonRosterListener implements RosterListener {
         LOGGER.info("ignoring entry deletion in roster");
     }
 
+    /**
+     * TODO obsolete?
+     * Note: custom Kontalk presence packets with public key ID are handled by
+     * the presence listener
+     */
     @Override
     public void presenceChanged(Presence presence) {
         LOGGER.info("got presence change: "+presence.toXML());
