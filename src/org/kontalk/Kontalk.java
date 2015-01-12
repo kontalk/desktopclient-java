@@ -54,7 +54,13 @@ public final class Kontalk {
     private final static String CONFIG_DIR;
 
     public enum Status {
-        DISCONNECTING, DISCONNECTED, CONNECTING, CONNECTED, SHUTTING_DOWN, FAILED
+        DISCONNECTING,
+        DISCONNECTED,
+        CONNECTING,
+        CONNECTED,
+        SHUTTING_DOWN,
+        FAILED,
+        ERROR
     }
 
     private ServerSocket mRun;

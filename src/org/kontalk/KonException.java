@@ -35,7 +35,8 @@ public final class KonException extends Exception {
         RELOAD_KEY,
         CLIENT_CONNECTION,
         CLIENT_CONNECT,
-        CLIENT_LOGIN
+        CLIENT_LOGIN,
+        CLIENT_ERROR
     }
 
     private final Error mError;

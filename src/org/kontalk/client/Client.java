@@ -105,6 +105,9 @@ public final class Client implements PacketListener, Runnable {
             return;
         }
 
+        // connection listener
+        mConn.addConnectionListener(new KonConnectionListener(mModel));
+
         // packet listeners
         RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
         mConn.getRoster().addRosterListener(rl);
@@ -169,8 +172,6 @@ public final class Client implements PacketListener, Runnable {
                 return;
             }
         }
-
-        LOGGER.info("connected!");
 
         try {
             mConn.addStanzaAcknowledgedListener(new AcknowledgedListener());

@@ -315,10 +315,10 @@ final class MainFrame extends WebFrame {
                 mDisconnectMenuItem.setEnabled(false);
                 break;
             case DISCONNECTED:
-                mConnectMenuItem.setEnabled(true);
-                mDisconnectMenuItem.setEnabled(false);
-                break;
+                // fallthrough
             case FAILED:
+                // fallthrough
+            case ERROR:
                 mConnectMenuItem.setEnabled(true);
                 mDisconnectMenuItem.setEnabled(false);
             break;

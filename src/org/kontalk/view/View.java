@@ -291,6 +291,10 @@ public final class View {
             case FAILED:
                 mStatusBarLabel.setText("Connecting failed");
                 break;
+            case ERROR:
+                mThreadView.setColor(Color.lightGray);
+                mStatusBarLabel.setText("Connection error");
+                break;
             }
 
         mMainFrame.statusChanged(status);
@@ -467,6 +471,10 @@ public final class View {
                     errorText += eol + "The server rejects the account. Is the "
                             + "specified server correct and the account valid?";
                 }
+                break;
+            case CLIENT_ERROR:
+                errorText = "Connection to server closed on error.";
+                // TODO more details
                 break;
         }
         return errorText;
