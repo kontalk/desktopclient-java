@@ -83,6 +83,7 @@ public class DownloadClient {
      * @param url
      * @param base base directory in which the download is saved
      * @return the absolute file path of the downloaded file, or an empty string
+     * if the file could not be downloaded
      */
     public String download(String url, File base) {
         if (mHTTPClient == null) {

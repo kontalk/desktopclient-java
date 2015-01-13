@@ -61,9 +61,13 @@ public class Downloader implements Runnable {
         }
     }
 
+    public File getBaseDir() {
+        return mBaseDir;
+    }
+
     private void downloadAsync(InMessage message) {
         // TODO reuse download client, currently a ssl exception is thrown on
-        // second connected
+        // second connection attempt
         //if (mClient == null) {
             try {
                 mClient = createClient();
@@ -75,22 +79,24 @@ public class Downloader implements Runnable {
 
         Optional<Attachment> optAttachment = message.getContent().getAttachment();
         if (!optAttachment.isPresent()) {
+            LOGGER.warning("no attachment in message");
             return;
         }
         Attachment attachment = optAttachment.get();
 
         String path = mClient.download(attachment.getURL(), mBaseDir);
-        if (path.isEmpty())
+        if (path.isEmpty()) {
+            // could not be downloaded
             return;
+        }
+
+        message.setAttachmentFileName(new File(path).getName());
 
         // decrypt file
         if (attachment.isEncrypted()) {
             // TODO
             LOGGER.info("encrypted attachments not supported (yet)");
-            return;
         }
-
-        message.setAttachmentFileName(new File(path).getName());
     }
 
     @Override

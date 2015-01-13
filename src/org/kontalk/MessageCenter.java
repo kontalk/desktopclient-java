@@ -49,6 +49,11 @@ public class MessageCenter {
         mModel = model;
     }
 
+    /**
+     * All-in-one method for a new outgoing message (except sending): Create,
+     * save and process the message.
+     * @return the new created message
+     */
     public OutMessage newOutMessage(KonThread thread,
             User user,
             String text,
@@ -107,7 +112,8 @@ public class MessageCenter {
         }
 
         // download attachment if url is included
-        Downloader.getInstance().queueDownload(newMessage);
+        if (newMessage.getContent().getAttachment().isPresent())
+            Downloader.getInstance().queueDownload(newMessage);
 
         thread.addMessage(newMessage);
         MessageList.getInstance().add(newMessage);
