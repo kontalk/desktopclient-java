@@ -27,6 +27,7 @@ import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -121,6 +122,23 @@ public final class Coder {
     /** Buffer size for encryption. It should always be a power of 2. */
     private static final int BUFFER_SIZE = 1 << 8;
 
+    private static class KeysResult {
+        PersonalKey myKey = null;
+        PGPPublicKey otherKey = null;
+        EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
+    }
+
+    private static class DecryptionResult {
+        EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
+        Optional<? extends OutputStream> encryptedStream = Optional.empty();
+        Signing signing = Signing.UNKNOWN;
+    }
+
+    private static class ParsingResult {
+        MessageContent content = null;
+        EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
+    }
+
     // please do not instantiate me
     private Coder() {
         throw new AssertionError();
@@ -141,27 +159,16 @@ public final class Coder {
 
         LOGGER.fine("encrypting message...");
 
-        // clear security errors
-        message.resetSecurityErrors();
-
-        // get my key
-        PersonalKey myKey;
-        try {
-            myKey = Account.getInstance().getPersonalKey();
-        } catch (KonException ex) {
-            LOGGER.log(Level.WARNING, "can't get personal key", ex);
-            message.addSecurityError(Error.UNKNOWN_ERROR);
+        // get keys
+        KeysResult keys = getKeys(message.getUser());
+        if (keys.myKey == null || keys.otherKey == null) {
+            message.setSecurityErrors(keys.errors);
             return Optional.empty();
         }
 
-        // get receiver key
-        PGPPublicKey receiverKey = getKey(message);
-        if (receiverKey == null)
-            return Optional.empty();
-
         // secure the message against the most basic attacks using Message/CPIM
-        String from = myKey.getUserId(null);
-        String to = PGP.getUserId(receiverKey, null) + "; ";
+        String from = keys.myKey.getUserId(null);
+        String to = PGP.getUserId(keys.otherKey, null) + "; ";
         String mime = "text/plain";
         // TODO encrypt more possible content
         String text = message.getContent().getPlainText();
@@ -176,7 +183,7 @@ public final class Coder {
         // add public key recipients
         PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
         //for (PGPPublicKey rcpt : mRecipients)
-        encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(receiverKey));
+        encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(keys.otherKey));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayInputStream in = new ByteArrayInputStream(plainText);
@@ -190,12 +197,12 @@ public final class Coder {
 
             // setup signature generator
             PGPSignatureGenerator sigGen = new PGPSignatureGenerator
-                    (new BcPGPContentSignerBuilder(myKey.getSignKeyPair()
+                    (new BcPGPContentSignerBuilder(keys.myKey.getSignKeyPair()
                         .getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1));
-            sigGen.init(PGPSignature.BINARY_DOCUMENT, myKey.getSignKeyPair().getPrivateKey());
+            sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getSignKeyPair().getPrivateKey());
 
             PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
-            spGen.setSignerUserID(false, myKey.getUserId(null));
+            spGen.setSignerUserID(false, keys.myKey.getUserId(null));
             sigGen.setUnhashedSubpackets(spGen.generate());
 
             sigGen.generateOnePassVersion(false).encode(compressedOut);
@@ -220,7 +227,7 @@ public final class Coder {
                     sigGen.update(buf, 0, len);
                 } catch (SignatureException ex) {
                         LOGGER.log(Level.WARNING, "can't read data for signature", ex);
-                        message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
+                        message.setSecurityErrors(EnumSet.of(Error.INVALID_SIGNATURE_DATA));
                         return Optional.empty();
                 }
             }
@@ -233,7 +240,7 @@ public final class Coder {
                 sigGen.generate().encode(compressedOut);
             } catch (SignatureException ex) {
                 LOGGER.log(Level.WARNING, "can't create signature", ex);
-                message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
+                message.setSecurityErrors(EnumSet.of(Error.INVALID_SIGNATURE_DATA));
                 return Optional.empty();
             }
             compGen.close();
@@ -241,7 +248,7 @@ public final class Coder {
 
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't encrypt message", ex);
-            message.addSecurityError(Error.UNKNOWN_ERROR);
+            message.setSecurityErrors(EnumSet.of(Error.UNKNOWN_ERROR));
             return Optional.empty();
         }
 
@@ -256,88 +263,101 @@ public final class Coder {
      */
     public static void processInMessage(InMessage message) {
         // signing requires also encryption
-        if (message.getEncryption() != Encryption.ENCRYPTED ||
-                message.getDir() != KonMessage.Direction.IN) {
+        if (message.getEncryption() != Encryption.ENCRYPTED) {
             LOGGER.warning("message not encrypted");
             return;
         }
         LOGGER.info("decrypting encrypted message...");
 
-        // clear security errors
-        message.resetSecurityErrors();
-
-        // get my key
-        PersonalKey myKey;
-        try {
-            myKey = Account.getInstance().getPersonalKey();
-        } catch (KonException ex) {
-            LOGGER.log(Level.WARNING, "can't get personal key", ex);
-            message.addSecurityError(Error.UNKNOWN_ERROR);
+        // get keys
+        KeysResult keys = getKeys(message.getUser());
+        if (keys.myKey == null || keys.otherKey == null) {
+            message.setSecurityErrors(keys.errors);
             return;
         }
-
-        // get sender key
-        PGPPublicKey senderKey = getKey(message);
-        if (senderKey == null)
-            return;
 
         // decrypt
-        Optional<String> decryptedBody = decryptAndVerify(message, myKey, senderKey);
+        String encryptedContent = message.getContent().getEncryptedContent();
+        if (encryptedContent.isEmpty()) {
+            LOGGER.warning("no encrypted data in encrypted message");
+        }
+        byte[] encryptedData = Base64.decode(encryptedContent);
+        InputStream encryptedStream = new ByteArrayInputStream(encryptedData);
+        DecryptionResult decResult = decryptAndVerify(encryptedStream, keys.myKey, keys.otherKey);
+        EnumSet<Coder.Error> allErrors = decResult.errors;
+        message.setSigning(decResult.signing);
 
-        MessageContent decryptedContent = null;
-        if (decryptedBody.isPresent()) {
+        // parse
+        ParsingResult parsingResult = null;
+        if (decResult.encryptedStream.isPresent()) {
             // parse encrypted CPIM content
-            String myUID = myKey.getUserId(null);
-            String senderUID = PGP.getUserId(senderKey, null);
-            decryptedContent = parseCPIM(message,
-                    decryptedBody.get(),
+            String myUID = keys.myKey.getUserId(null);
+            String senderUID = PGP.getUserId(keys.otherKey, null);
+            parsingResult = parseCPIM(decResult.encryptedStream.get().toString(),
                     myUID,
                     senderUID);
+            allErrors.addAll(parsingResult.errors);
         }
 
-        // check for errors that occured
-        if (decryptedContent != null && message.getSecurityErrors().isEmpty()) {
+        // set errors
+        message.setSecurityErrors(allErrors);
+
+        if (parsingResult != null && parsingResult.content != null &&
+                message.getSecurityErrors().isEmpty()) {
             // everything went better than expected
             LOGGER.info("decryption successful");
-            message.setDecryptedContent(decryptedContent);
+            message.setDecryptedContent(parsingResult.content);
         } else {
             LOGGER.warning("decryption failed");
         }
     }
 
-    private static PGPPublicKey getKey(KonMessage message) {
-        User user = message.getUser();
+
+    private static KeysResult getKeys(User user) {
+        KeysResult result = new KeysResult();
+
+        PersonalKey myKey;
+        try {
+            myKey = Account.getInstance().getPersonalKey();
+        } catch (KonException ex) {
+            LOGGER.log(Level.WARNING, "can't get personal key", ex);
+            // TODO unknown?
+            result.errors.add(Error.UNKNOWN_ERROR);
+            return result;
+        }
+        result.myKey = myKey;
+
         if (!user.hasKey()) {
             LOGGER.warning("key not found for user, id: "+user.getID());
-            message.addSecurityError(Error.KEY_UNAVAILABLE);
-            return null;
+            result.errors.add(Error.KEY_UNAVAILABLE);
+            return result;
         }
         PGPPublicKeyRing ring;
         try {
             ring = PGP.readPublicKeyring(user.getKey());
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't get keyring", ex);
-            message.addSecurityError(Error.INVALID_KEY);
-            return null;
+            result.errors.add(Error.INVALID_KEY);
+            return result;
         }
         PGPPublicKey senderKey = PGP.getMasterKey(ring);
         if (senderKey == null) {
             LOGGER.warning("can't find masterkey in keyring");
-            message.addSecurityError(Error.INVALID_KEY);
-            return null;
+            result.errors.add(Error.INVALID_KEY);
+            return result;
         }
-        return senderKey;
+        result.otherKey = senderKey;
+        return result;
     }
 
-    private static Optional<String> decryptAndVerify(KonMessage message,
+    private static DecryptionResult decryptAndVerify(InputStream encryptedStream,
             PersonalKey myKey,
             PGPPublicKey senderKey) {
         // note: the signature is inside the encrypted data
 
-        String encryptedContent = message.getContent().getEncryptedContent();
-        byte[] encryptedData = Base64.decode(encryptedContent);
+        DecryptionResult result = new DecryptionResult();
 
-        PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedData);
+        PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedStream);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -351,8 +371,8 @@ public final class Coder {
 
             if (!(o instanceof PGPEncryptedDataList)) {
                 LOGGER.warning("can't find encrypted data list in data");
-                message.addSecurityError(Error.INVALID_DATA);
-                return Optional.empty();
+                result.errors.add(Error.INVALID_DATA);
+                return result;
             }
             PGPEncryptedDataList encDataList = (PGPEncryptedDataList) o;
 
@@ -371,8 +391,8 @@ public final class Coder {
             }
             if (sKey == null || pbe == null) {
                 LOGGER.warning("private key for messsage not found");
-                message.addSecurityError(Error.INVALID_PRIVATE_KEY);
-                return Optional.empty();
+                result.errors.add(Error.INVALID_PRIVATE_KEY);
+                return result;
             }
 
             InputStream clear = pbe.getDataStream(new BcPublicKeyDataDecryptorFactory(sKey));
@@ -383,8 +403,8 @@ public final class Coder {
 
             if (!(object instanceof PGPCompressedData)) {
                 LOGGER.warning("data packet not compressed");
-                message.addSecurityError(Error.INVALID_DATA);
-                return Optional.empty();
+                result.errors.add(Error.INVALID_DATA);
+                return result;
             }
 
             PGPCompressedData cData = (PGPCompressedData) object;
@@ -399,11 +419,11 @@ public final class Coder {
                 PGPOnePassSignatureList signatureList = (PGPOnePassSignatureList) object;
                 // there is a signature list, so we assume the message is signed
                 // (makes sense)
-                message.setSigning(Signing.SIGNED);
+                result.signing = Signing.SIGNED;
 
                 if (signatureList.isEmpty()) {
                     LOGGER.warning("signature list is empty");
-                    message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
+                    result.errors.add(Error.INVALID_SIGNATURE_DATA);
                 } else {
                     ops = signatureList.get(0);
                     ops.init(new BcPGPContentVerifierBuilderProvider(), senderKey);
@@ -411,13 +431,13 @@ public final class Coder {
                 object = pgpFact.nextObject(); // nullable
             } else {
                 LOGGER.warning("signature list not found");
-                message.setSigning(Signing.NOT);
+                result.signing = Signing.NOT;
             }
 
             if (!(object instanceof PGPLiteralData)) {
                 LOGGER.warning("unknown packet type: " + object.getClass().getName());
-                message.addSecurityError(Error.INVALID_DATA);
-                return Optional.empty();
+                result.errors.add(Error.INVALID_DATA);
+                return result;
             }
 
             PGPLiteralData ld = (PGPLiteralData) object;
@@ -434,14 +454,14 @@ public final class Coder {
             }
 
             if (ops != null) {
-                verifySignature(message, pgpFact, ops);
+                result = verifySignature(result, pgpFact, ops);
             }
 
             // verify message integrity
             if (pbe.isIntegrityProtected()) {
                 if (!pbe.verify()) {
                     LOGGER.warning("message integrity check failed");
-                    message.addSecurityError(Error.INVALID_INTEGRITY);
+                    result.errors.add(Error.INVALID_INTEGRITY);
                 }
             } else {
                 LOGGER.warning("message is not integrity protected");
@@ -449,27 +469,28 @@ public final class Coder {
 
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't decrypt message", ex);
-            message.addSecurityError(Error.UNKNOWN_ERROR);
+            result.errors.add(Error.UNKNOWN_ERROR);
         }
 
-        return Optional.of(outputStream.toString());
+        result.encryptedStream = Optional.of(outputStream);
+        return result;
     }
 
-    private static void verifySignature(KonMessage message,
+    private static DecryptionResult verifySignature(DecryptionResult result,
             PGPObjectFactory pgpFact,
             PGPOnePassSignature ops) throws PGPException, IOException {
         Object object = pgpFact.nextObject(); // nullable
         if (!(object instanceof PGPSignatureList)) {
             LOGGER.warning("invalid signature packet");
-            message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
-            return;
+            result.errors.add(Error.INVALID_SIGNATURE_DATA);
+            return result;
         }
 
         PGPSignatureList signatureList = (PGPSignatureList) object;
         if (signatureList.isEmpty()) {
             LOGGER.warning("no signature in signature list");
-            message.addSecurityError(Error.INVALID_SIGNATURE_DATA);
-            return;
+            result.errors.add(Error.INVALID_SIGNATURE_DATA);
+            return result;
         }
 
         PGPSignature signature = signatureList.get(0);
@@ -481,28 +502,31 @@ public final class Coder {
         }
         if (verified) {
             // signature verification successful!
-            message.setSigning(Signing.VERIFIED);
+            result.signing = Signing.VERIFIED;
         } else {
             LOGGER.warning("signature verification failed");
-            message.addSecurityError(Error.INVALID_SIGNATURE);
+            result.errors.add(Error.INVALID_SIGNATURE);
         }
+        return result;
     }
 
     /**
      * Parse and verify CPIM ( https://tools.ietf.org/html/rfc3860 ).
      */
-    private static MessageContent parseCPIM(KonMessage message,
+    private static ParsingResult parseCPIM(
             String text,
             String myUid,
             String senderKeyUID) {
+
+        ParsingResult result = new ParsingResult();
 
         CPIMMessage cpimMessage;
         try {
             cpimMessage = CPIMMessage.parse(text);
         } catch (ParseException ex) {
             LOGGER.log(Level.WARNING, "can't find valid CPIM data", ex);
-            message.addSecurityError(Error.INVALID_DATA);
-            return null;
+            result.errors.add(Error.INVALID_DATA);
+            return result;
         }
 
         String mime = cpimMessage.getMime();
@@ -517,12 +541,12 @@ public final class Coder {
         // check that the recipient matches the full uid of the personal key
         if (!myUid.equals(cpimMessage.getTo())) {
             LOGGER.warning("destination does not match personal key");
-            message.addSecurityError(Error.INVALID_RECIPIENT);
+            result.errors.add(Error.INVALID_RECIPIENT);
         }
         // check that the sender matches the full uid of the sender's key
         if (!senderKeyUID.equals(cpimMessage.getFrom())) {
             LOGGER.warning("sender doesn't match sender's key");
-            message.addSecurityError(Error.INVALID_SENDER);
+            result.errors.add(Error.INVALID_SENDER);
         }
         // maybe add: check DateTime (possibly compare it with <delay/>)
 
@@ -544,7 +568,7 @@ public final class Coder {
             decryptedContent = new MessageContent(content);
         }
 
-        return decryptedContent;
+        result.content = decryptedContent;
+        return result;
     }
-
 }

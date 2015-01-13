@@ -236,17 +236,17 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public void setSigning(Coder.Signing signing) {
         if (signing == mSigning)
             return;
+
+        // check for locical errors in
         if (signing == Coder.Signing.NOT)
             assert mSigning == Coder.Signing.UNKNOWN;
         if (signing == Coder.Signing.SIGNED)
             assert mSigning == Coder.Signing.UNKNOWN;
         if (signing == Coder.Signing.VERIFIED)
-            assert mSigning == Coder.Signing.SIGNED;
-        mSigning = signing;
-    }
+            assert mSigning == Coder.Signing.SIGNED ||
+                    mSigning == Coder.Signing.UNKNOWN;
 
-    public void addSecurityError(Coder.Error error) {
-        mCoderErrors.add(error);
+        mSigning = signing;
         this.save();
     }
 
@@ -259,8 +259,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mCoderErrors.contains(error);
     }
 
-    public void resetSecurityErrors() {
+    public void setSecurityErrors(EnumSet<Coder.Error> errors) {
         mCoderErrors.clear();
+        mCoderErrors.addAll(errors);
         this.save();
     }
 
