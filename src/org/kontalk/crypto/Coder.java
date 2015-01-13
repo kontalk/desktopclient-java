@@ -96,6 +96,8 @@ public final class Coder {
     public static enum Error {
         /** Some unknown error. */
         UNKNOWN_ERROR,
+        /** Own personal key not found. */
+        MY_KEY_UNAVAILABLE,
         /** Public key of sender not found. */
         KEY_UNAVAILABLE,
         /** Key data invalid. */
@@ -257,7 +259,7 @@ public final class Coder {
     }
 
     /**
-     * Decrypts and verifies the body of a message. Errors that may occur are
+     * Decrypt and verify the body of a message. Errors that may occur are
      * saved to the message.
      * @param message
      */
@@ -321,8 +323,7 @@ public final class Coder {
             myKey = Account.getInstance().getPersonalKey();
         } catch (KonException ex) {
             LOGGER.log(Level.WARNING, "can't get personal key", ex);
-            // TODO unknown?
-            result.errors.add(Error.UNKNOWN_ERROR);
+            result.errors.add(Error.MY_KEY_UNAVAILABLE);
             return result;
         }
         result.myKey = myKey;
