@@ -22,7 +22,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.XMPPConnection;
+import org.kontalk.KonException;
 import org.kontalk.Kontalk;
+import org.kontalk.Kontalk.Status;
 
 /**
  *
@@ -55,8 +57,8 @@ public final class KonConnectionListener implements ConnectionListener {
     @Override
     public void connectionClosedOnError(Exception ex) {
         LOGGER.log(Level.WARNING, "connection closed on error", ex);
-        //mModel.statusChanged(Status.ERROR);
-        //mModel.handleException(new KonException(KonException.Error.CLIENT_ERROR, ex));
+        mModel.statusChanged(Status.ERROR);
+        mModel.handleException(new KonException(KonException.Error.CLIENT_ERROR, ex));
     }
 
     @Override
