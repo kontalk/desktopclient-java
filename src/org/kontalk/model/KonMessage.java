@@ -85,7 +85,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // enum, determines if content is verified
             // can only tell if signed after encryption attempt
             "signing_status INTEGER NOT NULL, " +
-            // encryption and signing errors
+            // enum set, encryption and signing errors of content
             "coder_errors INTEGER NOT NULL, " +
 
             "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
@@ -233,23 +233,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mSigning;
     }
 
-    public void setSigning(Coder.Signing signing) {
-        if (signing == mSigning)
-            return;
-
-        // check for locical errors in
-        if (signing == Coder.Signing.NOT)
-            assert mSigning == Coder.Signing.UNKNOWN;
-        if (signing == Coder.Signing.SIGNED)
-            assert mSigning == Coder.Signing.UNKNOWN;
-        if (signing == Coder.Signing.VERIFIED)
-            assert mSigning == Coder.Signing.SIGNED ||
-                    mSigning == Coder.Signing.UNKNOWN;
-
-        mSigning = signing;
-        this.save();
-    }
-
     public EnumSet<Coder.Error> getSecurityErrors() {
         // better return a copy
         return mCoderErrors.clone();
@@ -335,7 +318,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         public void signing(Coder.Signing signing) { mSigning = signing; }
         public void coderErrors(EnumSet<Coder.Error> coderErrors) { mCoderErrors = coderErrors; }
 
-        KonMessage build() {
+       KonMessage build() {
             if (mDir == Direction.IN)
                 return new InMessage(this);
             else

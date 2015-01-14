@@ -35,11 +35,29 @@ public final class InMessage extends KonMessage {
         super(builder);
     }
 
+    public void setSigning(Coder.Signing signing) {
+        if (signing == mSigning)
+            return;
+
+        // check for locical errors in
+        if (signing == Coder.Signing.NOT)
+            assert mSigning == Coder.Signing.UNKNOWN;
+        if (signing == Coder.Signing.SIGNED)
+            assert mSigning == Coder.Signing.UNKNOWN;
+        if (signing == Coder.Signing.VERIFIED)
+            assert mSigning == Coder.Signing.SIGNED ||
+                    mSigning == Coder.Signing.UNKNOWN;
+
+        mSigning = signing;
+        this.save();
+    }
+
     public void setDecryptedContent(MessageContent decryptedContent) {
         assert mEncryption == Coder.Encryption.ENCRYPTED;
         mContent.setDecryptedContent(decryptedContent);
         mEncryption = Coder.Encryption.DECRYPTED;
         this.save();
+        this.changed();
     }
 
     public void setAttachmentFileName(String fileName) {
@@ -77,6 +95,7 @@ public final class InMessage extends KonMessage {
 
         @Override
         public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
+
         @Override
         public void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
         @Override
