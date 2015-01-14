@@ -34,7 +34,7 @@ import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Database;
 import org.kontalk.crypto.PGP;
-import org.kontalk.util.MessageUtils;
+import org.kontalk.util.EncodingUtils;
 
 /**
  *
@@ -213,7 +213,7 @@ public final class User {
             LOGGER.info("overwriting public key, user id: "+mID);
 
         mKey = Base64.toBase64String(rawKey);
-        mFingerprint = MessageUtils.bytesToHex(key.getFingerprint());
+        mFingerprint = EncodingUtils.bytesToHex(key.getFingerprint());
         this.save();
         UserList.getInstance().changed();
     }

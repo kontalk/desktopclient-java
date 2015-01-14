@@ -42,7 +42,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBu
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.kontalk.crypto.PGP.PGPDecryptedKeyPairRing;
 import org.kontalk.crypto.PGP.PGPKeyPairRing;
-import org.kontalk.util.MessageUtils;
+import org.kontalk.util.EncodingUtils;
 
 /** Personal asymmetric encryption key. */
 public final class PersonalKey {
@@ -99,7 +99,7 @@ public final class PersonalKey {
     }
 
     public String getFingerprint() {
-    	return MessageUtils.bytesToHex(mPair.signKey.getPublicKey().getFingerprint());
+    	return EncodingUtils.bytesToHex(mPair.signKey.getPublicKey().getFingerprint());
     }
 
     public PGPKeyPairRing store(String name, String email, String comment, String passphrase) throws PGPException {

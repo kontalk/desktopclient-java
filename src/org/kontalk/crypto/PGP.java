@@ -58,10 +58,9 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyConverter;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyPair;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
-import org.kontalk.util.MessageUtils;
+import org.kontalk.util.EncodingUtils;
 
 //import android.os.Parcel;
-
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
 public final class PGP {
@@ -237,12 +236,12 @@ public final class PGP {
     }
 
     public static String getFingerprint(PGPPublicKey publicKey) {
-    	return MessageUtils.bytesToHex(publicKey.getFingerprint());
+    	return EncodingUtils.bytesToHex(publicKey.getFingerprint());
     }
 
     public static String getFingerprint(byte[] publicKeyring) throws IOException, PGPException {
     	PGPPublicKey pk = getMasterKey(publicKeyring);
-    	return MessageUtils.bytesToHex(pk.getFingerprint());
+    	return EncodingUtils.bytesToHex(pk.getFingerprint());
     }
 
     /** Returns the first user ID on the key that matches the given hostname. */

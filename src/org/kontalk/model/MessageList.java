@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.Database;
 import org.kontalk.crypto.Coder;
+import org.kontalk.util.EncodingUtils;
 
 /**
  * Central list of all messages.
@@ -89,7 +90,7 @@ public final class MessageList extends Observable {
                 int signingIndex = resultSet.getInt("signing_status");
                 Coder.Signing signing = signingValues[signingIndex];
                 int errorFlags = resultSet.getInt("coder_errors");
-                EnumSet<Coder.Error> coderErrors = Database.intToEnumSet(Coder.Error.class, errorFlags);
+                EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(Coder.Error.class, errorFlags);
 
                 KonMessage.Builder builder = new KonMessage.Builder(id,
                         optThread.get(),

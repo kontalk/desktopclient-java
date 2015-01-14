@@ -37,6 +37,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.User;
+import org.kontalk.util.EncodingUtils;
 import org.sqlite.SQLiteConfig;
 
 /**
@@ -259,7 +260,7 @@ public final class Database {
             } else if (value instanceof Enum) {
                 stat.setInt(i+1, ((Enum) value).ordinal());
             } else if (value instanceof EnumSet) {
-                stat.setInt(i+1, this.enumSetToInt(((EnumSet) value)));
+                stat.setInt(i+1, EncodingUtils.enumSetToInt(((EnumSet) value)));
             } else if (value instanceof Optional) {
                 Optional<?> o = (Optional) value;
                 this.setValue(stat, i, o.orElse(null));
@@ -268,36 +269,6 @@ public final class Database {
             } else {
                 LOGGER.warning("unknown type: " + value);
             }
-    }
-
-    /**
-     * Encode an enum set to an integer representing a bit array.
-     */
-    private int enumSetToInt(EnumSet<?> enumSet) {
-        int b = 0;
-        for (Object o: enumSet) {
-            b += 1 << ((Enum) o).ordinal();
-        }
-        return b;
-    }
-
-    /**
-     * Get an enum set by parsing an integer which represents a bit array.
-     * Source: http://stackoverflow.com/questions/2199399/storing-enumset-in-a-database
-     * @param <T> type of elements in enum set
-     * @param enumClass enum class to determine the type
-     * @param decoded integer decoded as
-     * @return an enum set containing the enums specified by the integer
-     */
-    public static <T extends Enum<T>> EnumSet<T> intToEnumSet(Class<T> enumClass, int decoded) {
-        EnumSet<T> enumSet = EnumSet.noneOf(enumClass);
-        T[] enums = enumClass.getEnumConstants();
-        while (decoded != 0) {
-            int ordinal = Integer.numberOfTrailingZeros(decoded);
-            enumSet.add(enums[ordinal]);
-            decoded -= Integer.lowestOneBit(decoded);
-        }
-        return enumSet;
     }
 
     /**
