@@ -63,8 +63,9 @@ import org.kontalk.KonException;
 import org.kontalk.client.KonMessageListener;
 import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
-import org.kontalk.model.KonMessage;
 import org.kontalk.model.MessageContent;
+import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.OutMessage;
 import org.kontalk.model.User;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.XMPPUtils;
@@ -106,6 +107,8 @@ public final class Coder {
         INVALID_PRIVATE_KEY,
         /** Invalid data / parsing failed. */
         INVALID_DATA,
+        /** No integrity protection found. */
+        NO_INTEGRITY,
         /** Integrity check failed. */
         INVALID_INTEGRITY,
         /** Invalid data / parsing failed of signature. */
@@ -132,7 +135,7 @@ public final class Coder {
 
     private static class DecryptionResult {
         EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
-        Optional<? extends OutputStream> encryptedStream = Optional.empty();
+        Optional<? extends ByteArrayOutputStream> decryptedStream = Optional.empty();
         Signing signing = Signing.UNKNOWN;
     }
 
@@ -152,14 +155,13 @@ public final class Coder {
      * @param message
      * @return the encrypted and signed text.
      */
-    public static Optional<byte[]> processOutMessage(KonMessage message) {
-        if (message.getEncryption() != Encryption.DECRYPTED ||
-                message.getDir() != KonMessage.Direction.OUT) {
+    public static Optional<byte[]> processOutMessage(OutMessage message) {
+        if (message.getEncryption() != Encryption.DECRYPTED) {
             LOGGER.warning("message does not want to be encrypted");
             return Optional.empty();
         }
 
-        LOGGER.fine("encrypting message...");
+        LOGGER.info("encrypting message...");
 
         // get keys
         KeysResult keys = getKeys(message.getUser());
@@ -254,13 +256,13 @@ public final class Coder {
             return Optional.empty();
         }
 
-        LOGGER.fine("encryption successful");
+        LOGGER.info("encryption successful");
         return Optional.of(out.toByteArray());
     }
 
     /**
-     * Decrypt and verify the body of a message. Errors that may occur are
-     * saved to the message.
+     * Decrypt and verify the body of a message. Sets the encryption and signing
+     * status of the message and errors that may occur are saved to the message.
      * @param message
      */
     public static void processInMessage(InMessage message) {
@@ -291,21 +293,19 @@ public final class Coder {
 
         // parse
         ParsingResult parsingResult = null;
-        if (decResult.encryptedStream.isPresent()) {
+        if (decResult.decryptedStream.isPresent()) {
             // parse encrypted CPIM content
             String myUID = keys.myKey.getUserId(null);
             String senderUID = PGP.getUserId(keys.otherKey, null);
-            parsingResult = parseCPIM(decResult.encryptedStream.get().toString(),
-                    myUID,
-                    senderUID);
+            String encrText = decResult.decryptedStream.get().toString();
+            parsingResult = parseCPIM(encrText, myUID, senderUID);
             allErrors.addAll(parsingResult.errors);
         }
 
         // set errors
         message.setSecurityErrors(allErrors);
 
-        if (parsingResult != null && parsingResult.content != null &&
-                message.getSecurityErrors().isEmpty()) {
+        if (parsingResult != null && parsingResult.content != null) {
             // everything went better than expected
             LOGGER.info("decryption successful");
             message.setDecryptedContent(parsingResult.content);
@@ -454,6 +454,8 @@ public final class Coder {
                 }
             }
 
+            result.decryptedStream = Optional.of(outputStream);
+
             if (ops != null) {
                 result = verifySignature(result, pgpFact, ops);
             }
@@ -466,6 +468,7 @@ public final class Coder {
                 }
             } else {
                 LOGGER.warning("message is not integrity protected");
+                result.errors.add(Error.NO_INTEGRITY);
             }
 
         } catch (IOException | PGPException ex) {
@@ -473,7 +476,6 @@ public final class Coder {
             result.errors.add(Error.UNKNOWN_ERROR);
         }
 
-        result.encryptedStream = Optional.of(outputStream);
         return result;
     }
 
