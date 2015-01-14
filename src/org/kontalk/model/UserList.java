@@ -81,10 +81,10 @@ public final class UserList extends Observable {
     }
 
     /**
-     * Add a new user.
+     * Add a new user to the list.
      * @param jid
      * @param name
-     * @return the newly created user
+     * @return the newly created user, if one was created
      */
     public Optional<User> addUser(String jid, String name) {
         jid = XmppStringUtils.parseBareJid(jid);
@@ -116,7 +116,7 @@ public final class UserList extends Observable {
     }
 
     /**
-     * Get the user for a JID (if the JID can not be found).
+     * Get the user for a JID (if the JID is in the list).
      * Resource is removed for lookup.
      * @param jid
      * @return

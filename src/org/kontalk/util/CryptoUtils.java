@@ -35,7 +35,7 @@ public class CryptoUtils {
     private final static Logger LOGGER = Logger.getLogger(CryptoUtils.class.getName());
 
     /**
-     * Ugly hack to get “unlimited strength” for the Java Encryption Extension
+     * Ugly hack to get “unlimited strength” for the Java Encryption Extension.
      * Source: https://stackoverflow.com/a/22492582
      */
     public static void removeCryptographyRestrictions() {
