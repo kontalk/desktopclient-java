@@ -99,6 +99,10 @@ public class Downloader implements Runnable {
         }
     }
 
+    public String getAttachmentDir() {
+        return mBaseDir.getAbsolutePath();
+    }
+
     @Override
     public void run() {
         while (true) {

@@ -18,6 +18,8 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.label.WebLinkLabel;
+import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
@@ -29,20 +31,25 @@ import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Optional;
 import java.util.Set;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
+import org.kontalk.Downloader;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
+import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.view.ListView.ListItem;
 
 /**
@@ -207,6 +214,7 @@ final class ThreadView extends WebScrollPane {
         private class MessageView extends ListItem implements Observer {
 
             private final KonMessage mMessage;
+            private final WebPanel mContentPanel;
             private final WebTextArea mTextArea;
             private final int mPreferredTextAreaWidth;
             private final WebLabel mStatusIconLabel;
@@ -243,6 +251,8 @@ final class ThreadView extends WebScrollPane {
                     messagePanel.add(fromLabel, BorderLayout.NORTH);
                 }
 
+                mContentPanel = new WebPanel();
+                mContentPanel.setOpaque(false);
                 // text
                 boolean encrypted = mMessage.getEncryption() == Coder.Encryption.ENCRYPTED;
                 // TODO display all possible content
@@ -255,7 +265,8 @@ final class ThreadView extends WebScrollPane {
                 mPreferredTextAreaWidth = mTextArea.getPreferredSize().width;
                 mTextArea.setLineWrap(true);
                 mTextArea.setWrapStyleWord(true);
-                messagePanel.add(mTextArea, BorderLayout.CENTER);
+                mContentPanel.add(mTextArea, BorderLayout.CENTER);
+                messagePanel.add(mContentPanel, BorderLayout.CENTER);
 
                 WebPanel statusPanel = new WebPanel();
                 statusPanel.setOpaque(false);
@@ -305,6 +316,7 @@ final class ThreadView extends WebScrollPane {
             }
 
             private void update() {
+                // status icon
                 switch (mMessage.getReceiptStatus()) {
                     case PENDING :
                         mStatusIconLabel.setIcon(PENDING_ICON);
@@ -316,6 +328,28 @@ final class ThreadView extends WebScrollPane {
                         mStatusIconLabel.setIcon(DELIVERED_ICON);
                         break;
                 }
+
+                // attachment
+                Optional<Attachment> optAttachment = mMessage.getContent().getAttachment();
+                if (optAttachment.isPresent()) {
+                    WebLabel attLabel;
+
+                    if (optAttachment.get().getFileName().isEmpty()) {
+                        attLabel = new WebLabel("?");
+                    } else {
+                        WebLinkLabel linkLabel = new WebLinkLabel();
+                        String base = Downloader.getInstance().getAttachmentDir();
+                        String fName = optAttachment.get().getFileName();
+                        Path path = Paths.get(base, fName);
+                        linkLabel.setLink(fName, path.toString());
+                        attLabel = linkLabel;
+                    }
+                    WebLabel labelLabel = new WebLabel("Attachment: ");
+                    labelLabel.setItalicFont();
+                    GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
+                    mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
+                }
+
             }
 
             @Override

@@ -78,6 +78,9 @@ class ListView extends WebList {
                     mTip.closeTooltip();
             }
         });
+
+        // TODO JLists in Swing don't forward mouse events to their items, we
+        // need to do this manually here
     }
 
     void filter(String search) {
