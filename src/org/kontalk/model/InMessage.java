@@ -39,7 +39,7 @@ public final class InMessage extends KonMessage {
         if (signing == mSigning)
             return;
 
-        // check for locical errors in
+        // check for locical errors in coder
         if (signing == Coder.Signing.NOT)
             assert mSigning == Coder.Signing.UNKNOWN;
         if (signing == Coder.Signing.SIGNED)
@@ -61,16 +61,51 @@ public final class InMessage extends KonMessage {
     }
 
     public void setAttachmentFileName(String fileName) {
-        Optional<Attachment> optAttachment = this.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
-            LOGGER.warning("no attachment!? can't set filename");
+        Attachment attachment = this.getAttachment();
+        if (attachment == null)
             return;
-        }
 
-        optAttachment.get().setFileName(fileName);
+        attachment.setFileName(fileName);
         this.save();
         this.changed();
      }
+
+    public void setAttachmentErrors(EnumSet<Coder.Error> errors) {
+        Attachment attachment = this.getAttachment();
+        if (attachment == null)
+            return;
+
+        attachment.setSecurityErrors(errors);
+        this.save();
+    }
+
+    public void setAttachmentSigning(Coder.Signing signing) {
+        Attachment attachment = this.getAttachment();
+        if (attachment == null)
+            return;
+
+        attachment.setSigning(signing);
+        this.save();
+    }
+
+    public void setDecryptedAttachment(String filename) {
+        Attachment attachment = this.getAttachment();
+        if (attachment == null)
+            return;
+
+        attachment.setDecryptedFilename(filename);
+        this.save();
+        this.changed();
+    }
+
+    private Attachment getAttachment() {
+        Optional<Attachment> optAttachment = this.getContent().getAttachment();
+        if (!optAttachment.isPresent()) {
+            LOGGER.warning("no attachment!?");
+            return null;
+        }
+        return optAttachment.get();
+    }
 
     public static class Builder extends KonMessage.Builder {
 

@@ -27,6 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
 import org.kontalk.client.DownloadClient;
+import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
@@ -93,7 +94,7 @@ public class Downloader implements Runnable {
         message.setAttachmentFileName(new File(path).getName());
 
         // decrypt file
-        if (attachment.isEncrypted()) {
+        if (attachment.getEncryption() == Coder.Encryption.ENCRYPTED) {
             // TODO
             LOGGER.info("encrypted attachments not supported (yet)");
         }

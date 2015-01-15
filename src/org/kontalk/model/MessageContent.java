@@ -18,12 +18,15 @@
 
 package org.kontalk.model;
 
+import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.kontalk.crypto.Coder;
+import org.kontalk.util.EncodingUtils;
 
 /**
  * All possible content a message can contain.
@@ -35,11 +38,11 @@ public class MessageContent {
 
     // plain message text, empty string if not present
     private final String mPlainText;
-    // attachment aka. file url in plaintext
+    // attachment a.k.a. file url in plaintext
     private final Optional<Attachment> mOptAttachment;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
-    // decrypted message
+    // decrypted message content
     private Optional<MessageContent> mOptDecryptedContent;
 
     private final static String JSON_PLAIN_TEXT = "plain_text";
@@ -106,6 +109,10 @@ public class MessageContent {
         mEncryptedContent = "";
     }
 
+    /**
+     * Return if there is no content in this message.
+     * @return true if there is no content at all, false otherwise
+     */
     public boolean isEmpty() {
         return mPlainText.isEmpty() &&
                 !mOptAttachment.isPresent() &&
@@ -156,47 +163,62 @@ public class MessageContent {
         private final String mURL;
         private final String mMimeType;
         private final long mLength;
-        private final boolean mEncrypted;
         private String mFileName;
+        // TODO same as in KonMessage, move to own class
+        private Coder.Encryption mEncryption;
+        private Coder.Signing mSigning;
+        private final EnumSet<Coder.Error> mCoderErrors;
 
         private final static String JSON_URL = "url";
         private final static String JSON_MIME_TYPE = "mime_type";
         private final static String JSON_LENGTH = "length";
-        private final static String JSON_ENCRYPTED = "encrypted";
         private final static String JSON_FILE_NAME = "file_name";
+        private final static String JSON_ENCRYPTION = "encryption";
+        private final static String JSON_SIGNING = "signing";
+        private final static String JSON_CODER_ERRORS = "coder_errors";
 
         // used for incoming attachments
         public Attachment(String url,
                 String mimeType,
                 long length,
                 boolean encrypted) {
-            this(url, mimeType, length, encrypted, "");
+            this(
+                    url,
+                    mimeType,
+                    length,
+                    "",
+                    encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT,
+                    encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT,
+                    EnumSet.noneOf(Coder.Error.class)
+            );
         }
 
         // used when loading from database.
-        public Attachment(String url,
+        private Attachment(String url,
                 String mimeType,
                 long length,
-                boolean encrypted,
-                String fileName)  {
+                String fileName,
+                Coder.Encryption encryption,
+                Coder.Signing signing,
+                EnumSet<Coder.Error> codingErrors)  {
             // URL to file, empty string by default
             mURL = url;
             // MIME of file, empty string by default
             mMimeType = mimeType;
             // size of file, -1 by default
             mLength = length;
-            // is file encrypted? false by default
-            mEncrypted = encrypted;
             // file name of downloaded and encrypted file, empty string by default
             mFileName = fileName;
+            // is file de-/encrypted?
+            mEncryption = encryption;
+            // signing status
+            mSigning = signing;
+            // de-/encrypting errors
+            mCoderErrors = codingErrors;
         }
 
         public String getURL() {
             return mURL;
-        }
-
-        public boolean isEncrypted() {
-            return mEncrypted;
         }
 
        /**
@@ -210,6 +232,37 @@ public class MessageContent {
             mFileName = fileName;
         }
 
+        public void setDecryptedFilename(String fileName) {
+            assert mEncryption == Coder.Encryption.ENCRYPTED;
+            mFileName = fileName;
+            mEncryption = Coder.Encryption.DECRYPTED;
+        }
+
+        public Coder.Encryption getEncryption() {
+            return mEncryption;
+        }
+
+        public void setSigning(Coder.Signing signing) {
+            if (signing == mSigning)
+                return;
+
+            // check for locical errors in coder
+            if (signing == Coder.Signing.NOT)
+                assert mSigning == Coder.Signing.UNKNOWN;
+            if (signing == Coder.Signing.SIGNED)
+                assert mSigning == Coder.Signing.UNKNOWN;
+            if (signing == Coder.Signing.VERIFIED)
+                assert mSigning == Coder.Signing.SIGNED ||
+                        mSigning == Coder.Signing.UNKNOWN;
+
+            mSigning = signing;
+        }
+
+        public void setSecurityErrors(EnumSet<Coder.Error> errors) {
+            mCoderErrors.clear();
+            mCoderErrors.addAll(errors);
+        }
+
         // using legacy lib, raw types extend Object
         @SuppressWarnings("unchecked")
         private String toJSONString() {
@@ -217,8 +270,10 @@ public class MessageContent {
             json.put(JSON_URL, mURL);
             json.put(JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
-            json.put(JSON_ENCRYPTED, mEncrypted);
             json.put(JSON_FILE_NAME, mFileName);
+            json.put(JSON_ENCRYPTION, mEncryption.ordinal());
+            json.put(JSON_SIGNING, mSigning.ordinal());
+            json.put(JSON_CODER_ERRORS, EncodingUtils.enumSetToInt(mCoderErrors));
             return json.toJSONString();
         }
 
@@ -226,15 +281,35 @@ public class MessageContent {
             Object obj = JSONValue.parse(jsonAttachment);
             try {
                 Map<?, ?> map = (Map) obj;
+
                 String url = (String) map.get(JSON_URL);
                 assert url != null;
+
                 String mimeType = (String) map.get(JSON_MIME_TYPE);
                 if (mimeType == null) mimeType = "";
-                long length = (Long) map.get(JSON_LENGTH);
-                boolean encrypted = (Boolean) map.get(JSON_ENCRYPTED);
+
+                long length = ((Number) map.get(JSON_LENGTH)).longValue();
+
+                Number enc = (Number) map.get(JSON_ENCRYPTION);
+                Coder.Encryption encryption = Coder.Encryption.values()[enc.intValue()];
+
+                Number sig = (Number) map.get(JSON_SIGNING);
+                Coder.Signing signing = Coder.Signing.values()[sig.intValue()];
+
+                Number err = ((Number) map.get(JSON_CODER_ERRORS));
+                EnumSet<Coder.Error> errors = EncodingUtils.intToEnumSet(Coder.Error.class, err.intValue());
+
                 String fileName = (String) map.get(JSON_FILE_NAME);
                 if (fileName == null) fileName = "";
-                Attachment a = new Attachment(url, mimeType, length, encrypted, fileName);
+
+                Attachment a = new Attachment(
+                        url,
+                        mimeType,
+                        length,
+                        fileName,
+                        encryption,
+                        signing,
+                        errors);
                 return Optional.of(a);
             } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON attachment", ex);
