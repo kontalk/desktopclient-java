@@ -20,6 +20,10 @@ package org.kontalk.crypto;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,6 +36,7 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.io.FilenameUtils;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
@@ -59,6 +64,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.stringencoder.Base64;
+import org.kontalk.Downloader;
 import org.kontalk.KonException;
 import org.kontalk.client.KonMessageListener;
 import org.kontalk.model.Account;
@@ -314,6 +320,82 @@ public final class Coder {
         }
     }
 
+    /**
+     * Decrypt and verify a downloaded attachment file. Sets the encryption and
+     * signing status of the message attachment and errors that may occur are
+     * saved to the message.
+     * @param message
+     */
+    public static void processAttachment(InMessage message) {
+        if (!message.getContent().getAttachment().isPresent()) {
+            LOGGER.warning("no attachment in message");
+            return;
+        }
+
+        Attachment attachment = message.getContent().getAttachment().get();
+
+        if (attachment.getEncryption() != Coder.Encryption.ENCRYPTED) {
+            LOGGER.warning("attachment not encrypted");
+            return;
+        }
+
+        if (attachment.getFileName().isEmpty()) {
+            LOGGER.warning("no filename in attachment");
+            return;
+        }
+
+        File baseDir = Downloader.getInstance().getBaseDir();
+        File inFile = new File(baseDir, attachment.getFileName());
+
+        InputStream encryptedStream;
+        try {
+            encryptedStream = new FileInputStream(inFile);
+        } catch (FileNotFoundException ex) {
+            LOGGER.log(Level.WARNING,
+                    "attachment file not found: "+inFile.getAbsolutePath(),
+                    ex);
+            return;
+        }
+
+        LOGGER.info("decrypting encrypted attachment...");
+
+        // get keys
+        KeysResult keys = getKeys(message.getUser());
+        if (keys.myKey == null || keys.otherKey == null) {
+            message.setAttachmentErrors(keys.errors);
+            return;
+        }
+
+        // decrypt
+        DecryptionResult decResult = decryptAndVerify(encryptedStream, keys.myKey, keys.otherKey);
+        message.setAttachmentErrors(keys.errors);
+        message.setAttachmentSigning(decResult.signing);
+
+        // check for errors
+        if (!decResult.decryptedStream.isPresent()) {
+            LOGGER.info("attachment decryption failed");
+            return;
+        }
+
+        // save encrypted data
+        String base = FilenameUtils.getBaseName(inFile.getName());
+        String ext = FilenameUtils.getExtension(inFile.getName());
+        File outFile = new File(baseDir, base + "_dec." + ext);
+        if (outFile.exists()) {
+            LOGGER.warning("encrypted file already exists: "+outFile.getAbsolutePath());
+            return;
+        }
+        try (FileOutputStream out = new FileOutputStream(outFile)){
+            out.write(decResult.decryptedStream.get().toByteArray());
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't write encrypted file", ex);
+            return;
+        }
+
+        // set new filename
+        message.setDecryptedAttachment(outFile.getName());
+        LOGGER.info("attachment decryption successful");
+    }
 
     private static KeysResult getKeys(User user) {
         KeysResult result = new KeysResult();

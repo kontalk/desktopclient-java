@@ -95,8 +95,7 @@ public class Downloader implements Runnable {
 
         // decrypt file
         if (attachment.getEncryption() == Coder.Encryption.ENCRYPTED) {
-            // TODO
-            LOGGER.info("encrypted attachments not supported (yet)");
+            Coder.processAttachment(message);
         }
     }
 

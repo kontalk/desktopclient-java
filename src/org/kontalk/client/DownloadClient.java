@@ -136,6 +136,10 @@ public class DownloadClient {
 
             // TODO we need to wrap the entity to monitor the download progress
             File destination = new File(base, name);
+            if (destination.exists()) {
+                LOGGER.warning("file already exists: "+destination.getAbsolutePath());
+                return "";
+            }
             try (FileOutputStream out = new FileOutputStream(destination)){
                 entity.writeTo(out);
             } catch (IOException ex) {
