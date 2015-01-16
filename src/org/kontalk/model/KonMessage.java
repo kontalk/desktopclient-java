@@ -87,7 +87,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             "signing_status INTEGER NOT NULL, " +
             // enum set, encryption and signing errors of content
             "coder_errors INTEGER NOT NULL, " +
-
+            // error child element in JSON format if message could not be
+            // delivered (not implemented)
+            "server_error TEXT, " +
+            // TODO unique
             "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
@@ -107,6 +110,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     protected Coder.Encryption mEncryption;
     protected Coder.Signing mSigning;
     protected final EnumSet<Coder.Error> mCoderErrors;
+
+    // TODO use me
+    private String mServerError = "";
 
     protected KonMessage(Builder builder) {
         mThread = builder.mThread;
@@ -155,6 +161,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mEncryption);
         values.add(mSigning);
         values.add(mCoderErrors);
+        values.add(mServerError);
 
         // database contains request and insert as atomic action
         synchronized (KonMessage.class) {
