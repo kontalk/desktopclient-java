@@ -41,13 +41,22 @@ public class CoderStatus {
         this.mErrors = errors;
     }
 
+    public Coder.Encryption getEncryption() {
+        return mEncryption;
+    }
+
+    /**
+     * Return whether the data is (or was) encrypted.
+     * @return true if message is (or was) encrypted, else false
+     */
+    public boolean isEncrypted() {
+        return mEncryption == Coder.Encryption.ENCRYPTED ||
+                mEncryption == Coder.Encryption.DECRYPTED;
+    }
+
     void setDecrypted() {
         assert mEncryption == Coder.Encryption.ENCRYPTED;
         mEncryption = Coder.Encryption.DECRYPTED;
-    }
-
-    public Coder.Encryption getEncryption() {
-        return mEncryption;
     }
 
     public Coder.Signing getSigning() {
@@ -71,7 +80,12 @@ public class CoderStatus {
     }
 
     public EnumSet<Coder.Error> getErrors() {
-        return mErrors;
+        // better return a copy
+        return mErrors.clone();
+    }
+
+    public boolean hasSecurityError(Coder.Error error) {
+        return mErrors.contains(error);
     }
 
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {

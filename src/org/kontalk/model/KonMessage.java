@@ -107,9 +107,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     protected Status mReceiptStatus;
     protected final MessageContent mContent;
 
-    protected Coder.Encryption mEncryption;
-    protected Coder.Signing mSigning;
-    protected final EnumSet<Coder.Error> mCoderErrors;
+    protected CoderStatus mCoderStatus;
 
     // TODO use me
     private String mServerError = "";
@@ -124,18 +122,14 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mDate = builder.mDate;
         mReceiptStatus = builder.mReceiptStatus;
         mContent = builder.mContent;
-        mEncryption = builder.mEncryption;
-        mSigning = builder.mSigning;
-        mCoderErrors = builder.mCoderErrors;
+        mCoderStatus = builder.mCoderStatus;
 
         if (mJID == null ||
                 mXMPPID == null ||
                 mDate == null ||
                 mReceiptStatus == null ||
                 mContent == null ||
-                mEncryption == null ||
-                mSigning == null ||
-                mCoderErrors == null)
+                mCoderStatus == null)
             throw new IllegalStateException();
 
         if (builder.mID >= 0)
@@ -158,9 +152,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         // i simply don't like to save all possible content explicitly in the
         // database, so we use JSON here
         values.add(mContent.toJSONString());
-        values.add(mEncryption);
-        values.add(mSigning);
-        values.add(mCoderErrors);
+        values.add(mCoderStatus.getEncryption());
+        values.add(mCoderStatus.getSigning());
+        values.add(mCoderStatus.getErrors());
         values.add(mServerError);
 
         // database contains request and insert as atomic action
@@ -223,35 +217,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mContent;
     }
 
-    /**
-     * Return whether a message is (or was) encrypted.
-     * @return true if message is (or was) encrypted, else false
-     */
-    public boolean isEncrypted() {
-        return mEncryption == Coder.Encryption.ENCRYPTED ||
-                mEncryption == Coder.Encryption.DECRYPTED;
-    }
-
-    public Coder.Encryption getEncryption() {
-        return mEncryption;
-    }
-
-    public Coder.Signing getSigning() {
-        return mSigning;
-    }
-
-    public EnumSet<Coder.Error> getSecurityErrors() {
-        // better return a copy
-        return mCoderErrors.clone();
-    }
-
-    public boolean hasSecurityError(Coder.Error error) {
-        return mCoderErrors.contains(error);
+    public CoderStatus getCoderStatus() {
+        return mCoderStatus;
     }
 
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {
-        mCoderErrors.clear();
-        mCoderErrors.addAll(errors);
+        mCoderStatus.setSecurityErrors(errors);
         this.save();
     }
 
@@ -268,9 +239,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
        set.put("xmpp_id", mXMPPID.isEmpty() ? null : mXMPPID);
        set.put("receipt_status", mReceiptStatus);
        set.put("content", mContent.toJSONString());
-       set.put("encryption_status", mEncryption);
-       set.put("signing_status", mSigning);
-       set.put("coder_errors", mCoderErrors);
+       set.put("encryption_status", mCoderStatus.getEncryption());
+       set.put("signing_status", mCoderStatus.getSigning());
+       set.put("coder_errors", mCoderStatus.getErrors());
        db.execUpdate(TABLE, set, mID);
     }
 
@@ -297,9 +268,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         protected Status mReceiptStatus = null;
         protected MessageContent mContent = null;
 
-        protected Coder.Encryption mEncryption = null;
-        protected Coder.Signing mSigning = null;
-        protected EnumSet<Coder.Error> mCoderErrors = null;
+        protected CoderStatus mCoderStatus = null;
 
         /**
         * Used when loading from database
@@ -321,9 +290,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         public void receiptStatus(Status status) { mReceiptStatus = status; }
         public void content(MessageContent content) { mContent = content; }
 
-        public void encryption(Coder.Encryption encryption) { mEncryption = encryption; }
-        public void signing(Coder.Signing signing) { mSigning = signing; }
-        public void coderErrors(EnumSet<Coder.Error> coderErrors) { mCoderErrors = coderErrors; }
+        public void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
 
        KonMessage build() {
             if (mDir == Direction.IN)

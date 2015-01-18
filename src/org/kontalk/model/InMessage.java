@@ -36,26 +36,13 @@ public final class InMessage extends KonMessage {
     }
 
     public void setSigning(Coder.Signing signing) {
-        if (signing == mSigning)
-            return;
-
-        // check for locical errors in coder
-        if (signing == Coder.Signing.NOT)
-            assert mSigning == Coder.Signing.UNKNOWN;
-        if (signing == Coder.Signing.SIGNED)
-            assert mSigning == Coder.Signing.UNKNOWN;
-        if (signing == Coder.Signing.VERIFIED)
-            assert mSigning == Coder.Signing.SIGNED ||
-                    mSigning == Coder.Signing.UNKNOWN;
-
-        mSigning = signing;
+        mCoderStatus.setSigning(signing);
         this.save();
     }
 
     public void setDecryptedContent(MessageContent decryptedContent) {
-        assert mEncryption == Coder.Encryption.ENCRYPTED;
         mContent.setDecryptedContent(decryptedContent);
-        mEncryption = Coder.Encryption.DECRYPTED;
+        mCoderStatus.setDecrypted();
         this.save();
         this.changed();
     }
@@ -113,8 +100,6 @@ public final class InMessage extends KonMessage {
             super(-1, thread, Direction.IN, user);
 
             mReceiptStatus = Status.IN;
-
-            mCoderErrors = EnumSet.noneOf(Coder.Error.class);
         }
 
         @Override
@@ -122,21 +107,22 @@ public final class InMessage extends KonMessage {
             super.content(content);
 
             boolean encrypted = !content.getEncryptedContent().isEmpty();
-            // no decryption attempt yet
-            mEncryption = encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT;
-            // if encrypted we don't know yet
-            mSigning = encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT;
+
+            mCoderStatus = new CoderStatus(
+                // no decryption attempt yet
+                encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT,
+                // if encrypted we don't know yet
+                encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT,
+                // no errors
+                EnumSet.noneOf(Coder.Error.class)
+            );
         }
 
         @Override
-        public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
+        public void receiptStatus(Status s) { throw new UnsupportedOperationException(); }
 
         @Override
-        public void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
-        @Override
-        public void signing(Coder.Signing signing) { throw new UnsupportedOperationException(); }
-        @Override
-        public void coderErrors(EnumSet<Coder.Error> coderErrors) { throw new UnsupportedOperationException(); }
+        public void coderStatus(CoderStatus c) { throw new UnsupportedOperationException(); }
 
         @Override
         public InMessage build() {

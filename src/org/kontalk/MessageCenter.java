@@ -107,7 +107,7 @@ public class MessageCenter {
 
         // decrypt content
         Coder.processInMessage(newMessage);
-        if (!newMessage.getSecurityErrors().isEmpty()) {
+        if (!newMessage.getCoderStatus().getErrors().isEmpty()) {
             mModel.handleSecurityErrors(newMessage);
         }
 

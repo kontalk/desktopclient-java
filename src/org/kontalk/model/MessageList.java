@@ -85,12 +85,14 @@ public final class MessageList extends Observable {
                 KonMessage.Status status = statusValues[statusIndex];
                 String jsonContent = resultSet.getString("content");
                 MessageContent content = MessageContent.fromJSONString(jsonContent);
+
                 int encryptionIndex = resultSet.getInt("encryption_status");
                 Coder.Encryption encryption = encryptionValues[encryptionIndex];
                 int signingIndex = resultSet.getInt("signing_status");
                 Coder.Signing signing = signingValues[signingIndex];
                 int errorFlags = resultSet.getInt("coder_errors");
                 EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(Coder.Error.class, errorFlags);
+                CoderStatus coderStatus = new CoderStatus(encryption, signing, coderErrors);
 
                 KonMessage.Builder builder = new KonMessage.Builder(id,
                         optThread.get(),
@@ -101,9 +103,7 @@ public final class MessageList extends Observable {
                 builder.date(date);
                 builder.receiptStatus(status);
                 builder.content(content);
-                builder.encryption(encryption);
-                builder.signing(signing);
-                builder.coderErrors(coderErrors);
+                builder.coderStatus(coderStatus);
 
                 KonMessage newMessage = builder.build();
 

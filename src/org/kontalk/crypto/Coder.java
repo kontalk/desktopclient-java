@@ -162,7 +162,7 @@ public final class Coder {
      * @return the encrypted and signed text.
      */
     public static Optional<byte[]> processOutMessage(OutMessage message) {
-        if (message.getEncryption() != Encryption.DECRYPTED) {
+        if (message.getCoderStatus().getEncryption() != Encryption.DECRYPTED) {
             LOGGER.warning("message does not want to be encrypted");
             return Optional.empty();
         }
@@ -273,7 +273,7 @@ public final class Coder {
      */
     public static void processInMessage(InMessage message) {
         // signing requires also encryption
-        if (message.getEncryption() != Encryption.ENCRYPTED) {
+        if (message.getCoderStatus().getEncryption() != Encryption.ENCRYPTED) {
             LOGGER.warning("message not encrypted");
             return;
         }

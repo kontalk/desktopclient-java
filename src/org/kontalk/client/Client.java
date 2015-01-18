@@ -225,14 +225,15 @@ public final class Client implements PacketListener, Runnable {
         if (conf.getBoolean(KonConf.NET_SEND_CHAT_STATE))
             smackMessage.addExtension(new ChatStateExtension(ChatState.active));
 
-        if (message.getEncryption() == Coder.Encryption.NOT &&
-                message.getSigning() == Coder.Signing.NOT) {
+        if (message.getCoderStatus().getEncryption() == Coder.Encryption.NOT &&
+                message.getCoderStatus().getSigning() == Coder.Signing.NOT) {
             // TODO send more possible content
             smackMessage.setBody(message.getContent().getPlainText());
         } else {
             Optional<byte[]> encrypted = Coder.processOutMessage(message);
             // check also for security errors just to be sure
-            if (!encrypted.isPresent() || !message.getSecurityErrors().isEmpty()) {
+            if (!encrypted.isPresent() ||
+                    !message.getCoderStatus().getErrors().isEmpty()) {
                 LOGGER.warning("encryption failed, not sending message");
                 message.setStatus(Status.ERROR);
                 mModel.handleSecurityErrors(message);

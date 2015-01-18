@@ -311,7 +311,7 @@ public final class View {
         boolean isOut = message.getDir() == KonMessage.Direction.OUT;
         errorText += isOut ? "Decryption error:" : "Encryption error:";
 
-        for (Coder.Error error : message.getSecurityErrors()) {
+        for (Coder.Error error : message.getCoderStatus().getErrors()) {
             errorText += "<br>";
             switch (error) {
                 case UNKNOWN_ERROR:

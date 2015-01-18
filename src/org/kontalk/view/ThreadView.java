@@ -254,7 +254,8 @@ final class ThreadView extends WebScrollPane {
                 mContentPanel = new WebPanel();
                 mContentPanel.setOpaque(false);
                 // text
-                boolean encrypted = mMessage.getEncryption() == Coder.Encryption.ENCRYPTED;
+                boolean encrypted = mMessage.getCoderStatus().getEncryption() ==
+                        Coder.Encryption.ENCRYPTED;
                 // TODO display all possible content
                 String text = encrypted ? "[encrypted]" : mMessage.getContent().getText();
                 mTextArea = new WebTextArea(text);
@@ -276,7 +277,7 @@ final class ThreadView extends WebScrollPane {
                 this.update();
                 statusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
-                if (message.isEncrypted()) {
+                if (message.getCoderStatus().isEncrypted()) {
                     encryptIconLabel.setIcon(CRYPT_ICON);
                 } else {
                     encryptIconLabel.setIcon(UNENCRYPT_ICON);
@@ -362,22 +363,22 @@ final class ThreadView extends WebScrollPane {
             @Override
             public String getTooltipText() {
                 String encryption = "unknown";
-                switch (mMessage.getEncryption()) {
+                switch (mMessage.getCoderStatus().getEncryption()) {
                     case NOT: encryption = "not encrypted"; break;
                     case ENCRYPTED: encryption = "encrypted"; break;
                     case DECRYPTED: encryption = "decrypted"; break;
                 }
                 String verification = "unknown";
-                switch (mMessage.getSigning()) {
+                switch (mMessage.getCoderStatus().getSigning()) {
                     case NOT: verification = "not signed"; break;
                     case SIGNED: verification = "signed"; break;
                     case VERIFIED: verification = "verified"; break;
                 }
-                String problems = "unknown";
-                if (mMessage.getSecurityErrors().isEmpty()) {
+                String problems = "";
+                if (mMessage.getCoderStatus().getErrors().isEmpty()) {
                     problems = "none";
                 } else {
-                  for (Coder.Error error: mMessage.getSecurityErrors()) {
+                  for (Coder.Error error: mMessage.getCoderStatus().getErrors()) {
                       problems += error.toString() + " <br> ";
                   }
                 }

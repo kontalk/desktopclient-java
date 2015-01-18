@@ -55,12 +55,14 @@ public static class Builder extends KonMessage.Builder {
             mDate = new Date();
             mReceiptStatus = Status.PENDING;
 
-            // outgoing messages are never saved encrypted
-            mEncryption = encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT;
-            // if we want encryption we also want signing, doesn't hurt
-            mSigning = encrypted ? Coder.Signing.SIGNED : Coder.Signing.NOT;
-
-            mCoderErrors = EnumSet.noneOf(Coder.Error.class);
+            mCoderStatus = new CoderStatus(
+                // outgoing messages are never saved encrypted
+                encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT,
+                // if we want encryption we also want signing, doesn't hurt
+                encrypted ? Coder.Signing.SIGNED : Coder.Signing.NOT,
+                // of course, no errors
+                EnumSet.noneOf(Coder.Error.class)
+            );
         }
 
         @Override
@@ -74,11 +76,7 @@ public static class Builder extends KonMessage.Builder {
         public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
 
         @Override
-        public void encryption(Coder.Encryption encryption) { throw new UnsupportedOperationException(); }
-        @Override
-        public void signing(Coder.Signing signing) { throw new UnsupportedOperationException(); }
-        @Override
-        public void coderErrors(EnumSet<Coder.Error> coderErrors) { throw new UnsupportedOperationException(); }
+        public void coderStatus(CoderStatus c) { throw new UnsupportedOperationException(); }
 
         @Override
         public OutMessage build() {
