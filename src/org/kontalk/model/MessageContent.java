@@ -165,9 +165,7 @@ public class MessageContent {
         private final long mLength;
         private String mFileName;
         // TODO same as in KonMessage, move to own class
-        private Coder.Encryption mEncryption;
-        private Coder.Signing mSigning;
-        private final EnumSet<Coder.Error> mCoderErrors;
+        private final CoderStatus mCoderStatus;
 
         private final static String JSON_URL = "url";
         private final static String JSON_MIME_TYPE = "mime_type";
@@ -187,9 +185,11 @@ public class MessageContent {
                     mimeType,
                     length,
                     "",
-                    encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT,
-                    encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT,
-                    EnumSet.noneOf(Coder.Error.class)
+                    new CoderStatus(
+                        encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT,
+                        encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT,
+                        EnumSet.noneOf(Coder.Error.class)
+                    )
             );
         }
 
@@ -198,9 +198,7 @@ public class MessageContent {
                 String mimeType,
                 long length,
                 String fileName,
-                Coder.Encryption encryption,
-                Coder.Signing signing,
-                EnumSet<Coder.Error> codingErrors)  {
+                CoderStatus coderStatus)  {
             // URL to file, empty string by default
             mURL = url;
             // MIME of file, empty string by default
@@ -209,12 +207,7 @@ public class MessageContent {
             mLength = length;
             // file name of downloaded and encrypted file, empty string by default
             mFileName = fileName;
-            // is file de-/encrypted?
-            mEncryption = encryption;
-            // signing status
-            mSigning = signing;
-            // de-/encrypting errors
-            mCoderErrors = codingErrors;
+            mCoderStatus = coderStatus;
         }
 
         public String getURL() {
@@ -233,34 +226,12 @@ public class MessageContent {
         }
 
         public void setDecryptedFilename(String fileName) {
-            assert mEncryption == Coder.Encryption.ENCRYPTED;
+            mCoderStatus.setDecrypted();
             mFileName = fileName;
-            mEncryption = Coder.Encryption.DECRYPTED;
         }
 
-        public Coder.Encryption getEncryption() {
-            return mEncryption;
-        }
-
-        public void setSigning(Coder.Signing signing) {
-            if (signing == mSigning)
-                return;
-
-            // check for locical errors in coder
-            if (signing == Coder.Signing.NOT)
-                assert mSigning == Coder.Signing.UNKNOWN;
-            if (signing == Coder.Signing.SIGNED)
-                assert mSigning == Coder.Signing.UNKNOWN;
-            if (signing == Coder.Signing.VERIFIED)
-                assert mSigning == Coder.Signing.SIGNED ||
-                        mSigning == Coder.Signing.UNKNOWN;
-
-            mSigning = signing;
-        }
-
-        public void setSecurityErrors(EnumSet<Coder.Error> errors) {
-            mCoderErrors.clear();
-            mCoderErrors.addAll(errors);
+        public CoderStatus getCoderStatus() {
+            return mCoderStatus;
         }
 
         // using legacy lib, raw types extend Object
@@ -271,9 +242,10 @@ public class MessageContent {
             json.put(JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
             json.put(JSON_FILE_NAME, mFileName);
-            json.put(JSON_ENCRYPTION, mEncryption.ordinal());
-            json.put(JSON_SIGNING, mSigning.ordinal());
-            json.put(JSON_CODER_ERRORS, EncodingUtils.enumSetToInt(mCoderErrors));
+            json.put(JSON_ENCRYPTION, mCoderStatus.getEncryption().ordinal());
+            json.put(JSON_SIGNING, mCoderStatus.getSigning().ordinal());
+            int errs = EncodingUtils.enumSetToInt(mCoderStatus.getErrors());
+            json.put(JSON_CODER_ERRORS, errs);
             return json.toJSONString();
         }
 
@@ -290,6 +262,9 @@ public class MessageContent {
 
                 long length = ((Number) map.get(JSON_LENGTH)).longValue();
 
+                String fileName = (String) map.get(JSON_FILE_NAME);
+                if (fileName == null) fileName = "";
+
                 Number enc = (Number) map.get(JSON_ENCRYPTION);
                 Coder.Encryption encryption = Coder.Encryption.values()[enc.intValue()];
 
@@ -299,17 +274,12 @@ public class MessageContent {
                 Number err = ((Number) map.get(JSON_CODER_ERRORS));
                 EnumSet<Coder.Error> errors = EncodingUtils.intToEnumSet(Coder.Error.class, err.intValue());
 
-                String fileName = (String) map.get(JSON_FILE_NAME);
-                if (fileName == null) fileName = "";
-
                 Attachment a = new Attachment(
                         url,
                         mimeType,
                         length,
                         fileName,
-                        encryption,
-                        signing,
-                        errors);
+                        new CoderStatus(encryption, signing, errors));
                 return Optional.of(a);
             } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON attachment", ex);

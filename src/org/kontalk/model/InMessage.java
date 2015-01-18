@@ -75,7 +75,7 @@ public final class InMessage extends KonMessage {
         if (attachment == null)
             return;
 
-        attachment.setSecurityErrors(errors);
+        attachment.getCoderStatus().setSecurityErrors(errors);
         this.save();
     }
 
@@ -84,7 +84,7 @@ public final class InMessage extends KonMessage {
         if (attachment == null)
             return;
 
-        attachment.setSigning(signing);
+        attachment.getCoderStatus().setSigning(signing);
         this.save();
     }
 

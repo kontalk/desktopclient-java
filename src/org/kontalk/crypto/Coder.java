@@ -334,7 +334,8 @@ public final class Coder {
 
         Attachment attachment = message.getContent().getAttachment().get();
 
-        if (attachment.getEncryption() != Coder.Encryption.ENCRYPTED) {
+        if (attachment.getCoderStatus().getEncryption() !=
+                Coder.Encryption.ENCRYPTED) {
             LOGGER.warning("attachment not encrypted");
             return;
         }
