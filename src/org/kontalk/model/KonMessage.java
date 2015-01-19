@@ -71,9 +71,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             "user_id INTEGER NOT NULL, " +
             // full jid with ressource
             "jid TEXT NOT NULL, " +
-            // optional, but required for receipts
-            // Note: RFC 6120 says it doesn't have to be unique
-            "xmpp_id TEXT, " +
+            // XMPP ID attribute; only recommended (RFC 6120), but we generate
+            // a random string if not in message for model consistency
+            // Note: must be unique only within a stream (RFC 6120)
+            "xmpp_id TEXT NOT NULL, " +
             // unix time, create/received timestamp
             "date INTEGER NOT NULL, " +
             // enum, server receipt status
@@ -90,7 +91,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // error child element in JSON format if message could not be
             // delivered (not implemented)
             "server_error TEXT, " +
-            // TODO unique
+            // if this combinations is equal we consider messages to be equal
+            "UNIQUE (direction, jid, xmpp_id, date), " +
             "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";

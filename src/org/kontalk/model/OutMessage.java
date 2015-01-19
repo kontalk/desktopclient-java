@@ -51,7 +51,7 @@ public static class Builder extends KonMessage.Builder {
             super(-1, thread, Direction.OUT, user);
 
             mJID = user.getJID();
-            mXMPPID = StringUtils.randomString(6);
+            mXMPPID = "Kon_" + StringUtils.randomString(8);
             mDate = new Date();
             mReceiptStatus = Status.PENDING;
 

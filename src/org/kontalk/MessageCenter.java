@@ -21,6 +21,7 @@ package org.kontalk;
 import java.util.Date;
 import java.util.Optional;
 import java.util.logging.Logger;
+import org.jivesoftware.smack.util.StringUtils;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
@@ -92,6 +93,10 @@ public class MessageCenter {
         ThreadList threadList = ThreadList.getInstance();
         Optional<KonThread> optThread = threadList.getThreadByXMPPID(xmppThreadID);
         KonThread thread = optThread.orElse(threadList.getThreadByUser(user));
+
+        // generate own XMPP ID if not included in message
+        if (xmppID.isEmpty())
+            xmppID = "_kon_" + StringUtils.randomString(8);
 
         InMessage.Builder builder = new InMessage.Builder(thread, user);
         builder.jid(from);
