@@ -147,6 +147,7 @@ public final class Database {
     /**
      * Get the number of rows in one table that match a WHERE clause
      * with one 'key' == 'value' condition.
+     * TODO unused
      * @return number of rows for a SELECT/count query, -1 if something went wrong
      */
     public int execCount(String table, String key, Object value) {

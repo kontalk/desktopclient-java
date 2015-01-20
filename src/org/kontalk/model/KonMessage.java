@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -92,12 +93,13 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // delivered (not implemented)
             "server_error TEXT, " +
             // if this combinations is equal we consider messages to be equal
+            // (see equals())
             "UNIQUE (direction, jid, xmpp_id, date), " +
             "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
-    private final int mID;
+    protected int mID;
     private final KonThread mThread;
     private final Direction mDir;
     private final User mUser;
@@ -115,6 +117,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     private String mServerError = "";
 
     protected KonMessage(Builder builder) {
+        mID = builder.mID;
         mThread = builder.mThread;
         mDir = builder.mDir;
         // TODO group message stuff
@@ -133,53 +136,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
                 mContent == null ||
                 mCoderStatus == null)
             throw new IllegalStateException();
-
-        if (builder.mID >= 0)
-            mID = builder.mID;
-        else
-            mID = this.insert();
-    }
-
-    private int insert() {
-        Database db = Database.getInstance();
-
-        List<Object> values = new LinkedList<>();
-        values.add(mThread.getID());
-        values.add(mDir);
-        values.add(mUser.getID());
-        values.add(mJID);
-        values.add(mXMPPID.isEmpty() ? null : mXMPPID);
-        values.add(mDate);
-        values.add(mReceiptStatus);
-        // i simply don't like to save all possible content explicitly in the
-        // database, so we use JSON here
-        values.add(mContent.toJSONString());
-        values.add(mCoderStatus.getEncryption());
-        values.add(mCoderStatus.getSigning());
-        values.add(mCoderStatus.getErrors());
-        values.add(mServerError);
-
-        // database contains request and insert as atomic action
-        synchronized (KonMessage.class) {
-            // TODO check if the exact same message is already in db
-//            if (!mReceiptID.isEmpty()) {
-//                if (db.execCount(TABLE, "receipt_id", mReceiptID) > 0) {
-//                    LOGGER.info("db already contains a message with receipt ID: "+mReceiptID);
-//                    return -1;
-//                }
-//            }
-            int id = db.execInsert(TABLE, values);
-            if (id <= 0) {
-                LOGGER.log(Level.WARNING, "db, couldn't insert message");
-                return -2;
-            }
-            return id;
-        }
     }
 
     /**
-     * Database ID. <br>
-     * -1 : a conflicting message is already saved to db <br>
+     * Get the database ID. <br>
+     * -1 : message is not saved in database <br>
      * {@literal <} -1 : unexpected error on insertion attempt
      * @return ID of message in db
      */
@@ -229,22 +190,89 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     }
 
     @Override
+    public boolean equals(Object obj) {
+        // performance optimization
+        if (this == obj)
+            return true;
+
+        if (!(obj instanceof KonMessage))
+            return false;
+
+        KonMessage o = (KonMessage) obj;
+
+        // note: use ONLY final fields
+        return mDir == o.mDir &&
+                mJID.equals(o.mJID) &&
+                mXMPPID.equals(o.mXMPPID) &&
+                mDate.equals(o.mDate);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 67 * hash + Objects.hashCode(this.mDir);
+        hash = 67 * hash + Objects.hashCode(this.mJID);
+        hash = 67 * hash + Objects.hashCode(this.mXMPPID);
+        hash = 67 * hash + Objects.hashCode(this.mDate);
+        return hash;
+    }
+
+    @Override
     public int compareTo(KonMessage o) {
         int idComp = Integer.compare(this.mID, o.mID);
         int dateComp = mDate.compareTo(o.getDate());
         return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
     }
 
-    protected void save() {
-       Database db = Database.getInstance();
-       Map<String, Object> set = new HashMap<>();
-       set.put("xmpp_id", mXMPPID.isEmpty() ? null : mXMPPID);
-       set.put("receipt_status", mReceiptStatus);
-       set.put("content", mContent.toJSONString());
-       set.put("encryption_status", mCoderStatus.getEncryption());
-       set.put("signing_status", mCoderStatus.getSigning());
-       set.put("coder_errors", mCoderStatus.getErrors());
-       db.execUpdate(TABLE, set, mID);
+    private void insert() {
+        if (mID >= 0) {
+            LOGGER.warning("message already in db, ID: "+mID);
+            return;
+        }
+        Database db = Database.getInstance();
+
+        List<Object> values = new LinkedList<>();
+        values.add(mThread.getID());
+        values.add(mDir);
+        values.add(mUser.getID());
+        values.add(mJID);
+        values.add(mXMPPID.isEmpty() ? null : mXMPPID);
+        values.add(mDate);
+        values.add(mReceiptStatus);
+        // i simply don't like to save all possible content explicitly in the
+        // database, so we use JSON here
+        values.add(mContent.toJSONString());
+        values.add(mCoderStatus.getEncryption());
+        values.add(mCoderStatus.getSigning());
+        values.add(mCoderStatus.getErrors());
+        values.add(mServerError);
+
+        int id = db.execInsert(TABLE, values);
+        if (id <= 0) {
+            LOGGER.log(Level.WARNING, "db, couldn't insert message");
+            mID = -2;
+            return;
+        }
+        mID = id;
+    }
+
+    /**
+     * Save (or insert) this message to/into the database.
+     */
+    public void save() {
+        if (mID < 0) {
+            this.insert();
+            return;
+        }
+        Database db = Database.getInstance();
+        Map<String, Object> set = new HashMap<>();
+        set.put("xmpp_id", mXMPPID.isEmpty() ? null : mXMPPID);
+        set.put("receipt_status", mReceiptStatus);
+        set.put("content", mContent.toJSONString());
+        set.put("encryption_status", mCoderStatus.getEncryption());
+        set.put("signing_status", mCoderStatus.getSigning());
+        set.put("coder_errors", mCoderStatus.getErrors());
+        db.execUpdate(TABLE, set, mID);
     }
 
     boolean delete() {
@@ -272,9 +300,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         protected CoderStatus mCoderStatus = null;
 
-        /**
-        * Used when loading from database
-        */
+        // used when loading from database
         Builder(int id,
                 KonThread thread,
                 Direction dir,

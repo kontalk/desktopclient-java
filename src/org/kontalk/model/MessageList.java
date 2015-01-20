@@ -41,6 +41,7 @@ public final class MessageList extends Observable {
 
     private final static MessageList INSTANCE = new MessageList();
 
+    // TODO this hashmap seems inappropiate here
     private final HashMap<Integer, KonMessage> mMap = new HashMap<>();
 
     private MessageList() {
@@ -118,13 +119,19 @@ public final class MessageList extends Observable {
 
     public void add(KonMessage newMessage) {
         if (mMap.containsKey(newMessage.getID())) {
-            LOGGER.warning("message already in message list, ID: "+newMessage.getID());
+            LOGGER.warning("message ID already in message list: "+newMessage.getID());
             return;
         }
         mMap.put(newMessage.getID(), newMessage);
 
         this.setChanged();
         this.notifyObservers(newMessage);
+    }
+
+    public boolean contains(KonMessage message) {
+        // see KonMessage.equals()
+        // TODO performance
+        return mMap.containsValue(message);
     }
 
     public Collection<KonMessage> getMessages() {

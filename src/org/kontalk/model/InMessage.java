@@ -31,6 +31,11 @@ import org.kontalk.model.MessageContent.Attachment;
 public final class InMessage extends KonMessage {
     private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
+    /**
+     * Create a new incoming message from builder.
+     * The message is not saved to database!
+     * @param builder
+     */
     InMessage(KonMessage.Builder builder) {
         super(builder);
     }

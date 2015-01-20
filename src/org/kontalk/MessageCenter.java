@@ -105,10 +105,11 @@ public class MessageCenter {
         builder.content(content);
         InMessage newMessage = builder.build();
 
-        if (newMessage.getID() == -1) {
-            LOGGER.info("conflicting message in db, dropping this one");
+        if (MessageList.getInstance().contains(newMessage)) {
+            LOGGER.info("message already in message list, dropping this one");
             return true;
         }
+        newMessage.save();
 
         // decrypt content
         Coder.processInMessage(newMessage);
