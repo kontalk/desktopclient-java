@@ -22,6 +22,7 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.kontalk.MessageCenter;
 import org.kontalk.model.KonMessage.Status;
 
@@ -41,7 +42,13 @@ public final class AcknowledgedListener implements PacketListener {
             return;
         }
 
-        LOGGER.info("got acknowledgement for packet: "+p.toXML());
+        LOGGER.info("got acknowledgement for message: "+p.toXML());
+
+        if (DeliveryReceipt.from(p) != null) {
+            // this is an ack for a 'received' message send by
+            // KonMessageListener (XEP-0184), nothing must be done
+            return;
+        }
 
         String xmppID = p.getPacketID();
         if (xmppID == null || xmppID.isEmpty()) {

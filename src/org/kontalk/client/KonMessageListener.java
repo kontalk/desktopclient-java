@@ -81,6 +81,9 @@ final public class KonMessageListener implements PacketListener {
         // note: thread and subject are null if message comes from Kontalk
         // android client
 
+        // TODO a message can contain all sorts of extensions, we should loop
+        // over all of them
+
         // timestamp
         // delayed deliver extension is the first the be processed
         // because it's used also in delivery receipts
@@ -112,7 +115,7 @@ final public class KonMessageListener implements PacketListener {
                 return;
         }
 
-        // delivery receipt
+        // check for delivery receipt (XEP-0184)
         DeliveryReceipt receipt = DeliveryReceipt.from(m);
         if (receipt != null) {
             // HOORAY! our message was received
@@ -149,7 +152,7 @@ final public class KonMessageListener implements PacketListener {
                 date,
                 content);
 
-        // on success, send a 'received' for a request
+        // on success, send a 'received' for a request (XEP-0184)
         DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);
         if (request != null && success && !xmppID.isEmpty()) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
