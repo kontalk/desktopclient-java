@@ -41,6 +41,7 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
+import java.util.logging.Logger;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.JViewport;
@@ -57,10 +58,12 @@ import org.kontalk.view.ListView.ListItem;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class ThreadView extends WebScrollPane {
+    private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
 
     private final static Icon PENDING_ICON = View.getIcon("ic_msg_pending.png");;
     private final static Icon SENT_ICON = View.getIcon("ic_msg_sent.png");
     private final static Icon DELIVERED_ICON = View.getIcon("ic_msg_delivered.png");
+    private final static Icon ERROR_ICON = View.getIcon("ic_msg_error.png");
     private final static Icon CRYPT_ICON = View.getIcon("ic_msg_crypt.png");
     private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
     private final static Image BG_IMAGE = View.getImage("thread_bg.png");
@@ -317,6 +320,9 @@ final class ThreadView extends WebScrollPane {
             }
 
             private void update() {
+                if (mMessage.getDir() == KonMessage.Direction.IN)
+                    return;
+
                 // status icon
                 switch (mMessage.getReceiptStatus()) {
                     case PENDING :
@@ -328,6 +334,11 @@ final class ThreadView extends WebScrollPane {
                     case RECEIVED:
                         mStatusIconLabel.setIcon(DELIVERED_ICON);
                         break;
+                    case ERROR:
+                        mStatusIconLabel.setIcon(ERROR_ICON);
+                        break;
+                    default:
+                        LOGGER.warning("unknown message receipt status!?");
                 }
 
                 // attachment
