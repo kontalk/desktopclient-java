@@ -20,12 +20,18 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.Database;
@@ -41,8 +47,10 @@ public final class MessageList extends Observable {
 
     private final static MessageList INSTANCE = new MessageList();
 
-    // TODO this hashmap seems inappropiate here
-    private final HashMap<Integer, KonMessage> mMap = new HashMap<>();
+    // the list is implemented as 'XMPP ID' to "list of messages" map, as equal
+    // XMPP IDs are possible but assumed to happen rarely
+    // note: map and lists are not thread-safe on modification / iteration!
+    private final HashMap<String, List<KonMessage>> mMap = new HashMap<>();
 
     private MessageList() {
     }
@@ -109,7 +117,7 @@ public final class MessageList extends Observable {
                 KonMessage newMessage = builder.build();
 
                 optThread.get().add(newMessage);
-                mMap.put(id, newMessage);
+                this.addMessage(newMessage);
             }
             resultSet.close();
         } catch (SQLException ex) {
@@ -117,47 +125,71 @@ public final class MessageList extends Observable {
         }
     }
 
-    public void add(KonMessage newMessage) {
-        if (mMap.containsKey(newMessage.getID())) {
-            LOGGER.warning("message ID already in message list: "+newMessage.getID());
-            return;
+    /**
+     * Add message without notifying observers.
+     */
+    private synchronized boolean addMessage(KonMessage m) {
+        // small capacity (dunno if this even matters)
+        List<KonMessage> l = mMap.getOrDefault(m.getXMPPID(), new ArrayList<KonMessage>(3));
+        mMap.putIfAbsent(m.getXMPPID(), l);
+        // see KonMessage.equals()
+        if (l.contains(m)) {
+            LOGGER.warning("message already in message list, ID: "+m.getID());
+            return true;
         }
-        mMap.put(newMessage.getID(), newMessage);
+        return l.add(m);
+    }
 
+    /**
+     * Add a new message to this list.
+     * @return true on success, else false
+     */
+    public boolean add(KonMessage newMessage) {
+        boolean success = this.addMessage(newMessage);
         this.setChanged();
         this.notifyObservers(newMessage);
+        return success;
     }
 
-    public boolean contains(KonMessage message) {
-        // see KonMessage.equals()
-        // TODO performance
-        return mMap.containsValue(message);
-    }
-
-    public Collection<KonMessage> getMessages() {
-        return mMap.values();
-    }
-
-    public Optional<OutMessage> getMessageByXMPPID(String xmppID) {
-        // TODO performance
-        KonMessage message = null;
-        for (KonMessage m : mMap.values()) {
-            if (m.getXMPPID().equals(xmppID))
-                message = m;
+    /**
+     * Get all outgoing messages with status "PENDING".
+     */
+    public synchronized Collection<OutMessage> getPendingMessages() {
+        // TODO performance, probably additional map needed
+        Set<OutMessage> s = new HashSet<>();
+        for (List<KonMessage> l : mMap.values()) {
+            // TODO use lambda in near future
+            for (KonMessage m : l) {
+                if (m.getReceiptStatus() == KonMessage.Status.PENDING &&
+                        m instanceof OutMessage) {
+                    s.add((OutMessage) m);
+                }
+            }
         }
-        if (message == null) {
+        return s;
+    }
+
+    /**
+     * Get the newest (ie last received) outgoing message that has not the status
+     * "RECEIVED".
+     */
+    public synchronized Optional<OutMessage> getUncompletedMessage(String xmppID) {
+        if (!mMap.containsKey(xmppID)) {
             LOGGER.warning("can't find message with XMPP ID: " + xmppID);
             return Optional.empty();
         }
-        return checkOutMessage(message);
-    }
-
-    private Optional<OutMessage> checkOutMessage(KonMessage message) {
-        if (!(message instanceof OutMessage)) {
-            LOGGER.warning("message is not an outgoing message");
+        SortedSet<OutMessage> s = new TreeSet<>();
+        for (KonMessage m : mMap.get(xmppID)) {
+            if (m instanceof OutMessage &&
+                    m.getReceiptStatus() != KonMessage.Status.RECEIVED) {
+                s.add((OutMessage) m);
+            }
+        }
+        if (s.isEmpty()) {
+            LOGGER.warning("can't find any not received outgoing message, XMPP ID: " + xmppID);
             return Optional.empty();
         }
-        return Optional.of((OutMessage) message);
+        return Optional.of(s.last());
     }
 
     public static MessageList getInstance() {

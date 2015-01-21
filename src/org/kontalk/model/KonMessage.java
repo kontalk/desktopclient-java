@@ -60,6 +60,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         RECEIVED,
         /** Outgoing message, an error occurred somewhere in the transmission. */
         ERROR
+        // TODO maybe use two error states: for sending, and for server errors
     };
 
     public final static String TABLE = "messages";
@@ -189,6 +190,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         this.save();
     }
 
+    /**
+     * Return if two messages are logically equal.
+     * Inconsistent with "natural ordering"!
+     */
     @Override
     public boolean equals(Object obj) {
         // performance optimization
@@ -217,6 +222,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return hash;
     }
 
+    /**
+     * Java's "natural ordering", used for sorting the messages in the order
+     * they are received/created.
+     * Inconsistent with equals!
+     */
     @Override
     public int compareTo(KonMessage o) {
         int idComp = Integer.compare(this.mID, o.mID);

@@ -59,6 +59,7 @@ public final class KonThread extends Observable {
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
+    // remember that KonMessage is not constistent with equals
     private final TreeSet<KonMessage> mSet = new TreeSet<>();
 
     private final int mID;
@@ -166,6 +167,7 @@ public final class KonThread extends Observable {
      * Add message to thread without notifying other components.
      */
     boolean add(KonMessage message) {
+        // see KonMessage.equals()
         if (mSet.contains(message)) {
             LOGGER.warning("message already in thread, ID: " + message.getID());
             return false;

@@ -65,7 +65,10 @@ public class MessageCenter {
         OutMessage newMessage = builder.build();
         thread.addMessage(newMessage);
 
-        MessageList.getInstance().add(newMessage);
+        boolean added = MessageList.getInstance().add(newMessage);
+        if (!added) {
+            LOGGER.warning("could not add outgoing message to message list");
+        }
         return newMessage;
     }
 
@@ -105,7 +108,8 @@ public class MessageCenter {
         builder.content(content);
         InMessage newMessage = builder.build();
 
-        if (MessageList.getInstance().contains(newMessage)) {
+        boolean added = MessageList.getInstance().add(newMessage);
+        if (!added) {
             LOGGER.info("message already in message list, dropping this one");
             return true;
         }
@@ -121,8 +125,8 @@ public class MessageCenter {
         if (newMessage.getContent().getAttachment().isPresent())
             Downloader.getInstance().queueDownload(newMessage);
 
+        // this will effect the view, so we are doing this last
         thread.addMessage(newMessage);
-        MessageList.getInstance().add(newMessage);
 
         return newMessage.getID() >= -1;
     }
@@ -133,7 +137,7 @@ public class MessageCenter {
      * @param status new receipt status of message
      */
     public void setMessageStatus(String xmppID, Status status) {
-        Optional<OutMessage> optMessage = MessageList.getInstance().getMessageByXMPPID(xmppID);
+        Optional<OutMessage> optMessage = MessageList.getInstance().getUncompletedMessage(xmppID);
         if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message");
             return;

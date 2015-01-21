@@ -209,11 +209,8 @@ public final class Kontalk {
         mView.statusChanged();
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (KonMessage m : MessageList.getInstance().getMessages()) {
-                if (m.getReceiptStatus() == KonMessage.Status.PENDING) {
-                    assert m instanceof OutMessage;
-                    mClient.sendMessage((OutMessage) m);
-                }
+            for (OutMessage m : MessageList.getInstance().getPendingMessages()) {
+                mClient.sendMessage(m);
             }
             // send public key requests for Kontalk users with missing key
             for (User user : UserList.getInstance().getUser()) {
