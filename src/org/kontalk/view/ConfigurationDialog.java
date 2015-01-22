@@ -133,8 +133,7 @@ final class ConfigurationDialog extends WebDialog {
             });
             mTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY));
 
-            GroupPanel buttonPanel = new GroupPanel(10, mTrayBox, mCloseTrayBox);
-            groupPanel.add(buttonPanel);
+            groupPanel.add(new GroupPanel(10, mTrayBox, mCloseTrayBox));
 
             mEnterSendsBox = new WebCheckBox("Enter key sends");
             mEnterSendsBox.setAnimated(false);
@@ -142,7 +141,7 @@ final class ConfigurationDialog extends WebDialog {
             String enterSendsToolText = "Enter key sends text, Control+Enter adds new line "
                     + "- or vice versa";
             TooltipManager.addTooltip(mEnterSendsBox, enterSendsToolText);
-            groupPanel.add(mEnterSendsBox);
+            groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
             this.add(groupPanel);
         }

@@ -287,7 +287,6 @@ final class ImportDialog extends WebDialog {
             showPasswordBox.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {
-                    System.out.println("set: "+mPassField.getEchoChar());
                     boolean selected = e.getStateChange() == ItemEvent.SELECTED;
                     mPassField.setEchoChar(selected ? (char)0 : '*');
                 }
