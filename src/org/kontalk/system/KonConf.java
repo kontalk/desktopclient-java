@@ -54,9 +54,10 @@ public final class KonConf extends PropertiesConfiguration {
     public final static String MAIN_TRAY_CLOSE = "main.tray_close";
     public final static String MAIN_ENTER_SENDS = "main.enter_sends";
 
+    // default server address
     //public final static String DEFAULT_SERV_NET = "kontalk.net";
-    public final static String DEFAULT_SERV_HOST = "prime.kontalk.net";
-    public final static int DEFAULT_SERV_PORT = 5222;
+    public final static String DEFAULT_SERV_HOST = "beta.kontalk.net";
+    public final static int DEFAULT_SERV_PORT = 5999;
 
     private KonConf() {
         super();
