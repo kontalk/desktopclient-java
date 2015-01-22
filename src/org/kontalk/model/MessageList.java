@@ -34,7 +34,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.Database;
+import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
 import org.kontalk.util.EncodingUtils;
 

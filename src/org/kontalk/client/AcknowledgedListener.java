@@ -23,7 +23,7 @@ import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
-import org.kontalk.MessageCenter;
+import org.kontalk.system.MessageCenter;
 import org.kontalk.model.KonMessage.Status;
 
 /**

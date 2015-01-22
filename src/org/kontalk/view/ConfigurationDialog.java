@@ -40,8 +40,8 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.swing.JFrame;
 import javax.swing.text.NumberFormatter;
-import org.kontalk.KonConf;
-import org.kontalk.KonException;
+import org.kontalk.system.KonConf;
+import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Account;
 

@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.Database;
+import org.kontalk.system.Database;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.

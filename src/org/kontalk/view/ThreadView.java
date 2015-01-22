@@ -46,7 +46,7 @@ import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
-import org.kontalk.Downloader;
+import org.kontalk.system.Downloader;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;

@@ -22,7 +22,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.XMPPConnection;
-import org.kontalk.KonException;
+import org.kontalk.misc.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.Kontalk.Status;
 

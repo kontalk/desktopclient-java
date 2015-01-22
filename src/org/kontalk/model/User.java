@@ -32,7 +32,7 @@ import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.util.encoders.Base64;
 import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.Database;
+import org.kontalk.system.Database;
 import org.kontalk.crypto.PGP;
 import org.kontalk.util.EncodingUtils;
 

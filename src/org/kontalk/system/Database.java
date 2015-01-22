@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk;
+package org.kontalk.system;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -34,6 +34,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
+import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.User;
@@ -214,6 +215,8 @@ public final class Database {
         try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)) {
             this.insertValues(stat, keyList, set);
             stat.executeUpdate();
+            // TODO sometimes we get a "SQLException: ResultSet already requested" here,
+            // maybe its not thread safe!?
             ResultSet keys = stat.getGeneratedKeys();
             return keys.getInt(1);
         } catch (SQLException ex) {

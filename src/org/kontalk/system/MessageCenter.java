@@ -16,13 +16,15 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk;
+package org.kontalk.system;
 
+import org.kontalk.system.Downloader;
 import java.util.Date;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage.Status;

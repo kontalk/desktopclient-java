@@ -62,7 +62,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import org.kontalk.KonConf;
+import org.kontalk.system.KonConf;
 import org.kontalk.Kontalk;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk;
+package org.kontalk.system;
 
 import java.io.File;
 import java.security.PrivateKey;
@@ -26,6 +26,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
+import org.kontalk.misc.KonException;
+import org.kontalk.Kontalk;
 import org.kontalk.client.DownloadClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;

@@ -42,7 +42,7 @@ import java.util.logging.Logger;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileFilter;
-import org.kontalk.KonException;
+import org.kontalk.misc.KonException;
 import org.kontalk.model.Account;
 
 /**

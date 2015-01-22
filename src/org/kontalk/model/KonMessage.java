@@ -28,7 +28,7 @@ import java.util.Objects;
 import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.Database;
+import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
 
 /**

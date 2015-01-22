@@ -18,6 +18,10 @@
 
 package org.kontalk;
 
+import org.kontalk.misc.KonException;
+import org.kontalk.system.MessageCenter;
+import org.kontalk.system.KonConf;
+import org.kontalk.system.Database;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
