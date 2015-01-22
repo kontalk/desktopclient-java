@@ -26,6 +26,7 @@ import org.jivesoftware.smack.RosterEntry;
 import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.RosterPacket;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 
@@ -79,6 +80,11 @@ final class KonRosterListener implements RosterListener {
             LOGGER.info("entry added to roster: "+entry.toString());
 
             String name = entry.getName() == null ? "" : entry.getName();
+            if (name.equals(XmppStringUtils.parseLocalpart(entry.getUser())) &&
+                    name.length() == 40) {
+                // this must be the hash string, don't use it as name
+                name = "";
+            }
             Optional<User> optNewUser = userList.addUser(entry.getUser(), name);
             if (!optNewUser.isPresent()) {
                 LOGGER.warning("can't add user");
