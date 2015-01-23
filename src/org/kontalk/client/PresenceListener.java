@@ -94,7 +94,7 @@ public class PresenceListener implements PacketListener {
 
         User user = optUser.get();
         if (!user.getFingerprint().equals(fingerprint)) {
-            // looks like the key changed, we request the new one
+            LOGGER.info("detected public key change, requesting new key...");
             mClient.sendPublicKeyRequest(user.getJID());
         }
 

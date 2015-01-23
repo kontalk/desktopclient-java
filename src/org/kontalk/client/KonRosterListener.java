@@ -77,7 +77,7 @@ final class KonRosterListener implements RosterListener {
             if (userList.containsUserWithJID(entry.getUser()))
                 continue;
 
-            LOGGER.info("entry added to roster: "+entry.toString());
+            LOGGER.info("adding user from roster: "+entry.toString());
 
             String name = entry.getName() == null ? "" : entry.getName();
             if (name.equals(XmppStringUtils.parseLocalpart(entry.getUser())) &&

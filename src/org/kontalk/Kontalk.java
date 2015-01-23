@@ -218,9 +218,11 @@ public final class Kontalk {
             }
             // send public key requests for Kontalk users with missing key
             for (User user : UserList.getInstance().getUser()) {
-                // TODO only for domains that a part of the Kontalk network
-                if (user.getFingerprint().isEmpty())
+                // TODO only for domains that are part of the Kontalk network
+                if (user.getFingerprint().isEmpty()) {
+                    LOGGER.info("public key missing for user, requesting it...");
                     mClient.sendPublicKeyRequest(user.getJID());
+                }
             }
 
         }
