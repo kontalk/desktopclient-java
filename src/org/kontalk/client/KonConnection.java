@@ -101,7 +101,7 @@ public final class KonConnection extends XMPPTCPConnection {
             // we need the roster
             .setRosterLoadedAtLogin(true)
             // enable compression
-            .setCompressionEnabled(false)
+            .setCompressionEnabled(true)
             // enable encryption
             .setSecurityMode(SecurityMode.required)
             // we will send a custom presence
