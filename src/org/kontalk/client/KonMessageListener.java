@@ -111,9 +111,12 @@ final public class KonMessageListener implements PacketListener {
         PacketExtension chatstate = m.getExtension("http://jabber.org/protocol/chatstates");
         if (chatstate != null) {
             LOGGER.info("got chatstate: " + chatstate.getElementName());
-            // TODO the thread needs to be imformed
-            // thread.processChatState(user, chatStateValue);
+            MessageCenter.getInstance().processChatState(m.getFrom(),
+                    threadID,
+                    date,
+                    chatstate.getElementName());
             if (!chatstate.getElementName().equals(ChatState.active.name()))
+                // we assume there is no other content
                 return;
         }
 

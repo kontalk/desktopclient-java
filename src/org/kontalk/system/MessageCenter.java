@@ -21,8 +21,11 @@ package org.kontalk.system;
 import org.kontalk.system.Downloader;
 import java.util.Date;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
+import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
@@ -86,18 +89,13 @@ public class MessageCenter {
             MessageContent content) {
         // get model references for this message
         String jid = XmppStringUtils.parseBareJid(from);
-        UserList userList = UserList.getInstance();
-        Optional<User> optUser = userList.containsUserWithJID(jid) ?
-                userList.getUserByJID(jid) :
-                userList.addUser(jid, "");
+        Optional<User> optUser = getUser(jid);
         if (!optUser.isPresent()) {
             LOGGER.warning("can't get user for message");
             return false;
         }
         User user = optUser.get();
-        ThreadList threadList = ThreadList.getInstance();
-        Optional<KonThread> optThread = threadList.getThreadByXMPPID(xmppThreadID);
-        KonThread thread = optThread.orElse(threadList.getThreadByUser(user));
+        KonThread thread = getThread(xmppThreadID, user);
 
         // generate own XMPP ID if not included in message
         if (xmppID.isEmpty())
@@ -145,6 +143,54 @@ public class MessageCenter {
             return;
         }
         optMessage.get().setStatus(status);
+    }
+
+    /**
+     * Inform model (and view) about a received chat state notification.
+     */
+    public void processChatState(String from,
+            String xmppThreadID,
+            Date date,
+            String chatStateString) {
+        long diff = new Date().getTime() - date.getTime(); // milliseconds
+        if (diff > TimeUnit.SECONDS.toMillis(10)) {
+            // too old
+            return;
+        }
+
+        ChatState chatState;
+        try {
+            chatState = ChatState.valueOf(chatStateString);
+        } catch (IllegalArgumentException ex) {
+            LOGGER.log(Level.WARNING, "can't parse chat state ", ex);
+            return;
+        }
+
+        // get model references for this chat state message
+        String jid = XmppStringUtils.parseBareJid(from);
+        Optional<User> optUser = getUser(jid);
+        if (!optUser.isPresent()) {
+            LOGGER.warning("can't get user for chat state message");
+            return;
+        }
+        User user = optUser.get();
+        KonThread thread = getThread(xmppThreadID, user);
+
+        thread.setChatState(user, chatState);
+    }
+
+    private static Optional<User> getUser(String jid) {
+        UserList userList = UserList.getInstance();
+        Optional<User> optUser = userList.containsUserWithJID(jid) ?
+        userList.getUserByJID(jid) :
+        userList.addUser(jid, "");
+        return optUser;
+    }
+
+    private static KonThread getThread(String xmppThreadID, User user) {
+        ThreadList threadList = ThreadList.getInstance();
+        Optional<KonThread> optThread = threadList.getThreadByXMPPID(xmppThreadID);
+        return optThread.orElse(threadList.getThreadByUser(user));
     }
 
     public static void initialize(Kontalk model) {

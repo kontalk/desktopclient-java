@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,6 +31,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.system.Database;
 
 /**
@@ -59,27 +61,25 @@ public final class KonThread extends Observable {
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
-    // remember that KonMessage is not constistent with equals
+    // remember that KonMessage's natural ordering is not consistent with equals
     private final TreeSet<KonMessage> mSet = new TreeSet<>();
 
     private final int mID;
     // TODO make notnull
     private final String mXMPPID;
-    private Set<User> mUser;
+    private HashMap<User, KonChatState> mUserMap;
     // TODO make notnull
     private String mSubject;
     private boolean mRead;
     private boolean mDeleted = false;
 
-    /**
-     * Used when creating a new thread
-     */
+    // used when creating a new thread
     KonThread(Set<User> user) {
         assert user != null;
         // Kontalk Android client is ignoring it, so set it to null for now
         //mXMPPID = StringUtils.randomString(8);
         mXMPPID = null;
-        mUser = user;
+        this.setUserMap(user);
         mSubject = null;
         mRead = true;
 
@@ -98,14 +98,12 @@ public final class KonThread extends Observable {
             this.insertReceiver(oneUser);
     }
 
-    /**
-     * Used for loading from database
-     */
+    // used when loading from database
     KonThread(int id, String xmppID, Set<User> user, String subject, boolean read) {
         assert user != null;
         mID = id;
         mXMPPID = xmppID;
-        mUser = user;
+        this.setUserMap(user);
         mSubject = subject;
         mRead = read;
     }
@@ -123,11 +121,11 @@ public final class KonThread extends Observable {
     }
 
     public Set<User> getUser() {
-        return mUser;
+        return mUserMap.keySet();
     }
 
     public void setUser(Set<User> user) {
-        mUser = user;
+        this.setUserMap(user);
         this.changed();
     }
 
@@ -163,6 +161,16 @@ public final class KonThread extends Observable {
         }
     }
 
+    public void setChatState(User user, ChatState chatState) {
+        KonChatState state = mUserMap.get(user);
+        if (state == null) {
+            LOGGER.warning("can't find user in user map!?");
+            return;
+        }
+        state.setState(chatState);
+        // TODO notify
+    }
+
     /**
      * Add message to thread without notifying other components.
      */
@@ -187,7 +195,7 @@ public final class KonThread extends Observable {
         Map<Integer, Integer> dbReceiver = this.loadReceiver();
 
         // add missing user
-        for (User user : mUser) {
+        for (User user : mUserMap.keySet()) {
             if (!dbReceiver.keySet().contains(user.getID())) {
                 this.insertReceiver(user);
             }
@@ -254,9 +262,29 @@ public final class KonThread extends Observable {
         }
     }
 
+    private void setUserMap(Set<User> user){
+        mUserMap = new HashMap<>();
+        for (User oneUser : user)
+            mUserMap.put(oneUser, new KonChatState());
+    }
+
     private synchronized void changed() {
         this.setChanged();
         this.notifyObservers();
     }
 
+    private class KonChatState {
+        private ChatState mState = ChatState.gone;
+        // note: the Android client does not set active states when only viewing
+        // the thread (not necessary according to XEP-0085), this makes the
+        // extra date field a bit useless
+        // TODO save last active date to DB
+        private Optional<Date> mLastActive = Optional.empty();
+
+        private void setState(ChatState state) {
+            mState = state;
+            if (mState == ChatState.active || mState == ChatState.composing)
+                mLastActive = Optional.of(new Date());
+        }
+    }
 }
