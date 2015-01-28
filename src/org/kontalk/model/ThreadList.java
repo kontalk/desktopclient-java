@@ -136,7 +136,7 @@ public final class ThreadList extends Observable {
     }
 
     public Optional<KonThread> getThreadByXMPPID(String xmppThreadID) {
-        if (xmppThreadID == null) {
+        if (xmppThreadID == null || xmppThreadID.isEmpty()) {
             return Optional.empty();
         }
         for (KonThread thread : mMap.values()) {

@@ -78,8 +78,10 @@ final public class KonMessageListener implements PacketListener {
 
     private void processChatMessage(Message m) {
         LOGGER.info("got message: "+m.toXML());
-        // note: thread and subject are null if message comes from Kontalk
-        // android client
+        // note: thread and subject are null if message comes from the Kontalk
+        // Android client
+
+        String threadID = m.getThread() != null ? m.getThread() : "";
 
         // TODO a message can contain all sorts of extensions, we should loop
         // over all of them
@@ -148,7 +150,7 @@ final public class KonMessageListener implements PacketListener {
         // add message
         boolean success = MessageCenter.getInstance().newInMessage(m.getFrom(),
                 xmppID,
-                m.getThread(),
+                threadID,
                 date,
                 content);
 
