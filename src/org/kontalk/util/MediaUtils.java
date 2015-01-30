@@ -31,6 +31,8 @@ import org.newdawn.easyogg.OggClip;
 public class MediaUtils {
     private final static Logger LOGGER = Logger.getLogger(MediaUtils.class.getName());
 
+    private static OggClip mAudioClip = null;
+
     public enum Sound{NOTIFICATION}
 
     private MediaUtils() { throw new AssertionError(); }
@@ -42,15 +44,19 @@ public class MediaUtils {
     }
 
     private static void play(String fileName) {
-        OggClip clip;
+        if (mAudioClip != null && !mAudioClip.stopped())
+            // already playing something
+            return;
+
         try {
+            // TODO re-use stream
             // path must be relative to classpath for some reason
-            clip = new OggClip(View.RES_PATH + fileName);
+            mAudioClip = new OggClip(View.RES_PATH + fileName);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't create clip", ex);
             return;
         }
-        clip.play();
+        mAudioClip.play();
     }
 
 }
