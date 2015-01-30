@@ -37,11 +37,14 @@ import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 
 /**
- *
+ * Listen and handle all incoming XMPP message packets.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final public class KonMessageListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
+
+    // plain text body added by Android client
+    private final static String IGNORE_PLAIN_TEXT = "(encrypted)";
 
     private final Client mClient;
 
@@ -174,7 +177,7 @@ final public class KonMessageListener implements PacketListener {
         String encryptedContent = "";
         PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
         if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
-            if (m.getBody() != null)
+            if (m.getBody() != null && !m.getBody().equals(IGNORE_PLAIN_TEXT))
                 LOGGER.warning("message contains encryption and body (ignoring body)");
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
             encryptedContent = Base64.encodeToString(encryption.getData());
