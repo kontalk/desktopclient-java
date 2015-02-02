@@ -28,10 +28,10 @@ import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.text.SimpleDateFormat;
 import javax.swing.JList;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
+import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * A generic list view for subclassing.
@@ -43,8 +43,7 @@ class ListView extends WebList {
 
     private final WebListModel<ListItem> mFilteredListModel = new WebListModel<>();
 
-    final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
-            new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");
+    final static PrettyTime TOOLTIP_DATE_FORMAT = new PrettyTime();
 
     private WebCustomTooltip mTip = null;
 
