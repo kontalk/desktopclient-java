@@ -245,7 +245,7 @@ final class ThreadView extends WebScrollPane {
                     } else {
                         from = mMessage.getJID();
                         if (from.length() > 40)
-                            from = from.substring(0, 8);
+                            from = from.substring(0, 8) + "...";
                     }
                     WebLabel fromLabel = new WebLabel(" "+from);
                     fromLabel.setFontSize(12);
