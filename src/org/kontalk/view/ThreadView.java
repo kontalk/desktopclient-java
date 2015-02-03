@@ -367,7 +367,8 @@ final class ThreadView extends WebScrollPane {
                         String base = Downloader.getInstance().getAttachmentDir();
                         String fName = optAttachment.get().getFileName();
                         Path path = Paths.get(base, fName);
-                        linkLabel.setLink(fName, path.toString());
+                        // TODO will this work on Windows?
+                        linkLabel.setLink(fName, "file://"+path.toString());
                         attLabel = linkLabel;
                     }
                     WebLabel labelLabel = new WebLabel("Attachment: ");
