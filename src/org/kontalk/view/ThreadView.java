@@ -277,7 +277,9 @@ final class ThreadView extends WebScrollPane {
                 statusPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
                 // icons
                 mStatusIconLabel = new WebLabel();
+
                 this.update();
+
                 statusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
                 if (message.getCoderStatus().isEncrypted()) {
@@ -319,26 +321,28 @@ final class ThreadView extends WebScrollPane {
                 mTextArea.setSize(width, mTextArea.getPreferredSize().height);
             }
 
+            /**
+             * Update what can change in a message: icon and attachment.
+             */
             private void update() {
-                if (mMessage.getDir() == KonMessage.Direction.IN)
-                    return;
-
                 // status icon
-                switch (mMessage.getReceiptStatus()) {
-                    case PENDING :
-                        mStatusIconLabel.setIcon(PENDING_ICON);
-                        break;
-                    case SENT :
-                        mStatusIconLabel.setIcon(SENT_ICON);
-                        break;
-                    case RECEIVED:
-                        mStatusIconLabel.setIcon(DELIVERED_ICON);
-                        break;
-                    case ERROR:
-                        mStatusIconLabel.setIcon(ERROR_ICON);
-                        break;
-                    default:
-                        LOGGER.warning("unknown message receipt status!?");
+                if (mMessage.getDir() == KonMessage.Direction.OUT) {
+                    switch (mMessage.getReceiptStatus()) {
+                        case PENDING :
+                            mStatusIconLabel.setIcon(PENDING_ICON);
+                            break;
+                        case SENT :
+                            mStatusIconLabel.setIcon(SENT_ICON);
+                            break;
+                        case RECEIVED:
+                            mStatusIconLabel.setIcon(DELIVERED_ICON);
+                            break;
+                        case ERROR:
+                            mStatusIconLabel.setIcon(ERROR_ICON);
+                            break;
+                        default:
+                            LOGGER.warning("unknown message receipt status!?");
+                    }
                 }
 
                 // attachment
