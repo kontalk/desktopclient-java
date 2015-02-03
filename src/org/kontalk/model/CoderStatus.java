@@ -19,15 +19,14 @@
 package org.kontalk.model;
 
 import java.util.EnumSet;
-import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
 
 /**
- *
+ * The encoding/decoding status of a an item (text, attachment, ...) in a
+ * message.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class CoderStatus {
-    private final static Logger LOGGER = Logger.getLogger(CoderStatus.class.getName());
 
     private Coder.Encryption mEncryption;
     private Coder.Signing mSigning;
@@ -91,5 +90,10 @@ public class CoderStatus {
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {
         mErrors.clear();
         mErrors.addAll(errors);
+    }
+
+    @Override
+    public String toString() {
+        return "CSTAT:encr="+mEncryption+",sign="+mSigning+",err="+mErrors;
     }
 }

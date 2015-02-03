@@ -57,10 +57,7 @@ public class MessageContent {
     public MessageContent(String plainText,
             Optional<Attachment> optAttachment,
             String encryptedContent) {
-        mPlainText = plainText;
-        mOptAttachment = optAttachment;
-        mEncryptedContent = encryptedContent;
-        mOptDecryptedContent = Optional.empty();
+        this(plainText, Optional.<Attachment>empty(), "", Optional.<MessageContent>empty());
     }
 
     private MessageContent(String plainText,
@@ -117,6 +114,12 @@ public class MessageContent {
         return mPlainText.isEmpty() &&
                 !mOptAttachment.isPresent() &&
                 mEncryptedContent.isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        return "CONT:plain="+mPlainText+",att="+mOptAttachment
+                +",encr="+mEncryptedContent+",decr="+mOptDecryptedContent;
     }
 
     // using legacy lib, raw types extend Object
@@ -232,6 +235,12 @@ public class MessageContent {
 
         public CoderStatus getCoderStatus() {
             return mCoderStatus;
+        }
+
+        @Override
+        public String toString() {
+            return "ATT:url="+mURL+",mime="+mMimeType+",file="+mFileName
+                    +",status="+mCoderStatus;
         }
 
         // using legacy lib, raw types extend Object
