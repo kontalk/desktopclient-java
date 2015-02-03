@@ -21,11 +21,13 @@ package org.kontalk.view;
 import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.label.WebLabel;
+import com.alee.laf.list.UnselectableListModel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebTextArea;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -42,7 +44,7 @@ import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
-import javax.swing.DefaultListSelectionModel;
+import java.util.Vector;
 import javax.swing.Icon;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
@@ -51,7 +53,6 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.view.ListView.ListItem;
 
 /**
  * Pane that shows the currently selected thread.
@@ -106,14 +107,14 @@ final class ThreadView extends WebScrollPane {
             mThreadCache.put(thread.getID(), new MessageViewList(thread));
             isNew = true;
         }
-        MessageViewList list = mThreadCache.get(thread.getID());
-        this.setViewportView(list);
+        MessageViewList table = mThreadCache.get(thread.getID());
+        this.setViewportView(table);
 
-        if (list.getModelSize() > 0 && isNew) {
+        if (table.getRowCount() > 0 && isNew) {
             // scroll down
-            list.ensureIndexIsVisible(list.getModelSize() -1);
-            //JScrollBar vertical = this.getVerticalScrollBar();
-            //vertical.setValue(vertical.getMaximum());
+            // TODO does not work right (again), probably bcause of row height
+            // adjustment
+            table.scrollToRow(table.getRowCount()-1);
         }
 
         mCurrentThreadID = thread.getID();
@@ -132,9 +133,9 @@ final class ThreadView extends WebScrollPane {
     }
 
     /**
-     * View all messages of on thread in a left/right MIM style list.
+     * View all messages of one thread in a left/right MIM style list.
      */
-    private class MessageViewList extends ListView implements Observer {
+    private class MessageViewList extends TableView implements Observer {
 
         private final KonThread mThread;
 
@@ -147,33 +148,25 @@ final class ThreadView extends WebScrollPane {
             //this.setAutoscrolls(true);
             this.setOpaque(false);
 
-            //this.setModel(mListModel);
-            //this.setCellRenderer(new MessageListRenderer());
-
             this.addComponentListener(new ComponentAdapter() {
                 @Override
                 public void componentResized(ComponentEvent e) {
-                    // cell height may have changed, the list doesn't detect
-                    // this, so we have to invalidate the cell size cache
-                    MessageViewList.this.setFixedCellHeight(1);
-                    MessageViewList.this.setFixedCellHeight(-1);
+                    // this table was resized, the size of each item might have
+                    // changed and each row height must be adjusted
+                    // TODO efficient?
+                    MessageViewList table = MessageViewList.this;
+                    for (int row = 0; row < table.getRowCount(); row++) {
+                        MessageViewList.this.setHeight(row);
+                    }
                 }
             });
 
-            // beautiful swing option to disable selection
-            this.setSelectionModel(new DefaultListSelectionModel() {
-                @Override
-                public void setSelectionInterval(int index0, int index1) {
-                }
-                @Override
-                public void addSelectionInterval(int index0, int index1) {
-                }
-            });
+            // disable selection
+            this.setSelectionModel(new UnselectableListModel());
 
             // insert messages
             for (KonMessage message: mThread.getMessages()) {
-                MessageView newMessageView = new MessageView(message);
-                mListModel.addElement(newMessageView);
+                this.addMessage(message);
             }
 
             mThread.addObserver(this);
@@ -186,35 +179,55 @@ final class ThreadView extends WebScrollPane {
             }
 
             // check for new messages to add
-            if (mListModel.size() < mThread.getMessages().size()) {
+            if (mTableModel.getRowCount() < mThread.getMessages().size()) {
                 Set<KonMessage> oldMessages = new HashSet<>();
-                for (ListItem m : mListModel.getElements())
+                for (Object vec : mTableModel.getDataVector()) {
+                    TableItem m = (TableItem) ((Vector) vec).elementAt(0);
                     oldMessages.add(((MessageView) m).mMessage);
+                }
 
                 for (KonMessage message: mThread.getMessages()) {
                     if (!oldMessages.contains(message)) {
-                        MessageView newMessageView = new MessageView(message);
                         // always inserted at the end, timestamp of message is
                         // ignored. Let's call it a feature.
-                        mListModel.addElement(newMessageView);
-                        // TODO doesn't work here somehow
-                        this.ensureIndexIsVisible(mListModel.size() -1);
+                        this.addMessage(message);
+                        // scroll to new message
+                        this.scrollToRow(this.getRowCount()-1);
                     }
                 }
             }
 
             if (ThreadView.this.mCurrentThreadID == mThread.getID()) {
-                // we are seeing this thread right now
-                // avoid loop
+                // we are seeing this thread right now, avoid loop
                 if (!mThread.isRead())
                     mThread.setRead();
             }
         }
 
+        private void addMessage(KonMessage message) {
+            MessageView newMessageView = new MessageView(message);
+            Object[] data = {newMessageView};
+            mTableModel.addRow(data);
+
+            this.setHeight(this.getRowCount() -1);
+        }
+
         /**
-         * View for one message. The content is added to a panel inside this panel.
+         * Row height must be adjusted manually to component height.
+         * source: https://stackoverflow.com/a/1784601
+         * @param row the row that gets set
          */
-        private class MessageView extends ListItem implements Observer {
+        private void setHeight(int row) {
+            Component comp = this.prepareRenderer(this.getCellRenderer(row, 0), row, 0);
+            int height = Math.max(this.getRowHeight(), comp.getPreferredSize().height);
+            this.setRowHeight(row, height);
+        }
+
+        /**
+         * View for one message.
+         * The content is added to a panel inside this panel.
+         */
+        private class MessageView extends TableItem implements Observer {
 
             private final KonMessage mMessage;
             private final WebPanel mContentPanel;
@@ -311,10 +324,7 @@ final class ThreadView extends WebScrollPane {
 
             @Override
             void resize(int listWidth) {
-                // on the very first call the list width is zero
-                //if (listWidth == 0)
-                //    listWidth = 500;
-
+                // note: on the very first call the list width is zero
                 int maxWidth = (int)(listWidth * 0.8);
                 int width = Math.min(mPreferredTextAreaWidth, maxWidth);
                 // height is reset later
@@ -365,7 +375,6 @@ final class ThreadView extends WebScrollPane {
                     GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
                     mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
                 }
-
             }
 
             @Override
