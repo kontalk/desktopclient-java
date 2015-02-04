@@ -22,6 +22,8 @@ import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.UnselectableListModel;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebTextArea;
@@ -31,8 +33,15 @@ import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -74,6 +83,9 @@ final class ThreadView extends WebScrollPane {
     private final static Icon CRYPT_ICON = View.getIcon("ic_msg_crypt.png");
     private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
     private final static Image BG_IMAGE = View.getImage("thread_bg.png");
+
+    private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
+    private final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
     private int mCurrentThreadID = -1;
@@ -175,6 +187,23 @@ final class ThreadView extends WebScrollPane {
                 this.addMessage(message);
             }
 
+            // actions triggered by mouse events
+            this.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    check(e);
+                }
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    check(e);
+                }
+                private void check(MouseEvent e) {
+                    if (e.isPopupTrigger()) {
+                        MessageViewList.this.showPopupMenu(e);
+                    }
+                }
+            });
+
             mThread.addObserver(this);
         }
 
@@ -188,7 +217,7 @@ final class ThreadView extends WebScrollPane {
             if (mTableModel.getRowCount() < mThread.getMessages().size()) {
                 Set<KonMessage> oldMessages = new HashSet<>();
                 for (Object vec : mTableModel.getDataVector()) {
-                    TableItem m = (TableItem) ((Vector) vec).elementAt(0);
+                    Object m = ((Vector) vec).elementAt(0);
                     oldMessages.add(((MessageView) m).mMessage);
                 }
 
@@ -229,6 +258,29 @@ final class ThreadView extends WebScrollPane {
             this.setRowHeight(row, height);
         }
 
+    private void showPopupMenu(MouseEvent e) {
+        int row = this.rowAtPoint(e.getPoint());
+        if (row < 0)
+            return;
+
+        final MessageView messageView = (MessageView) mTableModel.getValueAt(row, 0);
+
+        WebPopupMenu mPopupMenu = new WebPopupMenu();
+        WebMenuItem copyMenuItem = new WebMenuItem("Copy");
+        copyMenuItem.setToolTipText("Copy message content");
+        copyMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                String messageText = messageView.toPrettyString();
+                Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
+                clip.setContents(new StringSelection(messageText), null);
+            }
+        });
+        mPopupMenu.add(copyMenuItem);
+
+        mPopupMenu.show(this, e.getX(), e.getY());
+    }
+
         /**
          * View for one message.
          * The content is added to a panel inside this panel.
@@ -258,14 +310,7 @@ final class ThreadView extends WebScrollPane {
 
                 // from label
                 if (mMessage.getDir().equals(KonMessage.Direction.IN)) {
-                    String from;
-                    if (!mMessage.getUser().getName().isEmpty()) {
-                        from = mMessage.getUser().getName();
-                    } else {
-                        from = mMessage.getJID();
-                        if (from.length() > 40)
-                            from = from.substring(0, 8) + "...";
-                    }
+                    String from = getFromString(mMessage);
                     WebLabel fromLabel = new WebLabel(" "+from);
                     fromLabel.setFontSize(12);
                     fromLabel.setForeground(Color.BLUE);
@@ -324,10 +369,6 @@ final class ThreadView extends WebScrollPane {
                 }
 
                 mMessage.addObserver(this);
-            }
-
-            public int getMessageID() {
-                return mMessage.getID();
             }
 
             @Override
@@ -407,6 +448,12 @@ final class ThreadView extends WebScrollPane {
                 }
             }
 
+            public String toPrettyString() {
+                String date = LONG_DATE_FORMAT.format(mMessage.getDate());
+                String from = getFromString(mMessage);
+                return date + " - " + from + " : " + mMessage.getContent().getText();
+            }
+
             @Override
             public void update(Observable o, Object arg) {
                 this.update();
@@ -464,5 +511,17 @@ final class ThreadView extends WebScrollPane {
             LOGGER.log(Level.WARNING, "can't read image", ex);
         }
         return new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
+    }
+
+    private static String getFromString(KonMessage message) {
+        String from;
+        if (!message.getUser().getName().isEmpty()) {
+            from = message.getUser().getName();
+        } else {
+            from = message.getJID();
+            if (from.length() > 40)
+                from = from.substring(0, 8) + "...";
+        }
+        return from;
     }
 }
