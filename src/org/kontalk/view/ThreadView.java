@@ -321,8 +321,7 @@ final class ThreadView extends WebScrollPane {
                 mContentPanel = new WebPanel();
                 mContentPanel.setOpaque(false);
                 // text
-                boolean encrypted = mMessage.getCoderStatus().getEncryption() ==
-                        Coder.Encryption.ENCRYPTED;
+                boolean encrypted = mMessage.getCoderStatus().isEncrypted();
                 // TODO display all possible content
                 String text = encrypted ? "[encrypted]" : mMessage.getContent().getText();
                 mTextArea = new WebTextArea(text);
@@ -348,7 +347,7 @@ final class ThreadView extends WebScrollPane {
 
                 statusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
-                if (message.getCoderStatus().isEncrypted()) {
+                if (message.getCoderStatus().isSecure()) {
                     encryptIconLabel.setIcon(CRYPT_ICON);
                 } else {
                     encryptIconLabel.setIcon(UNENCRYPT_ICON);

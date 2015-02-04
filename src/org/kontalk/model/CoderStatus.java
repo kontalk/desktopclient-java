@@ -44,11 +44,15 @@ public class CoderStatus {
         return mEncryption;
     }
 
+    public boolean isEncrypted() {
+        return mEncryption == Coder.Encryption.ENCRYPTED;
+    }
+
     /**
      * Return whether the data is (or was) encrypted.
      * @return true if message is (or was) encrypted, else false
      */
-    public boolean isEncrypted() {
+    public boolean isSecure() {
         return mEncryption == Coder.Encryption.ENCRYPTED ||
                 mEncryption == Coder.Encryption.DECRYPTED;
     }

@@ -273,7 +273,7 @@ public final class Coder {
      */
     public static void processInMessage(InMessage message) {
         // signing requires also encryption
-        if (message.getCoderStatus().getEncryption() != Encryption.ENCRYPTED) {
+        if (!message.getCoderStatus().isEncrypted()) {
             LOGGER.warning("message not encrypted");
             return;
         }
@@ -334,8 +334,7 @@ public final class Coder {
 
         Attachment attachment = message.getContent().getAttachment().get();
 
-        if (attachment.getCoderStatus().getEncryption() !=
-                Coder.Encryption.ENCRYPTED) {
+        if (!attachment.getCoderStatus().isEncrypted()) {
             LOGGER.warning("attachment not encrypted");
             return;
         }
