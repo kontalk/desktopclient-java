@@ -44,7 +44,7 @@ import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
-import java.util.TreeSet;
+import java.util.SortedSet;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListDataEvent;
@@ -233,7 +233,7 @@ class ThreadListView extends ListView implements Observer {
 
         @Override
         String getTooltipText() {
-            TreeSet<KonMessage> messageSet = mThread.getMessages();
+            SortedSet<KonMessage> messageSet = mThread.getMessages();
             String lastActivity = messageSet.isEmpty() ? "no messages yet" :
                         TOOLTIP_DATE_FORMAT.format(messageSet.last().getDate());
 

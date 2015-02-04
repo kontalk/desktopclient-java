@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -62,7 +64,8 @@ public final class KonThread extends Observable {
             ")";
 
     // remember that KonMessage's natural ordering is not consistent with equals
-    private final TreeSet<KonMessage> mSet = new TreeSet<>();
+    private final SortedSet<KonMessage> mSet =
+            Collections.synchronizedSortedSet(new TreeSet<KonMessage>());
 
     private final int mID;
     // TODO make notnull
@@ -108,7 +111,7 @@ public final class KonThread extends Observable {
         mRead = read;
     }
 
-    public TreeSet<KonMessage> getMessages() {
+    public SortedSet<KonMessage> getMessages() {
         return mSet;
     }
 
