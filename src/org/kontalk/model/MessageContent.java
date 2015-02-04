@@ -57,7 +57,12 @@ public class MessageContent {
     public MessageContent(String plainText,
             Optional<Attachment> optAttachment,
             String encryptedContent) {
-        this(plainText, Optional.<Attachment>empty(), "", Optional.<MessageContent>empty());
+        this(
+                plainText,
+                Optional.<Attachment>empty(),
+                encryptedContent,
+                Optional.<MessageContent>empty()
+        );
     }
 
     private MessageContent(String plainText,
