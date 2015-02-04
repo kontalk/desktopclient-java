@@ -33,6 +33,9 @@ import java.awt.Graphics;
 import java.awt.Image;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -45,7 +48,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.Vector;
+import java.util.logging.Level;
+import javax.imageio.ImageIO;
 import javax.swing.Icon;
+import javax.swing.ImageIcon;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import org.kontalk.system.Downloader;
@@ -275,6 +281,8 @@ final class ThreadView extends WebScrollPane {
                 // TODO display all possible content
                 String text = encrypted ? "[encrypted]" : mMessage.getContent().getText();
                 mTextArea = new WebTextArea(text);
+                // hide area if there is no text
+                mTextArea.setVisible(!text.isEmpty());
                 mTextArea.setOpaque(false);
                 mTextArea.setFontSize(13);
                 mTextArea.setFontStyle(false, encrypted);
@@ -358,23 +366,44 @@ final class ThreadView extends WebScrollPane {
                 // attachment
                 Optional<Attachment> optAttachment = mMessage.getContent().getAttachment();
                 if (optAttachment.isPresent()) {
-                    WebLabel attLabel;
+                    String base = Downloader.getInstance().getAttachmentDir();
+                    String fName = optAttachment.get().getFileName();
+                    Path path = Paths.get(base, fName);
 
-                    if (optAttachment.get().getFileName().isEmpty()) {
-                        attLabel = new WebLabel("?");
-                    } else {
-                        WebLinkLabel linkLabel = new WebLinkLabel();
-                        String base = Downloader.getInstance().getAttachmentDir();
-                        String fName = optAttachment.get().getFileName();
-                        Path path = Paths.get(base, fName);
+                    // rely on mime type in message
+                    if (!optAttachment.get().getFileName().isEmpty() &&
+                            optAttachment.get().getMimeType().startsWith("image")) {
+                        // file should be present and should be an image, show it
+                        BufferedImage image = readImage(path.toString());
+                        double scale = Math.min(
+                                300 /(image.getWidth() * 1.0),
+                                200 /(image.getHeight() * 1.0));
+                        scale = Math.min(1, scale);
+                        Image scaledImage = image.getScaledInstance(
+                                (int) (image.getWidth() * scale),
+                                (int) (image.getHeight() * scale),
+                                Image.SCALE_FAST);
+                        WebLinkLabel imageView = new WebLinkLabel();
                         // TODO will this work on Windows?
-                        linkLabel.setLink(fName, "file://"+path.toString());
-                        attLabel = linkLabel;
+                        imageView.setLink("", "file://"+path.toString());
+                        imageView.setIcon(new ImageIcon(scaledImage));
+                        mContentPanel.add(imageView, BorderLayout.SOUTH);
+                    } else {
+                        // show a link to the file
+                        WebLabel attLabel;
+                        if (optAttachment.get().getFileName().isEmpty()) {
+                            attLabel = new WebLabel("?");
+                        } else {
+                            WebLinkLabel linkLabel = new WebLinkLabel();
+                            // TODO will this work on Windows?
+                            linkLabel.setLink(fName, "file://"+path.toString());
+                            attLabel = linkLabel;
+                        }
+                        WebLabel labelLabel = new WebLabel("Attachment: ");
+                        labelLabel.setItalicFont();
+                        GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
+                        mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
                     }
-                    WebLabel labelLabel = new WebLabel("Attachment: ");
-                    labelLabel.setItalicFont();
-                    GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
-                    mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
                 }
             }
 
@@ -423,6 +452,15 @@ final class ThreadView extends WebScrollPane {
                         mMessage.getUser().getName().toLowerCase().contains(search) ||
                         mMessage.getJID().toLowerCase().contains(search);
             }
+        }
+    }
+
+    private static BufferedImage readImage(String path) {
+        try {
+             return ImageIO.read(new File(path));
+        } catch(IOException ex) {
+            LOGGER.log(Level.WARNING, "can't read image", ex);
+            return new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
         }
     }
 }

@@ -217,6 +217,10 @@ public class MessageContent {
             return mURL;
         }
 
+        public String getMimeType() {
+            return mMimeType;
+        }
+
        /**
         * Return name of file or empty string if file wasn't downloaded yet.
         */
