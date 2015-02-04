@@ -59,7 +59,10 @@ public final class InMessage extends KonMessage {
 
         attachment.setFileName(fileName);
         this.save();
-        this.changed();
+        // only tell view if file not encrypted
+        if (attachment.getCoderStatus().getEncryption() !=
+                Coder.Encryption.ENCRYPTED)
+            this.changed();
      }
 
     public void setAttachmentErrors(EnumSet<Coder.Error> errors) {

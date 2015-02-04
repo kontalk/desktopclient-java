@@ -457,10 +457,12 @@ final class ThreadView extends WebScrollPane {
 
     private static BufferedImage readImage(String path) {
         try {
-             return ImageIO.read(new File(path));
+             BufferedImage image = ImageIO.read(new File(path));
+             if (image != null)
+                 return image;
         } catch(IOException ex) {
             LOGGER.log(Level.WARNING, "can't read image", ex);
-            return new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
         }
+        return new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
     }
 }
