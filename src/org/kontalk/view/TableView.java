@@ -149,7 +149,8 @@ class TableView extends WebTable {
 
         // catch the event, when a tooltip should be shown for this item and
         // create a own one
-        // TODO still needed?
+        // note: together with the cell renderer the tooltip can be added
+        // directly the item, but the behaviour is buggy so we keep this
         @Override
         public String getToolTipText(MouseEvent event) {
             TableView.this.showTooltip(this);
