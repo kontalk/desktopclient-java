@@ -50,7 +50,9 @@ public final class Database {
     private final static Logger LOGGER = Logger.getLogger(Database.class.getName());
 
     private static Database INSTANCE = null;
-    private final String DB_NAME = "kontalk_db.sqlite";
+    private static final String DB_NAME = "kontalk_db.sqlite";
+    // TODO use me
+    private static final String DB_VERSION = "0";
 
     private Connection mConn = null;
 
@@ -213,7 +215,7 @@ public final class Database {
         //update += " LIMIT 1";
 
         try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)) {
-            this.insertValues(stat, keyList, set);
+            insertValues(stat, keyList, set);
             stat.executeUpdate();
             // TODO sometimes we get a "SQLException: ResultSet already requested" here,
             // maybe its not thread safe!?
@@ -236,22 +238,22 @@ public final class Database {
         return true;
     }
 
-    private void insertValues(PreparedStatement stat,
+    private static void insertValues(PreparedStatement stat,
             List<String> keys,
             Map<String, Object> map) throws SQLException {
         for (int i = 0; i < keys.size(); i++) {
-            this.setValue(stat, i, map.get(keys.get(i)));
+            setValue(stat, i, map.get(keys.get(i)));
          }
     }
 
-    private void insertValues(PreparedStatement stat,
+    private static void insertValues(PreparedStatement stat,
             List<Object> values) throws SQLException {
         for (int i = 0; i < values.size(); i++) {
-            this.setValue(stat, i, values.get(i));
+            setValue(stat, i, values.get(i));
         }
     }
 
-    private void setValue(PreparedStatement stat, int i, Object value)
+    private static void setValue(PreparedStatement stat, int i, Object value)
             throws SQLException {
         if (value instanceof String) {
                 stat.setString(i+1, (String) value);
@@ -267,7 +269,7 @@ public final class Database {
                 stat.setInt(i+1, EncodingUtils.enumSetToInt(((EnumSet) value)));
             } else if (value instanceof Optional) {
                 Optional<?> o = (Optional) value;
-                this.setValue(stat, i, o.orElse(null));
+                setValue(stat, i, o.orElse(null));
             } else if (value == null) {
                 stat.setNull(i+1, Types.NULL);
             } else {
