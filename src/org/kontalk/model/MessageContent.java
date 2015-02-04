@@ -59,7 +59,7 @@ public class MessageContent {
             String encryptedContent) {
         this(
                 plainText,
-                Optional.<Attachment>empty(),
+                optAttachment,
                 encryptedContent,
                 Optional.<MessageContent>empty()
         );
