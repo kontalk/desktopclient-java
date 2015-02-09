@@ -38,7 +38,7 @@ import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.system.KonConf;
 import org.kontalk.misc.KonException;
 import org.kontalk.Kontalk;
-import org.kontalk.crypto.PGP;
+import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 
 public final class Account {
@@ -121,7 +121,7 @@ public final class Account {
 
         String newPassword = StringUtils.randomString(40);
         try {
-            privateKeyData = PGP.copySecretKeyRingWithNewPassword(privateKeyData,
+            privateKeyData = PGPUtils.copySecretKeyRingWithNewPassword(privateKeyData,
                     password, newPassword).getEncoded();
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't change password", ex);

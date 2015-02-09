@@ -44,7 +44,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
-public final class PGP {
+public final class PGPUtils {
 
     /** Security provider: Bouncy Castle. */
     public static final String PROVIDER = "BC";
@@ -52,7 +52,7 @@ public final class PGP {
     /** Singleton for converting a PGP key to a JCA key. */
     private static JcaPGPKeyConverter sKeyConverter;
 
-    private PGP() {
+    private PGPUtils() {
     }
 
     public static final class PGPDecryptedKeyPairRing {
@@ -123,7 +123,7 @@ public final class PGP {
 
     private static void ensureKeyConverter() {
     	if (sKeyConverter == null)
-    		sKeyConverter = new JcaPGPKeyConverter().setProvider(PGP.PROVIDER);
+    		sKeyConverter = new JcaPGPKeyConverter().setProvider(PGPUtils.PROVIDER);
     }
 
     public static PrivateKey convertPrivateKey(PGPPrivateKey key) throws PGPException {
@@ -146,7 +146,7 @@ public final class PGP {
 
         PGPDigestCalculatorProvider sha1CalcProv = new JcaPGPDigestCalculatorProviderBuilder().build();
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(sha1CalcProv)
-            .setProvider(PGP.PROVIDER)
+            .setProvider(PGPUtils.PROVIDER)
             .build(oldPassphrase.toCharArray());
 
         PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);

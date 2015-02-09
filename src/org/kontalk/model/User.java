@@ -33,7 +33,7 @@ import org.bouncycastle.util.encoders.Base64;
 import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
-import org.kontalk.crypto.PGP;
+import org.kontalk.crypto.PGPUtils;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -196,14 +196,14 @@ public final class User {
     void setKey(byte[] rawKey) {
         PGPPublicKey key;
         try {
-            key = PGP.readPublicKey(rawKey);
+            key = PGPUtils.readPublicKey(rawKey);
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't parse public key", ex);
             return;
         }
 
         // if not set use id in key for username
-        String id = PGP.getUserId(key, null);
+        String id = PGPUtils.getUserId(key, null);
         if (id != null && id.contains(" (NO COMMENT) ")) {
             String userName = id.substring(0, id.indexOf(" (NO COMMENT) "));
             if (!userName.isEmpty() && mName.isEmpty())

@@ -102,7 +102,7 @@ public final class X509Bridge {
         // extract the private key
         PGPDigestCalculatorProvider sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build();
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(sha1Calc)
-            .setProvider(PGP.PROVIDER)
+            .setProvider(PGPUtils.PROVIDER)
             .build(passphrase.toCharArray());
 
         PGPPrivateKey privateKey = secretKey.extractPrivateKey(decryptor);
@@ -120,7 +120,7 @@ public final class X509Bridge {
 
         PGPDigestCalculatorProvider sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build();
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(sha1Calc)
-            .setProvider(PGP.PROVIDER)
+            .setProvider(PGPUtils.PROVIDER)
             .build(passphrase.toCharArray());
 
         // secret key
@@ -179,7 +179,7 @@ public final class X509Bridge {
            validTo=new Date(creationTime.getTime() + 1000L * publicKey.getValidSeconds());
 
         return createCertificate(
-                publicKey.getKey(PGP.PROVIDER), privateKey.getKey(), x509name,
+                publicKey.getKey(PGPUtils.PROVIDER), privateKey.getKey(), x509name,
                 creationTime, validTo,
                 subjectAltName,
                 publicKeyRing.getEncoded());
@@ -347,7 +347,7 @@ public final class X509Bridge {
     public static X509Certificate load(byte[] certData)
     		throws CertificateException, NoSuchProviderException {
 
-        CertificateFactory certFactory = CertificateFactory.getInstance("X.509", PGP.PROVIDER);
+        CertificateFactory certFactory = CertificateFactory.getInstance("X.509", PGPUtils.PROVIDER);
         InputStream in = new ByteArrayInputStream(certData);
         return (X509Certificate) certFactory.generateCertificate(in);
     }
@@ -355,7 +355,7 @@ public final class X509Bridge {
     public static KeyStore exportCertificate(X509Certificate certificate, PrivateKey privateKey)
     		throws KeyStoreException, NoSuchProviderException, NoSuchAlgorithmException, CertificateException, IOException {
 
-        KeyStore store = KeyStore.getInstance("PKCS12", PGP.PROVIDER);
+        KeyStore store = KeyStore.getInstance("PKCS12", PGPUtils.PROVIDER);
 
         store.load(null, null);
 

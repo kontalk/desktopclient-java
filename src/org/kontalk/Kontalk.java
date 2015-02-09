@@ -32,7 +32,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import org.apache.commons.lang.SystemUtils;
-import org.kontalk.crypto.PGP;
+import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.UserList;
@@ -92,7 +92,7 @@ public final class Kontalk {
         CryptoUtils.removeCryptographyRestrictions();
 
         // register provider
-        PGP.registerProvider();
+        PGPUtils.registerProvider();
     }
 
     private Kontalk(String[] args) {

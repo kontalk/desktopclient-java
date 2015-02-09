@@ -39,7 +39,7 @@ import org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
-import org.kontalk.crypto.PGP.PGPDecryptedKeyPairRing;
+import org.kontalk.crypto.PGPUtils.PGPDecryptedKeyPairRing;
 import org.kontalk.util.EncodingUtils;
 
 /** Personal asymmetric encryption key. */
@@ -72,7 +72,7 @@ public final class PersonalKey {
     }
 
     public PrivateKey getBridgePrivateKey() throws PGPException {
-    	return PGP.convertPrivateKey(mPair.signKey.getPrivateKey());
+    	return PGPUtils.convertPrivateKey(mPair.signKey.getPrivateKey());
     }
 
     public byte[] getEncodedPublicKeyRing() throws IOException {
@@ -84,7 +84,7 @@ public final class PersonalKey {
 
     /** Returns the first user ID on the key that matches the given network. */
     public String getUserId(String network) {
-        return PGP.getUserId(mPair.signKey.getPublicKey(), network);
+        return PGPUtils.getUserId(mPair.signKey.getPublicKey(), network);
     }
 
     public String getFingerprint() {
@@ -105,7 +105,7 @@ public final class PersonalKey {
 
         PGPDigestCalculatorProvider sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build();
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(sha1Calc)
-            .setProvider(PGP.PROVIDER)
+            .setProvider(PGPUtils.PROVIDER)
             .build(passphrase.toCharArray());
 
         PGPKeyPair signKp, encryptKp;

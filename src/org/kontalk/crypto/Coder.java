@@ -177,7 +177,7 @@ public final class Coder {
 
         // secure the message against the most basic attacks using Message/CPIM
         String from = keys.myKey.getUserId(null);
-        String to = PGP.getUserId(keys.otherKey, null) + "; ";
+        String to = PGPUtils.getUserId(keys.otherKey, null) + "; ";
         String mime = "text/plain";
         // TODO encrypt more possible content
         String text = message.getContent().getPlainText();
@@ -301,7 +301,7 @@ public final class Coder {
         if (decResult.decryptedStream.isPresent()) {
             // parse encrypted CPIM content
             String myUID = keys.myKey.getUserId(null);
-            String senderUID = PGP.getUserId(keys.otherKey, null);
+            String senderUID = PGPUtils.getUserId(keys.otherKey, null);
             String encrText = decResult.decryptedStream.get().toString();
             parsingResult = parseCPIM(encrText, myUID, senderUID);
             allErrors.addAll(parsingResult.errors);
@@ -417,7 +417,7 @@ public final class Coder {
         PGPPublicKey senderKey;
         try {
             // TODO does it have to be the master key!?
-            senderKey = PGP.readPublicKey(user.getKey());
+            senderKey = PGPUtils.readPublicKey(user.getKey());
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't get keyring", ex);
             result.errors.add(Error.INVALID_KEY);
