@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
-import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Iterator;
@@ -41,7 +40,6 @@ import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.kontalk.crypto.PGP.PGPDecryptedKeyPairRing;
-import org.kontalk.crypto.PGP.PGPKeyPairRing;
 import org.kontalk.util.EncodingUtils;
 
 /** Personal asymmetric encryption key. */
@@ -61,11 +59,6 @@ public final class PersonalKey {
         this(new PGPDecryptedKeyPairRing(signKp, encryptKp), bridgeCert);
     }
 
-//    private PersonalKey(Parcel in) throws PGPException {
-//        mPair = PGP.fromParcel(in);
-//        mBridgeCert = X509Bridge.fromParcel(in);
-//    }
-
     public PGPKeyPair getEncryptKeyPair() {
         return mPair.encryptKey;
     }
@@ -80,10 +73,6 @@ public final class PersonalKey {
 
     public PrivateKey getBridgePrivateKey() throws PGPException {
     	return PGP.convertPrivateKey(mPair.signKey.getPrivateKey());
-    }
-
-    public PGPPublicKeyRing getPublicKeyRing() throws IOException {
-    	return new PGPPublicKeyRing(getEncodedPublicKeyRing(), new BcKeyFingerprintCalculator());
     }
 
     public byte[] getEncodedPublicKeyRing() throws IOException {
@@ -102,26 +91,12 @@ public final class PersonalKey {
     	return EncodingUtils.bytesToHex(mPair.signKey.getPublicKey().getFingerprint());
     }
 
-    public PGPKeyPairRing store(String name, String email, String comment, String passphrase) throws PGPException {
-        // name[ (comment)] <[email]>
-        StringBuilder userid = new StringBuilder(name);
-
-        if (comment != null) userid
-            .append(" (")
-            .append(comment)
-            .append(')');
-
-        userid.append(" <");
-        if (email != null)
-            userid.append(email);
-        userid.append('>');
-
-        return PGP.store(mPair, userid.toString(), passphrase);
-    }
-
     /** Creates a {@link PersonalKey} from private and public key byte buffers. */
     @SuppressWarnings("unchecked")
-    public static PersonalKey load(InputStream privateKeyData, InputStream publicKeyData, String passphrase, byte[] bridgeCertData)
+    public static PersonalKey load(InputStream privateKeyData,
+            InputStream publicKeyData,
+            String passphrase,
+            byte[] bridgeCertData)
             throws PGPException, IOException, CertificateException, NoSuchProviderException {
 
         KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
@@ -180,34 +155,4 @@ public final class PersonalKey {
 
         throw new PGPException("invalid key data");
     }
-
-    /**
-     * Signs the given public key uid using our master (signing) key.<br>
-     * WARNING use this method along with {@link PGPPublicKeyRing#insertPublicKey()}
-     * to make this effective, otherwise GnuPG will not accept the new signature.
-     * @see PGPPublicKeyRing#insertPublicKey(PGPPublicKeyRing, PGPPublicKey)
-     * @see #signPublicKey(byte[], String)
-     */
-    public PGPPublicKey signPublicKey(PGPPublicKey keyToBeSigned, String id)
-            throws PGPException, IOException, SignatureException {
-
-        return PGP.signPublicKey(mPair.signKey, keyToBeSigned, id);
-    }
-
-    /**
-     * Revokes the whole key pair using the master (signing) key.
-     * @param store true to store the key in this object
-     * @return the revoked master public key
-     */
-	public PGPPublicKey revoke(boolean store)
-			throws PGPException, IOException, SignatureException {
-
-		PGPPublicKey revoked = PGP.revokeKey(mPair.signKey);
-
-		if (store)
-			mPair.signKey = new PGPKeyPair(revoked, mPair.signKey.getPrivateKey());
-
-		return revoked;
-	}
-
 }
