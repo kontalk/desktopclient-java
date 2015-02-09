@@ -65,6 +65,7 @@ import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import org.kontalk.system.Downloader;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent.Attachment;
@@ -87,11 +88,15 @@ final class ThreadView extends WebScrollPane {
     private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
     private final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
 
+    private final View mModelView;
+
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
     private int mCurrentThreadID = -1;
 
-    ThreadView() {
+    ThreadView(View modelView) {
         super(null);
+
+        mModelView = modelView;
 
         this.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -263,22 +268,9 @@ final class ThreadView extends WebScrollPane {
         if (row < 0)
             return;
 
-        final MessageView messageView = (MessageView) mTableModel.getValueAt(row, 0);
-
-        WebPopupMenu mPopupMenu = new WebPopupMenu();
-        WebMenuItem copyMenuItem = new WebMenuItem("Copy");
-        copyMenuItem.setToolTipText("Copy message content");
-        copyMenuItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent event) {
-                String messageText = messageView.toPrettyString();
-                Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clip.setContents(new StringSelection(messageText), null);
-            }
-        });
-        mPopupMenu.add(copyMenuItem);
-
-        mPopupMenu.show(this, e.getX(), e.getY());
+        MessageView messageView = (MessageView) mTableModel.getValueAt(row, 0);
+        WebPopupMenu popupMenu = messageView.getPopupMenu();
+        popupMenu.show(this, e.getX(), e.getY());
     }
 
         /**
@@ -290,8 +282,8 @@ final class ThreadView extends WebScrollPane {
             private final KonMessage mMessage;
             private final WebPanel mContentPanel;
             private final WebTextArea mTextArea;
-            private final int mPreferredTextAreaWidth;
             private final WebLabel mStatusIconLabel;
+            private int mPreferredTextAreaWidth;
 
             MessageView(KonMessage message) {
                 mMessage = message;
@@ -320,18 +312,10 @@ final class ThreadView extends WebScrollPane {
 
                 mContentPanel = new WebPanel();
                 mContentPanel.setOpaque(false);
-                // text
-                boolean encrypted = mMessage.getCoderStatus().isEncrypted();
-                // TODO display all possible content
-                String text = encrypted ? "[encrypted]" : mMessage.getContent().getText();
-                mTextArea = new WebTextArea(text);
-                // hide area if there is no text
-                mTextArea.setVisible(!text.isEmpty());
+                // text area
+                mTextArea = new WebTextArea();
                 mTextArea.setOpaque(false);
                 mTextArea.setFontSize(13);
-                mTextArea.setFontStyle(false, encrypted);
-                // save the width that is requied to show the text in one line
-                mPreferredTextAreaWidth = mTextArea.getPreferredSize().width;
                 mTextArea.setLineWrap(true);
                 mTextArea.setWrapStyleWord(true);
                 mContentPanel.add(mTextArea, BorderLayout.CENTER);
@@ -354,8 +338,7 @@ final class ThreadView extends WebScrollPane {
                 }
                 statusPanel.add(encryptIconLabel);
                 // date label
-                SimpleDateFormat dateFormat = new SimpleDateFormat("EEE, HH:mm");
-                WebLabel dateLabel = new WebLabel(dateFormat.format(mMessage.getDate()));
+                WebLabel dateLabel = new WebLabel(SHORT_DATE_FORMAT.format(mMessage.getDate()));
                 dateLabel.setForeground(Color.GRAY);
                 dateLabel.setFontSize(11);
                 statusPanel.add(dateLabel);
@@ -371,7 +354,7 @@ final class ThreadView extends WebScrollPane {
             }
 
             @Override
-            void resize(int listWidth) {
+            protected void resize(int listWidth) {
                 // note: on the very first call the list width is zero
                 int maxWidth = (int)(listWidth * 0.8);
                 int width = Math.min(mPreferredTextAreaWidth, maxWidth);
@@ -380,9 +363,19 @@ final class ThreadView extends WebScrollPane {
             }
 
             /**
-             * Update what can change in a message: icon and attachment.
+             * Update what can change in a message: text, icon and attachment.
              */
             private void update() {
+                // text in text area
+                boolean encrypted = mMessage.getCoderStatus().isEncrypted();
+                String text = encrypted ? "[encrypted]" : mMessage.getContent().getText();
+                mTextArea.setFontStyle(false, encrypted);
+                mTextArea.setText(text);
+                // hide area if there is no text
+                mTextArea.setVisible(!text.isEmpty());
+                // save the width that is requied to show the text in one line
+                mPreferredTextAreaWidth = mTextArea.getPreferredSize().width;
+
                 // status icon
                 if (mMessage.getDir() == KonMessage.Direction.OUT) {
                     switch (mMessage.getReceiptStatus()) {
@@ -447,7 +440,39 @@ final class ThreadView extends WebScrollPane {
                 }
             }
 
-            public String toPrettyString() {
+            private WebPopupMenu getPopupMenu() {
+                WebPopupMenu popupMenu = new WebPopupMenu();
+                if (mMessage.getCoderStatus().isEncrypted()) {
+                    WebMenuItem decryptMenuItem = new WebMenuItem("Decrypt");
+                    decryptMenuItem.setToolTipText("Retry decrypting message");
+                    decryptMenuItem.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent event) {
+                            KonMessage m = MessageView.this.mMessage;
+                            if (!(m instanceof InMessage)) {
+                                LOGGER.warning("decrypted message not incoming message");
+                                return;
+                            }
+                            ThreadView.this.mModelView.callDecrypt((InMessage) m);
+                        }
+                    });
+                    popupMenu.add(decryptMenuItem);
+                }
+                WebMenuItem copyMenuItem = new WebMenuItem("Copy");
+                copyMenuItem.setToolTipText("Copy message content");
+                copyMenuItem.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent event) {
+                        String messageText = MessageView.this.toPrettyString();
+                        Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
+                        clip.setContents(new StringSelection(messageText), null);
+                    }
+                });
+                popupMenu.add(copyMenuItem);
+                return popupMenu;
+            }
+
+            private String toPrettyString() {
                 String date = LONG_DATE_FORMAT.format(mMessage.getDate());
                 String from = getFromString(mMessage);
                 return date + " - " + from + " : " + mMessage.getContent().getText();
@@ -461,7 +486,7 @@ final class ThreadView extends WebScrollPane {
             }
 
             @Override
-            public String getTooltipText() {
+            protected String getTooltipText() {
                 String encryption = "unknown";
                 switch (mMessage.getCoderStatus().getEncryption()) {
                     case NOT: encryption = "not encrypted"; break;

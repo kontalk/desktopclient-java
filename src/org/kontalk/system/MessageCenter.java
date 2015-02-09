@@ -115,10 +115,7 @@ public class MessageCenter {
         newMessage.save();
 
         // decrypt content
-        Coder.processInMessage(newMessage);
-        if (!newMessage.getCoderStatus().getErrors().isEmpty()) {
-            mControl.handleSecurityErrors(newMessage);
-        }
+        this.decrypt(newMessage);
 
         // download attachment if url is included
         if (newMessage.getContent().getAttachment().isPresent())
@@ -128,6 +125,17 @@ public class MessageCenter {
         thread.addMessage(newMessage);
 
         return newMessage.getID() >= -1;
+    }
+
+    /**
+     * Decrypt an incoming message.
+     * @param message
+     */
+    public void decrypt(InMessage message) {
+        Coder.processInMessage(message);
+        if (!message.getCoderStatus().getErrors().isEmpty()) {
+            mControl.handleSecurityErrors(message);
+        }
     }
 
     /**

@@ -137,7 +137,7 @@ class TableView extends WebTable {
 
         void repaint(boolean isSelected) {};
 
-        abstract String getTooltipText();
+        protected abstract String getTooltipText();
 
         /**
          * Return if the content of the item contains the search string.

@@ -67,6 +67,7 @@ import org.kontalk.system.KonConf;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.ViewEvent;
+import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageList;
@@ -74,6 +75,7 @@ import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
+import org.kontalk.system.MessageCenter;
 
 /**
  * Initialize and control the user interface.
@@ -108,7 +110,7 @@ public final class View implements Observer {
         // notify threadlist of changes in user list
         UserList.getInstance().addObserver(mThreadListView);
 
-        mThreadView = new ThreadView();
+        mThreadView = new ThreadView(this);
 
         // text field
         mSendTextArea = new WebTextArea();
@@ -272,7 +274,7 @@ public final class View implements Observer {
         configFrame.setVisible(true);
     }
 
-    /* View to Control */
+    /* control to view */
 
     @Override
     public void update(Observable o, Object arg) {
@@ -367,7 +369,15 @@ public final class View implements Observer {
         NotificationManager.showNotification(mThreadView, errorText);
     }
 
-    /* Control to View. */
+    private void removeTray() {
+        if (mTrayIcon != null) {
+            SystemTray tray = SystemTray.getSystemTray();
+            tray.remove(mTrayIcon);
+            mTrayIcon = null;
+        }
+    }
+
+    /* view to control */
 
     void callShutDown() {
         mControl.shutDown();
@@ -381,31 +391,10 @@ public final class View implements Observer {
         mControl.disconnect();
     }
 
-    void selectThreadByUser(User user) {
-        if (user == null)
-            return;
-
-        KonThread thread = ThreadList.getInstance().getThreadByUser(user);
-        this.showThread(thread);
-    }
-
     // TODO hide model
     void callCreateNewThread(Set<User> user) {
         KonThread thread = ThreadList.getInstance().createNewThread(user);
         this.showThread(thread);
-    }
-
-    private void showThread(KonThread thread) {
-        mThreadListView.selectThread(thread.getID());
-        mMainFrame.selectTab(MainFrame.Tab.THREADS);
-    }
-
-    void selectedThreadChanged(KonThread thread) {
-        if (thread == null)
-            return;
-
-        thread.setRead();
-        mThreadView.showThread(thread);
     }
 
     private void callSendText() {
@@ -422,12 +411,31 @@ public final class View implements Observer {
         mControl.setUserBlocking(user, blocking);
     }
 
-    private void removeTray() {
-        if (mTrayIcon != null) {
-            SystemTray tray = SystemTray.getSystemTray();
-            tray.remove(mTrayIcon);
-            mTrayIcon = null;
-        }
+    void callDecrypt(InMessage message) {
+        MessageCenter.getInstance().decrypt(message);
+    }
+
+    /* view internal */
+
+    void selectThreadByUser(User user) {
+        if (user == null)
+            return;
+
+        KonThread thread = ThreadList.getInstance().getThreadByUser(user);
+        this.showThread(thread);
+    }
+
+    private void showThread(KonThread thread) {
+        mThreadListView.selectThread(thread.getID());
+        mMainFrame.selectTab(MainFrame.Tab.THREADS);
+    }
+
+    void selectedThreadChanged(KonThread thread) {
+        if (thread == null)
+            return;
+
+        thread.setRead();
+        mThreadView.showThread(thread);
     }
 
     static Icon getIcon(String fileName) {
