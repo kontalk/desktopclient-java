@@ -44,9 +44,9 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
 import javax.swing.ListSelectionModel;
-import org.kontalk.Kontalk;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
  * Display all user (aka contacts) in a brief list.
@@ -234,7 +234,7 @@ final class UserListView extends ListView implements Observer {
                 public void actionPerformed(ActionEvent event) {
                     Set<User> user = new HashSet<>();
                     user.add(mSelectedUserView.getUser());
-                    UserListView.this.mModelView.newThread(user);
+                    UserListView.this.mModelView.callCreateNewThread(user);
                 }
             });
             this.add(newMenuItem);
@@ -255,7 +255,7 @@ final class UserListView extends ListView implements Observer {
             mBlockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mModelView.setUserBlocking(mSelectedUserView.getUser(), true);
+                    UserListView.this.mModelView.callSetUserBlocking(mSelectedUserView.getUser(), true);
                 }
             });
             this.add(mBlockMenuItem);
@@ -265,7 +265,7 @@ final class UserListView extends ListView implements Observer {
             mUnblockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mModelView.setUserBlocking(mSelectedUserView.getUser(), false);
+                    UserListView.this.mModelView.callSetUserBlocking(mSelectedUserView.getUser(), false);
                 }
             });
             this.add(mUnblockMenuItem);
@@ -294,9 +294,9 @@ final class UserListView extends ListView implements Observer {
                 mUnblockMenuItem.setVisible(false);
             }
 
-            Kontalk.Status status = UserListView.this.mModelView.getCurrentStatus();
-            mBlockMenuItem.setEnabled(status == Kontalk.Status.CONNECTED);
-            mUnblockMenuItem.setEnabled(status == Kontalk.Status.CONNECTED);
+            ControlCenter.Status status = UserListView.this.mModelView.getCurrentStatus();
+            mBlockMenuItem.setEnabled(status == ControlCenter.Status.CONNECTED);
+            mUnblockMenuItem.setEnabled(status == ControlCenter.Status.CONNECTED);
 
             this.show(invoker, x, y);
         }

@@ -20,31 +20,23 @@ package org.kontalk;
 
 import org.kontalk.misc.KonException;
 import org.kontalk.system.MessageCenter;
-import org.kontalk.system.KonConf;
 import org.kontalk.system.Database;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.Paths;
-import java.util.Set;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import org.apache.commons.lang.SystemUtils;
-import org.kontalk.client.Client;
 import org.kontalk.crypto.PGP;
-import org.kontalk.crypto.PersonalKey;
-import org.kontalk.model.Account;
-import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageList;
-import org.kontalk.model.OutMessage;
 import org.kontalk.model.ThreadList;
-import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 import org.kontalk.util.CryptoUtils;
 import org.kontalk.view.View;
 
@@ -57,22 +49,7 @@ public final class Kontalk {
     public final static String VERSION = "0.01a2";
     private final static String CONFIG_DIR;
 
-    public enum Status {
-        DISCONNECTING,
-        DISCONNECTED,
-        CONNECTING,
-        CONNECTED,
-        SHUTTING_DOWN,
-        FAILED,
-        ERROR
-    }
-
-    private ServerSocket mRun;
-
-    private final Client mClient;
-    private final View mView;
-
-    private Status mCurrentStatus = Status.DISCONNECTED;
+    private static ServerSocket RUN_LOCK;
 
     static {
         // check java version
@@ -122,7 +99,7 @@ public final class Kontalk {
         // check if already running
         try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
-            mRun = new ServerSocket(9871, 10, addr);
+            RUN_LOCK = new ServerSocket(9871, 10, addr);
         } catch(java.net.BindException ex) {
             LOGGER.severe("already running");
             System.exit(2);
@@ -131,23 +108,20 @@ public final class Kontalk {
         }
 
         this.parseArgs(args);
-
-        mClient = new Client(this);
-
-        mView = new View(this);
     }
 
     public void start() {
-        MessageCenter.initialize(this);
+        ControlCenter control = new ControlCenter();
+        MessageCenter.initialize(control);
 
-        new Thread(mClient).start();
+        View mView = new View(control);
 
         try {
             Database.initialize(CONFIG_DIR);
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
-            this.shutDown();
-            return;
+            control.shutDown();
+            return; // never reached
         }
 
         // order matters!
@@ -157,100 +131,7 @@ public final class Kontalk {
 
         mView.init();
 
-        // use password option to determine if account was imported
-        KonConf config = KonConf.getInstance();
-        if (config.getString(KonConf.ACC_PASS).isEmpty()) {
-            mView.showImportWizard();
-            return;
-        }
-
-        if (config.getBoolean(KonConf.MAIN_CONNECT_STARTUP))
-            this.connect();
-    }
-
-    public void shutDown() {
-        LOGGER.info("Shutting down...");
-        mCurrentStatus = Status.SHUTTING_DOWN;
-        mView.statusChanged();
-        UserList.getInstance().save();
-        ThreadList.getInstance().save();
-        mClient.disconnect();
-        if (Database.getInstance() != null)
-            Database.getInstance().close();
-        KonConf.getInstance().saveToFile();
-        try {
-            mRun.close();
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't close run socket", ex);
-        }
-        System.exit(0);
-    }
-
-    public void connect() {
-        PersonalKey key;
-        try {
-            key = Account.getInstance().getPersonalKey();
-        } catch (KonException ex) {
-            // something wrong with the account, tell view
-            this.handleException(ex);
-            return;
-        }
-        mClient.connect(key);
-    }
-
-    public void disconnect() {
-        mCurrentStatus = Status.DISCONNECTING;
-        mView.statusChanged();
-        mClient.disconnect();
-    }
-
-    public Status getCurrentStatus() {
-        return mCurrentStatus;
-    }
-
-    public void statusChanged(Status status) {
-        mCurrentStatus = status;
-        mView.statusChanged();
-        if (status == Status.CONNECTED) {
-            // send all pending messages
-            for (OutMessage m : MessageList.getInstance().getPendingMessages()) {
-                mClient.sendMessage(m);
-            }
-            // send public key requests for Kontalk users with missing key
-            for (User user : UserList.getInstance().getUser()) {
-                // TODO only for domains that are part of the Kontalk network
-                if (user.getFingerprint().isEmpty()) {
-                    LOGGER.info("public key missing for user, requesting it...");
-                    mClient.sendPublicKeyRequest(user.getJID());
-                }
-            }
-
-        }
-    }
-
-    public void sendText(KonThread thread, String text) {
-        // TODO no group chat support yet
-        Set<User> user = thread.getUser();
-        for (User oneUser: user) {
-            OutMessage newMessage = MessageCenter.getInstance().newOutMessage(
-                    thread,
-                    oneUser,
-                    text,
-                    oneUser.getEncrypted());
-            mClient.sendMessage(newMessage);
-        }
-    }
-
-    public void handleException(KonException ex) {
-        mView.handleException(ex);
-    }
-
-    public void handleSecurityErrors(KonMessage message) {
-        mView.handleSecurityErrors(message);
-    }
-
-    public void setUserBlocking(User user, boolean blocking) {
-        mClient.sendBlockingCommand(user.getJID(), blocking);
+        control.launch();
     }
 
     // parse optional arguments
@@ -265,6 +146,15 @@ public final class Kontalk {
         return CONFIG_DIR;
     }
 
+    public static void exit() {
+        try {
+            RUN_LOCK.close();
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't close run socket", ex);
+        }
+        System.exit(0);
+    }
+
     /**
      * @param args the command line arguments
      */
@@ -275,5 +165,4 @@ public final class Kontalk {
         Kontalk model = new Kontalk(args);
         model.start();
     }
-
 }

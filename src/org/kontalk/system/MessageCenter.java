@@ -18,7 +18,6 @@
 
 package org.kontalk.system;
 
-import org.kontalk.system.Downloader;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -27,7 +26,6 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage.Status;
@@ -41,6 +39,7 @@ import org.kontalk.model.UserList;
 
 /**
  * Central message handler as interface between controller and data model.
+ * TODO remove singleton
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
@@ -49,10 +48,10 @@ public class MessageCenter {
 
     private static MessageCenter INSTANCE = null;
 
-    private final Kontalk mModel;
+    private final ControlCenter mControl;
 
-    private MessageCenter(Kontalk model) {
-        mModel = model;
+    private MessageCenter(ControlCenter control) {
+        mControl = control;
     }
 
     /**
@@ -118,7 +117,7 @@ public class MessageCenter {
         // decrypt content
         Coder.processInMessage(newMessage);
         if (!newMessage.getCoderStatus().getErrors().isEmpty()) {
-            mModel.handleSecurityErrors(newMessage);
+            mControl.handleSecurityErrors(newMessage);
         }
 
         // download attachment if url is included
@@ -193,12 +192,12 @@ public class MessageCenter {
         return optThread.orElse(threadList.getThreadByUser(user));
     }
 
-    public static void initialize(Kontalk model) {
+    public static void initialize(ControlCenter control) {
         if (INSTANCE != null) {
             LOGGER.warning("message center already initialized");
             return;
         }
-        INSTANCE = new MessageCenter(model);
+        INSTANCE = new MessageCenter(control);
     }
 
     public static MessageCenter getInstance() {

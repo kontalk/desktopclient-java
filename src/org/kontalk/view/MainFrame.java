@@ -66,6 +66,7 @@ import org.kontalk.system.KonConf;
 import org.kontalk.Kontalk;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
  *
@@ -122,7 +123,7 @@ final class MainFrame extends WebFrame {
         mConnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                viewModel.connect();
+                viewModel.callConnect();
             }
         });
         konNetMenu.add(mConnectMenuItem);
@@ -133,7 +134,7 @@ final class MainFrame extends WebFrame {
         mDisconnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                viewModel.disconnect();
+                viewModel.callDisconnect();
             }
         });
         konNetMenu.add(mDisconnectMenuItem);
@@ -302,7 +303,7 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    public final void statusChanged(Kontalk.Status status) {
+    public final void statusChanged(ControlCenter.Status status) {
         switch (status) {
             case CONNECTING:
                 mConnectMenuItem.setEnabled(false);

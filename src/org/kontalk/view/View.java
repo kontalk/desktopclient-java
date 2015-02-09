@@ -49,6 +49,8 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
 import java.security.cert.CertificateException;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -63,27 +65,28 @@ import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.kontalk.system.KonConf;
 import org.kontalk.misc.KonException;
-import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
+import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
  * Initialize and control the user interface.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class View {
+public final class View implements Observer {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
     public final static String RES_PATH = "org/kontalk/res/";
     final static Color BLUE = new Color(130, 170, 240);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
 
-    private final Kontalk mModel;
+    private final ControlCenter mControl;
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
     private final ThreadView mThreadView;
@@ -93,8 +96,8 @@ public final class View {
     private final MainFrame mMainFrame;
     private TrayIcon mTrayIcon;
 
-    public View(Kontalk model) {
-        mModel = model;
+    public View(ControlCenter control) {
+        mControl = control;
 
         WebLookAndFeel.install();
 
@@ -120,7 +123,7 @@ public final class View {
         mSendButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                View.this.sendText();
+                View.this.callSendText();
             }
         });
 
@@ -144,6 +147,8 @@ public final class View {
         MessageList.getInstance().addObserver(new Notifier());
 
         this.statusChanged();
+
+        mControl.addObserver(this);
     }
 
     final void setTray() {
@@ -258,12 +263,36 @@ public final class View {
         mThreadListView.selectLastThread();
     }
 
-    Kontalk.Status getCurrentStatus() {
-        return mModel.getCurrentStatus();
+    ControlCenter.Status getCurrentStatus() {
+        return mControl.getCurrentStatus();
     }
 
-    public final void statusChanged() {
-        Kontalk.Status status = mModel.getCurrentStatus();
+    void showConfig() {
+        JDialog configFrame = new ConfigurationDialog(mMainFrame, this);
+        configFrame.setVisible(true);
+    }
+
+    /* View to Control */
+
+    @Override
+    public void update(Observable o, Object arg) {
+       if (arg instanceof ViewEvent.StatusChanged) {
+           this.statusChanged();
+       } else if (arg instanceof ViewEvent.MissingAccount) {
+           this.showImportWizard();
+       } else if (arg instanceof ViewEvent.Exception) {
+           ViewEvent.Exception exception = (ViewEvent.Exception) arg;
+           this.handleException(exception.exception);
+       } else if (arg instanceof ViewEvent.SecurityError) {
+           ViewEvent.SecurityError error = (ViewEvent.SecurityError) arg;
+           this.handleSecurityErrors(error.message);
+       } else {
+           LOGGER.warning("unexpected argument");
+       }
+    }
+
+    private void statusChanged() {
+        ControlCenter.Status status = mControl.getCurrentStatus();
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText("Connecting...");
@@ -300,12 +329,20 @@ public final class View {
         mMainFrame.statusChanged(status);
     }
 
-    public void handleException(KonException ex) {
-        String errorText = getErrorText(ex);
-        WebOptionPane.showMessageDialog(mMainFrame, errorText, "Error", WebOptionPane.ERROR_MESSAGE);
+    void showImportWizard() {
+        JDialog importFrame = new ImportDialog();
+        importFrame.setVisible(true);
     }
 
-    public void handleSecurityErrors(KonMessage message) {
+    private void handleException(KonException ex) {
+        String errorText = getErrorText(ex);
+        WebOptionPane.showMessageDialog(mMainFrame,
+                errorText,
+                "Error",
+                WebOptionPane.ERROR_MESSAGE);
+    }
+
+    private void handleSecurityErrors(KonMessage message) {
         String errorText = "<html>";
 
         boolean isOut = message.getDir() == KonMessage.Direction.OUT;
@@ -330,26 +367,18 @@ public final class View {
         NotificationManager.showNotification(mThreadView, errorText);
     }
 
-    public void showImportWizard() {
-        JDialog importFrame = new ImportDialog();
-        importFrame.setVisible(true);
-    }
-
-    void showConfig() {
-        JDialog configFrame = new ConfigurationDialog(mMainFrame, this);
-        configFrame.setVisible(true);
-    }
+    /* Control to View. */
 
     void callShutDown() {
-        mModel.shutDown();
+        mControl.shutDown();
     }
 
-    void connect() {
-        mModel.connect();
+    void callConnect() {
+        mControl.connect();
     }
 
-    void disconnect() {
-        mModel.disconnect();
+    void callDisconnect() {
+        mControl.disconnect();
     }
 
     void selectThreadByUser(User user) {
@@ -360,7 +389,8 @@ public final class View {
         this.showThread(thread);
     }
 
-    void newThread(Set<User> user) {
+    // TODO hide model
+    void callCreateNewThread(Set<User> user) {
         KonThread thread = ThreadList.getInstance().createNewThread(user);
         this.showThread(thread);
     }
@@ -378,18 +408,18 @@ public final class View {
         mThreadView.showThread(thread);
     }
 
-    private void sendText() {
+    private void callSendText() {
        KonThread thread = mThreadListView.getSelectedThread();
        if (thread == null) {
            // nothing selected
            return;
        }
-       mModel.sendText(thread, mSendTextArea.getText());
+       mControl.sendText(thread, mSendTextArea.getText());
        mSendTextArea.setText("");
     }
 
-    void setUserBlocking(User user, boolean blocking) {
-        mModel.setUserBlocking(user, blocking);
+    void callSetUserBlocking(User user, boolean blocking) {
+        mControl.setUserBlocking(user, blocking);
     }
 
     private void removeTray() {

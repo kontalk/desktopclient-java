@@ -46,11 +46,11 @@ import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.system.KonConf;
 import org.kontalk.misc.KonException;
-import org.kontalk.Kontalk;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
+import org.kontalk.system.ControlCenter;
 
 /**
  * Network client for an XMPP Kontalk Server.
@@ -67,14 +67,14 @@ public final class Client implements PacketListener, Runnable {
 
     private static enum Command {CONNECT, DISCONNECT};
 
-    private final Kontalk mModel;
+    private final ControlCenter mControl;
     private KonConnection mConn = null;
 
     // Limited connection flag.
     //protected boolean mLimited;
 
-    public Client(Kontalk model) {
-        mModel = model;
+    public Client(ControlCenter control) {
+        mControl = control;
         //mLimited = limited;
 
         // enable debug window
@@ -83,7 +83,7 @@ public final class Client implements PacketListener, Runnable {
 
     public void connect(PersonalKey key) {
         this.disconnect();
-        mModel.statusChanged(Kontalk.Status.CONNECTING);
+        mControl.setStatus(ControlCenter.Status.CONNECTING);
 
         KonConf config = KonConf.getInstance();
         // tigase: use hostname as network
@@ -100,13 +100,13 @@ public final class Client implements PacketListener, Runnable {
                     key.getBridgeCertificate());
         } catch (PGPException ex) {
             LOGGER.log(Level.WARNING, "can't create connection", ex);
-            mModel.statusChanged(Kontalk.Status.FAILED);
-            mModel.handleException(new KonException(KonException.Error.CLIENT_CONNECTION, ex));
+            mControl.setStatus(ControlCenter.Status.FAILED);
+            mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECTION, ex));
             return;
         }
 
         // connection listener
-        mConn.addConnectionListener(new KonConnectionListener(mModel));
+        mConn.addConnectionListener(new KonConnectionListener(mControl));
 
         // packet listeners
         RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
@@ -157,8 +157,8 @@ public final class Client implements PacketListener, Runnable {
                 mConn.connect();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't connect", ex);
-                mModel.statusChanged(Kontalk.Status.FAILED);
-                mModel.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
+                mControl.setStatus(ControlCenter.Status.FAILED);
+                mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
                 return;
             }
 
@@ -167,8 +167,8 @@ public final class Client implements PacketListener, Runnable {
                 mConn.login();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
-                mModel.statusChanged(Kontalk.Status.FAILED);
-                mModel.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
+                mControl.setStatus(ControlCenter.Status.FAILED);
+                mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
                 return;
             }
         }
@@ -183,7 +183,7 @@ public final class Client implements PacketListener, Runnable {
 
         this.sendBlocklistRequest();
 
-        mModel.statusChanged(Kontalk.Status.CONNECTED);
+        mControl.setStatus(ControlCenter.Status.CONNECTED);
     }
 
     public void disconnect() {
@@ -193,7 +193,7 @@ public final class Client implements PacketListener, Runnable {
                 mConn = null;
             }
         }
-        mModel.statusChanged(Kontalk.Status.DISCONNECTED);
+        mControl.setStatus(ControlCenter.Status.DISCONNECTED);
     }
 
     /**
@@ -236,7 +236,7 @@ public final class Client implements PacketListener, Runnable {
                     !message.getCoderStatus().getErrors().isEmpty()) {
                 LOGGER.warning("encryption failed, not sending message");
                 message.setStatus(Status.ERROR);
-                mModel.handleSecurityErrors(message);
+                mControl.handleSecurityErrors(message);
                 return;
             }
             smackMessage.addExtension(new E2EEncryption(encrypted.get()));
