@@ -27,10 +27,10 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyPair;
-import org.bouncycastle.openpgp.PGPObjectFactory;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
+import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
 import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
@@ -88,37 +88,37 @@ public final class PGP {
         return (String) key.getUserIDs().next();
     }
 
-    /** Returns the first master key found in the given public keyring.
-     *  Return null if no masterkey was found.
+    /**
+     * Read the public key encryption key from public key data.
+     * source: org.bouncycastle.openpgp.examples
+     *
+     * @param publicKeyring data containing the public key data
+     * @return the first public key found.
+     * @throws IOException
+     * @throws PGPException
      */
-    public static PGPPublicKey getMasterKey(PGPPublicKeyRing publicKeyring) {
-        @SuppressWarnings("unchecked")
-        Iterator<PGPPublicKey> iter = publicKeyring.getPublicKeys();
-        while (iter.hasNext()) {
-            PGPPublicKey pk = iter.next();
-            if (pk.isMasterKey())
-                return pk;
+    public static PGPPublicKey readPublicKey(byte[] publicKeyring) throws IOException, PGPException {
+        PGPPublicKeyRingCollection pgpPub = new PGPPublicKeyRingCollection(publicKeyring);
+        //
+        // we just loop through the collection till we find a key suitable for encryption, in the real
+        // world you would probably want to be a bit smarter about this.
+        //
+        // oh yeah, great example telling me to not use the code!
+        Iterator keyRingIter = pgpPub.getKeyRings();
+        while (keyRingIter.hasNext()) {
+            PGPPublicKeyRing keyRing = (PGPPublicKeyRing) keyRingIter.next();
+
+            Iterator keyIter = keyRing.getPublicKeys();
+            while (keyIter.hasNext()) {
+                PGPPublicKey key = (PGPPublicKey) keyIter.next();
+
+                if (key.isEncryptionKey()) {
+                    return key;
+                }
+            }
         }
 
-        return null;
-    }
-
-    /** Returns the first master key found in the given public keyring. */
-    public static PGPPublicKey getMasterKey(byte[] publicKeyring) throws IOException, PGPException {
-    	return getMasterKey(readPublicKeyring(publicKeyring));
-    }
-
-    public static PGPPublicKeyRing readPublicKeyring(byte[] publicKeyring) throws IOException, PGPException {
-        PGPObjectFactory reader = new PGPObjectFactory(publicKeyring);
-        Object o = reader.nextObject();
-        while (o != null) {
-            if (o instanceof PGPPublicKeyRing)
-            	return (PGPPublicKeyRing) o;
-
-            o = reader.nextObject();
-        }
-
-        throw new PGPException("invalid keyring data.");
+        throw new IllegalArgumentException("Can't find encryption key in key ring.");
     }
 
     private static void ensureKeyConverter() {

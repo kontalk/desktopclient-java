@@ -52,7 +52,6 @@ import org.bouncycastle.openpgp.PGPOnePassSignatureList;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyEncryptedData;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
 import org.bouncycastle.openpgp.PGPSignature;
 import org.bouncycastle.openpgp.PGPSignatureGenerator;
 import org.bouncycastle.openpgp.PGPSignatureList;
@@ -415,17 +414,12 @@ public final class Coder {
             result.errors.add(Error.KEY_UNAVAILABLE);
             return result;
         }
-        PGPPublicKeyRing ring;
+        PGPPublicKey senderKey;
         try {
-            ring = PGP.readPublicKeyring(user.getKey());
+            // TODO does it have to be the master key!?
+            senderKey = PGP.readPublicKey(user.getKey());
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't get keyring", ex);
-            result.errors.add(Error.INVALID_KEY);
-            return result;
-        }
-        PGPPublicKey senderKey = PGP.getMasterKey(ring);
-        if (senderKey == null) {
-            LOGGER.warning("can't find masterkey in keyring");
             result.errors.add(Error.INVALID_KEY);
             return result;
         }

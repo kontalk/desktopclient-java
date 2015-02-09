@@ -143,6 +143,7 @@ public final class User {
         mName = name;
         this.save();
         UserList.getInstance().changed();
+        // TODO thread view not updated
     }
 
     public String getStatus() {
@@ -195,7 +196,7 @@ public final class User {
     void setKey(byte[] rawKey) {
         PGPPublicKey key;
         try {
-            key = PGP.getMasterKey(rawKey);
+            key = PGP.readPublicKey(rawKey);
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't parse public key", ex);
             return;
