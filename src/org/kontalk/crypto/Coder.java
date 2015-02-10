@@ -414,16 +414,14 @@ public final class Coder {
             result.errors.add(Error.KEY_UNAVAILABLE);
             return result;
         }
-        PGPPublicKey senderKey;
-        try {
-            // TODO does it have to be the master key!?
-            senderKey = PGPUtils.readPublicKey(user.getKey());
-        } catch (IOException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't get keyring", ex);
+        // TODO signing key used for encryption
+        Optional<PGPPublicKey> senderKey = PGPUtils.readPublicSigningKey(user.getKey());
+        if (!senderKey.isPresent()) {
+            LOGGER.warning("can't get sender key");
             result.errors.add(Error.INVALID_KEY);
             return result;
         }
-        result.otherKey = senderKey;
+        result.otherKey = senderKey.get();
         return result;
     }
 

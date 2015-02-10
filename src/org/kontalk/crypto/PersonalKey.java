@@ -42,7 +42,10 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.kontalk.crypto.PGPUtils.PGPDecryptedKeyPairRing;
 import org.kontalk.util.EncodingUtils;
 
-/** Personal asymmetric encryption key. */
+/**
+ * Personal asymmetric encryption key.
+ * Note: There are two key pairs: one for encryption, one for signing.
+ */
 public final class PersonalKey {
 
     /** Decrypted key pair (for direct usage). */

@@ -22,6 +22,9 @@ import java.io.IOException;
 import java.security.PrivateKey;
 import java.security.Security;
 import java.util.Iterator;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPEncryptedData;
@@ -45,6 +48,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
 public final class PGPUtils {
+    private final static Logger LOGGER = Logger.getLogger(PGPUtils.class.getName());
 
     /** Security provider: Bouncy Castle. */
     public static final String PROVIDER = "BC";
@@ -89,36 +93,48 @@ public final class PGPUtils {
     }
 
     /**
-     * Read the public key encryption key from public key data.
-     * source: org.bouncycastle.openpgp.examples
+     * Return first public key ring read from key data (or null on error).
+     */
+    private static PGPPublicKeyRing readPublicKeyRing(byte[] publicKeyring) {
+        PGPPublicKeyRingCollection pgpPub;
+        try {
+            pgpPub = new PGPPublicKeyRingCollection(publicKeyring);
+        } catch (IOException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't read public key ring", ex);
+            return null;
+        }
+        Iterator<?> keyRingIter = pgpPub.getKeyRings();
+        if (!keyRingIter.hasNext()) {
+            LOGGER.warning("no key ring in key ring collection");
+            return null;
+        }
+        return (PGPPublicKeyRing) keyRingIter.next();
+    }
+
+    /**
+     * Read the public key signing key from public key data.
+     * The signing key is the master key!
      *
      * @param publicKeyring data containing the public key data
      * @return the first public key found.
      * @throws IOException
      * @throws PGPException
      */
-    public static PGPPublicKey readPublicKey(byte[] publicKeyring) throws IOException, PGPException {
-        PGPPublicKeyRingCollection pgpPub = new PGPPublicKeyRingCollection(publicKeyring);
-        //
-        // we just loop through the collection till we find a key suitable for encryption, in the real
-        // world you would probably want to be a bit smarter about this.
-        //
-        // oh yeah, great example telling me to not use the code!
-        Iterator keyRingIter = pgpPub.getKeyRings();
-        while (keyRingIter.hasNext()) {
-            PGPPublicKeyRing keyRing = (PGPPublicKeyRing) keyRingIter.next();
+    public static Optional<PGPPublicKey> readPublicSigningKey(byte[] publicKeyring) {
+        PGPPublicKeyRing keyRing = readPublicKeyRing(publicKeyring);
+        if (keyRing == null)
+            return Optional.empty();
 
-            Iterator keyIter = keyRing.getPublicKeys();
-            while (keyIter.hasNext()) {
-                PGPPublicKey key = (PGPPublicKey) keyIter.next();
-
-                if (key.isEncryptionKey()) {
-                    return key;
-                }
+        Iterator<?> keyIter = keyRing.getPublicKeys();
+        while (keyIter.hasNext()) {
+            PGPPublicKey key = (PGPPublicKey) keyIter.next();
+            if (key.isMasterKey() && key.isEncryptionKey()) {
+                return Optional.of(key);
             }
         }
 
-        throw new IllegalArgumentException("Can't find encryption key in key ring.");
+        LOGGER.warning("can't find signing key");
+        return Optional.empty();
     }
 
     private static void ensureKeyConverter() {

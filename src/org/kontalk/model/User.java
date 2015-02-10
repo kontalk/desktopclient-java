@@ -18,7 +18,6 @@
 
 package org.kontalk.model;
 
-import java.io.IOException;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -27,7 +26,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.util.encoders.Base64;
 import org.jivesoftware.smack.packet.Presence;
@@ -194,13 +192,12 @@ public final class User {
     }
 
     void setKey(byte[] rawKey) {
-        PGPPublicKey key;
-        try {
-            key = PGPUtils.readPublicKey(rawKey);
-        } catch (IOException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't parse public key", ex);
+        Optional<PGPPublicKey> optKey = PGPUtils.readPublicSigningKey(rawKey);
+        if (!optKey.isPresent()) {
+            LOGGER.log(Level.WARNING, "can't get public key");
             return;
         }
+        PGPPublicKey key = optKey.get();
 
         // if not set use id in key for username
         String id = PGPUtils.getUserId(key, null);
