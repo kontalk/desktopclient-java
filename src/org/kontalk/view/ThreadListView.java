@@ -69,7 +69,7 @@ class ThreadListView extends ListView implements Observer {
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;
 
-    ThreadListView(final View modelView, ThreadList threadList) {
+    ThreadListView(final View view, ThreadList threadList) {
         mThreadList = threadList;
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -113,7 +113,7 @@ class ThreadListView extends ListView implements Observer {
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                modelView.selectedThreadChanged(getSelectedThread());
+                view.selectedThreadChanged(getSelectedThread());
             }
         });
 
@@ -129,7 +129,8 @@ class ThreadListView extends ListView implements Observer {
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    ThreadListView.this.setSelectedIndex(locationToIndex(e.getPoint()));
+                    ThreadListView.this.setSelectedIndex(
+                            ThreadListView.this.locationToIndex(e.getPoint()));
                     ThreadListView.this.showPopupMenu(e);
                 }
             }

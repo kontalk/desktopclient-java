@@ -54,16 +54,16 @@ import org.kontalk.system.ControlCenter;
  */
 final class UserListView extends ListView implements Observer {
 
-    private final View mModelView;
+    private final View mView;
     private final UserList mUserList;
     private final UserPopupMenu mPopupMenu;
 
     private WebCustomTooltip mTip = null;
 
-    UserListView(final View modelView, UserList userList) {
+    UserListView(final View view, UserList userList) {
         super();
 
-        mModelView = modelView;
+        mView = view;
 
         mUserList = userList;
 
@@ -78,7 +78,7 @@ final class UserListView extends ListView implements Observer {
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
                 if (e.getClickCount() == 2) {
-                    mModelView.selectThreadByUser(getSelectedUser());
+                    mView.selectThreadByUser(getSelectedUser());
                 }
             }
             @Override
@@ -234,7 +234,7 @@ final class UserListView extends ListView implements Observer {
                 public void actionPerformed(ActionEvent event) {
                     Set<User> user = new HashSet<>();
                     user.add(mSelectedUserView.getUser());
-                    UserListView.this.mModelView.callCreateNewThread(user);
+                    UserListView.this.mView.callCreateNewThread(user);
                 }
             });
             this.add(newMenuItem);
@@ -255,7 +255,7 @@ final class UserListView extends ListView implements Observer {
             mBlockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mModelView.callSetUserBlocking(mSelectedUserView.getUser(), true);
+                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.getUser(), true);
                 }
             });
             this.add(mBlockMenuItem);
@@ -265,7 +265,7 @@ final class UserListView extends ListView implements Observer {
             mUnblockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mModelView.callSetUserBlocking(mSelectedUserView.getUser(), false);
+                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.getUser(), false);
                 }
             });
             this.add(mUnblockMenuItem);
@@ -294,7 +294,7 @@ final class UserListView extends ListView implements Observer {
                 mUnblockMenuItem.setVisible(false);
             }
 
-            ControlCenter.Status status = UserListView.this.mModelView.getCurrentStatus();
+            ControlCenter.Status status = UserListView.this.mView.getCurrentStatus();
             mBlockMenuItem.setEnabled(status == ControlCenter.Status.CONNECTED);
             mUnblockMenuItem.setEnabled(status == ControlCenter.Status.CONNECTED);
 

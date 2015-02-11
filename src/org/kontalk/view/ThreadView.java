@@ -88,15 +88,15 @@ final class ThreadView extends WebScrollPane {
     private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
     private final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
 
-    private final View mModelView;
+    private final View mModel;
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
     private int mCurrentThreadID = -1;
 
-    ThreadView(View modelView) {
+    ThreadView(View model) {
         super(null);
 
-        mModelView = modelView;
+        mModel = model;
 
         this.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -453,7 +453,7 @@ final class ThreadView extends WebScrollPane {
                                 LOGGER.warning("decrypted message not incoming message");
                                 return;
                             }
-                            ThreadView.this.mModelView.callDecrypt((InMessage) m);
+                            ThreadView.this.mModel.callDecrypt((InMessage) m);
                         }
                     });
                     popupMenu.add(decryptMenuItem);

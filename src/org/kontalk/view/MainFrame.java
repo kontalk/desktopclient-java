@@ -82,7 +82,7 @@ final class MainFrame extends WebFrame {
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
 
-    MainFrame(final View viewModel,
+    MainFrame(final View view,
             ListView userList,
             ListView threadList,
             Component threadView,
@@ -106,7 +106,7 @@ final class MainFrame extends WebFrame {
                         SystemTray.getSystemTray().getTrayIcons().length > 0)
                     MainFrame.this.toggleState();
                 else
-                    viewModel.callShutDown();
+                    view.callShutDown();
             }
         });
 
@@ -123,7 +123,7 @@ final class MainFrame extends WebFrame {
         mConnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                viewModel.callConnect();
+                view.callConnect();
             }
         });
         konNetMenu.add(mConnectMenuItem);
@@ -134,7 +134,7 @@ final class MainFrame extends WebFrame {
         mDisconnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                viewModel.callDisconnect();
+                view.callDisconnect();
             }
         });
         konNetMenu.add(mDisconnectMenuItem);
@@ -159,7 +159,7 @@ final class MainFrame extends WebFrame {
         exitMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                viewModel.callShutDown();
+                view.callShutDown();
             }
         });
         konNetMenu.add(exitMenuItem);
@@ -175,7 +175,7 @@ final class MainFrame extends WebFrame {
         conConfMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                viewModel.showConfig();
+                view.showConfig();
             }
         });
         optionsMenu.add(conConfMenuItem);

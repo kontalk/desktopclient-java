@@ -54,12 +54,12 @@ final class ConfigurationDialog extends WebDialog {
     private static enum ConfPage {MAIN, ACCOUNT};
 
     private final KonConf mConf = KonConf.getInstance();
-    private final View mViewModel;
+    private final View mView;
 
-    ConfigurationDialog(JFrame owner, final View viewModel) {
+    ConfigurationDialog(JFrame owner, final View view) {
         super(owner);
 
-        mViewModel = viewModel;
+        mView = view;
         this.setTitle("Preferences");
         this.setSize(550, 500);
         this.setResizable(false);
@@ -150,9 +150,9 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(KonConf.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
             mConf.setProperty(KonConf.MAIN_TRAY, mTrayBox.isSelected());
             mConf.setProperty(KonConf.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
-            mViewModel.setTray();
+            mView.setTray();
             mConf.setProperty(KonConf.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
-            mViewModel.setHotkeys();
+            mView.setHotkeys();
         }
     }
 
@@ -198,7 +198,7 @@ final class ConfigurationDialog extends WebDialog {
             importButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    mViewModel.showImportWizard();
+                    mView.showImportWizard();
                     AccountPanel.this.updateFingerprint();
                 }
             });
@@ -213,7 +213,7 @@ final class ConfigurationDialog extends WebDialog {
                 public void actionPerformed(ActionEvent e) {
                     AccountPanel.this.saveConfiguration();
                     ConfigurationDialog.this.dispose();
-                    mViewModel.callConnect();
+                    mView.callConnect();
                 }
             });
 

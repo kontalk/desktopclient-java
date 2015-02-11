@@ -44,7 +44,7 @@ import static org.kontalk.view.View.getIcon;
  * Inform user about events.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class Notifier implements Observer{
+final class Notifier implements Observer {
 
     private final static Icon NOTIFICATION_ICON = getIcon("ic_msg_pending.png");
 
