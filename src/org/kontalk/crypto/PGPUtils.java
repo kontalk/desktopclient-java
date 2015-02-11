@@ -45,6 +45,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBu
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyConverter;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
+import org.kontalk.util.EncodingUtils;
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
 public final class PGPUtils {
@@ -81,6 +82,22 @@ public final class PGPUtils {
         }
     }
 
+    /**
+     * A users public key for encryption and signing together with UID and
+     * fingerprint (from signing key).
+     */
+    public static final class PGPCoderKey {
+        PGPPublicKey encryptKey;
+        public String userID;
+        public String fingerprint;
+
+        public PGPCoderKey(PGPPublicKey encryptKey, String userID, String fingerprint) {
+            this.encryptKey = encryptKey;
+            this.userID = userID;
+            this.fingerprint = fingerprint;
+        }
+    }
+
     public static void registerProvider() {
         // register bouncy castle provider
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
@@ -93,48 +110,43 @@ public final class PGPUtils {
     }
 
     /**
-     * Return first public key ring read from key data (or null on error).
+     * Read a public key from key ring data.
      */
-    private static PGPPublicKeyRing readPublicKeyRing(byte[] publicKeyring) {
+    public static Optional<PGPCoderKey> readPublicKey(byte[] publicKeyring) {
         PGPPublicKeyRingCollection pgpPub;
         try {
             pgpPub = new PGPPublicKeyRingCollection(publicKeyring);
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't read public key ring", ex);
-            return null;
+            return Optional.empty();
         }
         Iterator<?> keyRingIter = pgpPub.getKeyRings();
         if (!keyRingIter.hasNext()) {
             LOGGER.warning("no key ring in key ring collection");
-            return null;
-        }
-        return (PGPPublicKeyRing) keyRingIter.next();
-    }
-
-    /**
-     * Read the public key signing key from public key data.
-     * The signing key is the master key!
-     *
-     * @param publicKeyring data containing the public key data
-     * @return the first public key found.
-     * @throws IOException
-     * @throws PGPException
-     */
-    public static Optional<PGPPublicKey> readPublicSigningKey(byte[] publicKeyring) {
-        PGPPublicKeyRing keyRing = readPublicKeyRing(publicKeyring);
-        if (keyRing == null)
             return Optional.empty();
-
+        }
+        PGPPublicKey encryptKey = null;
+        String uid = null;
+        String fp = null;
+        PGPPublicKeyRing keyRing = (PGPPublicKeyRing) keyRingIter.next();
         Iterator<?> keyIter = keyRing.getPublicKeys();
         while (keyIter.hasNext()) {
             PGPPublicKey key = (PGPPublicKey) keyIter.next();
-            if (key.isMasterKey() && key.isEncryptionKey()) {
-                return Optional.of(key);
+            if (key.isMasterKey()) {
+                fp = EncodingUtils.bytesToHex(key.getFingerprint());
+                Iterator<?> uidIt = key.getUserIDs();
+                if (uidIt.hasNext())
+                    uid = (String) uidIt.next();
+            }
+            if (!key.isMasterKey() && key.isEncryptionKey()) {
+                encryptKey = key;
             }
         }
-
-        LOGGER.warning("can't find signing key");
-        return Optional.empty();
+        if (encryptKey == null || uid == null || fp == null) {
+            LOGGER.warning("can't find public keys in key ring");
+            return Optional.empty();
+        }
+        return Optional.of(new PGPCoderKey(encryptKey, uid, fp));
     }
 
     private static void ensureKeyConverter() {

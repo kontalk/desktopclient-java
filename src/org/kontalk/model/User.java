@@ -26,13 +26,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.util.encoders.Base64;
 import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
 import org.kontalk.crypto.PGPUtils;
-import org.kontalk.util.EncodingUtils;
+import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 
 /**
  *
@@ -192,15 +191,15 @@ public final class User {
     }
 
     void setKey(byte[] rawKey) {
-        Optional<PGPPublicKey> optKey = PGPUtils.readPublicSigningKey(rawKey);
+        Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
         if (!optKey.isPresent()) {
             LOGGER.log(Level.WARNING, "can't get public key");
             return;
         }
-        PGPPublicKey key = optKey.get();
+        PGPCoderKey key = optKey.get();
 
         // if not set use id in key for username
-        String id = PGPUtils.getUserId(key, null);
+        String id = key.userID;
         if (id != null && id.contains(" (NO COMMENT) ")) {
             String userName = id.substring(0, id.indexOf(" (NO COMMENT) "));
             if (!userName.isEmpty() && mName.isEmpty())
@@ -211,7 +210,7 @@ public final class User {
             LOGGER.info("overwriting public key, user id: "+mID);
 
         mKey = Base64.toBase64String(rawKey);
-        mFingerprint = EncodingUtils.bytesToHex(key.getFingerprint());
+        mFingerprint = key.fingerprint;
         this.save();
         UserList.getInstance().changed();
     }

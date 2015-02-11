@@ -136,14 +136,13 @@ public final class PersonalKey {
         Iterator<PGPSecretKey> skeys = secRing.getSecretKeys();
         while (skeys.hasNext()) {
             PGPSecretKey key = skeys.next();
-            PGPSecretKey sec = secRing.getSecretKey();
             if (key.isMasterKey()) {
                 // master (signing) key
-                signPriv = sec.extractPrivateKey(decryptor);
+                signPriv = key.extractPrivateKey(decryptor);
             }
             else {
                 // sub (encryption) key
-                encPriv = sec.extractPrivateKey(decryptor);
+                encPriv = key.extractPrivateKey(decryptor);
             }
         }
 

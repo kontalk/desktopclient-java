@@ -44,6 +44,7 @@ import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
 import org.bouncycastle.openpgp.PGPEncryptedDataList;
 import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPLiteralData;
 import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
 import org.bouncycastle.openpgp.PGPObjectFactory;
@@ -66,6 +67,7 @@ import org.jivesoftware.smack.util.stringencoder.Base64;
 import org.kontalk.system.Downloader;
 import org.kontalk.misc.KonException;
 import org.kontalk.client.KonMessageListener;
+import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.MessageContent;
@@ -134,7 +136,7 @@ public final class Coder {
 
     private static class KeysResult {
         PersonalKey myKey = null;
-        PGPPublicKey otherKey = null;
+        PGPCoderKey otherKey = null;
         EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
     }
 
@@ -177,7 +179,7 @@ public final class Coder {
 
         // secure the message against the most basic attacks using Message/CPIM
         String from = keys.myKey.getUserId(null);
-        String to = PGPUtils.getUserId(keys.otherKey, null) + "; ";
+        String to = keys.otherKey.userID + "; ";
         String mime = "text/plain";
         // TODO encrypt more possible content
         String text = message.getContent().getPlainText();
@@ -192,7 +194,7 @@ public final class Coder {
         // add public key recipients
         PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
         //for (PGPPublicKey rcpt : mRecipients)
-        encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(keys.otherKey));
+        encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(keys.otherKey.encryptKey));
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayInputStream in = new ByteArrayInputStream(plainText);
@@ -205,10 +207,11 @@ public final class Coder {
             OutputStream compressedOut = compGen.open(encryptedOut, new byte[BUFFER_SIZE]);
 
             // setup signature generator
-            PGPSignatureGenerator sigGen = new PGPSignatureGenerator
-                    (new BcPGPContentSignerBuilder(keys.myKey.getSignKeyPair()
-                        .getPublicKey().getAlgorithm(), HashAlgorithmTags.SHA1));
-            sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getSignKeyPair().getPrivateKey());
+            PGPKeyPair encryptKeyPair = keys.myKey.getEncryptKeyPair();
+            int algo = encryptKeyPair.getPublicKey().getAlgorithm();
+            PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
+                    new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA1));
+            sigGen.init(PGPSignature.BINARY_DOCUMENT, encryptKeyPair.getPrivateKey());
 
             PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
             spGen.setSignerUserID(false, keys.myKey.getUserId(null));
@@ -292,7 +295,9 @@ public final class Coder {
         }
         byte[] encryptedData = Base64.decode(encryptedContent);
         InputStream encryptedStream = new ByteArrayInputStream(encryptedData);
-        DecryptionResult decResult = decryptAndVerify(encryptedStream, keys.myKey, keys.otherKey);
+        DecryptionResult decResult = decryptAndVerify(encryptedStream,
+                keys.myKey,
+                keys.otherKey.encryptKey);
         EnumSet<Coder.Error> allErrors = decResult.errors;
         message.setSigning(decResult.signing);
 
@@ -301,7 +306,7 @@ public final class Coder {
         if (decResult.decryptedStream.isPresent()) {
             // parse encrypted CPIM content
             String myUID = keys.myKey.getUserId(null);
-            String senderUID = PGPUtils.getUserId(keys.otherKey, null);
+            String senderUID = keys.otherKey.userID;
             String encrText = decResult.decryptedStream.get().toString();
             parsingResult = parseCPIM(encrText, myUID, senderUID);
             allErrors.addAll(parsingResult.errors);
@@ -366,7 +371,7 @@ public final class Coder {
         }
 
         // decrypt
-        DecryptionResult decResult = decryptAndVerify(encryptedStream, keys.myKey, keys.otherKey);
+        DecryptionResult decResult = decryptAndVerify(encryptedStream, keys.myKey, keys.otherKey.encryptKey);
         message.setAttachmentErrors(keys.errors);
         message.setAttachmentSigning(decResult.signing);
 
@@ -414,14 +419,15 @@ public final class Coder {
             result.errors.add(Error.KEY_UNAVAILABLE);
             return result;
         }
-        // TODO signing key used for encryption
-        Optional<PGPPublicKey> senderKey = PGPUtils.readPublicSigningKey(user.getKey());
-        if (!senderKey.isPresent()) {
+
+        Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(user.getKey());
+        if (!optKey.isPresent()) {
             LOGGER.warning("can't get sender key");
             result.errors.add(Error.INVALID_KEY);
             return result;
         }
-        result.otherKey = senderKey.get();
+        result.otherKey = optKey.get();
+
         return result;
     }
 
@@ -455,17 +461,17 @@ public final class Coder {
             Iterator<?> it = encDataList.getEncryptedDataObjects();
             PGPPrivateKey sKey = null;
             PGPPublicKeyEncryptedData pbe = null;
-            long ourKeyID = myKey.getEncryptKeyPair().getPrivateKey().getKeyID();
+            long myKeyID = myKey.getEncryptKeyPair().getPrivateKey().getKeyID();
             while (sKey == null && it.hasNext()) {
                 Object i = it.next();
                 if (!(i instanceof PGPPublicKeyEncryptedData))
                     continue;
                 pbe = (PGPPublicKeyEncryptedData) i;
-                if (pbe.getKeyID() == ourKeyID)
+                if (pbe.getKeyID() == myKeyID)
                     sKey = myKey.getEncryptKeyPair().getPrivateKey();
             }
             if (sKey == null || pbe == null) {
-                LOGGER.warning("private key for messsage not found");
+                LOGGER.warning("private key for message not found");
                 result.errors.add(Error.INVALID_PRIVATE_KEY);
                 return result;
             }
