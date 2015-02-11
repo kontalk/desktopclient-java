@@ -263,15 +263,15 @@ final class ThreadView extends WebScrollPane {
             this.setRowHeight(row, height);
         }
 
-    private void showPopupMenu(MouseEvent e) {
-        int row = this.rowAtPoint(e.getPoint());
-        if (row < 0)
-            return;
+        private void showPopupMenu(MouseEvent e) {
+            int row = this.rowAtPoint(e.getPoint());
+            if (row < 0)
+                return;
 
-        MessageView messageView = (MessageView) mTableModel.getValueAt(row, 0);
-        WebPopupMenu popupMenu = messageView.getPopupMenu();
-        popupMenu.show(this, e.getX(), e.getY());
-    }
+            MessageView messageView = (MessageView) mTableModel.getValueAt(row, 0);
+            WebPopupMenu popupMenu = messageView.getPopupMenu();
+            popupMenu.show(this, e.getX(), e.getY());
+        }
 
         /**
          * View for one message.
