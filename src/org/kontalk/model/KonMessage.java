@@ -100,7 +100,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
-    protected int mID;
+    private int mID;
     private final KonThread mThread;
     private final Direction mDir;
     private final User mUser;
@@ -137,6 +137,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
                 mContent == null ||
                 mCoderStatus == null)
             throw new IllegalStateException();
+
+        if (mID < 0)
+            this.save();
     }
 
     /**
@@ -259,7 +262,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         int id = db.execInsert(TABLE, values);
         if (id <= 0) {
-            LOGGER.log(Level.WARNING, "db, couldn't insert message");
+            LOGGER.log(Level.WARNING, "db, could not insert message");
             mID = -2;
             return;
         }
@@ -269,7 +272,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     /**
      * Save (or insert) this message to/into the database.
      */
-    public void save() {
+    public final void save() {
         if (mID < 0) {
             this.insert();
             return;

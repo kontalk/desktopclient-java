@@ -33,7 +33,6 @@ public final class OutMessage extends KonMessage {
 
     OutMessage(KonMessage.Builder builder) {
         super(builder);
-        this.save();
     }
 
     public void setStatus(Status status) {
