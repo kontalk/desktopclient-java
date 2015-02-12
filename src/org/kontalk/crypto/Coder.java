@@ -178,7 +178,7 @@ public final class Coder {
         }
 
         // secure the message against the most basic attacks using Message/CPIM
-        String from = keys.myKey.getUserId(null);
+        String from = keys.myKey.getUserId();
         String to = keys.otherKey.userID + "; ";
         String mime = "text/plain";
         // TODO encrypt more possible content
@@ -214,7 +214,7 @@ public final class Coder {
             sigGen.init(PGPSignature.BINARY_DOCUMENT, encryptKeyPair.getPrivateKey());
 
             PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
-            spGen.setSignerUserID(false, keys.myKey.getUserId(null));
+            spGen.setSignerUserID(false, keys.myKey.getUserId());
             sigGen.setUnhashedSubpackets(spGen.generate());
 
             sigGen.generateOnePassVersion(false).encode(compressedOut);
@@ -305,7 +305,7 @@ public final class Coder {
         ParsingResult parsingResult = null;
         if (decResult.decryptedStream.isPresent()) {
             // parse encrypted CPIM content
-            String myUID = keys.myKey.getUserId(null);
+            String myUID = keys.myKey.getUserId();
             String senderUID = keys.otherKey.userID;
             String encrText = decResult.decryptedStream.get().toString();
             parsingResult = parseCPIM(encrText, myUID, senderUID);

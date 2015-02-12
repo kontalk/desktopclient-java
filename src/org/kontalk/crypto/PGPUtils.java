@@ -103,12 +103,6 @@ public final class PGPUtils {
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
     }
 
-    /** Returns the first user ID on the key that matches the given hostname. */
-    public static String getUserId(PGPPublicKey key, String host) {
-        // TODO ehm :)
-        return (String) key.getUserIDs().next();
-    }
-
     /**
      * Read a public key from key ring data.
      */

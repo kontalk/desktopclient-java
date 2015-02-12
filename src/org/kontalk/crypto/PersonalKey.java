@@ -86,8 +86,12 @@ public final class PersonalKey {
     }
 
     /** Returns the first user ID on the key that matches the given network. */
-    public String getUserId(String network) {
-        return PGPUtils.getUserId(mPair.signKey.getPublicKey(), network);
+    public String getUserId() {
+        PGPPublicKey key = mPair.signKey.getPublicKey();
+        Iterator<?> uidIt = key.getUserIDs();
+        if (!uidIt.hasNext())
+            throw new IllegalStateException("no UID in personal key");
+        return (String) uidIt.next();
     }
 
     public String getFingerprint() {
