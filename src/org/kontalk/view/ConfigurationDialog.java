@@ -102,10 +102,10 @@ final class ConfigurationDialog extends WebDialog {
 
     private class MainPanel extends WebPanel {
 
-        WebCheckBox mConnectStartupBox;
-        WebCheckBox mTrayBox;
-        WebCheckBox mCloseTrayBox;
-        WebCheckBox mEnterSendsBox;
+        private final WebCheckBox mConnectStartupBox;
+        private final WebCheckBox mTrayBox;
+        private final WebCheckBox mCloseTrayBox;
+        private final WebCheckBox mEnterSendsBox;
 
         public MainPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -115,7 +115,7 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             mConnectStartupBox = new WebCheckBox("Connect on startup");
-            mConnectStartupBox.setSelected(false);
+            mConnectStartupBox.setAnimated(false);
             mConnectStartupBox.setSelected(mConf.getBoolean(KonConf.MAIN_CONNECT_STARTUP));
             groupPanel.add(mConnectStartupBox);
 
@@ -160,6 +160,7 @@ final class ConfigurationDialog extends WebDialog {
 
         private final WebTextField mServerField;
         private final WebFormattedTextField mPortField;
+        private final WebCheckBox mDisableCertBox;
         private final WebLabel mFingerprintLabel;
 
         public AccountPanel() {
@@ -188,6 +189,12 @@ final class ConfigurationDialog extends WebDialog {
             serverPanel.add(new GroupPanel(new WebLabel("  Port:"), mPortField),
                     BorderLayout.EAST);
             groupPanel.add(serverPanel);
+            mDisableCertBox = new WebCheckBox("Disable certificate validation");
+            mDisableCertBox.setAnimated(false);
+            mDisableCertBox.setSelected(!mConf.getBoolean(KonConf.SERV_CERT_VALIDATION));
+            String disableCertText = "Disable SSL certificate server validation";
+            TooltipManager.addTooltip(mDisableCertBox, disableCertText);
+            groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
             groupPanel.add(new WebSeparator(true, true));
             mFingerprintLabel = new WebLabel();
@@ -239,13 +246,14 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(KonConf.SERV_HOST, mServerField.getText());
             int port = Integer.parseInt(mPortField.getText());
             mConf.setProperty(KonConf.SERV_PORT, port);
+            mConf.setProperty(KonConf.SERV_CERT_VALIDATION, !mDisableCertBox.isSelected());
         }
 
     }
 
     private class PrivacyPanel extends WebPanel {
 
-        WebCheckBox mChatStateBox;
+        private final WebCheckBox mChatStateBox;
 
         public PrivacyPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);

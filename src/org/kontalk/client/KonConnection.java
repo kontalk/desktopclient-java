@@ -56,17 +56,16 @@ public final class KonConnection extends XMPPTCPConnection {
     private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
     private final static String RESSOURCE = "Kontalk_Desktop";
-    private final static boolean ACCEPT_ANY_CERTIFICATE = false;
 
     public KonConnection(EndpointServer server,
             PrivateKey privateKey,
-            X509Certificate bridgeCert) {
-        super(buildConfiguration(
-                RESSOURCE,
+            X509Certificate bridgeCert,
+            boolean validateCertificate) {
+        super(buildConfiguration(RESSOURCE,
                 server,
                 privateKey,
                 bridgeCert,
-                ACCEPT_ANY_CERTIFICATE)
+                validateCertificate)
         );
 
         // enable SM without resumption (XEP-0198)
@@ -79,7 +78,7 @@ public final class KonConnection extends XMPPTCPConnection {
             EndpointServer server,
             PrivateKey privateKey,
             X509Certificate bridgeCert,
-            boolean acceptAnyCertificate) {
+            boolean validateCertificate) {
         XMPPTCPConnectionConfiguration.XMPPTCPConnectionConfigurationBuilder builder =
             XMPPTCPConnectionConfiguration.builder();
 
@@ -132,15 +131,16 @@ public final class KonConnection extends XMPPTCPConnection {
 
             // trust managers
             TrustManager[] tm;
-            if (acceptAnyCertificate) {
-                tm = new TrustManager[] { TrustUtils.getBlindTrustManager() };
-            } else {
+            if (validateCertificate) {
                 // builtin keystore
                 TrustManagerFactory tmFactory = TrustManagerFactory
                     .getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 tmFactory.init(TrustUtils.getKeyStore());
 
                 tm = tmFactory.getTrustManagers();
+            } else {
+                LOGGER.warning("disabling SSL certificate validation");
+                tm = new TrustManager[] { TrustUtils.getBlindTrustManager() };
             }
             SSLContext ctx = SSLContext.getInstance("TLS");
             ctx.init(km, tm, null);

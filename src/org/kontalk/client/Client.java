@@ -92,12 +92,14 @@ public final class Client implements PacketListener, Runnable {
         String host = config.getString(KonConf.SERV_HOST);
         int port = config.getInt(KonConf.SERV_PORT);
         EndpointServer server = new EndpointServer(network, host, port);
+        boolean validateCertificate = config.getBoolean(KonConf.SERV_CERT_VALIDATION);
 
         // create connection
         try {
             mConn = new KonConnection(server,
                     key.getBridgePrivateKey(),
-                    key.getBridgeCertificate());
+                    key.getBridgeCertificate(),
+                    validateCertificate);
         } catch (PGPException ex) {
             LOGGER.log(Level.WARNING, "can't create connection", ex);
             mControl.setStatus(ControlCenter.Status.FAILED);

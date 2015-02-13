@@ -43,6 +43,7 @@ public final class KonConf extends PropertiesConfiguration {
     //public final static String SERV_NET = "server.network";
     public final static String SERV_HOST = "server.host";
     public final static String SERV_PORT = "server.port";
+    public final static String SERV_CERT_VALIDATION = "server.cert_validation";
     public final static String ACC_PASS = "account.passphrase";
     public final static String VIEW_FRAME_WIDTH = "view.frame.width";
     public final static String VIEW_FRAME_HEIGHT = "view.frame.height";
@@ -80,6 +81,7 @@ public final class KonConf extends PropertiesConfiguration {
         //map.put(SERV_NET, DEFAULT_SERV_NET);
         map.put(SERV_HOST, DEFAULT_SERV_HOST);
         map.put(SERV_PORT, DEFAULT_SERV_PORT);
+        map.put(SERV_CERT_VALIDATION, true);
         map.put(ACC_PASS, "");
         map.put(VIEW_FRAME_WIDTH, 600);
         map.put(VIEW_FRAME_HEIGHT, 650);
