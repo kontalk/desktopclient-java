@@ -134,10 +134,8 @@ final class ThreadView extends WebScrollPane {
         this.setViewportView(table);
 
         if (table.getRowCount() > 0 && isNew) {
-            // scroll down
-            // TODO does not work right (again), probably bcause of row height
-            // adjustment
-            table.scrollToRow(table.getRowCount()-1);
+            // trigger scrolling down
+            table.mScrollDownOnResize = true;
         }
 
         mCurrentThreadID = thread.getID();
@@ -161,6 +159,7 @@ final class ThreadView extends WebScrollPane {
     private class MessageViewList extends TableView implements Observer {
 
         private final KonThread mThread;
+        private boolean mScrollDownOnResize = false;
 
         MessageViewList(KonThread thread) {
             super();
@@ -178,8 +177,17 @@ final class ThreadView extends WebScrollPane {
                     // changed and each row height must be adjusted
                     // TODO efficient?
                     MessageViewList table = MessageViewList.this;
+
                     for (int row = 0; row < table.getRowCount(); row++) {
                         MessageViewList.this.setHeight(row);
+                    }
+
+                    // another issue: scrolling to a new component in the table
+                    // is only possible after the component was rendered (which
+                    // is now)
+                    if (mScrollDownOnResize) {
+                        table.scrollToRow(table.getRowCount() - 1);
+                        mScrollDownOnResize = false;
                     }
                 }
             });
@@ -231,8 +239,8 @@ final class ThreadView extends WebScrollPane {
                         // always inserted at the end, timestamp of message is
                         // ignored. Let's call it a feature.
                         this.addMessage(message);
-                        // scroll to new message
-                        this.scrollToRow(this.getRowCount()-1);
+                        // trigger scrolling
+                        mScrollDownOnResize = true;
                     }
                 }
             }
