@@ -63,6 +63,7 @@ import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
+import org.kontalk.Kontalk;
 import org.kontalk.system.KonConf;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
@@ -84,7 +85,6 @@ import org.kontalk.system.MessageCenter;
 public final class View implements Observer {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
-    public final static String RES_PATH = "org/kontalk/res/";
     final static Color BLUE = new Color(130, 170, 240);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
 
@@ -443,7 +443,7 @@ public final class View implements Observer {
     }
 
     static Image getImage(String fileName) {
-        URL imageUrl = ClassLoader.getSystemResource(RES_PATH + fileName);
+        URL imageUrl = ClassLoader.getSystemResource(Kontalk.RES_PATH + fileName);
         if (imageUrl == null) {
             LOGGER.warning("can't find icon image resource");
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);

@@ -23,6 +23,7 @@ import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.Certificate;
@@ -35,7 +36,6 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
@@ -45,6 +45,7 @@ import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
+import org.kontalk.util.TrustUtils;
 
 
 /**
@@ -55,18 +56,18 @@ public final class KonConnection extends XMPPTCPConnection {
     private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
     private final static String RESSOURCE = "Kontalk_Desktop";
-    // TODO
-    private final static boolean ACCEPT_ANY_CERTIFICATE = true;
+    private final static boolean ACCEPT_ANY_CERTIFICATE = false;
 
     public KonConnection(EndpointServer server,
             PrivateKey privateKey,
             X509Certificate bridgeCert) {
         super(buildConfiguration(
-        RESSOURCE,
-        server,
-        privateKey,
-        bridgeCert,
-        ACCEPT_ANY_CERTIFICATE));
+                RESSOURCE,
+                server,
+                privateKey,
+                bridgeCert,
+                ACCEPT_ANY_CERTIFICATE)
+        );
 
         // enable SM without resumption (XEP-0198)
         this.setUseStreamManagement(true);
@@ -112,8 +113,6 @@ public final class KonConnection extends XMPPTCPConnection {
 
         // setup SSL
         try {
-            SSLContext ctx = SSLContext.getInstance("TLS");
-
             // in-memory keystore
             KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
             keystore.load(null, null);
@@ -134,32 +133,16 @@ public final class KonConnection extends XMPPTCPConnection {
             // trust managers
             TrustManager[] tm;
             if (acceptAnyCertificate) {
-                tm = new TrustManager[] {
-                    new X509TrustManager() {
-                        @Override
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return null;
-                        }
-                        @Override
-                        public void checkServerTrusted(X509Certificate[] chain, String authType)
-                            throws CertificateException {
-                        }
-                        @Override
-                        public void checkClientTrusted(X509Certificate[] chain, String authType)
-                            throws CertificateException {
-                        }
-                    }
-                };
+                tm = new TrustManager[] { TrustUtils.getBlindTrustManager() };
             } else {
                 // builtin keystore
                 TrustManagerFactory tmFactory = TrustManagerFactory
                     .getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
-                tmFactory.init(ks);
+                tmFactory.init(TrustUtils.getKeyStore());
 
                 tm = tmFactory.getTrustManagers();
             }
-
+            SSLContext ctx = SSLContext.getInstance("TLS");
             ctx.init(km, tm, null);
             builder.setCustomSSLContext(ctx);
             // Note: SASL EXTERNAL is already enabled in Smack
@@ -168,7 +151,8 @@ public final class KonConnection extends XMPPTCPConnection {
                 IOException |
                 CertificateException |
                 UnrecoverableKeyException |
-                KeyManagementException ex) {
+                KeyManagementException |
+                NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't setup SSL connection", ex);
         }
 
