@@ -249,10 +249,6 @@ class ThreadListView extends ListView implements Observer {
         @Override
         public void update(Observable o, Object arg) {
             this.update();
-            // need to repaint parent to see changes
-            ThreadListView.this.repaint();
-            // TODO maybe this is better
-            //ThreadListView.this.mListModel.update(this);
         }
 
         private void update() {
