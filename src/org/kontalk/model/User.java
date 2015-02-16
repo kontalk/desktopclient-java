@@ -34,6 +34,8 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 
 /**
+ * A contact in the Kontalk/XMPP-Jabber network.
+ * Change notifications are send to the user list.
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
@@ -126,6 +128,7 @@ public final class User {
     public void setJID(String jid) {
         mJID = XmppStringUtils.parseBareJid(jid);
         this.save();
+        UserList.getInstance().changed();
     }
 
     public int getID() {
@@ -137,6 +140,9 @@ public final class User {
     }
 
     public void setName(String name) {
+        if (name.equals(mName))
+            return;
+
         mName = name;
         this.save();
         UserList.getInstance().changed();
@@ -156,7 +162,11 @@ public final class User {
     }
 
     public void setEncrypted(boolean encrypted) {
+        if (encrypted == mEncrypted)
+            return;
+
         mEncrypted = encrypted;
+        this.save();
     }
 
     public Available getAvailable() {
@@ -167,14 +177,14 @@ public final class User {
         if (type == Presence.Type.available) {
             mAvailable = Available.YES;
             mLastSeen = Optional.of(new Date());
-        }
-        if (type == Presence.Type.unavailable) {
+        } else if (type == Presence.Type.unavailable) {
             mAvailable = Available.NO;
         }
+        UserList.getInstance().changed();
+
         if (status != null && !status.isEmpty()) {
             mStatus = status;
         }
-        UserList.getInstance().changed();
     }
 
 
@@ -207,12 +217,11 @@ public final class User {
         }
 
         if (!mKey.isEmpty())
-            LOGGER.info("overwriting public key, user id: "+mID);
+            LOGGER.info("overwriting public key for user: "+this);
 
         mKey = Base64.toBase64String(rawKey);
         mFingerprint = key.fingerprint;
         this.save();
-        UserList.getInstance().changed();
     }
 
     public boolean isBlocked() {

@@ -386,7 +386,7 @@ final class UserListView extends ListView implements Observer {
 
         private boolean isConfirmed() {
             if (!mJIDField.getText().equals(mUserView.getUser().getJID())) {
-                String warningText = "Changing the JID is only useful in very "
+                String warningText = "Changing the JID is only useful in very"
                         + " rare cases. Are you sure?";
                 int selectedOption = WebOptionPane.showConfirmDialog(this,
                         warningText,
