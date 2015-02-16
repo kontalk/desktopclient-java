@@ -19,16 +19,12 @@
 package org.kontalk.client;
 
 import java.util.Collection;
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.Roster;
 import org.jivesoftware.smack.RosterEntry;
 import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.RosterPacket;
-import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
 
 /**
@@ -56,8 +52,6 @@ final class KonRosterListener implements RosterListener {
         if (mRoster == null)
             return;
 
-        UserList userList = UserList.getInstance();
-
         for (String jid: addresses) {
             RosterEntry entry = mRoster.getEntry(jid);
             if (entry == null) {
@@ -77,24 +71,7 @@ final class KonRosterListener implements RosterListener {
                 }
             }
 
-            if (userList.contains(entry.getUser()))
-                continue;
-
-            LOGGER.info("adding user from roster: "+entry.toString());
-
-            String name = entry.getName() == null ? "" : entry.getName();
-            if (name.equals(XmppStringUtils.parseLocalpart(entry.getUser())) &&
-                    name.length() == 40) {
-                // this must be the hash string, don't use it as name
-                name = "";
-            }
-            Optional<User> optNewUser = userList.add(entry.getUser(), name);
-            if (!optNewUser.isPresent()) {
-                LOGGER.warning("can't add user");
-                return;
-            }
-            // send request for public key
-            mClient.sendPublicKeyRequest(optNewUser.get().getJID());
+            mControl.addUser(entry.getUser(), entry.getName());
         }
     }
 

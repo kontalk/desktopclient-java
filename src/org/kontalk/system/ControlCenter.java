@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.PersonalKey;
@@ -166,6 +167,28 @@ public final class ControlCenter extends Observable {
     public void handleSecurityErrors(KonMessage message) {
         this.setChanged();
         this.notifyObservers(new ViewEvent.SecurityError(message));
+    }
+
+    public void addUser(String jid, String rosterName) {
+            UserList userList = UserList.getInstance();
+            if (userList.contains(jid))
+                return;
+
+            LOGGER.info("adding user from roster, jid: "+jid);
+
+            String name = rosterName == null ? "" : rosterName;
+            if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
+                    name.length() == 40) {
+                // this must be the hash string, don't use it as name
+                name = "";
+            }
+            Optional<User> optNewUser = userList.add(jid, name);
+            if (!optNewUser.isPresent()) {
+                LOGGER.warning("can't add user");
+                return;
+            }
+            // send request for public key
+            mClient.sendPublicKeyRequest(optNewUser.get().getJID());
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
