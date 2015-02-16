@@ -426,7 +426,7 @@ public final class View implements Observer {
     }
 
     private void showThread(KonThread thread) {
-        mThreadListView.selectThread(thread.getID());
+        mThreadListView.selectThread(thread);
         mMainFrame.selectTab(MainFrame.Tab.THREADS);
     }
 

@@ -135,14 +135,15 @@ class ThreadListView extends ListView implements Observer {
                 }
             }
         });
+
         mThreadList.addObserver(this);
     }
 
-    void selectThread(int threadID) {
+    void selectThread(KonThread thread) {
         Enumeration<ListItem> e = mListModel.elements();
         for(Enumeration<ListItem> threads = e; e.hasMoreElements();) {
             ThreadItemView threadView = (ThreadItemView) threads.nextElement();
-            if (threadView.getThread().getID() == threadID)
+            if (threadView.getThread() == thread)
                 this.setSelectedValue(threadView);
         }
     }
@@ -159,14 +160,14 @@ class ThreadListView extends ListView implements Observer {
     public void update(Observable o, Object arg) {
         // TODO, performance
         KonThread currentThread = this.getSelectedThread();
-        int threadID = currentThread != null ? currentThread.getID() : -1;
         mListModel.clear();
         for (KonThread thread: mThreadList.getThreads()) {
             ThreadItemView newThreadView = new ThreadItemView(thread);
             mListModel.addElement(newThreadView);
         }
-        if (threadID >= 0)
-            this.selectThread(threadID);
+        // reselect thread
+        if (currentThread != null)
+            this.selectThread(currentThread);
     }
 
     void selectLastThread() {
