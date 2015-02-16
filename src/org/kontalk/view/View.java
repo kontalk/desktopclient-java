@@ -434,7 +434,6 @@ public final class View implements Observer {
         if (thread == null)
             return;
 
-        thread.setRead();
         mThreadView.showThread(thread);
     }
 

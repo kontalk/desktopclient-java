@@ -135,6 +135,7 @@ final class ThreadView extends WebScrollPane {
         }
 
         mCurrentThread = thread;
+        thread.setRead();
     }
 
     void setColor(Color color) {
@@ -242,8 +243,6 @@ final class ThreadView extends WebScrollPane {
             }
 
             if (ThreadView.this.mCurrentThread == mThread) {
-                // we are seeing this thread right now, avoid loop
-                if (!mThread.isRead())
                     mThread.setRead();
             }
         }
