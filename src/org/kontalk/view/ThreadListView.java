@@ -352,6 +352,7 @@ class ThreadListView extends ListView implements Observer {
                     EditThreadDialog.this.dispose();
                 }
             });
+            this.getRootPane().setDefaultButton(saveButton);
 
             GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
             buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
