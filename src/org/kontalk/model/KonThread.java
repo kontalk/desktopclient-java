@@ -128,6 +128,9 @@ public final class KonThread extends Observable {
     }
 
     public void setUser(Set<User> user) {
+        if (user.equals(mUserMap.keySet()))
+            return;
+
         this.setUserMap(user);
         this.changed();
     }
@@ -137,6 +140,9 @@ public final class KonThread extends Observable {
     }
 
     public void setSubject(String subject) {
+        if (subject.equals(mSubject))
+            return;
+
         mSubject = subject;
         this.save();
         this.changed();
@@ -269,6 +275,7 @@ public final class KonThread extends Observable {
     }
 
     private void setUserMap(Set<User> user){
+        // TODO only apply differences to preserve chat states
         mUserMap = new HashMap<>();
         for (User oneUser : user)
             mUserMap.put(oneUser, new KonChatState());
