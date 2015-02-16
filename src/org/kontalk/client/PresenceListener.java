@@ -29,6 +29,7 @@ import org.jivesoftware.smack.provider.ProviderManager;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
  * Listen for presence packets. They also may include a custom Kontalk extension
@@ -40,10 +41,12 @@ public class PresenceListener implements PacketListener {
 
     private final Client mClient;
     private final Roster mRoster;
+    private final ControlCenter mControl;
 
-    public PresenceListener(Client client, Roster roster) {
+    public PresenceListener(Client client, Roster roster, ControlCenter control) {
         mClient = client;
         mRoster = roster;
+        mControl = control;
 
         ProviderManager.addExtensionProvider(
                 PublicKeyPresence.ELEMENT_NAME,
@@ -66,10 +69,9 @@ public class PresenceListener implements PacketListener {
 
         // NOTE: a delay extension is sometimes included, don't know why
         // ignoring mode, always null anyway
-        UserList.getInstance().setPresence(bestPresence.getFrom(),
+        mControl.setPresence(bestPresence.getFrom(),
                 bestPresence.getType(),
                 bestPresence.getStatus());
-
 
         PacketExtension publicKeyExt = presence.getExtension(
                 PublicKeyPresence.ELEMENT_NAME,
@@ -97,7 +99,5 @@ public class PresenceListener implements PacketListener {
             LOGGER.info("detected public key change, requesting new key...");
             mClient.sendPublicKeyRequest(user.getJID());
         }
-
     }
-
 }

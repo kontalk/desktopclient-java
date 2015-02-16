@@ -173,7 +173,7 @@ public final class User {
         return this.mAvailable;
     }
 
-    void setPresence(Presence.Type type, String status) {
+    public void setPresence(Presence.Type type, String status) {
         if (type == Presence.Type.available) {
             mAvailable = Available.YES;
             mLastSeen = Optional.of(new Date());

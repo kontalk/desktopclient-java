@@ -29,6 +29,7 @@ import org.jivesoftware.smack.packet.RosterPacket;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
  * Listener for events in the roster (a server-side contact list in XMPP).
@@ -39,10 +40,12 @@ final class KonRosterListener implements RosterListener {
 
     private final Roster mRoster;
     private final Client mClient;
+    private final ControlCenter mControl;
 
-    KonRosterListener(Roster roster, Client client) {
+    KonRosterListener(Roster roster, Client client, ControlCenter control) {
         mRoster = roster;
         mClient = client;
+        mControl = control;
     }
 
     /**
@@ -123,7 +126,7 @@ final class KonRosterListener implements RosterListener {
 
         // NOTE: a delay extension is sometimes included, don't know why
         // ignoring mode, always null anyway
-        UserList.getInstance().setPresence(bestPresence.getFrom(),
+        mControl.setPresence(bestPresence.getFrom(),
                 bestPresence.getType(),
                 bestPresence.getStatus());
     }

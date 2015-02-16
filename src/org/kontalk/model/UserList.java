@@ -27,7 +27,6 @@ import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
 
@@ -82,8 +81,8 @@ public final class UserList extends Observable {
 
     /**
      * Add a new user to the list.
-     * @param jid
-     * @param name
+     * @param jid JID of new user
+     * @param name nickname of new user, use an empty string if not known
      * @return the newly created user, if one was created
      */
     public Optional<User> addUser(String jid, String name) {
@@ -135,16 +134,6 @@ public final class UserList extends Observable {
     public boolean containsUserWithJID(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
         return mMap.containsKey(jid);
-    }
-
-    public void setPresence(String jid, Presence.Type type, String status) {
-        jid = XmppStringUtils.parseBareJid(jid);
-        if (!mMap.containsKey(jid)) {
-            LOGGER.warning("can't find user with jid: "+jid);
-            return;
-        }
-        User user = mMap.get(jid);
-        user.setPresence(type, status);
     }
 
     public void setPGPKey(String jid, byte[] rawKey) {

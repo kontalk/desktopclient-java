@@ -19,8 +19,10 @@
 package org.kontalk.system;
 
 import java.util.Observable;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
+import org.jivesoftware.smack.packet.Presence;
 import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.PersonalKey;
@@ -164,5 +166,14 @@ public final class ControlCenter extends Observable {
     public void handleSecurityErrors(KonMessage message) {
         this.setChanged();
         this.notifyObservers(new ViewEvent.SecurityError(message));
+    }
+
+    public void setPresence(String jid, Presence.Type type, String status) {
+        Optional<User> optUser = UserList.getInstance().getUserByJID(jid);
+        if (!optUser.isPresent()) {
+            LOGGER.warning("can't find user with jid: "+jid);
+            return;
+        }
+        optUser.get().setPresence(type, status);
     }
 }

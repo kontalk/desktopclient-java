@@ -111,7 +111,7 @@ public final class Client implements PacketListener, Runnable {
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
         // packet listeners
-        RosterListener rl = new KonRosterListener(mConn.getRoster(), this);
+        RosterListener rl = new KonRosterListener(mConn.getRoster(), this, mControl);
         mConn.getRoster().addRosterListener(rl);
 
         PacketFilter messageFilter = new PacketTypeFilter(Message.class);
@@ -127,7 +127,7 @@ public final class Client implements PacketListener, Runnable {
         mConn.addPacketListener(new PublicKeyListener(), publicKeyFilter);
 
         PacketFilter presenceFilter = new PacketTypeFilter(Presence.class);
-        mConn.addPacketListener(new PresenceListener(this, mConn.getRoster()), presenceFilter);
+        mConn.addPacketListener(new PresenceListener(this, mConn.getRoster(), mControl), presenceFilter);
 
          // fallback listener
         mConn.addPacketListener(this,
