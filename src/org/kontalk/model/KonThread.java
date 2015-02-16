@@ -147,6 +147,9 @@ public final class KonThread extends Observable {
     }
 
     public void setRead() {
+        if (mRead)
+            return;
+
         mRead = true;
         this.changed();
     }
