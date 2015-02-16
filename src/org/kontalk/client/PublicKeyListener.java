@@ -23,7 +23,7 @@ import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
  *
@@ -32,7 +32,11 @@ import org.kontalk.model.UserList;
 public class PublicKeyListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(PublicKeyListener.class.getName());
 
-    public PublicKeyListener() {
+    private final ControlCenter mControl;
+
+    public PublicKeyListener(ControlCenter control) {
+        mControl = control;
+
         ProviderManager.addIQProvider(PublicKeyPublish.ELEMENT_NAME,
                 PublicKeyPublish.NAMESPACE,
                 new PublicKeyPublish.Provider());
@@ -55,7 +59,7 @@ public class PublicKeyListener implements PacketListener {
                 LOGGER.warning("got public key packet without public key");
                 return;
             }
-            UserList.getInstance().setPGPKey(publicKeyPacket.getFrom(), keyData);
+            mControl.setPGPKey(publicKeyPacket.getFrom(), keyData);
         }
     }
 

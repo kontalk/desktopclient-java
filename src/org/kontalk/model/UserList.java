@@ -136,15 +136,6 @@ public final class UserList extends Observable {
         return mMap.containsKey(jid);
     }
 
-    public void setPGPKey(String jid, byte[] rawKey) {
-        jid = XmppStringUtils.parseBareJid(jid);
-        if (!mMap.containsKey(jid)) {
-            LOGGER.warning("can't find user with jid: "+jid);
-            return;
-        }
-        mMap.get(jid).setKey(rawKey);
-    }
-
     public synchronized void changed() {
         this.setChanged();
         this.notifyObservers();

@@ -200,7 +200,7 @@ public final class User {
         return mFingerprint;
     }
 
-    void setKey(byte[] rawKey) {
+    public void setKey(byte[] rawKey) {
         Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
         if (!optKey.isPresent()) {
             LOGGER.log(Level.WARNING, "can't get public key");

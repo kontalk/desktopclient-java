@@ -11,16 +11,21 @@ import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
- *  Listener for vCard4 iq stanzas.
+ * Listener for vCard4 iq stanzas, deprecated!
+ *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class VCardListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(VCardListener.class.getName());
 
-    VCardListener() {
+    private final ControlCenter mControl;
+
+    VCardListener(ControlCenter control) {
+        mControl = control;
+
         ProviderManager.addIQProvider(VCard4.ELEMENT_NAME, VCard4.NAMESPACE, new VCard4.Provider());
     }
 
@@ -42,7 +47,7 @@ final class VCardListener implements PacketListener {
                 LOGGER.warning("got vcard without pgp key included");
                 return;
             }
-            UserList.getInstance().setPGPKey(p.getFrom(), publicKey);
+            mControl.setPGPKey(p.getFrom(), publicKey);
         }
     }
 }

@@ -118,13 +118,13 @@ public final class Client implements PacketListener, Runnable {
         mConn.addPacketListener(new KonMessageListener(this), messageFilter);
 
         PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
-        mConn.addPacketListener(new VCardListener(), vCardFilter);
+        mConn.addPacketListener(new VCardListener(mControl), vCardFilter);
 
         PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
         mConn.addPacketListener(new BlockListListener(), blockingCommandFilter);
 
         PacketFilter publicKeyFilter = new PacketTypeFilter(PublicKeyPublish.class);
-        mConn.addPacketListener(new PublicKeyListener(), publicKeyFilter);
+        mConn.addPacketListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         PacketFilter presenceFilter = new PacketTypeFilter(Presence.class);
         mConn.addPacketListener(new PresenceListener(this, mConn.getRoster(), mControl), presenceFilter);
