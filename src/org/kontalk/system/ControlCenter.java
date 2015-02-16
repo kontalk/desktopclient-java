@@ -200,6 +200,20 @@ public final class ControlCenter extends Observable {
         optUser.get().setPresence(type, status);
     }
 
+    public void checkFingerprint(String jid, String fingerprint) {
+        Optional<User> optUser = UserList.getInstance().get(jid);
+        if (!optUser.isPresent()) {
+            LOGGER.warning("(fingerprint) can't find user with jid:" + jid);
+            return;
+        }
+
+        User user = optUser.get();
+        if (!user.getFingerprint().equals(fingerprint)) {
+            LOGGER.info("detected public key change, requesting new key...");
+            mClient.sendPublicKeyRequest(user.getJID());
+        }
+    }
+
     public void setPGPKey(String jid, byte[] rawKey) {
         Optional<User> optUser = UserList.getInstance().get(jid);
         if (!optUser.isPresent()) {

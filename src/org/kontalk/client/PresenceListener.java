@@ -18,7 +18,6 @@
 
 package org.kontalk.client;
 
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.Roster;
@@ -27,8 +26,6 @@ import org.jivesoftware.smack.packet.PacketExtension;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
 
 /**
@@ -88,16 +85,6 @@ public class PresenceListener implements PacketListener {
             return;
         }
 
-        Optional<User> optUser = UserList.getInstance().get(jid);
-        if (!optUser.isPresent()) {
-            LOGGER.warning("can't find user with jid:" + jid);
-            return;
-        }
-
-        User user = optUser.get();
-        if (!user.getFingerprint().equals(fingerprint)) {
-            LOGGER.info("detected public key change, requesting new key...");
-            mClient.sendPublicKeyRequest(user.getJID());
-        }
+        mControl.checkFingerprint(jid, fingerprint);
     }
 }
