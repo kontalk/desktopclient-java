@@ -305,7 +305,7 @@ class ThreadListView extends ListView implements Observer {
             groupPanel.add(new WebLabel("Participants:"));
             mParticipantsList = new WebCheckBoxList();
             mParticipantsList.setVisibleRowCount(10);
-            for (User oneUser : UserList.getInstance().getUser()) {
+            for (User oneUser : UserList.getInstance().getAll()) {
                 boolean selected = threadView.getThread().getUser().contains(oneUser);
                 mParticipantsList.getCheckBoxListModel().addCheckBoxElement(oneUser, selected);
             }

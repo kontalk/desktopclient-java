@@ -82,7 +82,7 @@ public final class MessageList extends Observable {
                 KonMessage.Direction dir = dirValues[dirIndex];
                 int userID = resultSet.getInt("user_id");
                 Optional<User> optUser =
-                        UserList.getInstance().getUserByID(userID);
+                        UserList.getInstance().get(userID);
                 if (!optUser.isPresent()) {
                     LOGGER.warning("can't find user, id:"+userID);
                     continue;

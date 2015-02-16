@@ -108,7 +108,7 @@ final class UserListView extends ListView implements Observer {
     @Override
     public void update(Observable o, Object arg) {
         mListModel.clear();
-        for (User oneUser: mUserList.getUser()) {
+        for (User oneUser: mUserList.getAll()) {
             mListModel.addElement(new UserItemView(oneUser));
         }
     }

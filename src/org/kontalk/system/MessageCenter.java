@@ -188,9 +188,9 @@ public class MessageCenter {
 
     private static Optional<User> getUser(String jid) {
         UserList userList = UserList.getInstance();
-        Optional<User> optUser = userList.containsUserWithJID(jid) ?
-        userList.getUserByJID(jid) :
-        userList.addUser(jid, "");
+        Optional<User> optUser = userList.contains(jid) ?
+        userList.get(jid) :
+        userList.add(jid, "");
         return optUser;
     }
 

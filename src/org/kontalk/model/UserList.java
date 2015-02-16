@@ -31,7 +31,7 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
 
 /**
- *
+ * Central list of all contacts known to this Kontalk entity.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class UserList extends Observable {
@@ -75,7 +75,7 @@ public final class UserList extends Observable {
         this.changed();
     }
 
-    public Collection<User> getUser() {
+    public Collection<User> getAll() {
             return mMap.values();
     }
 
@@ -85,7 +85,7 @@ public final class UserList extends Observable {
      * @param name nickname of new user, use an empty string if not known
      * @return the newly created user, if one was created
      */
-    public Optional<User> addUser(String jid, String name) {
+    public Optional<User> add(String jid, String name) {
         jid = XmppStringUtils.parseBareJid(jid);
         if (mMap.containsKey(jid)) {
             LOGGER.warning("user already exists, jid: "+jid);
@@ -104,7 +104,7 @@ public final class UserList extends Observable {
         }
     }
 
-    public Optional<User> getUserByID(int id) {
+    public Optional<User> get(int id) {
         // TODO performance
         for (User user: mMap.values()) {
             if (user.getID() == id)
@@ -120,7 +120,7 @@ public final class UserList extends Observable {
      * @param jid
      * @return
      */
-    public Optional<User> getUserByJID(String jid) {
+    public Optional<User> get(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
         return Optional.ofNullable(mMap.get(jid));
     }
@@ -131,7 +131,7 @@ public final class UserList extends Observable {
      * @param jid
      * @return
      */
-    public boolean containsUserWithJID(String jid) {
+    public boolean contains(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
         return mMap.containsKey(jid);
     }

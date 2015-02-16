@@ -63,7 +63,7 @@ final class BlockResponseListener implements PacketListener {
             return;
         }
 
-        Optional<User> optUser = UserList.getInstance().getUserByJID(mJID);
+        Optional<User> optUser = UserList.getInstance().get(mJID);
         if (!optUser.isPresent()) {
             LOGGER.info("ignoring block response of JID not in user list");
             return;

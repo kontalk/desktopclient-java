@@ -49,7 +49,7 @@ final class BlockListListener implements PacketListener {
                     LOGGER.info("ignoring blocking of JID with resource");
                     return;
                 }
-                Optional<User> optUser = UserList.getInstance().getUserByJID(jid);
+                Optional<User> optUser = UserList.getInstance().get(jid);
                 if (!optUser.isPresent()) {
                     LOGGER.info("ignoring blocking of JID not in user list");
                     return;

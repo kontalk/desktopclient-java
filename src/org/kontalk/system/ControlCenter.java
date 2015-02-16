@@ -147,7 +147,7 @@ public final class ControlCenter extends Observable {
                 mClient.sendMessage(m);
             }
             // send public key requests for Kontalk users with missing key
-            for (User user : UserList.getInstance().getUser()) {
+            for (User user : UserList.getInstance().getAll()) {
                 // TODO only for domains that are part of the Kontalk network
                 if (user.getFingerprint().isEmpty()) {
                     LOGGER.info("public key missing for user, requesting it...");
@@ -169,7 +169,7 @@ public final class ControlCenter extends Observable {
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
-        Optional<User> optUser = UserList.getInstance().getUserByJID(jid);
+        Optional<User> optUser = UserList.getInstance().get(jid);
         if (!optUser.isPresent()) {
             LOGGER.warning("(presence) can't find user with jid: "+jid);
             return;
@@ -178,7 +178,7 @@ public final class ControlCenter extends Observable {
     }
 
     public void setPGPKey(String jid, byte[] rawKey) {
-        Optional<User> optUser = UserList.getInstance().getUserByJID(jid);
+        Optional<User> optUser = UserList.getInstance().get(jid);
         if (!optUser.isPresent()) {
             LOGGER.warning("(PGPKey) can't find user with jid: "+jid);
             return;

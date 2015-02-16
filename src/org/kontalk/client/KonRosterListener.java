@@ -77,7 +77,7 @@ final class KonRosterListener implements RosterListener {
                 }
             }
 
-            if (userList.containsUserWithJID(entry.getUser()))
+            if (userList.contains(entry.getUser()))
                 continue;
 
             LOGGER.info("adding user from roster: "+entry.toString());
@@ -88,7 +88,7 @@ final class KonRosterListener implements RosterListener {
                 // this must be the hash string, don't use it as name
                 name = "";
             }
-            Optional<User> optNewUser = userList.addUser(entry.getUser(), name);
+            Optional<User> optNewUser = userList.add(entry.getUser(), name);
             if (!optNewUser.isPresent()) {
                 LOGGER.warning("can't add user");
                 return;

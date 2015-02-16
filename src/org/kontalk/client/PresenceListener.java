@@ -88,7 +88,7 @@ public class PresenceListener implements PacketListener {
             return;
         }
 
-        Optional<User> optUser = UserList.getInstance().getUserByJID(jid);
+        Optional<User> optUser = UserList.getInstance().get(jid);
         if (!optUser.isPresent()) {
             LOGGER.warning("can't find user with jid:" + jid);
             return;

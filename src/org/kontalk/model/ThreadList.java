@@ -65,7 +65,7 @@ public final class ThreadList extends Observable {
             while (receiverRS.next()) {
                 Integer threadID = receiverRS.getInt("thread_id");
                 Integer userID = receiverRS.getInt("user_id");
-                Optional<User> optUser = userList.getUserByID(userID);
+                Optional<User> optUser = userList.get(userID);
                 if (!optUser.isPresent()) {
                     LOGGER.warning("can't find user");
                     continue;
