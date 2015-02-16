@@ -112,8 +112,7 @@ public final class Database {
         try {
             mConn.close();
         } catch(SQLException ex) {
-            // connection close failed.
-            System.err.println(ex);
+            LOGGER.log(Level.WARNING, "can't close db", ex);
         }
     }
 
