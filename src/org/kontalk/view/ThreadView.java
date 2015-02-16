@@ -91,7 +91,7 @@ final class ThreadView extends WebScrollPane {
     private final View mModel;
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
-    private int mCurrentThreadID = -1;
+    private KonThread mCurrentThread = null;
 
     ThreadView(View model) {
         super(null);
@@ -120,10 +120,6 @@ final class ThreadView extends WebScrollPane {
         });
     }
 
-    int getCurrentThreadID() {
-        return mCurrentThreadID;
-    }
-
     void showThread(KonThread thread) {
         boolean isNew = false;
         if (!mThreadCache.containsKey(thread.getID())) {
@@ -138,17 +134,17 @@ final class ThreadView extends WebScrollPane {
             table.mScrollDownOnResize = true;
         }
 
-        mCurrentThreadID = thread.getID();
+        mCurrentThread = thread;
     }
 
     void setColor(Color color) {
         this.getViewport().setBackground(color);
     }
 
-    private void removeThread(int id) {
-        mThreadCache.remove(id);
-        if(mCurrentThreadID == id) {
-            mCurrentThreadID = -1;
+    private void removeThread(KonThread thread) {
+        mThreadCache.remove(thread.getID());
+        if(mCurrentThread == thread) {
+            mCurrentThread = null;
             this.setViewportView(null);
         }
     }
@@ -223,7 +219,7 @@ final class ThreadView extends WebScrollPane {
         @Override
         public void update(Observable o, Object arg) {
             if (mThread.isDeleted()) {
-                ThreadView.this.removeThread(mThread.getID());
+                ThreadView.this.removeThread(mThread);
             }
 
             // check for new messages to add
@@ -245,7 +241,7 @@ final class ThreadView extends WebScrollPane {
                 }
             }
 
-            if (ThreadView.this.mCurrentThreadID == mThread.getID()) {
+            if (ThreadView.this.mCurrentThread == mThread) {
                 // we are seeing this thread right now, avoid loop
                 if (!mThread.isRead())
                     mThread.setRead();
