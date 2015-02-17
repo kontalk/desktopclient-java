@@ -171,7 +171,7 @@ public final class View implements Observer {
         Image image = getImage("kontalk.png");
         //image = image.getScaledInstance(22, 22, Image.SCALE_SMOOTH);
 
-        // popup menu outside of frame, actually not supported
+        // popup menu outside of frame, officially not supported
         final WebPopupMenu popup = new WebPopupMenu("Kontalk");
         WebMenuItem quitItem = new WebMenuItem("Quit");
         quitItem.addActionListener(new ActionListener() {
@@ -209,6 +209,7 @@ public final class View implements Observer {
                 // TODO ugly code
                 popup.setLocation(e.getX() - 20, e.getY() - 40);
                 popup.setInvoker(hiddenDialog);
+                popup.setCornerWidth(0);
                 popup.setVisible(true);
             }
         };
