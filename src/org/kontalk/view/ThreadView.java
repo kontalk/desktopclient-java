@@ -403,6 +403,12 @@ final class ThreadView extends WebScrollPane {
                 }
 
                 // attachment
+                // remove possible old component (replacing does not work right)
+                BorderLayout layout = (BorderLayout) mContentPanel.getLayout();
+                Component oldComp = layout.getLayoutComponent(BorderLayout.SOUTH);
+                if (oldComp != null)
+                    mContentPanel.remove(oldComp);
+
                 Optional<Attachment> optAttachment = mMessage.getContent().getAttachment();
                 if (optAttachment.isPresent()) {
                     String base = Downloader.getInstance().getAttachmentDir();
