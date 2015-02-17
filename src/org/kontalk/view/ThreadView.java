@@ -319,8 +319,6 @@ final class ThreadView extends WebScrollPane {
                 mTextArea = new WebTextArea();
                 mTextArea.setOpaque(false);
                 mTextArea.setFontSize(13);
-                mTextArea.setLineWrap(true);
-                mTextArea.setWrapStyleWord(true);
                 mContentPanel.add(mTextArea, BorderLayout.CENTER);
                 messagePanel.add(mContentPanel, BorderLayout.CENTER);
 
@@ -331,6 +329,13 @@ final class ThreadView extends WebScrollPane {
                 mStatusIconLabel = new WebLabel();
 
                 this.update();
+
+                // save the width that is requied to show the text in one line
+                // before line wrap and only once!
+                mPreferredTextAreaWidth = mTextArea.getPreferredSize().width;
+
+                mTextArea.setLineWrap(true);
+                mTextArea.setWrapStyleWord(true);
 
                 statusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
@@ -376,8 +381,6 @@ final class ThreadView extends WebScrollPane {
                 mTextArea.setText(text);
                 // hide area if there is no text
                 mTextArea.setVisible(!text.isEmpty());
-                // save the width that is requied to show the text in one line
-                mPreferredTextAreaWidth = mTextArea.getPreferredSize().width;
 
                 // status icon
                 if (mMessage.getDir() == KonMessage.Direction.OUT) {
