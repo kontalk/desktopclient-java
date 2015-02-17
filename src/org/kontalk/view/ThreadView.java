@@ -176,7 +176,7 @@ final class ThreadView extends WebScrollPane {
                     MessageViewList table = MessageViewList.this;
 
                     for (int row = 0; row < table.getRowCount(); row++) {
-                        MessageViewList.this.setHeight(row);
+                        table.setHeight(row);
                     }
 
                     // another issue: scrolling to a new component in the table
@@ -286,7 +286,7 @@ final class ThreadView extends WebScrollPane {
             private final WebPanel mContentPanel;
             private final WebTextArea mTextArea;
             private final WebLabel mStatusIconLabel;
-            private int mPreferredTextAreaWidth;
+            private final int mPreferredTextAreaWidth;
 
             MessageView(KonMessage message) {
                 mMessage = message;
@@ -487,7 +487,16 @@ final class ThreadView extends WebScrollPane {
             @Override
             public void update(Observable o, Object arg) {
                 this.update();
+
+                // adjust height of row for this item
+                MessageViewList table = MessageViewList.this;
+                for (int row = 0; row < table.getRowCount(); row++) {
+                    if (this == table.getModel().getValueAt(row, 0));
+                        table.setHeight(row);
+                }
+
                 // need to repaint parent to see changes
+                // TODO needed?
                 ThreadView.this.repaint();
             }
 
