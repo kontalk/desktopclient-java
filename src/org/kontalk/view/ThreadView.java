@@ -494,12 +494,17 @@ final class ThreadView extends WebScrollPane {
             public void update(Observable o, Object arg) {
                 this.update();
 
-                // adjust height of row for this item
+                // find row of item...
                 MessageViewList table = MessageViewList.this;
-                for (int row = 0; row < table.getRowCount(); row++) {
-                    if (this == table.getModel().getValueAt(row, 0));
-                        table.setHeight(row);
-                }
+                int row;
+                for (row = table.getRowCount()-1; row >= 0; row--)
+                    if (this == table.getModel().getValueAt(row, 0))
+                        break;
+                // ...set height...
+                table.setHeight(row);
+                // ...and scroll down
+                if (row == table.getRowCount())
+                    table.mScrollDownOnResize = true;
             }
 
             @Override
