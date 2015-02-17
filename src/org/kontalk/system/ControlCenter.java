@@ -18,20 +18,28 @@
 
 package org.kontalk.system;
 
+import java.util.Date;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.util.StringUtils;
+import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
+import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Account;
+import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
+import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageList;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.ThreadList;
@@ -118,7 +126,7 @@ public final class ControlCenter extends Observable {
         // TODO no group chat support yet
         Set<User> user = thread.getUser();
         for (User oneUser: user) {
-            OutMessage newMessage = MessageCenter.getInstance().newOutMessage(
+            OutMessage newMessage = newOutMessage(
                     thread,
                     oneUser,
                     text,
@@ -167,6 +175,113 @@ public final class ControlCenter extends Observable {
     public void handleSecurityErrors(KonMessage message) {
         this.setChanged();
         this.notifyObservers(new ViewEvent.SecurityError(message));
+    }
+
+    /**
+     * All-in-one method for a new outgoing message (except sending): Create,
+     * save and process the message.
+     * @return the new created message
+     */
+    public OutMessage newOutMessage(KonThread thread, User user, String text, boolean encrypted) {
+        MessageContent content = new MessageContent(text);
+        OutMessage.Builder builder = new OutMessage.Builder(thread, user, encrypted);
+        builder.content(content);
+        OutMessage newMessage = builder.build();
+        thread.addMessage(newMessage);
+        boolean added = MessageList.getInstance().add(newMessage);
+        if (!added) {
+            LOGGER.warning("could not add outgoing message to message list");
+        }
+        return newMessage;
+    }
+
+    /**
+     * All-in-one method for a new incoming message (except handling server
+     * receipts): Create, save and process the message.
+     * @return true on success or message is a duplicate, false on unexpected failure
+     */
+    public boolean newInMessage(String from, String xmppID, String xmppThreadID, Date date, MessageContent content) {
+        String jid = XmppStringUtils.parseBareJid(from);
+        Optional<User> optUser = getUser(jid);
+        if (!optUser.isPresent()) {
+            LOGGER.warning("can't get user for message");
+            return false;
+        }
+        User user = optUser.get();
+        KonThread thread = getThread(xmppThreadID, user);
+        if (xmppID.isEmpty()) {
+            xmppID = "_kon_" + StringUtils.randomString(8);
+        }
+        InMessage.Builder builder = new InMessage.Builder(thread, user);
+        builder.jid(from);
+        builder.xmppID(xmppID);
+        builder.date(date);
+        builder.content(content);
+        InMessage newMessage = builder.build();
+        boolean added = MessageList.getInstance().add(newMessage);
+        if (!added) {
+            LOGGER.info("message already in message list, dropping this one");
+            return true;
+        }
+        newMessage.save();
+        this.decrypt(newMessage);
+        if (newMessage.getContent().getAttachment().isPresent()) {
+            Downloader.getInstance().queueDownload(newMessage);
+        }
+        thread.addMessage(newMessage);
+        return newMessage.getID() >= -1;
+    }
+
+    /**
+     * Decrypt an incoming message.
+     * @param message
+     */
+    public void decrypt(InMessage message) {
+        Coder.processInMessage(message);
+        if (!message.getCoderStatus().getErrors().isEmpty()) {
+            this.handleSecurityErrors(message);
+        }
+    }
+
+    /**
+     * Set the receipt status of a message.
+     * @param xmppID XMPP ID of message
+     * @param status new receipt status of message
+     */
+    public void setMessageStatus(String xmppID, KonMessage.Status status) {
+        Optional<OutMessage> optMessage = MessageList.getInstance().getUncompletedMessage(xmppID);
+        if (!optMessage.isPresent()) {
+            LOGGER.warning("can't find message");
+            return;
+        }
+        optMessage.get().setStatus(status);
+    }
+
+    /**
+     * Inform model (and view) about a received chat state notification.
+     */
+    public void processChatState(String from, String xmppThreadID, Date date, String chatStateString) {
+        long diff = new Date().getTime() - date.getTime();
+        if (diff > TimeUnit.SECONDS.toMillis(10)) {
+            // too old
+            return;
+        }
+        ChatState chatState;
+        try {
+            chatState = ChatState.valueOf(chatStateString);
+        } catch (IllegalArgumentException ex) {
+            LOGGER.log(Level.WARNING, "can't parse chat state ", ex);
+            return;
+        }
+        String jid = XmppStringUtils.parseBareJid(from);
+        Optional<User> optUser = getUser(jid);
+        if (!optUser.isPresent()) {
+            LOGGER.warning("can't get user for chat state message");
+            return;
+        }
+        User user = optUser.get();
+        KonThread thread = getThread(xmppThreadID, user);
+        thread.setChatState(user, chatState);
     }
 
     public void addUser(String jid, String rosterName) {
@@ -221,5 +336,17 @@ public final class ControlCenter extends Observable {
             return;
         }
         optUser.get().setKey(rawKey);
+    }
+
+    private static KonThread getThread(String xmppThreadID, User user) {
+        ThreadList threadList = ThreadList.getInstance();
+        Optional<KonThread> optThread = threadList.getThreadByXMPPID(xmppThreadID);
+        return optThread.orElse(threadList.getThreadByUser(user));
+    }
+
+    private static Optional<User> getUser(String jid) {
+        UserList userList = UserList.getInstance();
+        Optional<User> optUser = userList.contains(jid) ? userList.get(jid) : userList.add(jid, "");
+        return optUser;
     }
 }

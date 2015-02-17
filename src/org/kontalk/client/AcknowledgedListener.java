@@ -23,8 +23,8 @@ import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
-import org.kontalk.system.MessageCenter;
 import org.kontalk.model.KonMessage.Status;
+import org.kontalk.system.ControlCenter;
 
 /**
  * Listener for acknowledged packets (Stream Management, XEP-0198).
@@ -32,6 +32,12 @@ import org.kontalk.model.KonMessage.Status;
  */
 public final class AcknowledgedListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(AcknowledgedListener.class.getName());
+
+    private final ControlCenter mControl;
+
+    public AcknowledgedListener(ControlCenter control) {
+        mControl = control;
+    }
 
     @Override
     public void processPacket(Packet p) {
@@ -55,7 +61,7 @@ public final class AcknowledgedListener implements PacketListener {
             LOGGER.warning("acknowledged message has invalid XMPP ID: "+xmppID);
             return;
         }
-        MessageCenter.getInstance().setMessageStatus(xmppID, Status.SENT);
+        mControl.setMessageStatus(xmppID, Status.SENT);
     }
 
 }

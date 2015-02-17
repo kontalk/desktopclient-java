@@ -19,7 +19,6 @@
 package org.kontalk;
 
 import org.kontalk.misc.KonException;
-import org.kontalk.system.MessageCenter;
 import org.kontalk.system.Database;
 import java.io.File;
 import java.io.IOException;
@@ -113,7 +112,6 @@ public final class Kontalk {
 
     public void start() {
         ControlCenter control = new ControlCenter();
-        MessageCenter.initialize(control);
 
         View mView = new View(control);
 

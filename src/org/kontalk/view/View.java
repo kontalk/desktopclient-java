@@ -76,7 +76,6 @@ import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
-import org.kontalk.system.MessageCenter;
 
 /**
  * Initialize and control the user interface.
@@ -412,7 +411,7 @@ public final class View implements Observer {
     }
 
     void callDecrypt(InMessage message) {
-        MessageCenter.getInstance().decrypt(message);
+        mControl.decrypt(message);
     }
 
     /* view internal */

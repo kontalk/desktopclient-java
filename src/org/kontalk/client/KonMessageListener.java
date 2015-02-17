@@ -31,10 +31,10 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.kontalk.system.MessageCenter;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.system.ControlCenter;
 
 /**
  * Listen and handle all incoming XMPP message packets.
@@ -47,9 +47,11 @@ final public class KonMessageListener implements PacketListener {
     private final static String IGNORE_PLAIN_TEXT = "(encrypted)";
 
     private final Client mClient;
+    private final ControlCenter mControl;
 
-    KonMessageListener(Client client) {
+    KonMessageListener(Client client, ControlCenter control) {
         mClient = client;
+        mControl = control;
 
         ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
         //ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
@@ -72,7 +74,7 @@ final public class KonMessageListener implements PacketListener {
                 LOGGER.warning("error message has invalid XMPP ID: "+xmppID);
                 return;
             }
-            MessageCenter.getInstance().setMessageStatus(xmppID, Status.ERROR);
+            mControl.setMessageStatus(xmppID, Status.ERROR);
             // TODO save the error text somewhere
         } else {
             LOGGER.warning("unknown message type: "+m.getType());
@@ -114,7 +116,7 @@ final public class KonMessageListener implements PacketListener {
         PacketExtension chatstate = m.getExtension("http://jabber.org/protocol/chatstates");
         if (chatstate != null) {
             LOGGER.info("got chatstate: " + chatstate.getElementName());
-            MessageCenter.getInstance().processChatState(m.getFrom(),
+            mControl.processChatState(m.getFrom(),
                     threadID,
                     date,
                     chatstate.getElementName());
@@ -131,7 +133,7 @@ final public class KonMessageListener implements PacketListener {
             if (receiptID == null || receiptID.isEmpty()) {
                 LOGGER.warning("message has invalid receipt ID: "+receiptID);
             } else {
-                MessageCenter.getInstance().setMessageStatus(receiptID, Status.RECEIVED);
+                mControl.setMessageStatus(receiptID, Status.RECEIVED);
             }
             // we ignore anything else that might be in this message
             return;
@@ -154,7 +156,7 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // add message
-        boolean success = MessageCenter.getInstance().newInMessage(m.getFrom(),
+        boolean success = mControl.newInMessage(m.getFrom(),
                 xmppID,
                 threadID,
                 date,

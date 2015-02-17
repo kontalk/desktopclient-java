@@ -115,7 +115,7 @@ public final class Client implements PacketListener, Runnable {
         mConn.getRoster().addRosterListener(rl);
 
         PacketFilter messageFilter = new PacketTypeFilter(Message.class);
-        mConn.addPacketListener(new KonMessageListener(this), messageFilter);
+        mConn.addPacketListener(new KonMessageListener(this, mControl), messageFilter);
 
         PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
         mConn.addPacketListener(new VCardListener(mControl), vCardFilter);
@@ -176,7 +176,7 @@ public final class Client implements PacketListener, Runnable {
         }
 
         try {
-            mConn.addStanzaAcknowledgedListener(new AcknowledgedListener());
+            mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
         } catch (StreamManagementException.StreamManagementNotEnabledException ex) {
             LOGGER.log(Level.WARNING, "stream management not enabled", ex);
         }
