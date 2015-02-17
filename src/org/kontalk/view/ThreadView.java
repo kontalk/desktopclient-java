@@ -494,10 +494,6 @@ final class ThreadView extends WebScrollPane {
                     if (this == table.getModel().getValueAt(row, 0));
                         table.setHeight(row);
                 }
-
-                // need to repaint parent to see changes
-                // TODO needed?
-                ThreadView.this.repaint();
             }
 
             @Override
