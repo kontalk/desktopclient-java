@@ -503,7 +503,7 @@ final class ThreadView extends WebScrollPane {
                 // ...set height...
                 table.setHeight(row);
                 // ...and scroll down
-                if (row == table.getRowCount())
+                if (row == table.getRowCount()-1)
                     table.mScrollDownOnResize = true;
             }
 
