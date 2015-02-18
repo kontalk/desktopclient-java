@@ -120,6 +120,10 @@ final class ThreadView extends WebScrollPane {
         });
     }
 
+    Optional<KonThread> getCurrentThread() {
+        return Optional.ofNullable(mCurrentThread);
+    }
+
     void showThread(KonThread thread) {
         boolean isNew = false;
         if (!mThreadCache.containsKey(thread.getID())) {

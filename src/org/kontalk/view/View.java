@@ -51,6 +51,7 @@ import java.net.URL;
 import java.security.cert.CertificateException;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -145,7 +146,7 @@ public final class View implements Observer {
         this.setHotkeys();
 
         // notifier
-        MessageList.getInstance().addObserver(new Notifier());
+        MessageList.getInstance().addObserver(new Notifier(this));
 
         this.statusChanged();
 
@@ -435,6 +436,10 @@ public final class View implements Observer {
             return;
 
         mThreadView.showThread(thread);
+    }
+
+    Optional<KonThread> getCurrentShownThread() {
+        return mThreadView.getCurrentThread();
     }
 
     static Icon getIcon(String fileName) {

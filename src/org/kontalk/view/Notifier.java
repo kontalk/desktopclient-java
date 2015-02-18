@@ -37,6 +37,7 @@ import java.util.Observable;
 import java.util.Observer;
 import javax.swing.Icon;
 import org.kontalk.model.InMessage;
+import org.kontalk.model.KonMessage;
 import org.kontalk.util.MediaUtils;
 import static org.kontalk.view.View.getIcon;
 
@@ -48,7 +49,10 @@ final class Notifier implements Observer {
 
     private final static Icon NOTIFICATION_ICON = getIcon("ic_msg_pending.png");
 
-    Notifier() {
+    private final View mView;
+
+    Notifier(View view) {
+        mView = view;
     }
 
     @Override
@@ -56,9 +60,11 @@ final class Notifier implements Observer {
         // handle only incoming messages
         if (!(arg instanceof InMessage))
             return;
-        //KonMessage newMessage = (InMessage) arg;
 
-        MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);
+        KonMessage newMessage = (InMessage) arg;
+
+        if (newMessage.getThread() != mView.getCurrentShownThread().orElse(null))
+            MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);
     }
 
     // TODO not used
