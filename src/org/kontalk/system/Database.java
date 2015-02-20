@@ -147,25 +147,6 @@ public final class Database {
     }
 
     /**
-     * Get the number of rows in one table that match a WHERE clause
-     * with one 'key' == 'value' condition.
-     * TODO unused
-     * @return number of rows for a SELECT/count query, -1 if something went wrong
-     */
-    public int execCount(String table, String key, Object value) {
-        String select = "SELECT count(*) FROM " + table + " WHERE " + key + " = ?";
-        try {
-            PreparedStatement stat = mConn.prepareStatement(select);
-            setValue(stat, 0, value);
-            ResultSet resultSet = stat.executeQuery();
-            return resultSet.getInt(1);
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't execute select: " + select, ex);
-            return -1;
-        }
-    }
-
-    /**
      * Add new model to database.
      * @param table table name the values are inserted into
      * @param values arbitrary objects that are inserted
