@@ -143,6 +143,10 @@ public final class ControlCenter extends Observable {
         return mCurrentStatus;
     }
 
+    public KonThread createNewThread(Set<User> user) {
+        return ThreadList.getInstance().createNewThread(user);
+    }
+
     /* events from network client */
 
     public void setStatus(Status status) {

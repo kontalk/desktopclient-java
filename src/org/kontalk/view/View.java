@@ -392,9 +392,8 @@ public final class View implements Observer {
         mControl.disconnect();
     }
 
-    // TODO hide model
     void callCreateNewThread(Set<User> user) {
-        KonThread thread = ThreadList.getInstance().createNewThread(user);
+        KonThread thread = mControl.createNewThread(user);
         this.showThread(thread);
     }
 
