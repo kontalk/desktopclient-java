@@ -26,11 +26,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
-import org.kontalk.misc.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.client.DownloadClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.misc.KonException;
 import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.MessageContent.Attachment;
@@ -47,7 +47,6 @@ public class Downloader implements Runnable {
     private final LinkedBlockingQueue<InMessage> mQueue = new LinkedBlockingQueue<>();
 
     private final File mBaseDir;
-    private DownloadClient mClient = null;
 
     private Downloader() {
         String dirPath = Kontalk.getConfigDir() + "/attachments";
@@ -69,16 +68,23 @@ public class Downloader implements Runnable {
     }
 
     private void downloadAsync(InMessage message) {
-        // TODO reuse download client, currently a ssl exception is thrown on
-        // second connection attempt
-        //if (mClient == null) {
-            try {
-                mClient = createClient();
-            } catch (KonException | PGPException ex) {
-                LOGGER.log(Level.WARNING, "can't create download client", ex);
-                return;
-            }
-        //}
+        PersonalKey key;
+        try {
+            key = Account.getInstance().getPersonalKey();
+        } catch (KonException ex) {
+            LOGGER.log(Level.WARNING, "can't get personal key", ex);
+            return;
+        }
+        PrivateKey privateKey;
+        try {
+            privateKey = key.getBridgePrivateKey();
+        } catch (PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't private bridge key", ex);
+            return;
+        }
+        X509Certificate bridgeCert = key.getBridgeCertificate();
+        boolean validateCertificate = KonConf.getInstance().getBoolean(KonConf.SERV_CERT_VALIDATION);
+        DownloadClient client = new DownloadClient(privateKey, bridgeCert, validateCertificate);
 
         Optional<Attachment> optAttachment = message.getContent().getAttachment();
         if (!optAttachment.isPresent()) {
@@ -87,7 +93,7 @@ public class Downloader implements Runnable {
         }
         Attachment attachment = optAttachment.get();
 
-        String path = mClient.download(attachment.getURL(), mBaseDir);
+        String path = client.download(attachment.getURL(), mBaseDir);
         if (path.isEmpty()) {
             // could not be downloaded
             return;
@@ -126,15 +132,5 @@ public class Downloader implements Runnable {
             new Thread(INSTANCE).start();
         }
         return INSTANCE;
-    }
-
-    private static DownloadClient createClient() throws KonException, PGPException {
-        PersonalKey key = Account.getInstance().getPersonalKey();
-        PrivateKey privateKey;
-        privateKey = key.getBridgePrivateKey();
-        boolean validateCertificate = KonConf.getInstance().getBoolean(KonConf.SERV_CERT_VALIDATION);
-
-        X509Certificate bridgeCert = key.getBridgeCertificate();
-        return new DownloadClient(privateKey, bridgeCert, validateCertificate);
     }
 }
