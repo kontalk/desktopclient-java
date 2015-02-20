@@ -20,22 +20,16 @@ package org.kontalk.client;
 
 import java.io.IOException;
 import java.security.KeyManagementException;
-import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
@@ -67,6 +61,9 @@ public final class KonConnection extends XMPPTCPConnection {
                 bridgeCert,
                 validateCertificate)
         );
+
+        // blacklist PLAIN mechanism
+        SASLAuthentication.blacklistSASLMechanism("PLAIN");
 
         // enable SM without resumption (XEP-0198)
         this.setUseStreamManagement(true);
@@ -111,40 +108,13 @@ public final class KonConnection extends XMPPTCPConnection {
             .setLegacySessionDisabled(true);
 
         // setup SSL
+        if (!validateCertificate)
+            LOGGER.warning("disabling SSL certificate validation");
         try {
-            // in-memory keystore
-            KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-            keystore.load(null, null);
-            keystore.setKeyEntry("private",
-                    privateKey,
-                    new char[0],
-                    new Certificate[] { bridgeCert });
-
-            // key managers
-            KeyManagerFactory kmFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
-            kmFactory.init(keystore, new char[0]);
-
-            KeyManager[] km = kmFactory.getKeyManagers();
-
-            // blacklist PLAIN mechanism
-            SASLAuthentication.blacklistSASLMechanism("PLAIN");
-
-            // trust managers
-            TrustManager[] tm;
-            if (validateCertificate) {
-                // builtin keystore
-                TrustManagerFactory tmFactory = TrustManagerFactory
-                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
-                tmFactory.init(TrustUtils.getKeyStore());
-
-                tm = tmFactory.getTrustManagers();
-            } else {
-                LOGGER.warning("disabling SSL certificate validation");
-                tm = new TrustManager[] { TrustUtils.getBlindTrustManager() };
-            }
-            SSLContext ctx = SSLContext.getInstance("TLS");
-            ctx.init(km, tm, null);
-            builder.setCustomSSLContext(ctx);
+            SSLContext sslContext = TrustUtils.getCustomSSLContext(privateKey,
+                    bridgeCert,
+                    validateCertificate);
+            builder.setCustomSSLContext(sslContext);
             // Note: SASL EXTERNAL is already enabled in Smack
         } catch (NoSuchAlgorithmException |
                 KeyStoreException |

@@ -18,15 +18,28 @@
 
 package org.kontalk.util;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.KeyManagementException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
+import java.security.UnrecoverableKeyException;
+import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Enumeration;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.PGPUtils;
@@ -36,14 +49,58 @@ import org.kontalk.crypto.PGPUtils;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public class TrustUtils {
+    private final static Logger LOGGER = Logger.getLogger(TrustUtils.class.getName());
+
     private final static String KEYSTORE_FILE = "truststore.bks";
 
-    private static TrustManager TM = null;
-    private static KeyStore KS = null;
+    private static TrustManager BLIND_TM = null;
+    private static KeyStore MERGED_KS = null;
 
-    public static TrustManager getBlindTrustManager() {
-        if (TM == null) {
-            TM = new X509TrustManager() {
+    public static SSLContext getCustomSSLContext(
+            PrivateKey privateKey,
+            X509Certificate bridgeCert,
+            boolean validateCertificate)
+            throws KeyStoreException,
+            IOException,
+            NoSuchAlgorithmException,
+            CertificateException,
+            UnrecoverableKeyException,
+            NoSuchProviderException,
+            KeyManagementException {
+        // in-memory keystore
+        KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+        keystore.load(null, null);
+        keystore.setKeyEntry("private",
+                privateKey,
+                new char[0],
+                new Certificate[] { bridgeCert });
+
+        // key managers
+        KeyManagerFactory kmFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        kmFactory.init(keystore, new char[0]);
+
+        KeyManager[] km = kmFactory.getKeyManagers();
+
+        // trust managers
+        TrustManager[] tm;
+        if (validateCertificate) {
+            // builtin keystore
+            TrustManagerFactory tmFactory = TrustManagerFactory
+                    .getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            tmFactory.init(getKeyStore());
+            tm = tmFactory.getTrustManagers();
+        } else {
+            // trust everything!
+            tm = new TrustManager[] { getBlindTrustManager() };
+        }
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        ctx.init(km, tm, null);
+        return ctx;
+    }
+
+    private static TrustManager getBlindTrustManager() {
+        if (BLIND_TM == null) {
+            BLIND_TM = new X509TrustManager() {
                 @Override
                 public X509Certificate[] getAcceptedIssuers() {
                     return null;
@@ -58,23 +115,55 @@ public class TrustUtils {
                 }
             };
         }
-        return TM;
+        return BLIND_TM;
     }
 
     /**
-     * Load own key store from file.
+     * Load own key store from file and system.
+     * Return certificate store containing merged content from own key file
+     * (containing certificate for CAcert.org) with system certificates (if any).
      */
-    public static KeyStore getKeyStore()
-            throws IOException,
-            NoSuchAlgorithmException,
-            CertificateException,
-            KeyStoreException,
-            NoSuchProviderException {
-        if (KS == null) {
-            KS = KeyStore.getInstance("BKS", PGPUtils.PROVIDER);
-            InputStream in = ClassLoader.getSystemResourceAsStream(Kontalk.RES_PATH + KEYSTORE_FILE);
-            KS.load(in, "changeit".toCharArray());
+    private static KeyStore getKeyStore() throws KeyStoreException {
+        if (MERGED_KS == null) {
+            // note: there is no default keystore we can get from the JSSE
+            MERGED_KS = KeyStore.getInstance(KeyStore.getDefaultType());
+
+            // load system keys
+            String path = System.getProperty("javax.net.ssl.trustStore");
+            if (path == null) {
+                path = System.getProperty("java.home") + File.separator + "lib"
+                    + File.separator + "security" + File.separator
+                    + "cacerts";
+            }
+            try {
+                MERGED_KS.load(new FileInputStream(path), null);
+            } catch (IOException | NoSuchAlgorithmException | CertificateException ex) {
+                LOGGER.log(Level.WARNING, "can't load system keys", ex);
+            }
+
+            // add own keys
+            try {
+                KeyStore myKS = KeyStore.getInstance("BKS", PGPUtils.PROVIDER);
+                InputStream in = ClassLoader.getSystemResourceAsStream(Kontalk.RES_PATH + KEYSTORE_FILE);
+                myKS.load(in, "changeit".toCharArray());
+                Enumeration<String> aliases = myKS.aliases();
+                while (aliases.hasMoreElements()) {
+                    String alias = aliases.nextElement();
+                    Certificate cert = myKS.getCertificate(alias);
+
+                    if (MERGED_KS.containsAlias(alias))
+                        LOGGER.info("overwriting system certificate: "+alias);
+
+                    MERGED_KS.setCertificateEntry(alias, cert);
+                }
+            } catch (CertificateException |
+                    IOException |
+                    KeyStoreException |
+                    NoSuchAlgorithmException |
+                    NoSuchProviderException ex) {
+                LOGGER.warning("can't add keys from own truststore");
+            }
         }
-        return KS;
+        return MERGED_KS;
     }
 }

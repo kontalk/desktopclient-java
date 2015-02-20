@@ -132,8 +132,9 @@ public class Downloader implements Runnable {
         PersonalKey key = Account.getInstance().getPersonalKey();
         PrivateKey privateKey;
         privateKey = key.getBridgePrivateKey();
+        boolean validateCertificate = KonConf.getInstance().getBoolean(KonConf.SERV_CERT_VALIDATION);
 
         X509Certificate bridgeCert = key.getBridgeCertificate();
-        return new DownloadClient(privateKey, bridgeCert);
+        return new DownloadClient(privateKey, bridgeCert, validateCertificate);
     }
 }

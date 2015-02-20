@@ -23,32 +23,27 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
-import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.net.ssl.SSLContext;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpRequestBase;
-import org.apache.http.conn.ssl.SSLContextBuilder;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
-
-//import org.kontalk.service.DownloadListener;
-//import org.kontalk.util.InternalTrustStore;
-//import org.kontalk.util.Preferences;
-//import org.kontalk.util.ProgressOutputStreamEntity;
+import org.kontalk.util.TrustUtils;
 
 /**
  *
@@ -63,13 +58,15 @@ public class DownloadClient {
 
     private final PrivateKey mPrivateKey;
     private final X509Certificate mCertificate;
+    private final boolean mValidateCertificate;
 
     private HttpRequestBase mCurrentRequest;
     private CloseableHttpClient mHTTPClient;
 
-    public DownloadClient(PrivateKey privateKey, X509Certificate bridgeCert) {
+    public DownloadClient(PrivateKey privateKey, X509Certificate bridgeCert, boolean validateCertificate) {
         mPrivateKey = privateKey;
         mCertificate = bridgeCert;
+        mValidateCertificate = validateCertificate;
     }
 
     public void abort() {
@@ -87,7 +84,7 @@ public class DownloadClient {
      */
     public String download(String url, File base) {
         if (mHTTPClient == null) {
-            mHTTPClient = createHTTPClient(mPrivateKey, mCertificate);
+            mHTTPClient = createHTTPClient(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
                 return "";
         }
@@ -158,23 +155,22 @@ public class DownloadClient {
         }
     }
 
-    private static CloseableHttpClient createHTTPClient(PrivateKey privateKey, X509Certificate certificate) {
+    private static CloseableHttpClient createHTTPClient(PrivateKey privateKey,
+            X509Certificate certificate,
+            boolean validateCertificate) {
         //HttpClientBuilder clientBuilder = HttpClientBuilder.create();
         HttpClientBuilder clientBuilder = HttpClients.custom();
         try {
-            // SSL stuff
-            SSLContextBuilder sslBuilder = new SSLContextBuilder();
-            KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-            keystore.load(null, null);
-            keystore.setKeyEntry("private", privateKey, new char[0], new Certificate[] { certificate });
-            clientBuilder.setSslcontext(sslBuilder.loadKeyMaterial(keystore, new char[0]).build());
+            SSLContext sslContext = TrustUtils.getCustomSSLContext(privateKey, certificate, validateCertificate);
+            clientBuilder.setSslcontext(sslContext);
         }
         catch (KeyStoreException |
                 NoSuchAlgorithmException |
                 CertificateException |
                 IOException |
                 KeyManagementException |
-                UnrecoverableKeyException ex) {
+                UnrecoverableKeyException |
+                NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "unable to set SSL context", ex);
             return null;
         }
