@@ -30,6 +30,7 @@ import com.alee.laf.text.WebTextArea;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Image;
@@ -433,8 +434,7 @@ final class ThreadView extends WebScrollPane {
                                 (int) (image.getHeight() * scale),
                                 Image.SCALE_FAST);
                         WebLinkLabel imageView = new WebLinkLabel();
-                        // TODO will this work on Windows?
-                        imageView.setLink("", "file://"+path.toString());
+                        imageView.setLink("", linkRunnable(path));
                         imageView.setIcon(new ImageIcon(scaledImage));
                         mContentPanel.add(imageView, BorderLayout.SOUTH);
                     } else {
@@ -444,8 +444,7 @@ final class ThreadView extends WebScrollPane {
                             attLabel = new WebLabel("?");
                         } else {
                             WebLinkLabel linkLabel = new WebLinkLabel();
-                            // TODO will this work on Windows?
-                            linkLabel.setLink(fName, "file://"+path.toString());
+                            linkLabel.setLink(fName, linkRunnable(path));
                             attLabel = linkLabel;
                         }
                         WebLabel labelLabel = new WebLabel("Attachment: ");
@@ -573,5 +572,19 @@ final class ThreadView extends WebScrollPane {
                 from = from.substring(0, 8) + "...";
         }
         return from;
+    }
+
+    private static Runnable linkRunnable(final Path path) {
+        return new Runnable () {
+                @Override
+                public void run () {
+                    Desktop dt = Desktop.getDesktop();
+                    try {
+                        dt.open(new File(path.toString()));
+                    } catch (IOException ex) {
+                        LOGGER.log(Level.WARNING, "can't open attachment", ex);
+                    }
+                }
+            };
     }
 }
