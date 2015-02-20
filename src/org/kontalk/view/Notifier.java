@@ -63,8 +63,10 @@ final class Notifier implements Observer {
 
         KonMessage newMessage = (InMessage) arg;
 
-        if (newMessage.getThread() != mView.getCurrentShownThread().orElse(null))
-            MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);
+        if (newMessage.getThread() == mView.getCurrentShownThread().orElse(null) &&
+                mView.mainFrameIsFocused())
+            return;
+        MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);
     }
 
     // TODO not used

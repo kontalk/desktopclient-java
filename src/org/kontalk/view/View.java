@@ -442,6 +442,10 @@ public final class View implements Observer {
         return mThreadView.getCurrentThread();
     }
 
+    boolean mainFrameIsFocused() {
+        return mMainFrame.isFocused();
+    }
+
     static Icon getIcon(String fileName) {
         return new ImageIcon(getImage(fileName));
     }
