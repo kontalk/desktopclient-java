@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.Kontalk;
-import org.kontalk.view.View;
 import org.newdawn.easyogg.OggClip;
 
 /**
@@ -50,7 +49,6 @@ public class MediaUtils {
             return;
 
         try {
-            // TODO re-use stream
             // path must be relative to classpath for some reason
             mAudioClip = new OggClip(Kontalk.RES_PATH + fileName);
         } catch (IOException ex) {
