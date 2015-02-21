@@ -51,11 +51,17 @@ import org.kontalk.crypto.PGPUtils;
 public class TrustUtils {
     private final static Logger LOGGER = Logger.getLogger(TrustUtils.class.getName());
 
-    private final static String KEYSTORE_FILE = "truststore.bks";
+    private final static String TRUSSTORE_FILE = "truststore.bks";
 
     private static TrustManager BLIND_TM = null;
-    private static KeyStore MERGED_KS = null;
+    private static KeyStore MERGED_TS = null;
 
+    /**
+     * Get a custom SSL context for secure server connections. The key store of
+     * the context contains the private key and bridge certificate. The trust
+     * manager contains system and own certificates or blindly accepts every
+     * server certificate.
+     */
     public static SSLContext getCustomSSLContext(
             PrivateKey privateKey,
             X509Certificate bridgeCert,
@@ -84,10 +90,10 @@ public class TrustUtils {
         // trust managers
         TrustManager[] tm;
         if (validateCertificate) {
-            // builtin keystore
+            // use modified truststore
             TrustManagerFactory tmFactory = TrustManagerFactory
                     .getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            tmFactory.init(getKeyStore());
+            tmFactory.init(getTrustStore());
             tm = tmFactory.getTrustManagers();
         } else {
             // trust everything!
@@ -119,14 +125,14 @@ public class TrustUtils {
     }
 
     /**
-     * Load own key store from file and system.
-     * Return certificate store containing merged content from own key file
+     * Load own trust store from file and system.
+     * Return certificate store containing merged content from own keystore file
      * (containing certificate for CAcert.org) with system certificates (if any).
      */
-    private static KeyStore getKeyStore() throws KeyStoreException {
-        if (MERGED_KS == null) {
-            // note: there is no default keystore we can get from the JSSE
-            MERGED_KS = KeyStore.getInstance(KeyStore.getDefaultType());
+    private static KeyStore getTrustStore() throws KeyStoreException {
+        if (MERGED_TS == null) {
+            // note: there is no default truststore we can get from the JSSE
+            MERGED_TS = KeyStore.getInstance(KeyStore.getDefaultType());
 
             // load system keys
             String path = System.getProperty("javax.net.ssl.trustStore");
@@ -136,34 +142,34 @@ public class TrustUtils {
                     + "cacerts";
             }
             try {
-                MERGED_KS.load(new FileInputStream(path), null);
+                MERGED_TS.load(new FileInputStream(path), null);
             } catch (IOException | NoSuchAlgorithmException | CertificateException ex) {
                 LOGGER.log(Level.WARNING, "can't load system keys", ex);
             }
 
-            // add own keys
+            // add own certs
             try {
-                KeyStore myKS = KeyStore.getInstance("BKS", PGPUtils.PROVIDER);
-                InputStream in = ClassLoader.getSystemResourceAsStream(Kontalk.RES_PATH + KEYSTORE_FILE);
-                myKS.load(in, "changeit".toCharArray());
-                Enumeration<String> aliases = myKS.aliases();
+                KeyStore myTS = KeyStore.getInstance("BKS", PGPUtils.PROVIDER);
+                InputStream in = ClassLoader.getSystemResourceAsStream(Kontalk.RES_PATH + TRUSSTORE_FILE);
+                myTS.load(in, "changeit".toCharArray());
+                Enumeration<String> aliases = myTS.aliases();
                 while (aliases.hasMoreElements()) {
                     String alias = aliases.nextElement();
-                    Certificate cert = myKS.getCertificate(alias);
+                    Certificate cert = myTS.getCertificate(alias);
 
-                    if (MERGED_KS.containsAlias(alias))
+                    if (MERGED_TS.containsAlias(alias))
                         LOGGER.info("overwriting system certificate: "+alias);
 
-                    MERGED_KS.setCertificateEntry(alias, cert);
+                    MERGED_TS.setCertificateEntry(alias, cert);
                 }
             } catch (CertificateException |
                     IOException |
                     KeyStoreException |
                     NoSuchAlgorithmException |
                     NoSuchProviderException ex) {
-                LOGGER.warning("can't add keys from own truststore");
+                LOGGER.log(Level.WARNING, "can't add certificates from own truststore", ex);
             }
         }
-        return MERGED_KS;
+        return MERGED_TS;
     }
 }
