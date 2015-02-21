@@ -172,7 +172,6 @@ public class MessageContent {
         private final String mMimeType;
         private final long mLength;
         private String mFileName;
-        // TODO same as in KonMessage, move to own class
         private final CoderStatus mCoderStatus;
 
         private final static String JSON_URL = "url";
