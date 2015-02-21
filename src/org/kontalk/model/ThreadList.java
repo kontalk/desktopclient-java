@@ -83,13 +83,13 @@ public final class ThreadList extends Observable {
             // now, create threads
             while (threadRS.next()) {
                 int id = threadRS.getInt("_id");
-                String xmppThreadID = threadRS.getString("xmpp_id");
+                String xmppThreadID = Database.getString(threadRS, "xmpp_id");
                 Set<User> userSet = threadUserMapping.get(id);
                 if (userSet == null) {
                     LOGGER.warning("no users found for thread");
                     userSet = new HashSet<>();
                 }
-                String subject = threadRS.getString("subject");
+                String subject = Database.getString(threadRS, "subject");
                 boolean read = threadRS.getBoolean("read");
                 mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read));
             }

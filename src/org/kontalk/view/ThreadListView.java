@@ -253,8 +253,8 @@ class ThreadListView extends ListView implements Observer {
 
         private void update() {
             mBackround = !mThread.isRead() ? View.LIGHT_BLUE : Color.WHITE;
-
-            String subject = mThread.getSubject() != null ? mThread.getSubject(): "<unnamed>";
+            String subject = mThread.getSubject();
+            if (subject.isEmpty()) subject = "<unnamed>";
             mSubjectLabel.setText(subject);
 
             List<String> nameList = new ArrayList<>(mThread.getUser().size());
@@ -270,10 +270,7 @@ class ThreadListView extends ListView implements Observer {
                         user.getJID().toLowerCase().contains(search))
                     return true;
             }
-            if (mThread.getSubject() != null)
-                return mThread.getSubject().toLowerCase().contains(search);
-            else
-                return false;
+            return mThread.getSubject().toLowerCase().contains(search);
         }
     }
 
@@ -296,8 +293,9 @@ class ThreadListView extends ListView implements Observer {
 
             // editable fields
             groupPanel.add(new WebLabel("Subject:"));
-            mSubjectField = new WebTextField(mThreadView.getThread().getSubject(), 22);
-            mSubjectField.setInputPrompt(mThreadView.getThread().getSubject());
+            String subj = mThreadView.getThread().getSubject();
+            mSubjectField = new WebTextField(subj, 22);
+            mSubjectField.setInputPrompt(subj);
             mSubjectField.setHideInputPromptOnFocus(false);
             groupPanel.add(mSubjectField);
             groupPanel.add(new WebSeparator(true, true));

@@ -272,6 +272,10 @@ public final class Database {
         return s == null ? "" : s;
     }
 
+    public static String setString(String s) {
+        return s.isEmpty() ? null : s;
+    }
+
     public static void initialize(String path) throws KonException {
         INSTANCE = new Database(path);
     }

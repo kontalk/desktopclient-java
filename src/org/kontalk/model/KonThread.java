@@ -68,10 +68,8 @@ public final class KonThread extends Observable {
             Collections.synchronizedSortedSet(new TreeSet<KonMessage>());
 
     private final int mID;
-    // TODO make notnull
     private final String mXMPPID;
     private HashMap<User, KonChatState> mUserMap;
-    // TODO make notnull
     private String mSubject;
     private boolean mRead;
     private boolean mDeleted = false;
@@ -79,17 +77,17 @@ public final class KonThread extends Observable {
     // used when creating a new thread
     KonThread(Set<User> user) {
         assert user != null;
-        // Kontalk Android client is ignoring it, so set it to null for now
+        // Kontalk Android client is ignoring the thread id, don't set it for now
         //mXMPPID = StringUtils.randomString(8);
-        mXMPPID = null;
+        mXMPPID = "";
         this.setUserMap(user);
-        mSubject = null;
+        mSubject = "";
         mRead = true;
 
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
-        values.add(mXMPPID);
-        values.add(mSubject);
+        values.add(Database.setString(mXMPPID));
+        values.add(Database.setString(mSubject));
         values.add(mRead);
         mID = db.execInsert(TABLE, values);
         if (mID < 1) {
@@ -120,7 +118,7 @@ public final class KonThread extends Observable {
     }
 
     public Optional<String> getXMPPID() {
-        return Optional.ofNullable(mXMPPID);
+        return mXMPPID.isEmpty() ? Optional.<String>empty() : Optional.of(mXMPPID);
     }
 
     public Set<User> getUser() {
@@ -135,6 +133,9 @@ public final class KonThread extends Observable {
         this.changed();
     }
 
+    /**
+     * Get the user defined subject of this thread (empty string if not set).
+     */
     public String getSubject() {
         return mSubject;
     }
@@ -199,7 +200,7 @@ public final class KonThread extends Observable {
     void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
-        set.put("subject", mSubject);
+        set.put("subject", Database.setString(mSubject));
         set.put("read", mRead);
         db.execUpdate(TABLE, set, mID);
 
