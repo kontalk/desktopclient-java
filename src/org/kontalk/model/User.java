@@ -240,8 +240,8 @@ public final class User {
         set.put("status", mStatus);
         set.put("last_seen", mLastSeen);
         set.put("encrypted", mEncrypted);
-        set.put("public_key", mKey.isEmpty() ? null : mKey);
-        set.put("key_fingerprint", mFingerprint.isEmpty() ? null : mFingerprint);
+        set.put("public_key", Database.setString(mKey));
+        set.put("key_fingerprint", Database.setString(mFingerprint));
         db.execUpdate(TABLE, set, mID);
     }
 

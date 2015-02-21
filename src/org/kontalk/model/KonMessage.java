@@ -249,7 +249,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mDir);
         values.add(mUser.getID());
         values.add(mJID);
-        values.add(mXMPPID.isEmpty() ? null : mXMPPID);
+        values.add(Database.setString(mXMPPID));
         values.add(mDate);
         values.add(mReceiptStatus);
         // i simply don't like to save all possible content explicitly in the
@@ -279,7 +279,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         }
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
-        set.put("xmpp_id", mXMPPID.isEmpty() ? null : mXMPPID);
         set.put("receipt_status", mReceiptStatus);
         set.put("content", mContent.toJSONString());
         set.put("encryption_status", mCoderStatus.getEncryption());
