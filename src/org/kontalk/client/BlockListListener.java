@@ -18,14 +18,11 @@
 
 package org.kontalk.client;
 
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
  *
@@ -34,8 +31,14 @@ import org.kontalk.model.UserList;
 final class BlockListListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(BlockListListener.class.getName());
 
-    public BlockListListener() {
-        ProviderManager.addIQProvider(BlockingCommand.BLOCKLIST, BlockingCommand.NAMESPACE, new BlockingCommand.Provider());
+    private final ControlCenter mControl;
+
+    public BlockListListener(ControlCenter control) {
+        mControl = control;
+
+        ProviderManager.addIQProvider(BlockingCommand.BLOCKLIST,
+                BlockingCommand.NAMESPACE,
+                new BlockingCommand.Provider());
     }
 
     @Override
@@ -44,21 +47,7 @@ final class BlockListListener implements PacketListener {
         LOGGER.info("got blocklist response: "+p.toXML());
 
         if (p.getItems() != null) {
-            for (String jid : p.getItems()) {
-                if (XmppStringUtils.isFullJID(jid)) {
-                    LOGGER.info("ignoring blocking of JID with resource");
-                    return;
-                }
-                Optional<User> optUser = UserList.getInstance().get(jid);
-                if (!optUser.isPresent()) {
-                    LOGGER.info("ignoring blocking of JID not in user list");
-                    return;
-                }
-                User user = optUser.get();
-                LOGGER.info("blocked user: "+user.getID());
-                user.setBlocked(true);
-            }
-            UserList.getInstance().changed();
+            mControl.setBlockedUser(p.getItems());
         }
     }
 }

@@ -19,6 +19,7 @@
 package org.kontalk.system;
 
 import java.util.Date;
+import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
@@ -340,6 +341,24 @@ public final class ControlCenter extends Observable {
             return;
         }
         optUser.get().setKey(rawKey);
+    }
+
+    public void setBlockedUser(List<String> jids) {
+        for (String jid : jids) {
+            if (XmppStringUtils.isFullJID(jid)) {
+                LOGGER.info("ignoring blocking of JID with resource");
+                return;
+            }
+            Optional<User> optUser = UserList.getInstance().get(jid);
+            if (!optUser.isPresent()) {
+                LOGGER.info("ignoring blocking of JID not in user list");
+                return;
+            }
+            User user = optUser.get();
+            LOGGER.info("blocked user: "+user.getID());
+            user.setBlocked(true);
+        }
+        UserList.getInstance().changed();
     }
 
     private static KonThread getThread(String xmppThreadID, User user) {
