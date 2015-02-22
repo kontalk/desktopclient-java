@@ -249,6 +249,8 @@ class ThreadListView extends ListView implements Observer {
         @Override
         public void update(Observable o, Object arg) {
             this.update();
+            // needed for background repaint
+            ThreadListView.this.repaint();
         }
 
         private void update() {
