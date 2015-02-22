@@ -297,6 +297,14 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         this.notifyObservers();
     }
 
+    @Override
+    public String toString() {
+        return "M:id="+mID+",thread="+mThread+",dir="+mDir+",mUser="+mUser
+                +",jid="+mJID+",xmppid="+mXMPPID+",date="+mDate
+                +",recstat="+mReceiptStatus+",cont="+mContent
+                +",codstat="+mCoderStatus+",serverr="+mServerError;
+    }
+
     static class Builder {
         private final int mID;
         private final KonThread mThread;
