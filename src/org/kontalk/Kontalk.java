@@ -113,7 +113,7 @@ public final class Kontalk {
     public void start() {
         ControlCenter control = new ControlCenter();
 
-        View mView = new View(control);
+        View mView = View.start(control);
 
         try {
             Database.initialize(CONFIG_DIR);

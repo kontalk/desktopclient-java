@@ -131,7 +131,7 @@ class TableView extends WebTable {
         return TableItem.class;
     }
 
-    public abstract class TableItem extends WebPanel {
+    abstract class TableItem extends WebPanel {
 
         void resize(int listWidth) {};
 
@@ -177,7 +177,7 @@ class TableView extends WebTable {
         }
     }
 
-    // used only for correct mouse behaviour for compenents in items
+    // used only for correct mouse behaviour for components in items
     private class TableEditor implements TableCellEditor {
         @Override
         public Component getTableCellEditorComponent(JTable table,

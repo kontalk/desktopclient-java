@@ -47,6 +47,7 @@ import java.util.Set;
 import java.util.SortedSet;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
@@ -158,6 +159,15 @@ class ThreadListView extends ListView implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                ThreadListView.this.updateOnEDT();
+            }
+        });
+    }
+
+    private void updateOnEDT() {
         // TODO, performance
         KonThread currentThread = this.getSelectedThread();
         mListModel.clear();
@@ -248,6 +258,15 @@ class ThreadListView extends ListView implements Observer {
 
         @Override
         public void update(Observable o, Object arg) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    ThreadItemView.this.updateOnEDT();
+                }
+            });
+        }
+
+        private void updateOnEDT() {
             this.update();
             // needed for background repaint
             ThreadListView.this.repaint();
@@ -282,7 +301,7 @@ class ThreadListView extends ListView implements Observer {
         private final WebTextField mSubjectField;
         WebCheckBoxList mParticipantsList;
 
-        public EditThreadDialog(ThreadItemView threadView) {
+        EditThreadDialog(ThreadItemView threadView) {
 
             mThreadView = threadView;
 

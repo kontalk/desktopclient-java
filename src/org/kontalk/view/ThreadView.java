@@ -64,6 +64,7 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
 import org.kontalk.system.Downloader;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
@@ -408,6 +409,7 @@ final class ThreadView extends WebScrollPane {
                 }
 
                 // attachment
+                // TODO loading many images can is very slow
                 // remove possible old component (replacing does not work right)
                 BorderLayout layout = (BorderLayout) mContentPanel.getLayout();
                 Component oldComp = layout.getLayoutComponent(BorderLayout.SOUTH);
@@ -495,6 +497,15 @@ final class ThreadView extends WebScrollPane {
 
             @Override
             public void update(Observable o, Object arg) {
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        MessageView.this.updateOnEDT();
+                    }
+                });
+            }
+
+            private void updateOnEDT() {
                 this.update();
 
                 // find row of item...

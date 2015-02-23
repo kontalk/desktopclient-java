@@ -36,6 +36,7 @@ import java.awt.Rectangle;
 import java.util.Observable;
 import java.util.Observer;
 import javax.swing.Icon;
+import javax.swing.SwingUtilities;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.util.MediaUtils;
@@ -56,7 +57,16 @@ final class Notifier implements Observer {
     }
 
     @Override
-    public void update(Observable o, Object arg) {
+    public void update(Observable o, final Object arg) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                Notifier.this.updateOnEDT(arg);
+            }
+        });
+    }
+
+    private void updateOnEDT(Object arg) {
         // handle only incoming messages
         if (!(arg instanceof InMessage))
             return;

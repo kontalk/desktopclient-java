@@ -47,6 +47,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.util.Observable;
@@ -59,6 +60,7 @@ import javax.net.ssl.SSLHandshakeException;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
+import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException;
@@ -98,7 +100,7 @@ public final class View implements Observer {
     private final MainFrame mMainFrame;
     private TrayIcon mTrayIcon;
 
-    public View(ControlCenter control) {
+    private View(ControlCenter control) {
         mControl = control;
 
         WebLookAndFeel.install();
@@ -263,7 +265,12 @@ public final class View implements Observer {
      * Setup view on startup after model was initialized.
      */
     public void init() {
-        mThreadListView.selectLastThread();
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+               View.this.mThreadListView.selectLastThread();
+            }
+        });
     }
 
     ControlCenter.Status getCurrentStatus() {
@@ -278,7 +285,16 @@ public final class View implements Observer {
     /* control to view */
 
     @Override
-    public void update(Observable o, Object arg) {
+    public void update(Observable o, final Object arg) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                View.this.updateOnEDT(arg);
+            }
+        });
+    }
+
+    private void updateOnEDT(Object arg) {
        if (arg instanceof ViewEvent.StatusChanged) {
            this.statusChanged();
        } else if (arg instanceof ViewEvent.MissingAccount) {
@@ -443,6 +459,21 @@ public final class View implements Observer {
 
     boolean mainFrameIsFocused() {
         return mMainFrame.isFocused();
+    }
+
+    private static View view = null;
+    public static View start(final ControlCenter control) {
+        try {
+            SwingUtilities.invokeAndWait(new Runnable() {
+                @Override
+                public void run() {
+                    view = new View(control);
+                }
+            });
+        } catch (InterruptedException | InvocationTargetException ex) {
+            LOGGER.log(Level.WARNING, "can't start view", ex);
+        }
+        return view;
     }
 
     static Icon getIcon(String fileName) {

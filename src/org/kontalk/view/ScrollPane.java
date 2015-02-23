@@ -28,7 +28,7 @@ import javax.swing.ScrollPaneConstants;
  */
 final class ScrollPane extends WebScrollPane {
 
-    public ScrollPane(Component component) {
+    ScrollPane(Component component) {
         super(component);
 
         this.setHorizontalScrollBarPolicy(

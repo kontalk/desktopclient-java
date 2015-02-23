@@ -105,7 +105,7 @@ class ListView extends WebList {
         mTip = tip;
     }
 
-    public abstract class ListItem extends WebPanel {
+    abstract class ListItem extends WebPanel {
 
         void resize(int listWidth) {};
 

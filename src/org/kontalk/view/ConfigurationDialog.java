@@ -107,7 +107,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mCloseTrayBox;
         private final WebCheckBox mEnterSendsBox;
 
-        public MainPanel() {
+        MainPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
@@ -163,7 +163,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mDisableCertBox;
         private final WebLabel mFingerprintLabel;
 
-        public AccountPanel() {
+        AccountPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
@@ -255,7 +255,7 @@ final class ConfigurationDialog extends WebDialog {
 
         private final WebCheckBox mChatStateBox;
 
-        public PrivacyPanel() {
+        PrivacyPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 

@@ -75,7 +75,7 @@ import org.kontalk.system.ControlCenter;
 final class MainFrame extends WebFrame {
     private final static Logger LOGGER = Logger.getLogger(MainFrame.class.getName());
 
-    public static enum Tab {THREADS, USER};
+    static enum Tab {THREADS, USER};
 
     private final KonConf mConf = KonConf.getInstance();
     private final WebMenuItem mConnectMenuItem;
@@ -303,7 +303,7 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    public final void statusChanged(ControlCenter.Status status) {
+    final void statusChanged(ControlCenter.Status status) {
         switch (status) {
             case CONNECTING:
                 mConnectMenuItem.setEnabled(false);
