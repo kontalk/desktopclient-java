@@ -220,6 +220,8 @@ final class ThreadView extends WebScrollPane {
                 }
             });
 
+            this.updateOnEDT();
+
             mThread.addObserver(this);
         }
 

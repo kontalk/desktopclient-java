@@ -103,6 +103,8 @@ final class UserListView extends ListView implements Observer {
             }
         });
 
+        this.updateOnEDT();
+
         mUserList.addObserver(this);
     }
 
