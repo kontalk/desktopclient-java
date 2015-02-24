@@ -225,6 +225,15 @@ final class ThreadView extends WebScrollPane {
 
         @Override
         public void update(Observable o, Object arg) {
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    MessageViewList.this.updateOnEDT();
+                }
+            });
+        }
+
+        private void updateOnEDT() {
             if (mThread.isDeleted()) {
                 ThreadView.this.removeThread(mThread);
             }
