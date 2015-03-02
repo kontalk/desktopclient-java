@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.Paths;
+import java.util.Optional;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -113,7 +114,12 @@ public final class Kontalk {
     public void start() {
         ControlCenter control = new ControlCenter();
 
-        View mView = View.start(control);
+        Optional<View> optView = View.create(control);
+        if (!optView.isPresent()) {
+            control.shutDown();
+            return; // never reached
+        }
+        View view = optView.get();
 
         try {
             Database.initialize(CONFIG_DIR);
@@ -128,7 +134,7 @@ public final class Kontalk {
         ThreadList.getInstance().load();
         MessageList.getInstance().load();
 
-        mView.init();
+        view.init();
 
         control.launch();
     }

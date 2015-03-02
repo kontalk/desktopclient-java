@@ -47,13 +47,15 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
@@ -151,8 +153,6 @@ public final class View implements Observer {
         MessageList.getInstance().addObserver(new Notifier(this));
 
         this.statusChanged();
-
-        mControl.addObserver(this);
     }
 
     final void setTray() {
@@ -461,21 +461,6 @@ public final class View implements Observer {
         return mMainFrame.isFocused();
     }
 
-    private static View view = null;
-    public static View start(final ControlCenter control) {
-        try {
-            SwingUtilities.invokeAndWait(new Runnable() {
-                @Override
-                public void run() {
-                    view = new View(control);
-                }
-            });
-        } catch (InterruptedException | InvocationTargetException ex) {
-            LOGGER.log(Level.WARNING, "can't start view", ex);
-        }
-        return view;
-    }
-
     static Icon getIcon(String fileName) {
         return new ImageIcon(getImage(fileName));
     }
@@ -554,6 +539,32 @@ public final class View implements Observer {
                 break;
         }
         return errorText;
+    }
+
+    public static Optional<View> create(final ControlCenter control) {
+        Optional<View> optView = invokeAndWait(new Callable<View>() {
+            @Override
+            public View call() throws Exception {
+                return new View(control);
+            }
+        });
+        if(!optView.isPresent()) {
+            LOGGER.log(Level.SEVERE, "can't start view");
+            return optView;
+        }
+        control.addObserver(optView.get());
+        return optView;
+    }
+
+    static <T> Optional<T> invokeAndWait(Callable<T> callable) {
+        try {
+            FutureTask<T> task = new FutureTask<>(callable);
+            SwingUtilities.invokeLater(task);
+            return Optional.of(task.get());
+        } catch (ExecutionException | InterruptedException ex) {
+            LOGGER.log(Level.WARNING, "can't execute task", ex);
+        }
+        return Optional.empty();
     }
 
     public static void showWrongJavaVersionDialog() {
