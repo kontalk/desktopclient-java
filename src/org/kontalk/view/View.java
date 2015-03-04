@@ -84,6 +84,7 @@ import org.kontalk.system.ControlCenter;
 
 /**
  * Initialize and control the user interface.
+ * TODO leaking 'this' in constructor everywhere
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class View implements Observer {
@@ -428,7 +429,7 @@ public final class View implements Observer {
     }
 
     void callDecrypt(InMessage message) {
-        mControl.decrypt(message);
+        mControl.decryptAndDownload(message);
     }
 
     /* view internal */
@@ -560,6 +561,7 @@ public final class View implements Observer {
         try {
             FutureTask<T> task = new FutureTask<>(callable);
             SwingUtilities.invokeLater(task);
+            // blocking
             return Optional.of(task.get());
         } catch (ExecutionException | InterruptedException ex) {
             LOGGER.log(Level.WARNING, "can't execute task", ex);

@@ -54,6 +54,7 @@ import org.kontalk.model.UserList;
 public final class ControlCenter extends Observable {
     private final static Logger LOGGER = Logger.getLogger(ControlCenter.class.getName());
 
+    /** The current application state. **/
     public enum Status {
         DISCONNECTING,
         DISCONNECTED,
@@ -232,22 +233,24 @@ public final class ControlCenter extends Observable {
             return true;
         }
         newMessage.save();
-        this.decrypt(newMessage);
-        if (newMessage.getContent().getAttachment().isPresent()) {
-            Downloader.getInstance().queueDownload(newMessage);
-        }
+
+        this.decryptAndDownload(newMessage);
+
         thread.addMessage(newMessage);
         return newMessage.getID() >= -1;
     }
 
     /**
-     * Decrypt an incoming message.
-     * @param message
+     * Decrypt an incoming message and download attachment if present.
      */
-    public void decrypt(InMessage message) {
+    public void decryptAndDownload(InMessage message) {
         Coder.processInMessage(message);
         if (!message.getCoderStatus().getErrors().isEmpty()) {
             this.handleSecurityErrors(message);
+        }
+
+        if (message.getContent().getAttachment().isPresent()) {
+            Downloader.getInstance().queueDownload(message);
         }
     }
 
