@@ -157,6 +157,7 @@ public final class Kontalk {
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't close run socket", ex);
         }
+        LOGGER.info("exit");
         System.exit(0);
     }
 

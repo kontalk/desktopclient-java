@@ -97,8 +97,11 @@ public final class ControlCenter extends Observable {
         UserList.getInstance().save();
         ThreadList.getInstance().save();
         mClient.disconnect();
-        if (Database.getInstance() != null)
+        try {
             Database.getInstance().close();
+        } catch (RuntimeException ex) {
+            // ignore
+        }
         KonConf.getInstance().saveToFile();
 
         Kontalk.exit();
