@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.text.ParseException;
+import java.util.Base64;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.Iterator;
@@ -63,7 +64,6 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.util.stringencoder.Base64;
 import org.kontalk.system.Downloader;
 import org.kontalk.misc.KonException;
 import org.kontalk.client.KonMessageListener;
@@ -293,7 +293,7 @@ public final class Coder {
         if (encryptedContent.isEmpty()) {
             LOGGER.warning("no encrypted data in encrypted message");
         }
-        byte[] encryptedData = Base64.decode(encryptedContent);
+        byte[] encryptedData = Base64.getDecoder().decode(encryptedContent);
         InputStream encryptedStream = new ByteArrayInputStream(encryptedData);
         DecryptionResult decResult = decryptAndVerify(encryptedStream,
                 keys.myKey,
