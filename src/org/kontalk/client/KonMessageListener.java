@@ -18,6 +18,7 @@
 
 package org.kontalk.client;
 
+import java.util.Base64;
 import java.util.Date;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -26,7 +27,6 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.PacketExtension;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.jivesoftware.smack.util.stringencoder.Base64;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
@@ -182,7 +182,7 @@ final public class KonMessageListener implements PacketListener {
             if (m.getBody() != null && !m.getBody().equals(IGNORE_PLAIN_TEXT))
                 LOGGER.warning("message contains encryption and body (ignoring body)");
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
-            encryptedContent = Base64.encodeToString(encryption.getData());
+            encryptedContent = Base64.getEncoder().encodeToString(encryption.getData());
         }
 
         // Out of Band Data: a URI to a file

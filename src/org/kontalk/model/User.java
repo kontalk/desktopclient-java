@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -26,7 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.bouncycastle.util.encoders.Base64;
 import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
@@ -189,7 +189,7 @@ public final class User {
 
 
     public byte[] getKey() {
-        return Base64.decode(mKey);
+        return Base64.getDecoder().decode(mKey);
     }
 
     public boolean hasKey() {
@@ -219,7 +219,7 @@ public final class User {
         if (!mKey.isEmpty())
             LOGGER.info("overwriting public key for user: "+this);
 
-        mKey = Base64.toBase64String(rawKey);
+        mKey = Base64.getEncoder().encodeToString(rawKey);
         mFingerprint = key.fingerprint;
         this.save();
     }
