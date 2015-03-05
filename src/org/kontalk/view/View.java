@@ -299,7 +299,8 @@ public final class View implements Observer {
        if (arg instanceof ViewEvent.StatusChanged) {
            this.statusChanged();
        } else if (arg instanceof ViewEvent.MissingAccount) {
-           this.showImportWizard();
+           ViewEvent.MissingAccount missAccount = (ViewEvent.MissingAccount) arg;
+           this.showImportWizard(missAccount.connect);
        } else if (arg instanceof ViewEvent.Exception) {
            ViewEvent.Exception exception = (ViewEvent.Exception) arg;
            this.handleException(exception.exception);
@@ -349,8 +350,8 @@ public final class View implements Observer {
         mMainFrame.statusChanged(status);
     }
 
-    void showImportWizard() {
-        JDialog importFrame = new ImportDialog();
+    void showImportWizard(boolean connect) {
+        JDialog importFrame = new ImportDialog(this, connect);
         importFrame.setVisible(true);
     }
 

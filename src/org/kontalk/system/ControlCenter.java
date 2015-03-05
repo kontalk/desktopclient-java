@@ -78,13 +78,14 @@ public final class ControlCenter extends Observable {
 
         // use password option to determine if account was imported
         KonConf config = KonConf.getInstance();
+        boolean connect = config.getBoolean(KonConf.MAIN_CONNECT_STARTUP);
         if (config.getString(KonConf.ACC_PASS).isEmpty()) {
             this.setChanged();
-            this.notifyObservers(new ViewEvent.MissingAccount());
+            this.notifyObservers(new ViewEvent.MissingAccount(connect));
             return;
         }
 
-        if (config.getBoolean(KonConf.MAIN_CONNECT_STARTUP))
+        if (connect)
             this.connect();
     }
 

@@ -205,7 +205,7 @@ final class ConfigurationDialog extends WebDialog {
             importButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    mView.showImportWizard();
+                    mView.showImportWizard(false);
                     AccountPanel.this.updateFingerprint();
                 }
             });

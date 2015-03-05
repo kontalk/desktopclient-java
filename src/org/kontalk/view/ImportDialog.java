@@ -59,6 +59,7 @@ final class ImportDialog extends WebDialog {
     private final WebButton mBackButton;
     private final WebButton mNextButton;
     private final WebButton mCancelButton;
+    private final WebButton mFinishButton;
 
     private final WebFileChooserField mZipFileChooser;
     private final WebPasswordField mPassField;
@@ -68,7 +69,7 @@ final class ImportDialog extends WebDialog {
 
     private ImportPage mCurrentPage;
 
-    ImportDialog() {
+    ImportDialog(final View view, final boolean connect) {
         this.setTitle("Import Wizard");
         this.setSize(420, 260);
 
@@ -109,8 +110,18 @@ final class ImportDialog extends WebDialog {
                 ImportDialog.this.dispose();
             }
         });
+        mFinishButton = new WebButton("Finish");
+        mFinishButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ImportDialog.this.dispose();
+                if (connect)
+                    view.callConnect();
+            }
+        });
+        mFinishButton.setVisible(false);
 
-        GroupPanel buttonPanel = new GroupPanel(2, mBackButton, mNextButton, mCancelButton);
+        GroupPanel buttonPanel = new GroupPanel(2, mBackButton, mNextButton, mCancelButton, mFinishButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -180,13 +191,17 @@ final class ImportDialog extends WebDialog {
             case SETTINGS :
                 mBackButton.setVisible(true);
                 mNextButton.setVisible(true);
+                mCancelButton.setVisible(true);
+                mFinishButton.setVisible(false);
                 this.checkNextButton();
-                mCancelButton.setText("Cancel");
                 break;
             case RESULT :
-                ImportDialog.this.importAccount();
+                boolean success = ImportDialog.this.importAccount();
                 mNextButton.setVisible(false);
-                mCancelButton.setText("Finish");
+                if (success) {
+                    mCancelButton.setVisible(false);
+                    mFinishButton.setVisible(true);
+                }
                 break;
         }
         this.add(mPanels.get(mCurrentPage), BorderLayout.CENTER);
@@ -199,10 +214,10 @@ final class ImportDialog extends WebDialog {
                         !String.valueOf(mPassField.getPassword()).isEmpty());
     }
 
-    private void importAccount() {
+    private boolean importAccount() {
         if (mZipFileChooser.getSelectedFiles().isEmpty()) {
             LOGGER.warning("no zip file selected");
-            return;
+            return false;
         }
         String zipPath = mZipFileChooser.getSelectedFiles().get(0).getAbsolutePath();
         String password = new String(mPassField.getPassword());
@@ -219,6 +234,7 @@ final class ImportDialog extends WebDialog {
         mErrorLabel.setText(errorText == null ?
                 "" :
                 "<html>Error description: \n\n"+errorText+"</html>");
+        return errorText == null;
     }
 
     private class IntroPanel extends WebPanel {

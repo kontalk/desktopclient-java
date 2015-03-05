@@ -32,6 +32,11 @@ public abstract class ViewEvent {
 
     /** The personal account is missing (show import wizard). */
     public static class MissingAccount extends ViewEvent {
+        public final boolean connect;
+
+        public MissingAccount(boolean connect) {
+            this.connect = connect;
+        }
     }
 
     /** An exception was thrown somewhere. */
