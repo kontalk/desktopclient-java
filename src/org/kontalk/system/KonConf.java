@@ -88,7 +88,7 @@ public final class KonConf extends PropertiesConfiguration {
         map.put(VIEW_SELECTED_THREAD, -1);
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_STATUS_LIST, new String[]{""});
-        map.put(MAIN_CONNECT_STARTUP, false);
+        map.put(MAIN_CONNECT_STARTUP, true);
         map.put(MAIN_TRAY, true);
         map.put(MAIN_TRAY_CLOSE, false);
         map.put(MAIN_ENTER_SENDS, true);
