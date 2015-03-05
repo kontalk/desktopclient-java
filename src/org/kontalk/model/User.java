@@ -47,6 +47,8 @@ public final class User {
      */
     public static enum Available {UNKNOWN, YES, NO};
 
+    private static String LEGACY_CUT_FROM_ID = " (NO COMMENT) ";
+
     public final static String TABLE = "user";
     public final static String CREATE_TABLE = "(" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -209,11 +211,15 @@ public final class User {
         PGPCoderKey key = optKey.get();
 
         // if not set use id in key for username
-        String id = key.userID;
-        if (id != null && id.contains(" (NO COMMENT) ")) {
-            String userName = id.substring(0, id.indexOf(" (NO COMMENT) "));
-            if (!userName.isEmpty() && mName.isEmpty())
+        if (mName.isEmpty() && key.userID != null) {
+            String userName = key.userID.replaceFirst("<[a-f0-9]+@.+>$", "");
+            if (userName.endsWith(LEGACY_CUT_FROM_ID))
+                userName = userName.substring(0,
+                        userName.length() - LEGACY_CUT_FROM_ID.length());
+            if (!userName.isEmpty()) {
                 mName = userName;
+                UserList.getInstance().changed();
+            }
         }
 
         if (!mKey.isEmpty())
