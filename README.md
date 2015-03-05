@@ -17,10 +17,11 @@ You can get the Android-App v3.0Beta4 (or newer) from
 
 - connecting to Kontalk server with an already existing Kontalk account
 - automatically adding XMPP roster entries from server
-- requesting/adding public keys for known user
-- sending/receiving (un-)encrypted text messages from/to Kontalk server
+- automatically requesting/adding public keys for known user
+- sending/receiving (un-/)encrypted text messages from/to Kontalk server
 - sending/requesting server receipts according to Kontalk XMPP extension
 - ability to block all messages for specific user
+- receiving files send from the Android client
 
 **Note: private key and messages are saved unencrypted and can be read by other
 applications on your computer!**
