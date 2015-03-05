@@ -269,7 +269,10 @@ public final class View implements Observer {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-               View.this.mThreadListView.selectLastThread();
+                View.this.mThreadListView.selectLastThread();
+
+                if (ThreadList.getInstance().getThreads().isEmpty())
+                    mMainFrame.selectTab(MainFrame.Tab.USER);
             }
         });
     }
