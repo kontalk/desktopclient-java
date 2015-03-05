@@ -79,7 +79,7 @@ public class Downloader implements Runnable {
         try {
             privateKey = key.getBridgePrivateKey();
         } catch (PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't private bridge key", ex);
+            LOGGER.log(Level.WARNING, "can't get private bridge key", ex);
             return;
         }
         X509Certificate bridgeCert = key.getBridgeCertificate();

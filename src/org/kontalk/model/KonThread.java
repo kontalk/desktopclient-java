@@ -250,7 +250,7 @@ public final class KonThread extends Observable {
         try {
             resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
         } catch (SQLException ex) {
-            LOGGER.warning("can't get receiver from db");
+            LOGGER.log(Level.WARNING, "can't get receiver from db", ex);
             return dbReceiver;
         }
         try {
