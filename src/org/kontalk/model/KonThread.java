@@ -81,7 +81,14 @@ public final class KonThread extends Observable {
         //mXMPPID = StringUtils.randomString(8);
         mXMPPID = "";
         this.setUserMap(user);
-        mSubject = "";
+        if (user.size() > 1){
+            mSubject = "New group chat";
+        } else if (user.size() == 1 &&
+                !user.iterator().next().getName().isEmpty()) {
+            mSubject = user.iterator().next().getName();
+        } else {
+            mSubject = "";
+        }
         mRead = true;
 
         Database db = Database.getInstance();
