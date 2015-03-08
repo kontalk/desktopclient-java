@@ -290,6 +290,10 @@ public final class View implements Observer {
 
     @Override
     public void update(Observable o, final Object arg) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            this.updateOnEDT(arg);
+            return;
+        }
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {

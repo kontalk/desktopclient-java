@@ -152,6 +152,10 @@ class ThreadListView extends ListView<ThreadItem, KonThread> implements Observer
 
     @Override
     public void update(Observable o, Object arg) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            this.updateOnEDT();
+            return;
+        }
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -246,6 +250,10 @@ class ThreadListView extends ListView<ThreadItem, KonThread> implements Observer
 
         @Override
         public void update(Observable o, Object arg) {
+            if (SwingUtilities.isEventDispatchThread()) {
+                this.updateOnEDT();
+                return;
+            }
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
