@@ -28,8 +28,11 @@ import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.logging.Logger;
 import javax.swing.JList;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import org.kontalk.view.ListView.ListItem;
@@ -41,7 +44,7 @@ import org.ocpsoft.prettytime.PrettyTime;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-class ListView<I extends ListView<I, V>.ListItem, V> extends WebList {
+abstract class ListView<I extends ListView<I, V>.ListItem, V> extends WebList implements Observer {
     private final static Logger LOGGER = Logger.getLogger(ListView.class.getName());
 
     private final WebListModel<I> mListModel = new WebListModel<>();
@@ -96,7 +99,7 @@ class ListView<I extends ListView<I, V>.ListItem, V> extends WebList {
     }
 
     // nullable
-    protected V getSelectedItem() {
+    protected V getSelectedListValue() {
         if (this.getSelectedIndex() == -1)
             return null;
         ListItem listItem = this.getSelectedListItem();
@@ -124,10 +127,26 @@ class ListView<I extends ListView<I, V>.ListItem, V> extends WebList {
             }
         }
 
-        if (this.getSelectedItem() != value) {
-            LOGGER.warning("can't select value: "+value);
+        if (this.getSelectedListValue() != value) {
+            LOGGER.warning("can't select item, value: "+value);
         }
     }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            this.updateOnEDT();
+            return;
+        }
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                ListView.this.updateOnEDT();
+            }
+        });
+    }
+
+    abstract protected void updateOnEDT();
 
     private void resetFiltering() {
         mFilteredListModel.setElements(mListModel.getElements());

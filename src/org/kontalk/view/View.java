@@ -423,7 +423,7 @@ public final class View implements Observer {
     }
 
     private void callSendText() {
-       KonThread thread = mThreadListView.getSelectedThread();
+       KonThread thread = mThreadListView.getSelectedListValue();
        if (thread == null) {
            // nothing selected
            return;

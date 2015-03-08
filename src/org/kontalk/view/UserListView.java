@@ -40,11 +40,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
-import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
@@ -80,7 +78,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
                 if (e.getClickCount() == 2) {
-                    mView.selectThreadByUser(UserListView.this.getSelectedItem());
+                    mView.selectThreadByUser(UserListView.this.getSelectedListValue());
                 }
             }
             @Override
@@ -110,20 +108,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
     }
 
     @Override
-    public void update(Observable o, Object arg) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            this.updateOnEDT();
-            return;
-        }
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                UserListView.this.updateOnEDT();
-            }
-        });
-    }
-
-    private void updateOnEDT() {
+    protected void updateOnEDT() {
         // TODO performance
         this.clearModel();
         for (User oneUser: mUserList.getAll()) {

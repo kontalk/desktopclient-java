@@ -65,7 +65,7 @@ import org.kontalk.view.ThreadListView.ThreadItem;
  * Show a brief list of all threads.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-class ThreadListView extends ListView<ThreadItem, KonThread> implements Observer {
+final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;
@@ -114,7 +114,7 @@ class ThreadListView extends ListView<ThreadItem, KonThread> implements Observer
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                view.selectedThreadChanged(getSelectedThread());
+                view.selectedThreadChanged(ThreadListView.this.getSelectedListValue());
             }
         });
 
@@ -142,31 +142,10 @@ class ThreadListView extends ListView<ThreadItem, KonThread> implements Observer
         mThreadList.addObserver(this);
     }
 
-    // nullable
-    KonThread getSelectedThread() {
-        if (this.getSelectedIndex() == -1)
-            return null;
-        ThreadItem t = ThreadListView.this.getSelectedListItem();
-        return t.getValue();
-    }
-
     @Override
-    public void update(Observable o, Object arg) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            this.updateOnEDT();
-            return;
-        }
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                ThreadListView.this.updateOnEDT();
-            }
-        });
-    }
-
-    private void updateOnEDT() {
+    protected void updateOnEDT() {
         // TODO, performance
-        KonThread currentThread = this.getSelectedThread();
+        KonThread currentThread = this.getSelectedListValue();
         this.clearModel();
         for (KonThread thread: mThreadList.getThreads()) {
             ThreadItem newThreadView = new ThreadItem(thread);
