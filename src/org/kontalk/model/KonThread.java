@@ -63,12 +63,14 @@ public final class KonThread extends Observable {
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
-    // remember that KonMessage's natural ordering is not consistent with equals
-    private final SortedSet<KonMessage> mSet =
-            Collections.synchronizedSortedSet(new TreeSet<KonMessage>());
-
     private final int mID;
     private final String mXMPPID;
+    /**
+     * Messages of thread.
+     * remember that KonMessage's natural ordering is not consistent with equals
+     */
+    private final SortedSet<KonMessage> mSet =
+            Collections.synchronizedSortedSet(new TreeSet<KonMessage>());
     private HashMap<User, KonChatState> mUserMap;
     private String mSubject;
     private boolean mRead;
@@ -292,6 +294,11 @@ public final class KonThread extends Observable {
     private synchronized void changed() {
         this.setChanged();
         this.notifyObservers();
+    }
+
+    @Override
+    public String toString() {
+        return "T:id="+mID+",xmppid="+mXMPPID+",subject="+mSubject;
     }
 
     private class KonChatState {
