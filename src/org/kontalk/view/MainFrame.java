@@ -83,8 +83,8 @@ final class MainFrame extends WebFrame {
     private final WebTabbedPane mTabbedPane;
 
     MainFrame(final View view,
-            ListView userList,
-            ListView threadList,
+            ListView<?, ?> userList,
+            ListView<?, ?> threadList,
             Component threadView,
             Component sendTextField,
             Component sendButton,
@@ -243,7 +243,7 @@ final class MainFrame extends WebFrame {
         this.add(statusBar, BorderLayout.SOUTH);
     }
 
-    private WebPanel createListPane(final ListView list, Component newButton) {
+    private WebPanel createListPane(final ListView<?, ?> list, Component newButton) {
         Icon clearIcon = View.getIcon("ic_ui_clear.png");
         WebPanel listPanel = new WebPanel();
         WebPanel searchPanel = new WebPanel();

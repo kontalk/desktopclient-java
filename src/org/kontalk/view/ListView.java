@@ -28,20 +28,25 @@ import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.logging.Logger;
 import javax.swing.JList;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
+import org.kontalk.view.ListView.ListItem;
 import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * A generic list view for subclassing.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @param <I> the view item in this list
+ * @param <V> the value of one view item
  */
-class ListView extends WebList {
+class ListView<I extends ListView<I, V>.ListItem, V> extends WebList {
+    private final static Logger LOGGER = Logger.getLogger(ListView.class.getName());
 
-    protected final WebListModel<ListItem> mListModel = new WebListModel<>();
+    private final WebListModel<I> mListModel = new WebListModel<>();
 
-    private final WebListModel<ListItem> mFilteredListModel = new WebListModel<>();
+    private final WebListModel<I> mFilteredListModel = new WebListModel<>();
 
     final static PrettyTime TOOLTIP_DATE_FORMAT = new PrettyTime();
 
@@ -82,11 +87,45 @@ class ListView extends WebList {
         // need to do this manually here
     }
 
+    protected void clearModel() {
+        mListModel.clear();
+    }
+
+    protected I getSelectedListItem() {
+        return mListModel.get(this.getSelectedIndex());
+    }
+
+    // nullable
+    protected V getSelectedItem() {
+        if (this.getSelectedIndex() == -1)
+            return null;
+        ListItem listItem = this.getSelectedListItem();
+        V v = listItem.getValue();
+        return v;
+    }
+
+    protected void addItem(I newItem) {
+        mListModel.addElement(newItem);
+    }
+
     void filter(String search) {
         mFilteredListModel.clear();
-        for (ListItem listItem : mListModel.getElements()) {
+        for (I listItem : mListModel.getElements()) {
             if (listItem.contains(search.toLowerCase()))
                 mFilteredListModel.addElement(listItem);
+        }
+    }
+
+    void selectItem(V value) {
+        // TODO performance
+        for (I listItem: mListModel.getElements()) {
+            if (listItem.getValue() == value) {
+                this.setSelectedValue(listItem);
+            }
+        }
+
+        if (this.getSelectedItem() != value) {
+            LOGGER.warning("can't select value: "+value);
         }
     }
 
@@ -107,6 +146,16 @@ class ListView extends WebList {
 
     abstract class ListItem extends WebPanel {
 
+        protected final V mValue;
+
+        protected ListItem(V value) {
+            mValue = value;
+        }
+
+        V getValue() {
+            return mValue;
+        };
+
         void resize(int listWidth) {};
 
         void repaint(boolean isSelected) {};
@@ -125,7 +174,6 @@ class ListView extends WebList {
     }
 
     private class ListRenderer extends WebListCellRenderer {
-
         @Override
         @SuppressWarnings("rawtypes")
         public Component getListCellRendererComponent(JList list,
@@ -133,7 +181,7 @@ class ListView extends WebList {
                                                 int index,
                                                 boolean isSelected,
                                                 boolean hasFocus) {
-            ListItem panel = (ListItem) value;
+            ListView<?, ?>.ListItem panel = (ListView<?, ?>.ListItem) value;
             panel.resize(list.getWidth());
             panel.repaint(isSelected);
             return panel;

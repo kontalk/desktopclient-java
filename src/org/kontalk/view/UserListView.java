@@ -48,12 +48,13 @@ import javax.swing.SwingUtilities;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
+import org.kontalk.view.UserListView.UserItem;
 
 /**
  * Display all user (aka contacts) in a brief list.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class UserListView extends ListView implements Observer {
+final class UserListView extends ListView<UserItem, User> implements Observer {
 
     private final View mView;
     private final UserList mUserList;
@@ -79,7 +80,7 @@ final class UserListView extends ListView implements Observer {
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
                 if (e.getClickCount() == 2) {
-                    mView.selectThreadByUser(getSelectedUser());
+                    mView.selectThreadByUser(UserListView.this.getSelectedItem());
                 }
             }
             @Override
@@ -119,43 +120,37 @@ final class UserListView extends ListView implements Observer {
     }
 
     private void updateOnEDT() {
-        mListModel.clear();
+        // TODO performance
+        this.clearModel();
         for (User oneUser: mUserList.getAll()) {
-            mListModel.addElement(new UserItemView(oneUser));
+            this.addItem(new UserItem(oneUser));
         }
-    }
-
-    User getSelectedUser() {
-        if (getSelectedIndex() == -1)
-            return null;
-        ListItem p = mListModel.get(getSelectedIndex());
-        return ((UserItemView) p).getUser();
     }
 
     private void showPopupMenu(MouseEvent e) {
         // note: only work when right click does also selection
-        ListItem item = mListModel.get(getSelectedIndex());
-        mPopupMenu.show((UserItemView) item, this, e.getX(), e.getY());
+        mPopupMenu.show(this.getSelectedListItem(), this, e.getX(), e.getY());
     }
 
     /**
      * One item in the contact list representing a user.
      */
-    private class UserItemView extends ListItem {
+    class UserItem extends ListView<UserItem, User>.ListItem {
 
-        private final User mUser;
         private final WebLabel mNameLabel;
         private final WebLabel mJIDLabel;
         private final Color mBackround;
 
-        UserItemView(User user) {
-            mUser = user;
+        UserItem(User user) {
+            super(user);
+
+            this.getValue();
 
             //this.setPaintFocus(true);
             this.setMargin(5);
             this.setLayout(new BorderLayout(10, 5));
 
-            this.add(new WebLabel(Integer.toString(mUser.getID())), BorderLayout.WEST);
+            this.add(new WebLabel(Integer.toString(mValue.getID())), BorderLayout.WEST);
 
             mNameLabel = new WebLabel();
             mNameLabel.setFontSize(14);
@@ -176,34 +171,30 @@ final class UserListView extends ListView implements Observer {
             mNameLabel.setMinimumSize(size);
             mNameLabel.setPreferredSize(size);
 
-            String name = !mUser.getName().isEmpty() ? mUser.getName() : "<unknown>";
+            String name = !mValue.getName().isEmpty() ? mValue.getName() : "<unknown>";
             mNameLabel.setText(name);
-            mJIDLabel.setText(mUser.getJID());
+            mJIDLabel.setText(mValue.getJID());
 
-            mBackround = mUser.getAvailable() == User.Available.YES ? View.LIGHT_BLUE : Color.WHITE;
+            mBackround = mValue.getAvailable() == User.Available.YES ? View.LIGHT_BLUE : Color.WHITE;
             this.setBackground(mBackround);
-        }
-
-        User getUser() {
-            return mUser;
         }
 
         @Override
         public String getTooltipText() {
             String isAvailable;
-            if (mUser.getAvailable() == User.Available.YES)
+            if (mValue.getAvailable() == User.Available.YES)
                 isAvailable = "Yes";
-            else if (mUser.getAvailable() == User.Available.NO)
+            else if (mValue.getAvailable() == User.Available.NO)
                 isAvailable = "No";
             else
                 isAvailable = "?";
 
-            String status = mUser.getStatus().isEmpty() ? "?" : mUser.getStatus();
+            String status = mValue.getStatus().isEmpty() ? "?" : mValue.getStatus();
 
-            String lastSeen = !mUser.getLastSeen().isPresent() ? "?" :
-                    TOOLTIP_DATE_FORMAT.format(mUser.getLastSeen().get());
+            String lastSeen = !mValue.getLastSeen().isPresent() ? "?" :
+                    TOOLTIP_DATE_FORMAT.format(mValue.getLastSeen().get());
 
-            String isBlocked = mUser.isBlocked() ? "YES" : "No";
+            String isBlocked = mValue.isBlocked() ? "YES" : "No";
 
             String html = "<html><body>" +
                     //"<h3>Header</h3>" +
@@ -227,14 +218,14 @@ final class UserListView extends ListView implements Observer {
 
         @Override
         protected boolean contains(String search) {
-            return mUser.getName().toLowerCase().contains(search) ||
-                    mUser.getJID().toLowerCase().contains(search);
+            return mValue.getName().toLowerCase().contains(search) ||
+                    mValue.getJID().toLowerCase().contains(search);
         }
     }
 
     private class UserPopupMenu extends WebPopupMenu {
 
-        UserItemView mSelectedUserView;
+        UserItem mSelectedUserView;
         WebMenuItem mBlockMenuItem;
         WebMenuItem mUnblockMenuItem;
 
@@ -245,7 +236,7 @@ final class UserListView extends ListView implements Observer {
                 @Override
                 public void actionPerformed(ActionEvent event) {
                     Set<User> user = new HashSet<>();
-                    user.add(mSelectedUserView.getUser());
+                    user.add(mSelectedUserView.getValue());
                     UserListView.this.mView.callCreateNewThread(user);
                 }
             });
@@ -267,7 +258,7 @@ final class UserListView extends ListView implements Observer {
             mBlockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.getUser(), true);
+                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.getValue(), true);
                 }
             });
             this.add(mBlockMenuItem);
@@ -277,7 +268,7 @@ final class UserListView extends ListView implements Observer {
             mUnblockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.getUser(), false);
+                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.getValue(), false);
                 }
             });
             this.add(mUnblockMenuItem);
@@ -295,10 +286,10 @@ final class UserListView extends ListView implements Observer {
             //this.add(deleteMenuItem);
         }
 
-        void show(UserItemView selectedUserView, Component invoker, int x, int y) {
+        void show(UserItem selectedUserView, Component invoker, int x, int y) {
             mSelectedUserView = selectedUserView;
 
-            if (mSelectedUserView.getUser().isBlocked()) {
+            if (mSelectedUserView.getValue().isBlocked()) {
                 mBlockMenuItem.setVisible(false);
                 mUnblockMenuItem.setVisible(true);
             } else {
@@ -317,12 +308,12 @@ final class UserListView extends ListView implements Observer {
 
     private class EditUserDialog extends WebDialog {
 
-        private final UserItemView mUserView;
+        private final UserItem mUserView;
         private final WebTextField mNameField;
         private final WebTextField mJIDField;
         private final WebCheckBox mEncryptionBox;
 
-        EditUserDialog(UserItemView userView) {
+        EditUserDialog(UserItem userView) {
 
             mUserView = userView;
 
@@ -338,15 +329,15 @@ final class UserListView extends ListView implements Observer {
             WebPanel namePanel = new WebPanel();
             namePanel.setLayout(new BorderLayout(10, 5));
             namePanel.add(new WebLabel("Display Name:"), BorderLayout.WEST);
-            mNameField = new WebTextField(mUserView.getUser().getName());
-            mNameField.setInputPrompt(mUserView.getUser().getName());
+            mNameField = new WebTextField(mUserView.getValue().getName());
+            mNameField.setInputPrompt(mUserView.getValue().getName());
             mNameField.setHideInputPromptOnFocus(false);
             namePanel.add(mNameField, BorderLayout.CENTER);
             groupPanel.add(namePanel);
             groupPanel.add(new WebSeparator(true, true));
 
             String hasKey = "<html>Encryption Key: ";
-            if (mUserView.getUser().hasKey()) {
+            if (mUserView.getValue().hasKey()) {
                 hasKey += "Available</html>";
             } else {
                 hasKey += "<font color='red'>Not Available</font></html>";
@@ -355,13 +346,13 @@ final class UserListView extends ListView implements Observer {
 
             mEncryptionBox = new WebCheckBox("Encryption");
             mEncryptionBox.setAnimated(false);
-            mEncryptionBox.setSelected(mUserView.getUser().getEncrypted());
+            mEncryptionBox.setSelected(mUserView.getValue().getEncrypted());
             groupPanel.add(mEncryptionBox);
             groupPanel.add(new WebSeparator(true, true));
 
             groupPanel.add(new WebLabel("JID:"));
-            mJIDField = new WebTextField(mUserView.getUser().getJID(), 38);
-            mJIDField.setInputPrompt(mUserView.getUser().getJID());
+            mJIDField = new WebTextField(mUserView.getValue().getJID(), 38);
+            mJIDField.setInputPrompt(mUserView.getValue().getJID());
             mJIDField.setHideInputPromptOnFocus(false);
             groupPanel.add(mJIDField);
             groupPanel.add(new WebSeparator(true, true));
@@ -397,7 +388,7 @@ final class UserListView extends ListView implements Observer {
         }
 
         private boolean isConfirmed() {
-            if (!mJIDField.getText().equals(mUserView.getUser().getJID())) {
+            if (!mJIDField.getText().equals(mUserView.getValue().getJID())) {
                 String warningText = "Changing the JID is only useful in very"
                         + " rare cases. Are you sure?";
                 int selectedOption = WebOptionPane.showConfirmDialog(this,
@@ -414,11 +405,11 @@ final class UserListView extends ListView implements Observer {
 
         private void saveUser() {
             if (!mNameField.getText().isEmpty()) {
-                mUserView.getUser().setName(mNameField.getText());
+                mUserView.getValue().setName(mNameField.getText());
             }
-            mUserView.getUser().setEncrypted(mEncryptionBox.isSelected());
+            mUserView.getValue().setEncrypted(mEncryptionBox.isSelected());
             if (!mJIDField.getText().isEmpty()) {
-                mUserView.getUser().setJID(mJIDField.getText());
+                mUserView.getValue().setJID(mJIDField.getText());
             }
         }
     }

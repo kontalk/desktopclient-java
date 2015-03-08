@@ -38,7 +38,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
@@ -60,12 +59,13 @@ import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import static org.kontalk.view.ListView.TOOLTIP_DATE_FORMAT;
+import org.kontalk.view.ThreadListView.ThreadItem;
 
 /**
  * Show a brief list of all threads.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-class ThreadListView extends ListView implements Observer {
+class ThreadListView extends ListView<ThreadItem, KonThread> implements Observer {
 
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;
@@ -82,7 +82,7 @@ class ThreadListView extends ListView implements Observer {
         editMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                ThreadItemView t = (ThreadItemView) mListModel.get(getSelectedIndex());
+                ThreadItem t = ThreadListView.this.getSelectedListItem();
                 JDialog editUserDialog = new EditThreadDialog(t);
                 editUserDialog.setVisible(true);
             }
@@ -101,8 +101,8 @@ class ThreadListView extends ListView implements Observer {
                         WebOptionPane.OK_CANCEL_OPTION,
                         WebOptionPane.WARNING_MESSAGE);
                 if (selectedOption == WebOptionPane.OK_OPTION) {
-                    ThreadItemView threadView = (ThreadItemView) mListModel.get(getSelectedIndex());
-                    mThreadList.deleteThreadWithID(threadView.getThread().getID());
+                    ThreadItem threadView = ThreadListView.this.getSelectedListItem();
+                    mThreadList.deleteThreadWithID(threadView.getValue().getID());
                 }
             }
         });
@@ -142,21 +142,12 @@ class ThreadListView extends ListView implements Observer {
         mThreadList.addObserver(this);
     }
 
-    void selectThread(KonThread thread) {
-        Enumeration<ListItem> e = mListModel.elements();
-        for(Enumeration<ListItem> threads = e; e.hasMoreElements();) {
-            ThreadItemView threadView = (ThreadItemView) threads.nextElement();
-            if (threadView.getThread() == thread)
-                this.setSelectedValue(threadView);
-        }
-    }
-
     // nullable
     KonThread getSelectedThread() {
         if (this.getSelectedIndex() == -1)
             return null;
-        ThreadItemView t = (ThreadItemView) mListModel.get(this.getSelectedIndex());
-        return t.getThread();
+        ThreadItem t = ThreadListView.this.getSelectedListItem();
+        return t.getValue();
     }
 
     @Override
@@ -172,14 +163,14 @@ class ThreadListView extends ListView implements Observer {
     private void updateOnEDT() {
         // TODO, performance
         KonThread currentThread = this.getSelectedThread();
-        mListModel.clear();
+        this.clearModel();
         for (KonThread thread: mThreadList.getThreads()) {
-            ThreadItemView newThreadView = new ThreadItemView(thread);
-            mListModel.addElement(newThreadView);
+            ThreadItem newThreadView = new ThreadItem(thread);
+            this.addItem(newThreadView);
         }
         // reselect thread
         if (currentThread != null)
-            this.selectThread(currentThread);
+            this.selectItem(currentThread);
     }
 
     void selectLastThread() {
@@ -198,15 +189,14 @@ class ThreadListView extends ListView implements Observer {
            mPopupMenu.show(this, e.getX(), e.getY());
     }
 
-    private class ThreadItemView extends ListItem implements Observer {
+    protected class ThreadItem extends ListView<ThreadItem, KonThread>.ListItem implements Observer {
 
-        private final KonThread mThread;
         WebLabel mSubjectLabel;
         WebLabel mUserLabel;
         private Color mBackround;
 
-        ThreadItemView(KonThread thread) {
-            mThread = thread;
+        ThreadItem(KonThread thread) {
+            super(thread);
 
             this.setMargin(5);
             this.setLayout(new BorderLayout(10, 5));
@@ -230,11 +220,7 @@ class ThreadListView extends ListView implements Observer {
 
             this.setBackground(mBackround);
 
-            mThread.addObserver(this);
-        }
-
-        KonThread getThread() {
-            return mThread;
+            mValue.addObserver(this);
         }
 
         @Override
@@ -247,7 +233,7 @@ class ThreadListView extends ListView implements Observer {
 
         @Override
         String getTooltipText() {
-            SortedSet<KonMessage> messageSet = mThread.getMessages();
+            SortedSet<KonMessage> messageSet = this.getValue().getMessages();
             String lastActivity = messageSet.isEmpty() ? "no messages yet" :
                         TOOLTIP_DATE_FORMAT.format(messageSet.last().getDate());
 
@@ -263,7 +249,7 @@ class ThreadListView extends ListView implements Observer {
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    ThreadItemView.this.updateOnEDT();
+                    ThreadItem.this.updateOnEDT();
                 }
             });
         }
@@ -275,35 +261,35 @@ class ThreadListView extends ListView implements Observer {
         }
 
         private void update() {
-            mBackround = !mThread.isRead() ? View.LIGHT_BLUE : Color.WHITE;
-            String subject = mThread.getSubject();
+            mBackround = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
+            String subject = mValue.getSubject();
             if (subject.isEmpty()) subject = "<unnamed>";
             mSubjectLabel.setText(subject);
 
-            List<String> nameList = new ArrayList<>(mThread.getUser().size());
-            for (User user : mThread.getUser())
+            List<String> nameList = new ArrayList<>(mValue.getUser().size());
+            for (User user : mValue.getUser())
                 nameList.add(user.getName().isEmpty() ? "<unknown>" : user.getName());
             mUserLabel.setText(StringUtils.join(nameList, ", "));
         }
 
         @Override
         protected boolean contains(String search) {
-            for (User user: mThread.getUser()) {
+            for (User user: mValue.getUser()) {
                 if (user.getName().toLowerCase().contains(search) ||
                         user.getJID().toLowerCase().contains(search))
                     return true;
             }
-            return mThread.getSubject().toLowerCase().contains(search);
+            return mValue.getSubject().toLowerCase().contains(search);
         }
     }
 
     private class EditThreadDialog extends WebDialog {
 
-        private final ThreadItemView mThreadView;
+        private final ThreadItem mThreadView;
         private final WebTextField mSubjectField;
         WebCheckBoxList mParticipantsList;
 
-        EditThreadDialog(ThreadItemView threadView) {
+        EditThreadDialog(ThreadItem threadView) {
 
             mThreadView = threadView;
 
@@ -316,7 +302,7 @@ class ThreadListView extends ListView implements Observer {
 
             // editable fields
             groupPanel.add(new WebLabel("Subject:"));
-            String subj = mThreadView.getThread().getSubject();
+            String subj = mThreadView.getValue().getSubject();
             mSubjectField = new WebTextField(subj, 22);
             mSubjectField.setInputPrompt(subj);
             mSubjectField.setHideInputPromptOnFocus(false);
@@ -327,7 +313,7 @@ class ThreadListView extends ListView implements Observer {
             mParticipantsList = new WebCheckBoxList();
             mParticipantsList.setVisibleRowCount(10);
             for (User oneUser : UserList.getInstance().getAll()) {
-                boolean selected = threadView.getThread().getUser().contains(oneUser);
+                boolean selected = threadView.getValue().getUser().contains(oneUser);
                 mParticipantsList.getCheckBoxListModel().addCheckBoxElement(oneUser, selected);
             }
             final WebButton saveButton = new WebButton("Save");
@@ -384,14 +370,14 @@ class ThreadListView extends ListView implements Observer {
 
         private void saveThread() {
             if (!mSubjectField.getText().isEmpty()) {
-                mThreadView.getThread().setSubject(mSubjectField.getText());
+                mThreadView.getValue().setSubject(mSubjectField.getText());
             }
             List<?> participants = mParticipantsList.getCheckedValues();
             Set<User> threadUser = new HashSet<>();
             for (Object o: participants) {
                 threadUser.add((User) o);
             }
-            mThreadView.getThread().setUser(threadUser);
+            mThreadView.getValue().setUser(threadUser);
         }
     }
 }
