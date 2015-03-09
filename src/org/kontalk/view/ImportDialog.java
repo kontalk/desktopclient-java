@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.logging.Logger;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.filechooser.FileFilter;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Account;
 
@@ -126,51 +126,6 @@ final class ImportDialog extends WebDialog {
         this.add(buttonPanel, BorderLayout.SOUTH);
 
         this.updatePage(ImportPage.INTRO);
-    }
-
-    private WebFileChooserField createFileChooser(String path) {
-        final WebFileChooserField fileChooser = new WebFileChooserField();
-        fileChooser.setPreferredWidth(100);
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setShowFileShortName(false);
-        fileChooser.setShowRemoveButton(false);
-        // does not work:
-        // fileChooser.getWebFileChooser().setFileSelectionMode(JFileChooser.FILES_ONLY);
-        // instead:
-        FileFilter fileFilter = new FileFilter() {
-            @Override
-            public boolean accept(File f) {
-                return f.isFile();
-            }
-            @Override
-            public String getDescription() {
-                return "";
-            }
-        };
-
-        fileChooser.getWebFileChooser().setFileFilter(fileFilter);
-        File file = new File(path);
-        if (file.exists()) {
-            fileChooser.setSelectedFile(new File(path));
-        } else {
-            fileChooser.setBorderColor(Color.RED);
-        }
-
-        if (file.getParentFile() != null && file.getParentFile().exists())
-            fileChooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
-
-        fileChooser.addSelectedFilesListener(new FilesSelectionListener() {
-            @Override
-            public void selectionChanged(List<File> files) {
-                for (File file : files) {
-                    if (file.exists()) {
-                        fileChooser.setBorderColor(Color.BLACK);
-                    }
-                }
-            }
-        });
-
-        return fileChooser;
     }
 
     private void switchPage(Direction dir) {
@@ -312,6 +267,37 @@ final class ImportDialog extends WebDialog {
             this.add(groupPanel);
         }
 
+    }
+
+    private static WebFileChooserField createFileChooser(String path) {
+        final WebFileChooserField fileChooser = new WebFileChooserField();
+        fileChooser.setPreferredWidth(100);
+        fileChooser.setMultiSelectionEnabled(false);
+        fileChooser.setShowFileShortName(false);
+        fileChooser.setShowRemoveButton(false);
+        fileChooser.getWebFileChooser().setFileFilter(new FileNameExtensionFilter("Zip archive", "zip"));
+        File file = new File(path);
+        if (file.exists()) {
+            fileChooser.setSelectedFile(new File(path));
+        } else {
+            fileChooser.setBorderColor(Color.RED);
+        }
+
+        if (file.getParentFile() != null && file.getParentFile().exists())
+            fileChooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
+
+        fileChooser.addSelectedFilesListener(new FilesSelectionListener() {
+            @Override
+            public void selectionChanged(List<File> files) {
+                for (File file : files) {
+                    if (file.exists()) {
+                        fileChooser.setBorderColor(Color.BLACK);
+                    }
+                }
+            }
+        });
+
+        return fileChooser;
     }
 
     private class ResultPanel extends WebPanel {
