@@ -30,7 +30,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.logging.Logger;
 import javax.swing.JList;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ListDataEvent;
@@ -45,7 +44,6 @@ import org.ocpsoft.prettytime.PrettyTime;
  * @param <V> the value of one view item
  */
 abstract class ListView<I extends ListView<I, V>.ListItem, V> extends WebList implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(ListView.class.getName());
 
     private final WebListModel<I> mListModel = new WebListModel<>();
 
@@ -103,8 +101,7 @@ abstract class ListView<I extends ListView<I, V>.ListItem, V> extends WebList im
         if (this.getSelectedIndex() == -1)
             return null;
         ListItem listItem = this.getSelectedListItem();
-        V v = listItem.getValue();
-        return v;
+        return listItem.getValue();
     }
 
     protected void addItem(I newItem) {
@@ -128,7 +125,8 @@ abstract class ListView<I extends ListView<I, V>.ListItem, V> extends WebList im
         }
 
         if (this.getSelectedListValue() != value) {
-            LOGGER.warning("can't select item, value: "+value);
+            // fallback
+            this.setSelectedIndex(0);
         }
     }
 
