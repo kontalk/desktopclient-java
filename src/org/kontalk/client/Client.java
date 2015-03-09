@@ -190,9 +190,8 @@ public final class Client implements PacketListener, Runnable {
 
     public void disconnect() {
         synchronized (this) {
-            if (mConn != null) {
+            if (mConn != null && mConn.isConnected()) {
                 mConn.disconnect();
-                mConn = null;
             }
         }
         mControl.setStatus(ControlCenter.Status.DISCONNECTED);

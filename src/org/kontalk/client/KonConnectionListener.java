@@ -74,5 +74,4 @@ public final class KonConnectionListener implements ConnectionListener {
     public void reconnectionFailed(Exception e) {
         LOGGER.info("reconnection failed");
     }
-
 }

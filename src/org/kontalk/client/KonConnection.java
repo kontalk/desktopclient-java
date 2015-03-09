@@ -36,7 +36,6 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.kontalk.util.TrustUtils;
@@ -131,19 +130,9 @@ public final class KonConnection extends XMPPTCPConnection {
 
     @Override
     public void disconnect() {
-        LOGGER.info("disconnecting (no presence)");
+        LOGGER.info("disconnecting");
         try {
             super.disconnect();
-        } catch (SmackException.NotConnectedException ex) {
-            LOGGER.info("can't disconnect, not connected");
-        }
-    }
-
-    @Override
-    public synchronized void disconnect(Presence presence) {
-        LOGGER.log(Level.INFO, "disconnecting ({0})", presence.toXML());
-        try {
-            super.disconnect(presence);
         } catch (SmackException.NotConnectedException ex) {
             LOGGER.info("can't disconnect, not connected");
         }
