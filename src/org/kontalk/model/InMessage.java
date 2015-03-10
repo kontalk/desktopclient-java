@@ -82,6 +82,16 @@ public final class InMessage extends KonMessage {
         this.save();
     }
 
+    public void setAttachmentDownloadProgress(int p) {
+        Attachment attachment = this.getAttachment();
+        if (attachment == null)
+            return;
+
+        attachment.setDownloadProgress(p);
+        // TODO
+        //this.changed();
+    }
+
     public void setDecryptedAttachment(String filename) {
         Attachment attachment = this.getAttachment();
         if (attachment == null)

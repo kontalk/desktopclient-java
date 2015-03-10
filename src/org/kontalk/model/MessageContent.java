@@ -168,11 +168,19 @@ public class MessageContent {
     }
 
     public static class Attachment {
+        // URL to file, empty string by default
         private final String mURL;
+        // MIME of file, empty string by default
         private final String mMimeType;
+        // size of (decrypted) file, -1 by default
         private final long mLength;
+        // file name of downloaded and encrypted file, empty string by default
         private String mFileName;
+        // coder status of file encryption
         private final CoderStatus mCoderStatus;
+        // progress downloaded of (encrypted) file in percent
+        // no download/default: -1; unknown size: -2; download abort: -3
+        private int mDownloadProgress = -1;
 
         private final static String JSON_URL = "url";
         private final static String JSON_MIME_TYPE = "mime_type";
@@ -206,13 +214,9 @@ public class MessageContent {
                 long length,
                 String fileName,
                 CoderStatus coderStatus)  {
-            // URL to file, empty string by default
             mURL = url;
-            // MIME of file, empty string by default
             mMimeType = mimeType;
-            // size of file, -1 by default
             mLength = length;
-            // file name of downloaded and encrypted file, empty string by default
             mFileName = fileName;
             mCoderStatus = coderStatus;
         }
@@ -243,6 +247,10 @@ public class MessageContent {
 
         public CoderStatus getCoderStatus() {
             return mCoderStatus;
+        }
+
+        void setDownloadProgress(int p) {
+            mDownloadProgress = p;
         }
 
         @Override
