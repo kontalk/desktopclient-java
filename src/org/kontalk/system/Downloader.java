@@ -67,7 +67,7 @@ public class Downloader implements Runnable {
         return mBaseDir;
     }
 
-    private void downloadAsync(InMessage message) {
+    private void downloadAsync(final InMessage message) {
         PersonalKey key;
         try {
             key = Account.getInstance().getPersonalKey();
@@ -84,7 +84,16 @@ public class Downloader implements Runnable {
         }
         X509Certificate bridgeCert = key.getBridgeCertificate();
         boolean validateCertificate = KonConf.getInstance().getBoolean(KonConf.SERV_CERT_VALIDATION);
-        DownloadClient client = new DownloadClient(privateKey, bridgeCert, validateCertificate);
+        DownloadClient.ProgressListener listener = new DownloadClient.ProgressListener() {
+            @Override
+            public void updateProgress(int p) {
+                message.setAttachmentDownloadProgress(p);
+            }
+        };
+        DownloadClient client = new DownloadClient(privateKey,
+                bridgeCert,
+                validateCertificate,
+                listener);
 
         Optional<Attachment> optAttachment = message.getContent().getAttachment();
         if (!optAttachment.isPresent()) {

@@ -34,6 +34,7 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.SSLContext;
+import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.config.RequestConfig;
@@ -59,26 +60,34 @@ public class DownloadClient {
     private final PrivateKey mPrivateKey;
     private final X509Certificate mCertificate;
     private final boolean mValidateCertificate;
+    private final ProgressListener mListener;
 
     private HttpRequestBase mCurrentRequest;
     private CloseableHttpClient mHTTPClient;
 
-    public DownloadClient(PrivateKey privateKey, X509Certificate bridgeCert, boolean validateCertificate) {
+    public DownloadClient(PrivateKey privateKey,
+            X509Certificate bridgeCert,
+            boolean validateCertificate,
+            ProgressListener listener) {
         mPrivateKey = privateKey;
         mCertificate = bridgeCert;
         mValidateCertificate = validateCertificate;
+        mListener = listener;
     }
 
+    // TODO unused
     public void abort() {
         if (mCurrentRequest != null)
             mCurrentRequest.abort();
+        mListener.updateProgress(-3);
     }
 
     /**
      * Downloads to a directory represented by a {@link File} object,
      * determining the file name from the Content-Disposition header.
-     * @param url
+     * @param url URL of file
      * @param base base directory in which the download is saved
+     * @param listener listener for download progress
      * @return the absolute file path of the downloaded file, or an empty string
      * if the file could not be downloaded
      */
@@ -109,19 +118,34 @@ public class DownloadClient {
                 return "";
             }
 
-            Header disp = response.getFirstHeader("Content-Disposition");
-            if (disp == null) {
+            // get filename
+            Header dispHeader = response.getFirstHeader("Content-Disposition");
+            if (dispHeader == null) {
                 LOGGER.warning("no content header");
                 return "";
             }
-
-            String name = parseContentDisposition(disp.getValue());
+            String filename = parseContentDisposition(dispHeader.getValue());
             // never trust incoming data
-            name = name != null ? new File(name).getName() : "";
-            if (name.isEmpty()) {
-                LOGGER.warning("no filename in content: "+disp.getValue());
+            filename = filename != null ? new File(filename).getName() : "";
+            if (filename.isEmpty()) {
+                LOGGER.warning("no filename in content: "+dispHeader.getValue());
                 return "";
             }
+
+            // get file size
+            long s = -1;
+            Header lengthHeader = response.getFirstHeader("Content-Length");
+            if (lengthHeader == null) {
+                LOGGER.warning("no length header");
+            } else {
+                try {
+                    s = Long.parseLong(lengthHeader.getValue());
+                } catch (NumberFormatException ex) {
+                    LOGGER.log(Level.WARNING, "can' parse file size", ex);
+                }
+            }
+            final long fileSize = s;
+            mListener.updateProgress(s < 0 ? -2 : 0);
 
             // TODO should check for content-disposition parsing here
             // and choose another filename if necessary
@@ -131,14 +155,22 @@ public class DownloadClient {
                 return "";
             }
 
-            // TODO we need to wrap the entity to monitor the download progress
-            File destination = new File(base, name);
+            File destination = new File(base, filename);
             if (destination.exists()) {
                 LOGGER.warning("file already exists: "+destination.getAbsolutePath());
                 return "";
             }
             try (FileOutputStream out = new FileOutputStream(destination)){
-                entity.writeTo(out);
+                CountingOutputStream cOut = new CountingOutputStream(out) {
+                    @Override
+                    protected synchronized void afterWrite(int n) {
+                        // inform listener
+                        if (fileSize <= 0) return;
+                        mListener.updateProgress(
+                                (int) (this.getByteCount() /(fileSize * 1.0) * 100));
+                    }
+                };
+                entity.writeTo(cOut);
             } catch (IOException ex) {
                 LOGGER.log(Level.WARNING, "can't download file", ex);
                 return "";
@@ -161,7 +193,9 @@ public class DownloadClient {
         //HttpClientBuilder clientBuilder = HttpClientBuilder.create();
         HttpClientBuilder clientBuilder = HttpClients.custom();
         try {
-            SSLContext sslContext = TrustUtils.getCustomSSLContext(privateKey, certificate, validateCertificate);
+            SSLContext sslContext = TrustUtils.getCustomSSLContext(privateKey,
+                    certificate,
+                    validateCertificate);
             clientBuilder.setSslcontext(sslContext);
         }
         catch (KeyStoreException |
@@ -196,10 +230,16 @@ public class DownloadClient {
      * downloaded to the file system. We only support the attachment type.
      */
     private static String parseContentDisposition(String contentDisposition) {
+        if (contentDisposition == null)
+            return null;
+
         Matcher m = CONTENT_DISPOSITION_PATTERN.matcher(contentDisposition);
         if (m.find())
             return m.group(1);
         else return null;
     }
 
+    public interface ProgressListener {
+        void updateProgress(int percent);
+    }
 }
