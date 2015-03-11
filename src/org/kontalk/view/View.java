@@ -112,7 +112,7 @@ public final class View implements Observer {
 
         mUserListView = new UserListView(this, UserList.getInstance());
         mThreadListView = new ThreadListView(this, ThreadList.getInstance());
-        // notify threadlist of changes in user list
+        // notify thread list of changes in user list (name changes)
         UserList.getInstance().addObserver(mThreadListView);
 
         mThreadView = new ThreadView(this);
@@ -468,6 +468,10 @@ public final class View implements Observer {
 
     boolean mainFrameIsFocused() {
         return mMainFrame.isFocused();
+    }
+
+    void reloadThreadBG() {
+        mThreadView.loadDefaultBG();
     }
 
     static Icon getIcon(String fileName) {

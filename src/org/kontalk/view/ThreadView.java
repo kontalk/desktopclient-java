@@ -71,6 +71,7 @@ import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.system.KonConf;
 
 /**
  * Pane that shows the currently selected thread.
@@ -85,7 +86,6 @@ final class ThreadView extends WebScrollPane {
     private final static Icon ERROR_ICON = View.getIcon("ic_msg_error.png");
     private final static Icon CRYPT_ICON = View.getIcon("ic_msg_crypt.png");
     private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
-    private final static Image BG_IMAGE = View.getImage("thread_bg.png");
 
     private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
     private final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
@@ -94,6 +94,10 @@ final class ThreadView extends WebScrollPane {
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
     private KonThread mCurrentThread = null;
+    // background image from ressource or user selected
+    private Image mDefaultBG;
+    // scaled version of default bg
+    private Image mScaledBG;
 
     ThreadView(View model) {
         super(null);
@@ -104,20 +108,30 @@ final class ThreadView extends WebScrollPane {
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.getVerticalScrollBar().setUnitIncrement(25);
 
+        this.loadDefaultBG();
+
         this.setViewport(new JViewport() {
             @Override
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 // tiling
-                int iw = BG_IMAGE.getWidth(this);
-                int ih = BG_IMAGE.getHeight(this);
+                int iw = mScaledBG.getWidth(this);
+                int ih = mScaledBG.getHeight(this);
                 if (iw > 0 && ih > 0) {
-                    for (int x = 0; x < getWidth(); x += iw) {
-                        for (int y = 0; y < getHeight(); y += ih) {
-                            g.drawImage(BG_IMAGE, x, y, iw, ih, this);
+                    for (int x = 0; x < this.getWidth(); x += iw) {
+                        for (int y = 0; y < this.getHeight(); y += ih) {
+                            g.drawImage(mScaledBG, x, y, iw, ih, this);
                         }
                     }
                 }
+            }
+        });
+
+        this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                super.componentResized(e);
+                ThreadView.this.resized();
             }
         });
     }
@@ -148,11 +162,41 @@ final class ThreadView extends WebScrollPane {
         this.getViewport().setBackground(color);
     }
 
+    void loadDefaultBG() {
+        String imagePath = KonConf.getInstance().getString(KonConf.VIEW_THREAD_BG);
+        Image image;
+        if (!imagePath.isEmpty()) {
+            image = Toolkit.getDefaultToolkit().createImage(imagePath);
+        } else
+            image = View.getImage("thread_bg.png");
+        mDefaultBG = image;
+        this.resized();
+        this.repaint();
+    }
+
     private void removeThread(KonThread thread) {
         mThreadCache.remove(thread.getID());
         if(mCurrentThread == thread) {
             mCurrentThread = null;
             this.setViewportView(null);
+        }
+    }
+
+    private void resized() {
+        // scale background image down (if both dimensions exceed)
+        // TODO ugly flickering on resize
+        int iw = mDefaultBG.getWidth(this);
+        int ih = mDefaultBG.getHeight(this);
+        if (iw > this.getWidth() && ih > this.getHeight()) {
+            double scale = Math.max(
+                    this.getWidth() / (iw * 1.0),
+                    this.getHeight() / (ih * 1.0));
+            mScaledBG = mDefaultBG.getScaledInstance(
+                    (int) (iw * scale),
+                    (int) (ih * scale),
+                    Image.SCALE_FAST);
+        } else {
+            mScaledBG = mDefaultBG;
         }
     }
 

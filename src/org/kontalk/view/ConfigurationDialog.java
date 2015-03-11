@@ -18,7 +18,10 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.filechooser.WebFileChooserField;
+import com.alee.extended.filefilter.ImageFilesFilter;
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
@@ -36,6 +39,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.io.File;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.swing.JFrame;
@@ -106,6 +110,8 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mTrayBox;
         private final WebCheckBox mCloseTrayBox;
         private final WebCheckBox mEnterSendsBox;
+        private final WebCheckBox mBGBox;
+        private final WebFileChooserField mBGChooser;
 
         MainPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -119,20 +125,19 @@ final class ConfigurationDialog extends WebDialog {
             mConnectStartupBox.setSelected(mConf.getBoolean(KonConf.MAIN_CONNECT_STARTUP));
             groupPanel.add(mConnectStartupBox);
 
-            mCloseTrayBox = new WebCheckBox("Close to tray");
-            mCloseTrayBox.setAnimated(false);
-            mCloseTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE));
-
             mTrayBox = new WebCheckBox("Show tray icon");
             mTrayBox.setAnimated(false);
+            mTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY));
             mTrayBox.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {
                     mCloseTrayBox.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
                 }
             });
-            mTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY));
-
+            mCloseTrayBox = new WebCheckBox("Close to tray");
+            mCloseTrayBox.setAnimated(false);
+            mCloseTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE));
+            mCloseTrayBox.setEnabled(mTrayBox.isSelected());
             groupPanel.add(new GroupPanel(10, mTrayBox, mCloseTrayBox));
 
             mEnterSendsBox = new WebCheckBox("Enter key sends");
@@ -142,6 +147,36 @@ final class ConfigurationDialog extends WebDialog {
                     + "- or vice versa";
             TooltipManager.addTooltip(mEnterSendsBox, enterSendsToolText);
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
+
+            mBGBox = new WebCheckBox("Custom background: ");
+            mBGBox.setAnimated(false);
+            String bgPath = mConf.getString(KonConf.VIEW_THREAD_BG);
+            mBGBox.setSelected(!bgPath.isEmpty());
+            mBGBox.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    mBGChooser.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                    mBGChooser.getChooseButton().setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                }
+            });
+
+            mBGChooser = new WebFileChooserField();
+            mBGChooser.setEnabled(mBGBox.isSelected());
+            mBGChooser.getChooseButton().setEnabled(mBGBox.isSelected());
+            if (!bgPath.isEmpty())
+                mBGChooser.setSelectedFile(new File(bgPath));
+            mBGChooser.setMultiSelectionEnabled(false);
+            mBGChooser.setShowRemoveButton(true);
+            mBGChooser.getWebFileChooser().setFileFilter(new ImageFilesFilter());
+            File file = new File(bgPath);
+            if (file.exists()) {
+                mBGChooser.setSelectedFile(file);
+            }
+
+            if (file.getParentFile() != null && file.getParentFile().exists())
+                mBGChooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
+
+            groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
 
             this.add(groupPanel);
         }
@@ -153,6 +188,17 @@ final class ConfigurationDialog extends WebDialog {
             mView.setTray();
             mConf.setProperty(KonConf.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
+            String bgPath;
+            if (mBGBox.isSelected() && !mBGChooser.getSelectedFiles().isEmpty()) {
+                bgPath = mBGChooser.getSelectedFiles().get(0).getAbsolutePath();
+            } else {
+                bgPath = "";
+            }
+            String oldBGPath = mConf.getString(KonConf.VIEW_THREAD_BG);
+            if (!bgPath.equals(oldBGPath)) {
+                mConf.setProperty(KonConf.VIEW_THREAD_BG, bgPath);
+                mView.reloadThreadBG();
+            }
         }
     }
 

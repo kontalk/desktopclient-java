@@ -48,6 +48,7 @@ public final class KonConf extends PropertiesConfiguration {
     public final static String VIEW_FRAME_WIDTH = "view.frame.width";
     public final static String VIEW_FRAME_HEIGHT = "view.frame.height";
     public final static String VIEW_SELECTED_THREAD = "view.thread";
+    public final static String VIEW_THREAD_BG = "view.thread_bg";
     public final static String NET_SEND_CHAT_STATE = "net.chatstate";
     public final static String NET_STATUS_LIST = "net.status_list";
     public final static String MAIN_CONNECT_STARTUP = "main.connect_startup";
@@ -86,6 +87,7 @@ public final class KonConf extends PropertiesConfiguration {
         map.put(VIEW_FRAME_WIDTH, 600);
         map.put(VIEW_FRAME_HEIGHT, 650);
         map.put(VIEW_SELECTED_THREAD, -1);
+        map.put(VIEW_THREAD_BG, "");
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_STATUS_LIST, new String[]{""});
         map.put(MAIN_CONNECT_STARTUP, true);
