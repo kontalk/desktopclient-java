@@ -5,6 +5,8 @@ nbproject/private/
 kontalk.db
 kontalk.properties
 *.pgp
+# Transifex
+.tx/
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
@@ -20,3 +22,4 @@ build/
 dist/
 store/
 release/
+
