@@ -30,7 +30,7 @@ import org.kontalk.Kontalk;
 
 /**
  * Translation for strings used in view.
- * TODO strings key file can't be updated dynamically
+ * Use the Python script for updating the string properties file!
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */

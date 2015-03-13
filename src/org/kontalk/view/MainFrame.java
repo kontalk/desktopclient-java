@@ -73,9 +73,10 @@ import org.kontalk.Kontalk;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
+import org.kontalk.util.Tr;
 
 /**
- *
+ * The application window.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class MainFrame extends WebFrame {
@@ -123,9 +124,9 @@ final class MainFrame extends WebFrame {
         WebMenu konNetMenu = new WebMenu("KonNet");
         konNetMenu.setMnemonic(KeyEvent.VK_K);
 
-        mConnectMenuItem = new WebMenuItem("Connect");
+        mConnectMenuItem = new WebMenuItem(Tr.tr("Connect"));
         mConnectMenuItem.setAccelerator(Hotkey.ALT_C);
-        mConnectMenuItem.setToolTipText("Connect to Server");
+        mConnectMenuItem.setToolTipText(Tr.tr("Connect to Server"));
         mConnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -134,9 +135,9 @@ final class MainFrame extends WebFrame {
         });
         konNetMenu.add(mConnectMenuItem);
 
-        mDisconnectMenuItem = new WebMenuItem("Disconnect");
+        mDisconnectMenuItem = new WebMenuItem(Tr.tr("Disconnect"));
         mDisconnectMenuItem.setAccelerator(Hotkey.ALT_D);
-        mDisconnectMenuItem.setToolTipText("Disconnect from Server");
+        mDisconnectMenuItem.setToolTipText(Tr.tr("Disconnect from Server"));
         mDisconnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -146,9 +147,9 @@ final class MainFrame extends WebFrame {
         konNetMenu.add(mDisconnectMenuItem);
         konNetMenu.addSeparator();
 
-        WebMenuItem statusMenuItem = new WebMenuItem("Set status");
+        WebMenuItem statusMenuItem = new WebMenuItem(Tr.tr("Set status"));
         statusMenuItem.setAccelerator(Hotkey.ALT_S);
-        statusMenuItem.setToolTipText("Set status text send to other user");
+        statusMenuItem.setToolTipText(Tr.tr("Set status text send to other user"));
         statusMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -159,9 +160,9 @@ final class MainFrame extends WebFrame {
         konNetMenu.add(statusMenuItem);
         konNetMenu.addSeparator();
 
-        WebMenuItem exitMenuItem = new WebMenuItem("Exit");
+        WebMenuItem exitMenuItem = new WebMenuItem(Tr.tr("Exit"));
         exitMenuItem.setAccelerator(Hotkey.ALT_E);
-        exitMenuItem.setToolTipText("Exit application");
+        exitMenuItem.setToolTipText(Tr.tr("Exit application"));
         exitMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -172,12 +173,12 @@ final class MainFrame extends WebFrame {
 
         menubar.add(konNetMenu);
 
-        WebMenu optionsMenu = new WebMenu("Options");
+        WebMenu optionsMenu = new WebMenu(Tr.tr("Options"));
         optionsMenu.setMnemonic(KeyEvent.VK_O);
 
-        WebMenuItem conConfMenuItem = new WebMenuItem("Preferences");
+        WebMenuItem conConfMenuItem = new WebMenuItem(Tr.tr("Preferences"));
         conConfMenuItem.setAccelerator(Hotkey.ALT_P);
-        conConfMenuItem.setToolTipText("Set application preferences");
+        conConfMenuItem.setToolTipText(Tr.tr("Set application preferences"));
         conConfMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -188,11 +189,11 @@ final class MainFrame extends WebFrame {
 
         menubar.add(optionsMenu);
 
-        WebMenu helpMenu = new WebMenu("Help");
+        WebMenu helpMenu = new WebMenu(Tr.tr("Help"));
         helpMenu.setMnemonic(KeyEvent.VK_H);
 
-        WebMenuItem aboutMenuItem = new WebMenuItem("About");
-        aboutMenuItem.setToolTipText("About Kontalk");
+        WebMenuItem aboutMenuItem = new WebMenuItem(Tr.tr("About"));
+        aboutMenuItem.setToolTipText(Tr.tr("About Kontalk"));
         aboutMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -208,23 +209,23 @@ final class MainFrame extends WebFrame {
 
         // ...left...
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-        WebButton newThreadButton = new WebButton("New");
+        WebButton newThreadButton = new WebButton(Tr.tr("New"));
         newThreadButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 // TODO new thread button
             }
         });
-        String threadOverlayText = "No threads to display. You can create new threads"
-        + " from your contacts";
+        String threadOverlayText =
+                Tr.tr("No threads to display. You can create new threads from your contacts");
         WebPanel threadListPanel = createListPane(threadList,
                 newThreadButton,
                 threadOverlayText);
         mTabbedPane.addTab("", threadListPanel);
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
-                new WebVerticalLabel("Threads"));
+                new WebVerticalLabel(Tr.tr("Threads")));
 
-        WebButton newUserButton = new WebButton("Add");
+        WebButton newUserButton = new WebButton(Tr.tr("Add"));
         newUserButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -232,13 +233,13 @@ final class MainFrame extends WebFrame {
                 addUserDialog.setVisible(true);
             }
         });
-        String userOverlayText = "No contacts to display. You have no friends ;(";
+        String userOverlayText = Tr.tr("No contacts to display. You have no friends ;(");
         WebPanel userListPanel = createListPane(userList,
                 newUserButton,
                 userOverlayText);
         mTabbedPane.addTab("", userListPanel);
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
-                new WebVerticalLabel("Contacts"));
+                new WebVerticalLabel(Tr.tr("Contacts")));
         mTabbedPane.setPreferredSize(new Dimension(250, -1));
         this.add(mTabbedPane, BorderLayout.WEST);
 
@@ -303,14 +304,14 @@ final class MainFrame extends WebFrame {
         aboutPanel.add(new WebLabel("Kontalk Java Client v" + Kontalk.VERSION));
         WebLinkLabel linkLabel = new WebLinkLabel();
         linkLabel.setLink("http://www.kontalk.org");
-        linkLabel.setText("Visit kontalk.org");
+        linkLabel.setText(Tr.tr("Visit kontalk.org"));
         aboutPanel.add(linkLabel);
-        WebLabel soundLabel = new WebLabel("Notification sound by FxProSound");
+        WebLabel soundLabel = new WebLabel(Tr.tr("Notification sound by")+" FxProSound");
         aboutPanel.add(soundLabel);
         Icon icon = View.getIcon("kontalk.png");
         WebOptionPane.showMessageDialog(this,
                 aboutPanel,
-                "About",
+                Tr.tr("About"),
                 WebOptionPane.INFORMATION_MESSAGE,
                 icon);
     }
@@ -321,7 +322,7 @@ final class MainFrame extends WebFrame {
         private final WebList mStatusList;
 
         StatusDialog() {
-            this.setTitle("Status");
+            this.setTitle(Tr.tr("Status"));
             this.setResizable(false);
             this.setModal(true);
 
@@ -336,12 +337,12 @@ final class MainFrame extends WebFrame {
 
             stats.remove("");
 
-            groupPanel.add(new WebLabel("Your current status:"));
+            groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
             mStatusField = new WebTextField(currentStatus, 30);
             groupPanel.add(mStatusField);
             groupPanel.add(new WebSeparator(true, true));
 
-            groupPanel.add(new WebLabel("Previously used:"));
+            groupPanel.add(new WebLabel(Tr.tr("Previously used:")));
             mStatusList = new WebList(stats);
             mStatusList.setMultiplySelectionAllowed(false);
             mStatusList.addListSelectionListener(new ListSelectionListener() {
@@ -359,14 +360,14 @@ final class MainFrame extends WebFrame {
             this.add(groupPanel, BorderLayout.CENTER);
 
             // buttons
-            WebButton cancelButton = new WebButton("Cancel");
+            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
             cancelButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     StatusDialog.this.dispose();
                 }
             });
-            final WebButton saveButton = new WebButton("Save");
+            final WebButton saveButton = new WebButton(Tr.tr("Save"));
             saveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -406,7 +407,7 @@ final class MainFrame extends WebFrame {
         private final WebCheckBox mEncryptionBox;
 
         AddUserDialog() {
-            this.setTitle("Add New Contact");
+            this.setTitle(Tr.tr("Add New Contact"));
             //this.setSize(400, 280);
             this.setResizable(false);
             this.setModal(true);
@@ -417,13 +418,13 @@ final class MainFrame extends WebFrame {
             // editable fields
             WebPanel namePanel = new WebPanel();
             namePanel.setLayout(new BorderLayout(10, 5));
-            namePanel.add(new WebLabel("Display Name:"), BorderLayout.WEST);
+            namePanel.add(new WebLabel(Tr.tr("Display Name:")), BorderLayout.WEST);
             mNameField = new WebTextField();
             namePanel.add(mNameField, BorderLayout.CENTER);
             groupPanel.add(namePanel);
             groupPanel.add(new WebSeparator(true, true));
 
-            mEncryptionBox = new WebCheckBox("Encryption");
+            mEncryptionBox = new WebCheckBox(Tr.tr("Encryption"));
             mEncryptionBox.setAnimated(false);
             mEncryptionBox.setSelected(true);
             groupPanel.add(mEncryptionBox);
@@ -437,14 +438,14 @@ final class MainFrame extends WebFrame {
             this.add(groupPanel, BorderLayout.CENTER);
 
             // buttons
-            WebButton cancelButton = new WebButton("Cancel");
+            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
             cancelButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     AddUserDialog.this.dispose();
                 }
             });
-            final WebButton saveButton = new WebButton("Save");
+            final WebButton saveButton = new WebButton(Tr.tr("Save"));
             saveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -481,7 +482,7 @@ final class MainFrame extends WebFrame {
         // search panel
         WebPanel searchPanel = new WebPanel();
         final WebTextField searchField = new WebTextField();
-        searchField.setInputPrompt("Search...");
+        searchField.setInputPrompt(Tr.tr("Search..."));
         searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
