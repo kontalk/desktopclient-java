@@ -44,6 +44,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Account;
+import org.kontalk.util.Tr;
 
 /**
  * Wizard-like dialog for importing new key files.
@@ -70,7 +71,7 @@ final class ImportDialog extends WebDialog {
     private ImportPage mCurrentPage;
 
     ImportDialog(final View view, final boolean connect) {
-        this.setTitle("Import Wizard");
+        this.setTitle(Tr.tr("Import Wizard"));
         this.setSize(420, 260);
 
         this.setResizable(false);
@@ -89,28 +90,28 @@ final class ImportDialog extends WebDialog {
         mPanels.put(ImportPage.RESULT, new ResultPanel());
 
         // buttons
-        mBackButton = new WebButton("Back");
+        mBackButton = new WebButton(Tr.tr("Back"));
         mBackButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ImportDialog.this.switchPage(Direction.BACK);
             }
         });
-        mNextButton = new WebButton("Next");
+        mNextButton = new WebButton(Tr.tr("Next"));
         mNextButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ImportDialog.this.switchPage(Direction.FORTH);
             }
         });
-        mCancelButton = new WebButton("Cancel");
+        mCancelButton = new WebButton(Tr.tr("Cancel"));
         mCancelButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ImportDialog.this.dispose();
             }
         });
-        mFinishButton = new WebButton("Finish");
+        mFinishButton = new WebButton(Tr.tr("Finish"));
         mFinishButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -184,11 +185,11 @@ final class ImportDialog extends WebDialog {
             errorText = View.getErrorText(ex);
         }
 
-        String result = errorText == null ? "Success!" : "Error";
-        mResultLabel.setText("Import process finished with: "+result);
+        String result = errorText == null ? Tr.tr("Success!") : Tr.tr("Error");
+        mResultLabel.setText(Tr.tr("Import process finished with:")+" "+result);
         mErrorLabel.setText(errorText == null ?
                 "" :
-                "<html>Error description: \n\n"+errorText+"</html>");
+                "<html>"+Tr.tr("Error description:")+" \n\n"+errorText+"</html>");
         return errorText == null;
     }
 
@@ -198,14 +199,15 @@ final class ImportDialog extends WebDialog {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
-            groupPanel.add(new WebLabel("Get Started").setBoldFont());
+            groupPanel.add(new WebLabel(Tr.tr("Get Started")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
             // html tag for word wrap
-            String text = "<html>Welcome to the import wizard. To use the "
-                    + "Kontalk desktop client you need an existing account. "
-                    + "Please export the key files from your Android device and "
-                    + "select them on the next page.</html>";
+            String text = "<html>"+
+                    Tr.tr("Welcome to the import wizard.")+" "
+                    +Tr.tr("To use the Kontalk desktop client you need an existing account.")+" "
+                    +Tr.tr("Please export the key files from your Android device and select them on the next page.")
+                    +"</html>";
             groupPanel.add(new WebLabel(text));
 
             this.add(groupPanel);
@@ -219,11 +221,11 @@ final class ImportDialog extends WebDialog {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
-            groupPanel.add(new WebLabel("Setup").setBoldFont());
+            groupPanel.add(new WebLabel(Tr.tr("Setup")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
             // file chooser for key files
-            groupPanel.add(new WebLabel("Zip archive containing personal key:"));
+            groupPanel.add(new WebLabel(Tr.tr("Zip archive containing personal key:")));
 
             mZipFileChooser.addSelectedFilesListener(new FilesSelectionListener() {
                 @Override
@@ -235,8 +237,8 @@ final class ImportDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             // text field for passphrase
-            groupPanel.add(new WebLabel("Decryption password for key:"));
-            mPassField.setInputPrompt("Enter password...");
+            groupPanel.add(new WebLabel(Tr.tr("Decryption password for key:")));
+            mPassField.setInputPrompt(Tr.tr("Enter password..."));
             mPassField.setHideInputPromptOnFocus(false);
             mPassField.getDocument().addDocumentListener(new DocumentListener() {
                 @Override
@@ -254,7 +256,7 @@ final class ImportDialog extends WebDialog {
             });
             groupPanel.add(mPassField);
 
-            WebCheckBox showPasswordBox = new WebCheckBox("Show password");
+            WebCheckBox showPasswordBox = new WebCheckBox(Tr.tr("Show password"));
             showPasswordBox.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {
@@ -275,10 +277,10 @@ final class ImportDialog extends WebDialog {
         fileChooser.setMultiSelectionEnabled(false);
         fileChooser.setShowFileShortName(false);
         fileChooser.setShowRemoveButton(false);
-        fileChooser.getWebFileChooser().setFileFilter(new FileNameExtensionFilter("Zip archive", "zip"));
+        fileChooser.getWebFileChooser().setFileFilter(new FileNameExtensionFilter(Tr.tr("Zip archive"), "zip"));
         File file = new File(path);
         if (file.exists()) {
-            fileChooser.setSelectedFile(new File(path));
+            fileChooser.setSelectedFile(file);
         } else {
             fileChooser.setBorderColor(Color.RED);
         }
@@ -306,7 +308,7 @@ final class ImportDialog extends WebDialog {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
-            groupPanel.add(new WebLabel("Import results").setBoldFont());
+            groupPanel.add(new WebLabel(Tr.tr("Import results")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
             groupPanel.add(mResultLabel);
