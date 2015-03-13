@@ -81,6 +81,7 @@ import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
+import org.kontalk.util.Tr;
 
 /**
  * Initialize and control the user interface.
@@ -124,9 +125,9 @@ public final class View implements Observer {
         mSendTextArea.setWrapStyleWord(true);
 
         // send button
-        mSendButton = new WebButton("Send");
+        mSendButton = new WebButton(Tr.tr("Send"));
         // for showing the hotkey tooltip
-        TooltipManager.addTooltip(mSendButton, "Send Message");
+        TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
         mSendButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -177,7 +178,7 @@ public final class View implements Observer {
 
         // popup menu outside of frame, officially not supported
         final WebPopupMenu popup = new WebPopupMenu("Kontalk");
-        WebMenuItem quitItem = new WebMenuItem("Quit");
+        WebMenuItem quitItem = new WebMenuItem(Tr.tr("Quit"));
         quitItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -323,18 +324,18 @@ public final class View implements Observer {
         ControlCenter.Status status = mControl.getCurrentStatus();
         switch (status) {
             case CONNECTING:
-                mStatusBarLabel.setText("Connecting...");
+                mStatusBarLabel.setText(Tr.tr("Connecting..."));
                 break;
             case CONNECTED:
                 mThreadView.setColor(Color.white);
-                mStatusBarLabel.setText("Connected");
+                mStatusBarLabel.setText(Tr.tr("Connected"));
                 break;
             case DISCONNECTING:
-                mStatusBarLabel.setText("Disconnecting...");
+                mStatusBarLabel.setText(Tr.tr("Disconnecting..."));
                 break;
             case DISCONNECTED:
                 mThreadView.setColor(Color.lightGray);
-                mStatusBarLabel.setText("Not connected");
+                mStatusBarLabel.setText(Tr.tr("Not connected"));
                 //if (mTrayIcon != null)
                 //    trayIcon.setImage(updatedImage);
                 break;
@@ -346,11 +347,11 @@ public final class View implements Observer {
                 mMainFrame.dispose();
                 break;
             case FAILED:
-                mStatusBarLabel.setText("Connecting failed");
+                mStatusBarLabel.setText(Tr.tr("Connecting failed"));
                 break;
             case ERROR:
                 mThreadView.setColor(Color.lightGray);
-                mStatusBarLabel.setText("Connection error");
+                mStatusBarLabel.setText(Tr.tr("Connection error"));
                 break;
             }
 
@@ -366,7 +367,7 @@ public final class View implements Observer {
         String errorText = getErrorText(ex);
         WebOptionPane.showMessageDialog(mMainFrame,
                 errorText,
-                "Error",
+                Tr.tr("Error"),
                 WebOptionPane.ERROR_MESSAGE);
     }
 
@@ -374,19 +375,20 @@ public final class View implements Observer {
         String errorText = "<html>";
 
         boolean isOut = message.getDir() == KonMessage.Direction.OUT;
-        errorText += isOut ? "Encryption error:" : "Decryption error:";
+        errorText += isOut ? Tr.tr("Encryption error") : Tr.tr("Decryption error");
+        errorText += ":";
 
         for (Coder.Error error : message.getCoderStatus().getErrors()) {
             errorText += "<br>";
             switch (error) {
                 case UNKNOWN_ERROR:
-                    errorText += "Unknown error";
+                    errorText += Tr.tr("Unknown error");
                     break;
                 case KEY_UNAVAILABLE:
-                    errorText += "Key for receiver not found.";
+                    errorText += Tr.tr("Key for receiver not found.");
                     break;
                 default:
-                    errorText += "Unusual coder error: " + error.toString();
+                    errorText += Tr.tr("Unusual coder error")+": " + error.toString();
             }
         }
 
@@ -489,65 +491,69 @@ public final class View implements Observer {
 
     static String getErrorText(KonException ex) {
         String eol = System.getProperty("line.separator");
-        String errorText = "Uknown error!?";
+        String errorText = Tr.tr("Unknown error!?");
         switch(ex.getError()) {
             case IMPORT_ARCHIVE:
-                errorText = "Can't open key archive.";
+                errorText = Tr.tr("Can't open key archive.");
                 break;
             case IMPORT_READ_FILE:
-                errorText = "Can't load keyfile(s) from archive.";
+                errorText = Tr.tr("Can't load keyfile(s) from archive.");
                 break;
             case IMPORT_KEY:
-                errorText = "Can't create personal key from key files. ";
+                errorText = Tr.tr("Can't create personal key from key files.")+" ";
                 if (ex.getExceptionClass().equals(IOException.class)) {
-                    errorText += eol + "Is the public key file valid?";
+                    errorText += eol + Tr.tr("Is the public key file valid?");
                 }
                 if (ex.getExceptionClass().equals(CertificateException.class)) {
                     // bridge
-                    errorText += eol + "Are all key files valid?";
+                    errorText += eol + Tr.tr("Are all key files valid?");
                 }
                 if (ex.getExceptionClass().equals(PGPException.class)) {
-                    errorText += eol + "Is the passphrase correct?";
+                    errorText += eol + Tr.tr("Is the passphrase correct?");
                 }
                 break;
             case IMPORT_CHANGE_PASSWORD:
-                errorText = "Can't change password. Internal error!?";
+                errorText = Tr.tr("Can't change password. Internal error(!?)");
                 break;
             case IMPORT_WRITE_FILE:
-                errorText = "Can't write key files to configuration directory.";
+                errorText = Tr.tr("Can't write key files to configuration directory.");
                 break;
             case RELOAD_READ_FILE:
-                errorText = "Can't read key files from configuration directory.";
-                errorText += " Please reimport your key.";
-                break;
             case RELOAD_KEY:
-                errorText = "Can't load key files from configuration directory.";
-                errorText += " Please reimport your key.";
+                switch (ex.getError()) {
+                    case RELOAD_READ_FILE:
+                        errorText = Tr.tr("Can't read key files from configuration directory.");
+                        break;
+                    case RELOAD_KEY:
+                        errorText = Tr.tr("Can't load key files from configuration directory.");
+                        break;
+                }
+                errorText += " "+Tr.tr("Please reimport your key.");
                 break;
             case CLIENT_CONNECTION:
-                errorText = "Can't create connection";
+                errorText = Tr.tr("Can't create connection");
                 break;
             case CLIENT_CONNECT:
-                errorText = "Can't connect to server.";
+                errorText = Tr.tr("Can't connect to server.");
                 if (ex.getExceptionClass().equals(ConnectionException.class)) {
-                    errorText += eol + "Is the server address correct?";
+                    errorText += eol + Tr.tr("Is the server address correct?");
                 }
                 if (ex.getExceptionClass().equals(SSLHandshakeException.class)) {
-                    errorText += eol + "The server rejects the key.";
+                    errorText += eol + Tr.tr("The server rejects the key.");
                 }
                 if (ex.getExceptionClass().equals(SmackException.NoResponseException.class)) {
-                    errorText += eol + "The server does not respond.";
+                    errorText += eol + Tr.tr("The server does not respond.");
                 }
                 break;
             case CLIENT_LOGIN:
-                errorText = "Can't login to server.";
+                errorText = Tr.tr("Can't login to server.");
                 if (ex.getExceptionClass().equals(SASLErrorException.class)) {
-                    errorText += eol + "The server rejects the account. Is the "
-                            + "specified server correct and the account valid?";
+                    errorText += eol +
+                            Tr.tr("The server rejects the account. Is the specified server correct and the account valid?");
                 }
                 break;
             case CLIENT_ERROR:
-                errorText = "Connection to server closed on error.";
+                errorText = Tr.tr("Connection to server closed on error.");
                 // TODO more details
                 break;
         }
@@ -585,12 +591,12 @@ public final class View implements Observer {
         String jVersion = System.getProperty("java.version");
         if (jVersion.length() >= 3)
             jVersion = jVersion.substring(2, 3);
-        String errorText = "The installed Java version is too old: " + jVersion;
+        String errorText = Tr.tr("The installed Java version is too old")+": " + jVersion;
         errorText += System.getProperty("line.separator");
-        errorText += "Please install Java 8.";
+        errorText += Tr.tr("Please install Java 8.");
         WebOptionPane.showMessageDialog(null,
                 errorText,
-                "Unsupported Java Version",
+                Tr.tr("Unsupported Java Version"),
                 WebOptionPane.ERROR_MESSAGE);
     }
 }
