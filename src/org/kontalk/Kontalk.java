@@ -53,6 +53,9 @@ public final class Kontalk {
     private static ServerSocket RUN_LOCK;
 
     static {
+        // initialize translation
+        //Tr.init();
+
         // check java version
         String jVersion = System.getProperty("java.version");
         if (jVersion.startsWith("1.7")) {

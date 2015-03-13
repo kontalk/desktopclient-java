@@ -45,6 +45,12 @@ public class Tr {
     /** Map default (English) strings to translated strings. **/
     private static Map<String, String> TR_MAP = null;
 
+    /**
+     * Translate string used in user interface.
+     * Spaces at beginning or end of string not supported!
+     * @param s string thats wants to be translated (in English)
+     * @return translation of input string (depending of platform language)
+     */
     public static String tr(String s) {
         if (TR_MAP == null || !TR_MAP.containsKey(s))
             return s;
