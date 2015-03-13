@@ -60,8 +60,6 @@ public class Tr {
     public static void init(){
         // get language
         String lang = Locale.getDefault().getLanguage();
-        // TODO for testing
-        lang = "de";
         if (lang.equals(DEFAULT_LANG)) {
             return;
         }
