@@ -71,7 +71,7 @@ final class KonRosterListener implements RosterListener {
                 }
             }
 
-            mControl.addUser(entry.getUser(), entry.getName());
+            mControl.addUserFromRoster(entry.getUser(), entry.getName());
         }
     }
 

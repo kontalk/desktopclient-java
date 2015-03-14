@@ -212,7 +212,7 @@ public final class ControlCenter extends Observable {
      */
     public boolean newInMessage(String from, String xmppID, String xmppThreadID, Date date, MessageContent content) {
         String jid = XmppStringUtils.parseBareJid(from);
-        Optional<User> optUser = getUser(jid);
+        Optional<User> optUser = this.getOrAddUser(jid);
         if (!optUser.isPresent()) {
             LOGGER.warning("can't get user for message");
             return false;
@@ -286,9 +286,9 @@ public final class ControlCenter extends Observable {
             return;
         }
         String jid = XmppStringUtils.parseBareJid(from);
-        Optional<User> optUser = getUser(jid);
+        Optional<User> optUser = UserList.getInstance().get(jid);
         if (!optUser.isPresent()) {
-            LOGGER.warning("can't get user for chat state message");
+            LOGGER.warning("(chat state) can't find user with jid: "+jid);
             return;
         }
         User user = optUser.get();
@@ -296,9 +296,8 @@ public final class ControlCenter extends Observable {
         thread.setChatState(user, chatState);
     }
 
-    public void addUser(String jid, String rosterName) {
-            UserList userList = UserList.getInstance();
-            if (userList.contains(jid))
+    public void addUserFromRoster(String jid, String rosterName) {
+            if (UserList.getInstance().contains(jid))
                 return;
 
             LOGGER.info("adding user from roster, jid: "+jid);
@@ -309,13 +308,8 @@ public final class ControlCenter extends Observable {
                 // this must be the hash string, don't use it as name
                 name = "";
             }
-            Optional<User> optNewUser = userList.add(jid, name);
-            if (!optNewUser.isPresent()) {
-                LOGGER.warning("can't add user");
-                return;
-            }
-            // send request for public key
-            mClient.sendPublicKeyRequest(optNewUser.get().getJID());
+
+            this.addUser(jid, name);
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
@@ -368,15 +362,34 @@ public final class ControlCenter extends Observable {
         UserList.getInstance().changed();
     }
 
+    /* private */
+
+    private Optional<User> getOrAddUser(String jid) {
+        UserList userList = UserList.getInstance();
+
+        Optional<User> optUser = userList.contains(jid) ? userList.get(jid) : this.addUser(jid, "");
+        return optUser;
+    }
+
+    private Optional<User> addUser(String jid, String name) {
+        UserList userList = UserList.getInstance();
+        Optional<User> optNewUser = userList.add(jid, name);
+        if (!optNewUser.isPresent()) {
+            LOGGER.warning("can't add user");
+            return optNewUser;
+        }
+
+        // send request for public key
+        mClient.sendPublicKeyRequest(optNewUser.get().getJID());
+
+        // TODO when to add new user to roster!?
+
+        return optNewUser;
+    }
+
     private static KonThread getThread(String xmppThreadID, User user) {
         ThreadList threadList = ThreadList.getInstance();
         Optional<KonThread> optThread = threadList.getThreadByXMPPID(xmppThreadID);
         return optThread.orElse(threadList.getThreadByUser(user));
-    }
-
-    private static Optional<User> getUser(String jid) {
-        UserList userList = UserList.getInstance();
-        Optional<User> optUser = userList.contains(jid) ? userList.get(jid) : userList.add(jid, "");
-        return optUser;
     }
 }
