@@ -30,8 +30,6 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
-import org.kontalk.crypto.PGPUtils;
-import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
@@ -43,11 +41,10 @@ public final class User {
     private final static Logger LOGGER = Logger.getLogger(User.class.getName());
 
     /**
-     * Availability of one user. Not saved to database.
+     * Availability of one user (== is user currently online?).
+     * Not saved to database.
      */
     public static enum Available {UNKNOWN, YES, NO};
-
-    private static String LEGACY_CUT_FROM_ID = " (NO COMMENT) ";
 
     public final static String TABLE = "user";
     public final static String CREATE_TABLE = "(" +
@@ -202,31 +199,12 @@ public final class User {
         return mFingerprint;
     }
 
-    public void setKey(byte[] rawKey) {
-        Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
-        if (!optKey.isPresent()) {
-            LOGGER.log(Level.WARNING, "can't get public key");
-            return;
-        }
-        PGPCoderKey key = optKey.get();
-
-        // if not set use id in key for username
-        if (mName.isEmpty() && key.userID != null) {
-            String userName = key.userID.replaceFirst("<[a-f0-9]+@.+>$", "");
-            if (userName.endsWith(LEGACY_CUT_FROM_ID))
-                userName = userName.substring(0,
-                        userName.length() - LEGACY_CUT_FROM_ID.length());
-            if (!userName.isEmpty()) {
-                mName = userName;
-                UserList.getInstance().changed();
-            }
-        }
-
+    public void setKey(byte[] rawKey, String fingerprint) {
         if (!mKey.isEmpty())
-            LOGGER.info("overwriting public key for user: "+this);
+            LOGGER.info("overwriting public key of user: "+this);
 
         mKey = Base64.getEncoder().encodeToString(rawKey);
-        mFingerprint = key.fingerprint;
+        mFingerprint = fingerprint;
         this.save();
     }
 

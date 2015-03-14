@@ -33,6 +33,7 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.Coder;
+import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.misc.ViewEvent;
@@ -53,6 +54,8 @@ import org.kontalk.model.UserList;
  */
 public final class ControlCenter extends Observable {
     private final static Logger LOGGER = Logger.getLogger(ControlCenter.class.getName());
+
+    private final static String LEGACY_CUT_FROM_ID = " (NO COMMENT)";
 
     /** The current application state. **/
     public enum Status {
@@ -341,7 +344,26 @@ public final class ControlCenter extends Observable {
             LOGGER.warning("(PGPKey) can't find user with jid: "+jid);
             return;
         }
-        optUser.get().setKey(rawKey);
+        User user = optUser.get();
+
+        Optional<PGPUtils.PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
+        if (!optKey.isPresent()) {
+            LOGGER.log(Level.WARNING, "can't get public key");
+            return;
+        }
+        PGPUtils.PGPCoderKey key = optKey.get();
+        user.setKey(rawKey, key.fingerprint);
+
+        // if not set, use uid in key for user name
+        if (user.getName().isEmpty() && key.userID != null) {
+            String userName = key.userID.replaceFirst(" <[a-f0-9]+@.+>$", "");
+            if (userName.endsWith(LEGACY_CUT_FROM_ID))
+                userName = userName.substring(0,
+                        userName.length() - LEGACY_CUT_FROM_ID.length());
+            if (!userName.isEmpty())
+                user.setName(userName);
+        }
+
     }
 
     public void setBlockedUser(List<String> jids) {
