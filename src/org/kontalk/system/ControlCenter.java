@@ -355,11 +355,13 @@ public final class ControlCenter extends Observable {
         user.setKey(rawKey, key.fingerprint);
 
         // if not set, use uid in key for user name
+        LOGGER.info("full UID in key: '" + key.userID + "'");
         if (user.getName().isEmpty() && key.userID != null) {
             String userName = key.userID.replaceFirst(" <[a-f0-9]+@.+>$", "");
             if (userName.endsWith(LEGACY_CUT_FROM_ID))
                 userName = userName.substring(0,
                         userName.length() - LEGACY_CUT_FROM_ID.length());
+            LOGGER.info("user name from key: '" + userName + "'");
             if (!userName.isEmpty())
                 user.setName(userName);
         }
