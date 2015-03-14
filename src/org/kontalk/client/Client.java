@@ -273,7 +273,7 @@ public final class Client implements PacketListener, Runnable {
         BlockingCommand blockingCommand = new BlockingCommand(command, jid);
 
         // add response listener
-        PacketListener blockResponseListener = new BlockResponseListener(mConn, blocking, jid);
+        PacketListener blockResponseListener = new BlockResponseListener(mControl, mConn, blocking, jid);
         mConn.addPacketListener(blockResponseListener, new PacketIDFilter(blockingCommand));
 
         this.sendPacket(blockingCommand);

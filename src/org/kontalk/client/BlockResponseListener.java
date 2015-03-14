@@ -18,15 +18,13 @@
 
 package org.kontalk.client;
 
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
+import org.kontalk.system.ControlCenter;
 
 /**
  *
@@ -35,11 +33,16 @@ import org.kontalk.model.UserList;
 final class BlockResponseListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(BlockResponseListener.class.getName());
 
+    private final ControlCenter mControl;
     private final XMPPConnection mConn;
     private final boolean mBlocking;
     private final String mJID;
 
-    BlockResponseListener(XMPPConnection conn, boolean blocking, String jid){
+    BlockResponseListener(ControlCenter control,
+            XMPPConnection conn,
+            boolean blocking,
+            String jid){
+        mControl = control;
         mConn = conn;
         mBlocking = blocking;
         mJID = jid;
@@ -63,14 +66,6 @@ final class BlockResponseListener implements PacketListener {
             return;
         }
 
-        Optional<User> optUser = UserList.getInstance().get(mJID);
-        if (!optUser.isPresent()) {
-            LOGGER.info("ignoring block response of JID not in user list");
-            return;
-        }
-        User user = optUser.get();
-
-        LOGGER.info("set user blocking: "+user.getID()+" "+mBlocking);
-        user.setBlocked(mBlocking);
+        mControl.setUserBlocking(mJID, mBlocking);
     }
 };

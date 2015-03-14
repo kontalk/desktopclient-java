@@ -435,7 +435,7 @@ public final class View implements Observer {
     }
 
     void callSetUserBlocking(User user, boolean blocking) {
-        mControl.setUserBlocking(user, blocking);
+        mControl.sendUserBlocking(user, blocking);
     }
 
     void callDecrypt(InMessage message) {

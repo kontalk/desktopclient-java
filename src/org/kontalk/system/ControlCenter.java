@@ -144,7 +144,7 @@ public final class ControlCenter extends Observable {
         }
     }
 
-    public void setUserBlocking(User user, boolean blocking) {
+    public void sendUserBlocking(User user, boolean blocking) {
         mClient.sendBlockingCommand(user.getJID(), blocking);
     }
 
@@ -372,16 +372,21 @@ public final class ControlCenter extends Observable {
                 LOGGER.info("ignoring blocking of JID with resource");
                 return;
             }
-            Optional<User> optUser = UserList.getInstance().get(jid);
-            if (!optUser.isPresent()) {
-                LOGGER.info("ignoring blocking of JID not in user list");
-                return;
-            }
-            User user = optUser.get();
-            LOGGER.info("blocked user: "+user.getID());
-            user.setBlocked(true);
+            this.setUserBlocking(jid, true);
         }
         UserList.getInstance().changed();
+    }
+
+    public void setUserBlocking(String jid, boolean blocking) {
+        Optional<User> optUser = UserList.getInstance().get(jid);
+        if (!optUser.isPresent()) {
+            LOGGER.info("ignoring blocking of JID not in user list");
+            return;
+        }
+        User user = optUser.get();
+
+        LOGGER.info("set user blocking: "+user+" "+blocking);
+        user.setBlocked(blocking);
     }
 
     /* private */
