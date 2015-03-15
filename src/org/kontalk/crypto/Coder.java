@@ -27,6 +27,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
 import java.security.SignatureException;
 import java.text.ParseException;
@@ -157,8 +158,8 @@ public final class Coder {
     }
 
     /**
-     * Creates encrypted and signed message body. Errors that may occur are
-     * saved to the message.
+     * Creates encrypted and signed message body.
+     * Errors that may occur are saved to the message.
      * @param message
      * @return the encrypted and signed text.
      */
@@ -184,7 +185,13 @@ public final class Coder {
         // TODO encrypt more possible content
         String text = message.getContent().getPlainText();
         CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, text);
-        byte[] plainText = cpim.toByteArray();
+        byte[] plainText;
+        try {
+            plainText = cpim.toByteArray();
+        } catch (UnsupportedEncodingException ex) {
+            LOGGER.log(Level.WARNING, "UTF-8 not supported", ex);
+            plainText = cpim.toString().getBytes();
+        }
 
         // setup data encryptor & generator
         BcPGPDataEncryptorBuilder encryptor = new BcPGPDataEncryptorBuilder(PGPEncryptedData.AES_192);
