@@ -462,6 +462,7 @@ final class MainFrame extends WebFrame {
         }
 
         private void saveUser() {
+            // TODO move to control!
             Optional<User> optNewUser = UserList.getInstance().add(
                     mJIDField.getText(),
                     mNameField.getText());

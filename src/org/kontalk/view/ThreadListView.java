@@ -58,6 +58,7 @@ import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.util.Tr;
 import static org.kontalk.view.ListView.TOOLTIP_DATE_FORMAT;
 import org.kontalk.view.ThreadListView.ThreadItem;
 
@@ -77,8 +78,8 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
         // right click popup menu
         mPopupMenu = new WebPopupMenu();
-        WebMenuItem editMenuItem = new WebMenuItem("Edit Thread");
-        editMenuItem.setToolTipText("Edit this thread");
+        WebMenuItem editMenuItem = new WebMenuItem(Tr.tr("Edit Thread"));
+        editMenuItem.setToolTipText(Tr.tr("Edit this thread"));
         editMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -89,15 +90,15 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         });
         mPopupMenu.add(editMenuItem);
 
-        WebMenuItem deleteMenuItem = new WebMenuItem("Delete Thread");
-        deleteMenuItem.setToolTipText("Delete this thread");
+        WebMenuItem deleteMenuItem = new WebMenuItem(Tr.tr("Delete Thread"));
+        deleteMenuItem.setToolTipText(Tr.tr("Delete this thread"));
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                String warningText = "Permanently delete all messages in this thread?";
+                String warningText =Tr.tr( "Permanently delete all messages in this thread?");
                 int selectedOption = WebOptionPane.showConfirmDialog(ThreadListView.this,
                         warningText,
-                        "Please Confirm",
+                        Tr.tr("Please Confirm"),
                         WebOptionPane.OK_CANCEL_OPTION,
                         WebOptionPane.WARNING_MESSAGE);
                 if (selectedOption == WebOptionPane.OK_OPTION) {
@@ -217,12 +218,12 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         @Override
         String getTooltipText() {
             SortedSet<KonMessage> messageSet = this.getValue().getMessages();
-            String lastActivity = messageSet.isEmpty() ? "no messages yet" :
+            String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
                         TOOLTIP_DATE_FORMAT.format(messageSet.last().getDate());
 
             String html = "<html><body>" +
                     "<br>" +
-                    "Last activity: " + lastActivity + "<br>" +
+                    Tr.tr("Last activity")+": " + lastActivity + "<br>" +
                     "";
             return html;
         }
@@ -250,12 +251,12 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         private void update() {
             mBackround = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
             String subject = mValue.getSubject();
-            if (subject.isEmpty()) subject = "<unnamed>";
+            if (subject.isEmpty()) subject = Tr.tr("<unnamed>");
             mSubjectLabel.setText(subject);
 
             List<String> nameList = new ArrayList<>(mValue.getUser().size());
             for (User user : mValue.getUser())
-                nameList.add(user.getName().isEmpty() ? "<unknown>" : user.getName());
+                nameList.add(user.getName().isEmpty() ? Tr.tr("<unknown>") : user.getName());
             mUserLabel.setText(StringUtils.join(nameList, ", "));
         }
 
@@ -280,7 +281,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
             mThreadView = threadView;
 
-            this.setTitle("Edit Thread");
+            this.setTitle(Tr.tr("Edit Thread"));
             this.setResizable(false);
             this.setModal(true);
 
@@ -288,7 +289,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             groupPanel.setMargin(5);
 
             // editable fields
-            groupPanel.add(new WebLabel("Subject:"));
+            groupPanel.add(new WebLabel(Tr.tr("Subject:")));
             String subj = mThreadView.getValue().getSubject();
             mSubjectField = new WebTextField(subj, 22);
             mSubjectField.setInputPrompt(subj);
@@ -296,14 +297,14 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             groupPanel.add(mSubjectField);
             groupPanel.add(new WebSeparator(true, true));
 
-            groupPanel.add(new WebLabel("Participants:"));
+            groupPanel.add(new WebLabel(Tr.tr("Participants:")));
             mParticipantsList = new WebCheckBoxList();
             mParticipantsList.setVisibleRowCount(10);
             for (User oneUser : UserList.getInstance().getAll()) {
                 boolean selected = threadView.getValue().getUser().contains(oneUser);
                 mParticipantsList.getCheckBoxListModel().addCheckBoxElement(oneUser, selected);
             }
-            final WebButton saveButton = new WebButton("Save");
+            final WebButton saveButton = new WebButton(Tr.tr("Save"));
             mParticipantsList.getModel().addListDataListener(new ListDataListener() {
                 @Override
                 public void intervalAdded(ListDataEvent e) {
@@ -323,7 +324,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             this.add(groupPanel, BorderLayout.CENTER);
 
             // buttons
-            WebButton cancelButton = new WebButton("Cancel");
+            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
             cancelButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -335,10 +336,10 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     if (mParticipantsList.getCheckedValues().size() > 1) {
-                        String infoText = "More than one receiver not supported (yet).";
+                        String infoText = Tr.tr("More than one receiver not supported (yet).");
                         WebOptionPane.showMessageDialog(ThreadListView.this,
                                 infoText,
-                                "Sorry",
+                                Tr.tr("Sorry"),
                                 WebOptionPane.INFORMATION_MESSAGE);
                         return;
                     }

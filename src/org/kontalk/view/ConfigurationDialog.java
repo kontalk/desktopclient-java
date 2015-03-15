@@ -48,6 +48,7 @@ import org.kontalk.system.KonConf;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Account;
+import org.kontalk.util.Tr;
 
 /**
  * Dialog for showing and changing all application options.
@@ -64,7 +65,7 @@ final class ConfigurationDialog extends WebDialog {
         super(owner);
 
         mView = view;
-        this.setTitle("Preferences");
+        this.setTitle(Tr.tr("Preferences"));
         this.setSize(550, 500);
         this.setResizable(false);
         this.setModal(true);
@@ -74,21 +75,21 @@ final class ConfigurationDialog extends WebDialog {
         final MainPanel mainPanel = new MainPanel();
         final AccountPanel accountPanel = new AccountPanel();
         final PrivacyPanel privacyPanel = new PrivacyPanel();
-        tabbedPane.addTab("Main", mainPanel);
-        tabbedPane.addTab("Account", accountPanel);
-        tabbedPane.addTab("Privacy", privacyPanel);
+        tabbedPane.addTab(Tr.tr("Main"), mainPanel);
+        tabbedPane.addTab(Tr.tr("Account"), accountPanel);
+        tabbedPane.addTab(Tr.tr("Privacy"), privacyPanel);
 
         this.add(tabbedPane, BorderLayout.CENTER);
 
         // buttons
-        WebButton cancelButton = new WebButton("Cancel");
+        WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
         cancelButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ConfigurationDialog.this.dispose();
             }
         });
-        WebButton saveButton = new WebButton("Save");
+        WebButton saveButton = new WebButton(Tr.tr("Save"));
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -117,15 +118,15 @@ final class ConfigurationDialog extends WebDialog {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
-            groupPanel.add(new WebLabel("Main Settings").setBoldFont());
+            groupPanel.add(new WebLabel(Tr.tr("Main Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
-            mConnectStartupBox = new WebCheckBox("Connect on startup");
+            mConnectStartupBox = new WebCheckBox(Tr.tr("Connect on startup"));
             mConnectStartupBox.setAnimated(false);
             mConnectStartupBox.setSelected(mConf.getBoolean(KonConf.MAIN_CONNECT_STARTUP));
             groupPanel.add(mConnectStartupBox);
 
-            mTrayBox = new WebCheckBox("Show tray icon");
+            mTrayBox = new WebCheckBox(Tr.tr("Show tray icon"));
             mTrayBox.setAnimated(false);
             mTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY));
             mTrayBox.addItemListener(new ItemListener() {
@@ -134,21 +135,21 @@ final class ConfigurationDialog extends WebDialog {
                     mCloseTrayBox.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
                 }
             });
-            mCloseTrayBox = new WebCheckBox("Close to tray");
+            mCloseTrayBox = new WebCheckBox(Tr.tr("Close to tray"));
             mCloseTrayBox.setAnimated(false);
             mCloseTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE));
             mCloseTrayBox.setEnabled(mTrayBox.isSelected());
             groupPanel.add(new GroupPanel(10, mTrayBox, mCloseTrayBox));
 
-            mEnterSendsBox = new WebCheckBox("Enter key sends");
+            mEnterSendsBox = new WebCheckBox(Tr.tr("Enter key sends"));
             mEnterSendsBox.setAnimated(false);
             mEnterSendsBox.setSelected(mConf.getBoolean(KonConf.MAIN_ENTER_SENDS));
-            String enterSendsToolText = "Enter key sends text, Control+Enter adds new line "
-                    + "- or vice versa";
+            String enterSendsToolText =
+                    Tr.tr("Enter key sends text, Control+Enter adds new line - or vice versa");
             TooltipManager.addTooltip(mEnterSendsBox, enterSendsToolText);
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
-            mBGBox = new WebCheckBox("Custom background: ");
+            mBGBox = new WebCheckBox(Tr.tr("Custom background:")+" ");
             mBGBox.setAnimated(false);
             String bgPath = mConf.getString(KonConf.VIEW_THREAD_BG);
             mBGBox.setSelected(!bgPath.isEmpty());
@@ -213,11 +214,11 @@ final class ConfigurationDialog extends WebDialog {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
-            groupPanel.add(new WebLabel("Account Configuration").setBoldFont());
+            groupPanel.add(new WebLabel(Tr.tr("Account Configuration")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
             // server text field
-            groupPanel.add(new WebLabel("Server address:"));
+            groupPanel.add(new WebLabel(Tr.tr("Server address:")));
             WebPanel serverPanel = new WebPanel(false);
             mServerField = new WebTextField(mConf.getString(KonConf.SERV_HOST));
             mServerField.setInputPrompt(KonConf.DEFAULT_SERV_HOST);
@@ -232,13 +233,13 @@ final class ConfigurationDialog extends WebDialog {
             mPortField = new WebFormattedTextField(formatter);
             mPortField.setColumns(4);
             mPortField.setValue(port);
-            serverPanel.add(new GroupPanel(new WebLabel("  Port:"), mPortField),
+            serverPanel.add(new GroupPanel(new WebLabel("  "+Tr.tr("Port:")), mPortField),
                     BorderLayout.EAST);
             groupPanel.add(serverPanel);
-            mDisableCertBox = new WebCheckBox("Disable certificate validation");
+            mDisableCertBox = new WebCheckBox(Tr.tr("Disable certificate validation"));
             mDisableCertBox.setAnimated(false);
             mDisableCertBox.setSelected(!mConf.getBoolean(KonConf.SERV_CERT_VALIDATION));
-            String disableCertText = "Disable SSL certificate server validation";
+            String disableCertText = Tr.tr("Disable SSL certificate server validation");
             TooltipManager.addTooltip(mDisableCertBox, disableCertText);
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
@@ -247,7 +248,7 @@ final class ConfigurationDialog extends WebDialog {
             this.updateFingerprint();
             groupPanel.add(mFingerprintLabel);
 
-            WebButton importButton = new WebButton("Import new Account");
+            WebButton importButton = new WebButton(Tr.tr("Import new Account"));
             importButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -260,7 +261,7 @@ final class ConfigurationDialog extends WebDialog {
             this.add(groupPanel, BorderLayout.CENTER);
 
 
-            WebButton okButton = new WebButton("Save & Connect");
+            WebButton okButton = new WebButton(Tr.tr("Save & Connect"));
             okButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -282,10 +283,10 @@ final class ConfigurationDialog extends WebDialog {
             } catch (KonException ex) {
                 // ignore
             }
-            String fingerprint = "- no key loaded -";
+            String fingerprint = "- "+Tr.tr("no key loaded")+" -";
             if (personalKey != null)
                 fingerprint = personalKey.getFingerprint();
-            mFingerprintLabel.setText("Key fingerprint: "+fingerprint);
+            mFingerprintLabel.setText(Tr.tr("Key fingerprint:")+" "+fingerprint);
         }
 
         private void saveConfiguration() {
@@ -305,10 +306,10 @@ final class ConfigurationDialog extends WebDialog {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
-            groupPanel.add(new WebLabel("Privacy Settings").setBoldFont());
+            groupPanel.add(new WebLabel(Tr.tr("Privacy Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
-            mChatStateBox = new WebCheckBox("Send chatstate notification");
+            mChatStateBox = new WebCheckBox(Tr.tr("Send chatstate notification"));
             mChatStateBox.setAnimated(false);
             mChatStateBox.setSelected(mConf.getBoolean(KonConf.NET_SEND_CHAT_STATE));
 

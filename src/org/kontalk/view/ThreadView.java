@@ -72,6 +72,7 @@ import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.system.KonConf;
+import org.kontalk.util.Tr;
 
 /**
  * Pane that shows the currently selected thread.
@@ -441,7 +442,7 @@ final class ThreadView extends WebScrollPane {
             private void update() {
                 // text in text area
                 boolean encrypted = mMessage.getCoderStatus().isEncrypted();
-                String text = encrypted ? "[encrypted]" : mMessage.getContent().getText();
+                String text = encrypted ? Tr.tr("[encrypted]") : mMessage.getContent().getText();
                 mTextArea.setFontStyle(false, encrypted);
                 mTextArea.setText(text);
                 // hide area if there is no text
@@ -502,13 +503,13 @@ final class ThreadView extends WebScrollPane {
                         // show a link to the file
                         WebLabel attLabel;
                         if (optAttachment.get().getFileName().isEmpty()) {
-                            attLabel = new WebLabel("?");
+                            attLabel = new WebLabel(Tr.tr("?"));
                         } else {
                             WebLinkLabel linkLabel = new WebLinkLabel();
                             linkLabel.setLink(fName, linkRunnable(path));
                             attLabel = linkLabel;
                         }
-                        WebLabel labelLabel = new WebLabel("Attachment: ");
+                        WebLabel labelLabel = new WebLabel(Tr.tr("Attachment:")+" ");
                         labelLabel.setItalicFont();
                         GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
                         mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
@@ -519,8 +520,8 @@ final class ThreadView extends WebScrollPane {
             private WebPopupMenu getPopupMenu() {
                 WebPopupMenu popupMenu = new WebPopupMenu();
                 if (mMessage.getCoderStatus().isEncrypted()) {
-                    WebMenuItem decryptMenuItem = new WebMenuItem("Decrypt");
-                    decryptMenuItem.setToolTipText("Retry decrypting message");
+                    WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
+                    decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
                     decryptMenuItem.addActionListener(new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent event) {
@@ -534,8 +535,8 @@ final class ThreadView extends WebScrollPane {
                     });
                     popupMenu.add(decryptMenuItem);
                 }
-                WebMenuItem copyMenuItem = new WebMenuItem("Copy");
-                copyMenuItem.setToolTipText("Copy message content");
+                WebMenuItem copyMenuItem = new WebMenuItem(Tr.tr("Copy"));
+                copyMenuItem.setToolTipText(Tr.tr("Copy message content"));
                 copyMenuItem.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent event) {
@@ -586,21 +587,21 @@ final class ThreadView extends WebScrollPane {
 
             @Override
             protected String getTooltipText() {
-                String encryption = "unknown";
+                String encryption = Tr.tr("unknown");
                 switch (mMessage.getCoderStatus().getEncryption()) {
-                    case NOT: encryption = "not encrypted"; break;
-                    case ENCRYPTED: encryption = "encrypted"; break;
-                    case DECRYPTED: encryption = "decrypted"; break;
+                    case NOT: encryption = Tr.tr("not encrypted"); break;
+                    case ENCRYPTED: encryption = Tr.tr("encrypted"); break;
+                    case DECRYPTED: encryption = Tr.tr("decrypted"); break;
                 }
-                String verification = "unknown";
+                String verification = Tr.tr("unknown");
                 switch (mMessage.getCoderStatus().getSigning()) {
-                    case NOT: verification = "not signed"; break;
-                    case SIGNED: verification = "signed"; break;
-                    case VERIFIED: verification = "verified"; break;
+                    case NOT: verification = Tr.tr("not signed"); break;
+                    case SIGNED: verification = Tr.tr("signed"); break;
+                    case VERIFIED: verification = Tr.tr("verified"); break;
                 }
                 String problems = "";
                 if (mMessage.getCoderStatus().getErrors().isEmpty()) {
-                    problems = "none";
+                    problems = Tr.tr("none");
                 } else {
                   for (Coder.Error error: mMessage.getCoderStatus().getErrors()) {
                       problems += error.toString() + " <br> ";
@@ -610,8 +611,8 @@ final class ThreadView extends WebScrollPane {
                 String html = "<html><body>" +
                         //"<h3>Header</h3>" +
                         "<br>" +
-                        "Security: " + encryption + " / " + verification + "<br>" +
-                        "Problems: " + problems;
+                        Tr.tr("Security")+": " + encryption + " / " + verification + "<br>" +
+                        Tr.tr("Problems")+": " + problems;
 
                 return html;
             }
