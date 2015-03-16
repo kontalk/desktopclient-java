@@ -47,19 +47,11 @@ public final class ThreadList extends Observable {
     public void load() {
         assert mMap.isEmpty();
 
-        Database db = Database.getInstance();
-        ResultSet receiverRS;
-        ResultSet threadRS;
-        try {
-            receiverRS = db.execSelectAll(KonThread.TABLE_RECEIVER);
-            threadRS = db.execSelectAll(KonThread.TABLE);
-        } catch (SQLException ex) {
-            LOGGER.warning("can't get user from db");
-            return;
-        }
         HashMap<Integer, Set<User>> threadUserMapping = new HashMap<>();
         UserList userList = UserList.getInstance();
-        try {
+        Database db = Database.getInstance();
+        try (ResultSet receiverRS = db.execSelectAll(KonThread.TABLE_RECEIVER);
+                ResultSet threadRS = db.execSelectAll(KonThread.TABLE)) {
             // first, find user for threads
             // TODO: rewrite
             while (receiverRS.next()) {
@@ -79,7 +71,6 @@ public final class ThreadList extends Observable {
                     threadUserMapping.put(threadID, userSet);
                 }
             }
-            receiverRS.close();
             // now, create threads
             while (threadRS.next()) {
                 int id = threadRS.getInt("_id");
@@ -93,7 +84,6 @@ public final class ThreadList extends Observable {
                 boolean read = threadRS.getBoolean("read");
                 mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read));
             }
-            threadRS.close();
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load threads from db", ex);
         }

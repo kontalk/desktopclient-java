@@ -57,18 +57,11 @@ public final class MessageList extends Observable {
 
     public void load() {
         Database db = Database.getInstance();
-        ResultSet resultSet;
-        try {
-            resultSet = db.execSelectAll(KonMessage.TABLE);
-        } catch (SQLException ex) {
-            LOGGER.warning("can't get messages from db");
-            return;
-        }
         KonMessage.Direction[] dirValues = KonMessage.Direction.values();
         KonMessage.Status[] statusValues = KonMessage.Status.values();
         Coder.Encryption[] encryptionValues = Coder.Encryption.values();
         Coder.Signing[] signingValues = Coder.Signing.values();
-        try {
+        try (ResultSet resultSet = db.execSelectAll(KonMessage.TABLE)) {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");
                 int threadID = resultSet.getInt("thread_id");
@@ -119,7 +112,6 @@ public final class MessageList extends Observable {
                 optThread.get().add(newMessage);
                 this.addMessage(newMessage);
             }
-            resultSet.close();
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load messages from db", ex);
         }

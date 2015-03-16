@@ -46,14 +46,7 @@ public final class UserList extends Observable {
 
     public void load() {
         Database db = Database.getInstance();
-        ResultSet resultSet;
-        try {
-            resultSet = db.execSelectAll(User.TABLE);
-        } catch (SQLException ex) {
-            Logger.getLogger(UserList.class.getName()).log(Level.SEVERE, null, ex);
-            return;
-        }
-        try {
+        try (ResultSet resultSet = db.execSelectAll(User.TABLE)) {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");
                 String jid = resultSet.getString("jid");
@@ -68,7 +61,6 @@ public final class UserList extends Observable {
                 String fp = Database.getString(resultSet, "key_fingerprint");
                 mMap.put(jid, new User(id, jid, name, status, lastSeen, encr, key, fp));
             }
-        resultSet.close();
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load users from db", ex);
         }
