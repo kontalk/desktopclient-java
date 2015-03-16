@@ -52,6 +52,7 @@ import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.KonConf;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
@@ -302,7 +303,9 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             mParticipantsList.setVisibleRowCount(10);
             for (User oneUser : UserList.getInstance().getAll()) {
                 boolean selected = threadView.getValue().getUser().contains(oneUser);
-                mParticipantsList.getCheckBoxListModel().addCheckBoxElement(oneUser, selected);
+                mParticipantsList.getCheckBoxListModel().addCheckBoxElement(
+                        new UserElement(oneUser),
+                        selected);
             }
             final WebButton saveButton = new WebButton(Tr.tr("Save"));
             mParticipantsList.getModel().addListDataListener(new ListDataListener() {
@@ -363,9 +366,34 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             List<?> participants = mParticipantsList.getCheckedValues();
             Set<User> threadUser = new HashSet<>();
             for (Object o: participants) {
-                threadUser.add((User) o);
+                threadUser.add(((UserElement) o).user);
             }
             mThreadView.getValue().setUser(threadUser);
         }
+
+        private class UserElement {
+            User user;
+
+            UserElement(User user) {
+                this.user = user;
+            }
+
+            @Override
+            public String toString() {
+                String jid = user.getJID();
+                if (jid.length() > 25) {
+                    String local = shorten(XmppStringUtils.parseLocalpart(jid), 16);
+                    String domain = shorten(XmppStringUtils.parseDomain(jid), 24);
+                    jid = "<" +XmppStringUtils.completeJidFrom(local, domain) + ">";
+                }
+                String name = shorten(user.getName(), 24);
+                return name.isEmpty() ? jid : name +" "+jid;
+            }
+        }
+    }
+
+    private static String shorten(String s, int max_length) {
+        if (max_length < 6) max_length = 6;
+        return s.length() >= max_length ? s.substring(0, max_length / 2) + "..." : s;
     }
 }
