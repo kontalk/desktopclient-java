@@ -51,8 +51,8 @@ public final class Database {
 
     private static Database INSTANCE = null;
     private static final String DB_NAME = "kontalk_db.sqlite";
-    // TODO use me
-    private static final String DB_VERSION = "0";
+    private static final String DB_VERSION = "1";
+    private static final String UV = "user_version";
 
     private Connection mConn = null;
 
@@ -104,6 +104,32 @@ public final class Database {
             LOGGER.log(Level.SEVERE, "can't create tables", ex);
             throw new KonException(KonException.Error.DB, ex);
         }
+
+        int version;
+        try (ResultSet rs = this.execQuery("PRAGMA "+UV)) {
+            version = rs.getInt(UV);
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't get db version", ex);
+            return;
+        }
+        LOGGER.info("database version: "+version);
+
+        try {
+            this.update(version);
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't update db", ex);
+        }
+    }
+
+    private void update(int fromVersion) throws SQLException {
+        if (fromVersion >= 1)
+            return;
+        mConn.createStatement().execute("ALTER TABLE "+KonThread.TABLE+
+                " ADD COLUMN "+KonThread.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
+
+        // set new version
+        mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
+        LOGGER.info("updated to version 1");
     }
 
     public void close() {
@@ -121,7 +147,7 @@ public final class Database {
      * The returned ResultSet must be closed by the caller after usage!
      */
     public ResultSet execSelectAll(String table) throws SQLException {
-        return execSelect("SELECT * FROM " + table);
+        return this.execQuery("SELECT * FROM " + table);
     }
 
     /**
@@ -130,10 +156,10 @@ public final class Database {
      * The returned ResultSet must be closed by the caller after usage!
      */
     public ResultSet execSelectWhereInsecure(String table, String where) throws SQLException {
-        return execSelect("SELECT * FROM " + table + " WHERE " + where);
+        return this.execQuery("SELECT * FROM " + table + " WHERE " + where);
     }
 
-    private ResultSet execSelect(String select) throws SQLException {
+    private ResultSet execQuery(String select) throws SQLException {
         try {
             PreparedStatement stat = mConn.prepareStatement(select);
             // does not work, i dont care

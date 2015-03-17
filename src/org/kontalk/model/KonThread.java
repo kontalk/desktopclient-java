@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -34,6 +35,7 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
+import org.json.simple.JSONObject;
 import org.kontalk.system.Database;
 
 /**
@@ -44,12 +46,17 @@ public final class KonThread extends Observable {
     private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());
 
     public static final String TABLE = "threads";
+    public static final String COL_SUBJ = "subject";
+    public static final String COL_READ = "read";
+    public static final String COL_VIEW_SET = "view_settings";
     public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             "xmpp_id TEXT UNIQUE, " +
-            "subject TEXT, " +
+            COL_SUBJ+" TEXT, " +
             // boolean, contains unread messages?
-            "read INTEGER NOT NULL" +
+            COL_READ+" INTEGER NOT NULL, " +
+            // view settings in JSON format
+            COL_VIEW_SET+" TEXT NOT NULL" +
             ")";
 
     // many to many relationship requires additional table for receiver
@@ -63,6 +70,8 @@ public final class KonThread extends Observable {
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
+    private final static String JSON_BG_COLOR = "bg_color";
+
     private final int mID;
     private final String mXMPPID;
     /**
@@ -75,6 +84,8 @@ public final class KonThread extends Observable {
     private String mSubject;
     private boolean mRead;
     private boolean mDeleted = false;
+    // background color, if set
+    private Optional<Color> mViewColor = Optional.empty();
 
     // used when creating a new thread
     KonThread(Set<User> user) {
@@ -98,6 +109,7 @@ public final class KonThread extends Observable {
         values.add(Database.setString(mXMPPID));
         values.add(Database.setString(mSubject));
         values.add(mRead);
+        values.add(this.viewSettingsJSONString());
         mID = db.execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert thread");
@@ -209,8 +221,9 @@ public final class KonThread extends Observable {
     void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
-        set.put("subject", Database.setString(mSubject));
-        set.put("read", mRead);
+        set.put(COL_SUBJ, Database.setString(mSubject));
+        set.put(COL_READ, mRead);
+
         db.execUpdate(TABLE, set, mID);
 
         // get receiver for this thread
@@ -289,6 +302,13 @@ public final class KonThread extends Observable {
         mUserMap = new HashMap<>();
         for (User oneUser : user)
             mUserMap.put(oneUser, new KonChatState());
+    }
+
+    private String viewSettingsJSONString() {
+        JSONObject json = new JSONObject();
+        if (mViewColor.isPresent())
+            json.put(JSON_BG_COLOR,  mViewColor.get().getRGB());
+        return json.toJSONString();
     }
 
     private synchronized void changed() {
