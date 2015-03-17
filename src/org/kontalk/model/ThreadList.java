@@ -80,9 +80,10 @@ public final class ThreadList extends Observable {
                     LOGGER.warning("no users found for thread");
                     userSet = new HashSet<>();
                 }
-                String subject = Database.getString(threadRS, "subject");
-                boolean read = threadRS.getBoolean("read");
-                mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read));
+                String subject = Database.getString(threadRS, KonThread.COL_SUBJ);
+                boolean read = threadRS.getBoolean(KonThread.COL_READ);
+                String jsonViewSettings = Database.getString(threadRS, KonThread.COL_VIEW_SET);
+                mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read, jsonViewSettings));
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load threads from db", ex);

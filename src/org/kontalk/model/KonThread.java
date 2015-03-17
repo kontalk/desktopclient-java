@@ -36,6 +36,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 import org.kontalk.system.Database;
 
 /**
@@ -70,8 +71,6 @@ public final class KonThread extends Observable {
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
             ")";
 
-    private final static String JSON_BG_COLOR = "bg_color";
-
     private final int mID;
     private final String mXMPPID;
     /**
@@ -83,9 +82,8 @@ public final class KonThread extends Observable {
     private HashMap<User, KonChatState> mUserMap;
     private String mSubject;
     private boolean mRead;
+    private final ViewSettings mViewSettings;
     private boolean mDeleted = false;
-    // background color, if set
-    private Optional<Color> mViewColor = Optional.empty();
 
     // used when creating a new thread
     KonThread(Set<User> user) {
@@ -103,13 +101,14 @@ public final class KonThread extends Observable {
             mSubject = "";
         }
         mRead = true;
+        mViewSettings = new ViewSettings();
 
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
         values.add(Database.setString(mXMPPID));
         values.add(Database.setString(mSubject));
         values.add(mRead);
-        values.add(this.viewSettingsJSONString());
+        values.add(mViewSettings.toJSONString());
         mID = db.execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert thread");
@@ -121,13 +120,20 @@ public final class KonThread extends Observable {
     }
 
     // used when loading from database
-    KonThread(int id, String xmppID, Set<User> user, String subject, boolean read) {
+    KonThread(int id,
+            String xmppID,
+            Set<User> user,
+            String subject,
+            boolean read,
+            String jsonViewSettings
+            ) {
         assert user != null;
         mID = id;
         mXMPPID = xmppID;
         this.setUserMap(user);
         mSubject = subject;
         mRead = read;
+        mViewSettings = new ViewSettings(jsonViewSettings);
     }
 
     public SortedSet<KonMessage> getMessages() {
@@ -223,6 +229,7 @@ public final class KonThread extends Observable {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(mSubject));
         set.put(COL_READ, mRead);
+        set.put(COL_VIEW_SET, mViewSettings.toJSONString());
 
         db.execUpdate(TABLE, set, mID);
 
@@ -304,13 +311,6 @@ public final class KonThread extends Observable {
             mUserMap.put(oneUser, new KonChatState());
     }
 
-    private String viewSettingsJSONString() {
-        JSONObject json = new JSONObject();
-        if (mViewColor.isPresent())
-            json.put(JSON_BG_COLOR,  mViewColor.get().getRGB());
-        return json.toJSONString();
-    }
-
     private synchronized void changed() {
         this.setChanged();
         this.notifyObservers();
@@ -333,6 +333,41 @@ public final class KonThread extends Observable {
             mState = state;
             if (mState == ChatState.active || mState == ChatState.composing)
                 mLastActive = Optional.of(new Date());
+        }
+    }
+
+    private class ViewSettings {
+        private final static String JSON_BG_COLOR = "bg_color";
+
+        // background color, if set
+        private final Optional<Color> mOptColor;
+
+        private ViewSettings(String json) {
+            Object obj = JSONValue.parse(json);
+            Optional<Color> optColor;
+            try {
+                Map<?, ?> map = (Map) obj;
+                optColor = map.containsKey(JSON_BG_COLOR) ?
+                    Optional.of(new Color((Integer) map.get(JSON_BG_COLOR))) :
+                    Optional.<Color>empty();
+            } catch (NullPointerException | ClassCastException ex) {
+                LOGGER.log(Level.WARNING, "can't parse JSON view settings", ex);
+                optColor = Optional.empty();
+            }
+            mOptColor = optColor;
+        }
+
+        private ViewSettings() {
+            mOptColor = Optional.empty();
+        }
+
+        // using legacy lib, raw types extend Object
+        @SuppressWarnings("unchecked")
+        String toJSONString() {
+            JSONObject json = new JSONObject();
+            if (mOptColor.isPresent())
+                json.put(JSON_BG_COLOR,  mOptColor.get().getRGB());
+            return json.toJSONString();
         }
     }
 }
