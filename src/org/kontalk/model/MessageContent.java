@@ -131,14 +131,14 @@ public class MessageContent {
     @SuppressWarnings("unchecked")
     String toJSONString() {
         JSONObject json = new JSONObject();
-        json.put(JSON_PLAIN_TEXT, mPlainText);
-        json.put(JSON_ATTACHMENT, mOptAttachment.isPresent() ?
-                mOptAttachment.get().toJSONString() :
-                null);
-        json.put(JSON_ENC_CONTENT, mEncryptedContent);
-        json.put(JSON_DEC_CONTENT, mOptDecryptedContent.isPresent() ?
-                mOptDecryptedContent.get().toJSONString() :
-                null);
+        if (!mPlainText.isEmpty())
+            json.put(JSON_PLAIN_TEXT, mPlainText);
+        if (mOptAttachment.isPresent())
+            json.put(JSON_ATTACHMENT, mOptAttachment.get().toJSONString());
+        if (!mEncryptedContent.isEmpty())
+            json.put(JSON_ENC_CONTENT, mEncryptedContent);
+        if (mOptDecryptedContent.isPresent())
+            json.put(JSON_DEC_CONTENT, mOptDecryptedContent.get().toJSONString());
         return json.toJSONString();
     }
 
@@ -147,12 +147,14 @@ public class MessageContent {
         try {
             Map<?, ?> map = (Map) obj;
             String plainText = (String) map.get(JSON_PLAIN_TEXT);
+            if (plainText == null) plainText = "";
             String jsonAttachment = (String) map.get(JSON_ATTACHMENT);
             Optional<Attachment> optAttachment = jsonAttachment == null ?
                     Optional.<Attachment>empty() :
                     Attachment.fromJSONString(jsonAttachment);
 
             String encryptedContent = (String) map.get(JSON_ENC_CONTENT);
+            if (encryptedContent == null) encryptedContent = "";
             String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
             Optional<MessageContent> decryptedContent = jsonDecryptedContent == null ?
                     Optional.<MessageContent>empty() :
