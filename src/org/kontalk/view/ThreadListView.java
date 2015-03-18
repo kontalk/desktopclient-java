@@ -20,7 +20,9 @@ package org.kontalk.view;
 
 import com.alee.extended.list.WebCheckBoxList;
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.colorchooser.WebColorChooserDialog;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
@@ -29,6 +31,7 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
+import com.alee.utils.swing.DialogOptions;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -68,6 +71,8 @@ import org.kontalk.view.ThreadListView.ThreadItem;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class ThreadListView extends ListView<ThreadItem, KonThread> {
+
+    private final static Color DEFAULT_BG = Color.WHITE;
 
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;
@@ -276,6 +281,8 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
         private final ThreadItem mThreadView;
         private final WebTextField mSubjectField;
+        private final WebButton mColorChooserButton;
+        private final WebColorChooserDialog mColorChooser;
         WebCheckBoxList mParticipantsList;
 
         EditThreadDialog(ThreadItem threadView) {
@@ -297,6 +304,24 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             mSubjectField.setHideInputPromptOnFocus(false);
             groupPanel.add(mSubjectField);
             groupPanel.add(new WebSeparator(true, true));
+
+            mColorChooserButton = new WebButton();
+            mColorChooserButton.setMinimumHeight(25);
+            Color oldColor =
+                    mThreadView.getValue().getViewSettings().getBGColor().orElse(DEFAULT_BG);
+            mColorChooserButton.setBottomBgColor(oldColor);
+            mColorChooserButton.addActionListener(new ActionListener () {
+                @Override
+                public void actionPerformed(ActionEvent e ) {
+                    EditThreadDialog.this.editColor();
+                }
+            } );
+            mColorChooser = new WebColorChooserDialog(this);
+            mColorChooser.setColor(oldColor);
+            groupPanel.add(new GroupPanel(GroupingType.fillLast,
+                    new WebLabel(Tr.tr("Color:")+" "),
+                    mColorChooserButton));
+            groupPanel.add(new WebSeparator());
 
             groupPanel.add(new WebLabel(Tr.tr("Participants:")));
             mParticipantsList = new WebCheckBoxList();
@@ -359,6 +384,13 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             this.pack();
         }
 
+        private void editColor() {
+            mColorChooser.setVisible(true);
+            if (mColorChooser.getResult () == DialogOptions.OK_OPTION) {
+                mColorChooserButton.setBottomBgColor(mColorChooser.getColor());
+            }
+        }
+
         private void saveThread() {
             if (!mSubjectField.getText().isEmpty()) {
                 mThreadView.getValue().setSubject(mSubjectField.getText());
@@ -369,6 +401,8 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
                 threadUser.add(((UserElement) o).user);
             }
             mThreadView.getValue().setUser(threadUser);
+            if (!mColorChooser.getColor().equals(DEFAULT_BG))
+                mThreadView.getValue().getViewSettings().setBGColor(mColorChooser.getColor());
         }
 
         private class UserElement {

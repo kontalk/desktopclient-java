@@ -188,6 +188,10 @@ public final class KonThread extends Observable {
         this.changed();
     }
 
+    public ViewSettings getViewSettings() {
+        return mViewSettings;
+    }
+
     public boolean isDeleted() {
         return mDeleted;
     }
@@ -336,11 +340,11 @@ public final class KonThread extends Observable {
         }
     }
 
-    private class ViewSettings {
+    public class ViewSettings {
         private final static String JSON_BG_COLOR = "bg_color";
 
         // background color, if set
-        private final Optional<Color> mOptColor;
+        private Optional<Color> mOptColor;
 
         private ViewSettings(String json) {
             Object obj = JSONValue.parse(json);
@@ -348,7 +352,7 @@ public final class KonThread extends Observable {
             try {
                 Map<?, ?> map = (Map) obj;
                 optColor = map.containsKey(JSON_BG_COLOR) ?
-                    Optional.of(new Color((Integer) map.get(JSON_BG_COLOR))) :
+                    Optional.of(new Color(((Long) map.get(JSON_BG_COLOR)).intValue())) :
                     Optional.<Color>empty();
             } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON view settings", ex);
@@ -359,6 +363,19 @@ public final class KonThread extends Observable {
 
         private ViewSettings() {
             mOptColor = Optional.empty();
+        }
+
+        public Optional<Color> getBGColor() {
+            return mOptColor;
+        }
+
+        public void setBGColor(Color color){
+            if (mOptColor.isPresent() && mOptColor.get().equals(color))
+                return;
+
+            mOptColor = Optional.of(color);
+            KonThread.this.save();
+            KonThread.this.changed();
         }
 
         // using legacy lib, raw types extend Object
