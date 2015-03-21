@@ -27,12 +27,14 @@ import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebTextArea;
+import com.alee.laf.viewport.WebViewport;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.FlowLayout;
 import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -44,6 +46,7 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -62,7 +65,6 @@ import java.util.logging.Level;
 import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import org.kontalk.system.Downloader;
@@ -97,8 +99,8 @@ final class ThreadView extends WebScrollPane {
     private KonThread mCurrentThread = null;
     // background image from ressource or user selected
     private Image mDefaultBG;
-    // scaled version of default bg
-    private Image mScaledBG;
+    // cached background with size of viewport
+    private BufferedImage mCachedBG = null;
 
     ThreadView(View model) {
         super(null);
@@ -109,32 +111,9 @@ final class ThreadView extends WebScrollPane {
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.getVerticalScrollBar().setUnitIncrement(25);
 
+        this.setViewport(new ThreadViewPort());
+
         this.loadDefaultBG();
-
-        this.setViewport(new JViewport() {
-            @Override
-            public void paintComponent(Graphics g) {
-                super.paintComponent(g);
-                // tiling
-                int iw = mScaledBG.getWidth(this);
-                int ih = mScaledBG.getHeight(this);
-                if (iw > 0 && ih > 0) {
-                    for (int x = 0; x < this.getWidth(); x += iw) {
-                        for (int y = 0; y < this.getHeight(); y += ih) {
-                            g.drawImage(mScaledBG, x, y, iw, ih, this);
-                        }
-                    }
-                }
-            }
-        });
-
-        this.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent e) {
-                super.componentResized(e);
-                ThreadView.this.resized();
-            }
-        });
     }
 
     Optional<KonThread> getCurrentThread() {
@@ -165,14 +144,11 @@ final class ThreadView extends WebScrollPane {
 
     void loadDefaultBG() {
         String imagePath = KonConf.getInstance().getString(KonConf.VIEW_THREAD_BG);
-        Image image;
-        if (!imagePath.isEmpty()) {
-            image = Toolkit.getDefaultToolkit().createImage(imagePath);
-        } else
-            image = View.getImage("thread_bg.png");
-        mDefaultBG = image;
-        this.resized();
-        this.repaint();
+        mDefaultBG = !imagePath.isEmpty() ?
+                Toolkit.getDefaultToolkit().createImage(imagePath) :
+                View.getImage("thread_bg.png");
+        mCachedBG = null;
+        this.getViewport().repaint();
     }
 
     private void removeThread(KonThread thread) {
@@ -180,24 +156,6 @@ final class ThreadView extends WebScrollPane {
         if(mCurrentThread == thread) {
             mCurrentThread = null;
             this.setViewportView(null);
-        }
-    }
-
-    private void resized() {
-        // scale background image down (if both dimensions exceed)
-        // TODO ugly flickering on resize
-        int iw = mDefaultBG.getWidth(this);
-        int ih = mDefaultBG.getHeight(this);
-        if (iw > this.getWidth() && ih > this.getHeight()) {
-            double scale = Math.max(
-                    this.getWidth() / (iw * 1.0),
-                    this.getHeight() / (ih * 1.0));
-            mScaledBG = mDefaultBG.getScaledInstance(
-                    (int) (iw * scale),
-                    (int) (ih * scale),
-                    Image.SCALE_FAST);
-        } else {
-            mScaledBG = mDefaultBG;
         }
     }
 
@@ -626,6 +584,58 @@ final class ThreadView extends WebScrollPane {
         }
     }
 
+    /** Custom viewport for efficient reloading of background image. */
+    private class ThreadViewPort extends WebViewport {
+        @Override
+        public void paintComponent(Graphics g) {
+            super.paintComponent(g);
+            if (mCachedBG == null ||
+                    mCachedBG.getWidth() != this.getWidth() ||
+                    mCachedBG.getHeight() != this.getHeight()) {
+                Image scaledImage = scale(mDefaultBG, this.getWidth(), this.getHeight());
+                // if scaling is performed async, we continue updating the
+                // background from imageUpdate()
+                if (scaledImage.getWidth(this) != -1)
+                    this.updateCachedBG(scaledImage);
+            }
+            // if there is something to draw, draw it
+            if (mCachedBG != null)
+                g.drawImage(mCachedBG, 0, 0, this.getWidth(), this.getHeight(), null);
+        }
+        @Override
+        public boolean imageUpdate(Image img, int infoflags, int x, int y, int w, int h) {
+            if ((infoflags & ImageObserver.ALLBITS) == 0) {
+                return true;
+            }
+            // completely loaded
+            this.updateCachedBG(img);
+            return false;
+        }
+        private void updateCachedBG(Image scaledImage) {
+            mCachedBG = new BufferedImage(this.getWidth(),
+                    this.getHeight(),
+                    BufferedImage.TYPE_INT_ARGB);
+            Graphics2D cachedG = mCachedBG.createGraphics();
+            // gradient background of background
+//                GradientPaint p2 = new GradientPaint(
+//                        0, 0, new Color(0, 0, 0, 0),
+//                        0, this.getHeight(), Color.BLUE);
+//                cachedG.setPaint(p2);
+//                cachedG.fillRect(0, 0, this.getWidth(), getHeight());
+            // tiling
+            int iw = scaledImage.getWidth(this);
+            int ih = scaledImage.getHeight(this);
+            if (iw > 0 && ih > 0) {
+                for (int x = 0; x < this.getWidth(); x += iw) {
+                    for (int y = 0; y < this.getHeight(); y += ih) {
+                        cachedG.drawImage(scaledImage, x, y, iw, ih, this);
+                    }
+                }
+            }
+            this.repaint();
+        }
+    }
+
     private static BufferedImage readImage(String path) {
         try {
              BufferedImage image = ImageIO.read(new File(path));
@@ -661,5 +671,22 @@ final class ThreadView extends WebScrollPane {
                     }
                 }
             };
+    }
+
+    /** Scale image down to max of width / height, preserving ratio. */
+    private static Image scale(Image image, int width, int height) {
+        int iw = image.getWidth(null);
+        int ih = image.getHeight(null);
+        if (iw > width && ih > height) {
+            double scale = Math.max(
+                    width / (iw * 1.0),
+                    height / (ih * 1.0));
+            return image.getScaledInstance(
+                    (int) (iw * scale),
+                    (int) (ih * scale),
+                    Image.SCALE_FAST);
+        } else {
+            return image;
+        }
     }
 }
