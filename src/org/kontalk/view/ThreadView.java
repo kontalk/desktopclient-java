@@ -445,14 +445,7 @@ final class ThreadView extends WebScrollPane {
                             optAttachment.get().getMimeType().startsWith("image")) {
                         // file should be present and should be an image, show it
                         BufferedImage image = readImage(path.toString());
-                        double scale = Math.min(
-                                300 /(image.getWidth() * 1.0),
-                                200 /(image.getHeight() * 1.0));
-                        scale = Math.min(1, scale);
-                        Image scaledImage = image.getScaledInstance(
-                                (int) (image.getWidth() * scale),
-                                (int) (image.getHeight() * scale),
-                                Image.SCALE_FAST);
+                        Image scaledImage = scale(image, 300, 200, false);
                         WebLinkLabel imageView = new WebLinkLabel();
                         imageView.setLink("", linkRunnable(path));
                         imageView.setIcon(new ImageIcon(scaledImage));
@@ -592,7 +585,7 @@ final class ThreadView extends WebScrollPane {
             if (mCachedBG == null ||
                     mCachedBG.getWidth() != this.getWidth() ||
                     mCachedBG.getHeight() != this.getHeight()) {
-                Image scaledImage = scale(mDefaultBG, this.getWidth(), this.getHeight());
+                Image scaledImage = scale(mDefaultBG, this.getWidth(), this.getHeight(), true);
                 // if scaling is performed async, we continue updating the
                 // background from imageUpdate()
                 if (scaledImage.getWidth(this) != -1)
@@ -673,20 +666,22 @@ final class ThreadView extends WebScrollPane {
             };
     }
 
-    /** Scale image down to max of width / height, preserving ratio. */
-    private static Image scale(Image image, int width, int height) {
+    /** Scale image down to maximum or minimum of width / height, preserving
+     * ratio.
+     * @param max specifies if image is scaled to maximum or minimum of width/height
+     */
+    private static Image scale(Image image, int width, int height, boolean max) {
         int iw = image.getWidth(null);
         int ih = image.getHeight(null);
-        if (iw > width && ih > height) {
-            double scale = Math.max(
-                    width / (iw * 1.0),
-                    height / (ih * 1.0));
-            return image.getScaledInstance(
-                    (int) (iw * scale),
-                    (int) (ih * scale),
-                    Image.SCALE_FAST);
-        } else {
+        if (max && (iw <= width || ih <= height) ||
+                !max && (iw <= width && ih <= height))
             return image;
-        }
+        double sw = width / (iw * 1.0);
+        double sh = height / (ih * 1.0);
+        double scale = max ? Math.max(sw, sh) : Math.min(sw, sh);
+        return image.getScaledInstance(
+                (int) (iw * scale),
+                (int) (ih * scale),
+                Image.SCALE_FAST);
     }
 }
