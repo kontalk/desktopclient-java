@@ -96,11 +96,7 @@ final class ThreadView extends WebScrollPane {
     private final View mModel;
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
-    private KonThread mCurrentThread = null;
-    // background image from ressource or user selected
-    private Image mDefaultBG;
-    // cached background with size of viewport
-    private BufferedImage mCachedBG = null;
+    private Background mDefaultBG;
 
     ThreadView(View model) {
         super(null);
@@ -111,13 +107,26 @@ final class ThreadView extends WebScrollPane {
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         this.getVerticalScrollBar().setUnitIncrement(25);
 
-        this.setViewport(new ThreadViewPort());
+        this.setViewport(new WebViewport() {
+            @Override
+            public void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Optional<BufferedImage> optBG =
+                        ThreadView.this.getCurrentBackground().updateNowOrLater(this);
+                // if there is something to draw, draw it now even if its old
+                if (optBG.isPresent())
+                    g.drawImage(optBG.get(), 0, 0, this.getWidth(), this.getHeight(), null);
+            }
+        });
 
         this.loadDefaultBG();
     }
 
     Optional<KonThread> getCurrentThread() {
-        return Optional.ofNullable(mCurrentThread);
+        Component view = this.getViewport().getView();
+        if (view == null)
+            return Optional.empty();
+        return Optional.of(((MessageViewList) view).getThread());
     }
 
     void showThread(KonThread thread) {
@@ -134,7 +143,6 @@ final class ThreadView extends WebScrollPane {
             table.mScrollDownOnResize = true;
         }
 
-        mCurrentThread = thread;
         thread.setRead();
     }
 
@@ -144,19 +152,23 @@ final class ThreadView extends WebScrollPane {
 
     void loadDefaultBG() {
         String imagePath = KonConf.getInstance().getString(KonConf.VIEW_THREAD_BG);
-        mDefaultBG = !imagePath.isEmpty() ?
+        Image bgImage = !imagePath.isEmpty() ?
                 Toolkit.getDefaultToolkit().createImage(imagePath) :
                 View.getImage("thread_bg.png");
-        mCachedBG = null;
+        mDefaultBG = new Background(bgImage);
         this.getViewport().repaint();
     }
 
     private void removeThread(KonThread thread) {
         mThreadCache.remove(thread.getID());
-        if(mCurrentThread == thread) {
-            mCurrentThread = null;
+        if(this.getCurrentThread().orElse(null) == thread) {
             this.setViewportView(null);
         }
+    }
+
+    private Background getCurrentBackground() {
+        // TODO
+        return mDefaultBG;
     }
 
     /**
@@ -166,6 +178,8 @@ final class ThreadView extends WebScrollPane {
 
         private final KonThread mThread;
         private boolean mScrollDownOnResize = false;
+        // TODO
+        private Optional<Background> mBackground;
 
         MessageViewList(KonThread thread) {
             super();
@@ -228,6 +242,10 @@ final class ThreadView extends WebScrollPane {
             mThread.addObserver(this);
         }
 
+        KonThread getThread() {
+            return mThread;
+        }
+
         @Override
         public void update(Observable o, Object arg) {
             if (SwingUtilities.isEventDispatchThread()) {
@@ -266,8 +284,8 @@ final class ThreadView extends WebScrollPane {
                 }
             }
 
-            if (ThreadView.this.mCurrentThread == mThread) {
-                    mThread.setRead();
+            if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
+                mThread.setRead();
             }
         }
 
@@ -577,24 +595,34 @@ final class ThreadView extends WebScrollPane {
         }
     }
 
-    /** Custom viewport for efficient reloading of background image. */
-    private class ThreadViewPort extends WebViewport {
-        @Override
-        public void paintComponent(Graphics g) {
-            super.paintComponent(g);
-            if (mCachedBG == null ||
-                    mCachedBG.getWidth() != this.getWidth() ||
-                    mCachedBG.getHeight() != this.getHeight()) {
-                Image scaledImage = scale(mDefaultBG, this.getWidth(), this.getHeight(), true);
+    /** A background image of thread view with efficient reloading. */
+    private class Background implements ImageObserver {
+        // background image from ressource or user selected
+        private Image mOrigin;
+        // cached background with size of viewport
+        private BufferedImage mCached = null;
+        private Component mCaller;
+
+        public Background(Image image) {
+            mOrigin = image;
+        }
+
+        Optional<BufferedImage> updateNowOrLater(Component caller) {
+            mCaller = caller;
+            int width = mCaller.getWidth();
+            int height = mCaller.getHeight();
+            if (mCached == null ||
+                    mCached.getWidth() != width ||
+                    mCached.getHeight() != height) {
+                Image scaledImage = scale(mOrigin, width, height, true);
                 // if scaling is performed async, we continue updating the
-                // background from imageUpdate()
+                // background from imageUpdate() later
                 if (scaledImage.getWidth(this) != -1)
                     this.updateCachedBG(scaledImage);
             }
-            // if there is something to draw, draw it
-            if (mCachedBG != null)
-                g.drawImage(mCachedBG, 0, 0, this.getWidth(), this.getHeight(), null);
+            return Optional.ofNullable(mCached);
         }
+
         @Override
         public boolean imageUpdate(Image img, int infoflags, int x, int y, int w, int h) {
             if ((infoflags & ImageObserver.ALLBITS) == 0) {
@@ -604,28 +632,29 @@ final class ThreadView extends WebScrollPane {
             this.updateCachedBG(img);
             return false;
         }
+
         private void updateCachedBG(Image scaledImage) {
-            mCachedBG = new BufferedImage(this.getWidth(),
-                    this.getHeight(),
-                    BufferedImage.TYPE_INT_ARGB);
-            Graphics2D cachedG = mCachedBG.createGraphics();
+            int width = mCaller.getWidth();
+            int height = mCaller.getHeight();
+            mCached = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D cachedG = mCached.createGraphics();
             // gradient background of background
-//                GradientPaint p2 = new GradientPaint(
-//                        0, 0, new Color(0, 0, 0, 0),
-//                        0, this.getHeight(), Color.BLUE);
-//                cachedG.setPaint(p2);
-//                cachedG.fillRect(0, 0, this.getWidth(), getHeight());
+//            GradientPaint p2 = new GradientPaint(
+//                    0, 0, new Color(0, 0, 0, 0),
+//                    0, height, Color.BLUE);
+//            cachedG.setPaint(p2);
+//            cachedG.fillRect(0, 0, width, getHeight());
             // tiling
             int iw = scaledImage.getWidth(this);
             int ih = scaledImage.getHeight(this);
             if (iw > 0 && ih > 0) {
-                for (int x = 0; x < this.getWidth(); x += iw) {
-                    for (int y = 0; y < this.getHeight(); y += ih) {
+                for (int x = 0; x < width; x += iw) {
+                    for (int y = 0; y < height; y += ih) {
                         cachedG.drawImage(scaledImage, x, y, iw, ih, this);
                     }
                 }
             }
-            this.repaint();
+            mCaller.repaint();
         }
     }
 
@@ -666,8 +695,8 @@ final class ThreadView extends WebScrollPane {
             };
     }
 
-    /** Scale image down to maximum or minimum of width / height, preserving
-     * ratio.
+    /**
+     * Scale image down to maximum or minimum of width or height, preserving ratio.
      * @param max specifies if image is scaled to maximum or minimum of width/height
      */
     private static Image scale(Image image, int width, int height, boolean max) {
