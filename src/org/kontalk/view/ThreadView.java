@@ -33,6 +33,7 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.FlowLayout;
+import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -112,7 +113,7 @@ final class ThreadView extends WebScrollPane {
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Optional<BufferedImage> optBG =
-                        ThreadView.this.getCurrentBackground().updateNowOrLater(this);
+                        ThreadView.this.getCurrentBackground().updateNowOrLater();
                 // if there is something to draw, draw it now even if its old
                 if (optBG.isPresent())
                     g.drawImage(optBG.get(), 0, 0, this.getWidth(), this.getHeight(), null);
@@ -122,11 +123,18 @@ final class ThreadView extends WebScrollPane {
         this.loadDefaultBG();
     }
 
-    Optional<KonThread> getCurrentThread() {
+    private Optional<MessageViewList> getCurrentView() {
         Component view = this.getViewport().getView();
         if (view == null)
             return Optional.empty();
-        return Optional.of(((MessageViewList) view).getThread());
+        return Optional.of((MessageViewList) view);
+    }
+
+    Optional<KonThread> getCurrentThread() {
+        Optional<MessageViewList> optview = this.getCurrentView();
+        return optview.isPresent() ?
+                Optional.of(optview.get().getThread()) :
+                Optional.<KonThread>empty();
     }
 
     void showThread(KonThread thread) {
@@ -136,7 +144,7 @@ final class ThreadView extends WebScrollPane {
             isNew = true;
         }
         MessageViewList table = mThreadCache.get(thread.getID());
-        this.setViewportView(table);
+        this.getViewport().setView(table);
 
         if (table.getRowCount() > 0 && isNew) {
             // trigger scrolling down
@@ -152,11 +160,20 @@ final class ThreadView extends WebScrollPane {
 
     void loadDefaultBG() {
         String imagePath = KonConf.getInstance().getString(KonConf.VIEW_THREAD_BG);
-        Image bgImage = !imagePath.isEmpty() ?
-                Toolkit.getDefaultToolkit().createImage(imagePath) :
-                View.getImage("thread_bg.png");
-        mDefaultBG = new Background(bgImage);
+        mDefaultBG = !imagePath.isEmpty() ?
+                new Background(this.getViewport(), imagePath) :
+                new Background(this.getViewport());
         this.getViewport().repaint();
+    }
+
+    void updateViewSettings(KonThread thread, Color color) {
+        if (!mThreadCache.containsKey(thread.getID()))
+            // no update needed
+            return;
+        MessageViewList view = mThreadCache.get(thread.getID());
+        view.updateViewSettings(color);
+        if (view == this.getCurrentView().orElse(null))
+            this.getViewport().repaint();
     }
 
     private void removeThread(KonThread thread) {
@@ -167,8 +184,13 @@ final class ThreadView extends WebScrollPane {
     }
 
     private Background getCurrentBackground() {
-        // TODO
-        return mDefaultBG;
+        Optional<MessageViewList> optView = this.getCurrentView();
+        if (!optView.isPresent())
+            return mDefaultBG;
+        Optional<Background> optBG = optView.get().getBG();
+        if (!optBG.isPresent())
+            return mDefaultBG;
+        return optBG.get();
     }
 
     /**
@@ -178,8 +200,7 @@ final class ThreadView extends WebScrollPane {
 
         private final KonThread mThread;
         private boolean mScrollDownOnResize = false;
-        // TODO
-        private Optional<Background> mBackground;
+        private Optional<Background> mBackground = Optional.empty();
 
         MessageViewList(KonThread thread) {
             super();
@@ -237,6 +258,10 @@ final class ThreadView extends WebScrollPane {
                 }
             });
 
+            Optional<Color> optBGColor = mThread.getViewSettings().getBGColor();
+            if (optBGColor.isPresent())
+                mBackground = Optional.of(new Background(ThreadView.this.getViewport(), optBGColor.get()));
+
             this.updateOnEDT();
 
             mThread.addObserver(this);
@@ -244,6 +269,15 @@ final class ThreadView extends WebScrollPane {
 
         KonThread getThread() {
             return mThread;
+        }
+
+        Optional<Background> getBG() {
+            return mBackground;
+        }
+
+        void updateViewSettings(Color color) {
+            // simply overwrite
+            mBackground = Optional.of(new Background(ThreadView.this.getViewport(), color));
         }
 
         @Override
@@ -597,20 +631,34 @@ final class ThreadView extends WebScrollPane {
 
     /** A background image of thread view with efficient reloading. */
     private class Background implements ImageObserver {
+        private final Component mParent;
         // background image from ressource or user selected
         private Image mOrigin;
         // cached background with size of viewport
         private BufferedImage mCached = null;
-        private Component mCaller;
+        private Color mBottomColor = null;
 
-        public Background(Image image) {
-            mOrigin = image;
+        /** Default, no thread specific settings view settings. */
+        Background(Component parent) {
+            mParent = parent;
+            mOrigin = View.getImage("thread_bg.png");
         }
 
-        Optional<BufferedImage> updateNowOrLater(Component caller) {
-            mCaller = caller;
-            int width = mCaller.getWidth();
-            int height = mCaller.getHeight();
+        /** Global image set by user. */
+        Background(Component parent, String imagePath) {
+            mParent = parent;
+            mOrigin = Toolkit.getDefaultToolkit().createImage(imagePath);
+        }
+
+        /** Thread specific color. */
+        Background(Component parent, Color bottomColor) {
+            this(parent);
+            mBottomColor = bottomColor;
+        }
+
+        Optional<BufferedImage> updateNowOrLater() {
+            int width = mParent.getWidth();
+            int height = mParent.getHeight();
             if (mCached == null ||
                     mCached.getWidth() != width ||
                     mCached.getHeight() != height) {
@@ -630,20 +678,23 @@ final class ThreadView extends WebScrollPane {
             }
             // completely loaded
             this.updateCachedBG(img);
+            mParent.repaint();
             return false;
         }
 
         private void updateCachedBG(Image scaledImage) {
-            int width = mCaller.getWidth();
-            int height = mCaller.getHeight();
+            int width = mParent.getWidth();
+            int height = mParent.getHeight();
             mCached = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
             Graphics2D cachedG = mCached.createGraphics();
             // gradient background of background
-//            GradientPaint p2 = new GradientPaint(
-//                    0, 0, new Color(0, 0, 0, 0),
-//                    0, height, Color.BLUE);
-//            cachedG.setPaint(p2);
-//            cachedG.fillRect(0, 0, width, getHeight());
+            if (mBottomColor != null) {
+                GradientPaint p2 = new GradientPaint(
+                        0, 0, new Color(0, 0, 0, 0),
+                        0, height, mBottomColor);
+                cachedG.setPaint(p2);
+                cachedG.fillRect(0, 0, width, getHeight());
+            }
             // tiling
             int iw = scaledImage.getWidth(this);
             int ih = scaledImage.getHeight(this);
@@ -654,7 +705,6 @@ final class ThreadView extends WebScrollPane {
                     }
                 }
             }
-            mCaller.repaint();
         }
     }
 

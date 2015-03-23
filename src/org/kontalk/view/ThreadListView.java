@@ -74,10 +74,12 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
     private final static Color DEFAULT_BG = Color.WHITE;
 
+    private final View mView;
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;
 
     ThreadListView(final View view, ThreadList threadList) {
+        mView = view;
         mThreadList = threadList;
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -101,15 +103,15 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                String warningText =Tr.tr( "Permanently delete all messages in this thread?");
+                String warningText =Tr.tr("Permanently delete all messages in this thread?");
                 int selectedOption = WebOptionPane.showConfirmDialog(ThreadListView.this,
                         warningText,
                         Tr.tr("Please Confirm"),
                         WebOptionPane.OK_CANCEL_OPTION,
                         WebOptionPane.WARNING_MESSAGE);
                 if (selectedOption == WebOptionPane.OK_OPTION) {
-                    ThreadItem threadView = ThreadListView.this.getSelectedListItem();
-                    mThreadList.deleteThreadWithID(threadView.getValue().getID());
+                    ThreadItem threadItem = ThreadListView.this.getSelectedListItem();
+                    mThreadList.deleteThreadWithID(threadItem.getValue().getID());
                 }
             }
         });
@@ -121,7 +123,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                view.selectedThreadChanged(ThreadListView.this.getSelectedListValue());
+                mView.selectedThreadChanged(ThreadListView.this.getSelectedListValue());
             }
         });
 
@@ -155,8 +157,8 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         KonThread currentThread = this.getSelectedListValue();
         this.clearModel();
         for (KonThread thread: mThreadList.getThreads()) {
-            ThreadItem newThreadView = new ThreadItem(thread);
-            this.addItem(newThreadView);
+            ThreadItem newThreadItem = new ThreadItem(thread);
+            this.addItem(newThreadItem);
         }
         // reselect thread
         if (currentThread != null)
@@ -279,15 +281,15 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
     private class EditThreadDialog extends WebDialog {
 
-        private final ThreadItem mThreadView;
+        private final ThreadItem mThreadItem;
         private final WebTextField mSubjectField;
         private final WebButton mColorChooserButton;
         private final WebColorChooserDialog mColorChooser;
         WebCheckBoxList mParticipantsList;
 
-        EditThreadDialog(ThreadItem threadView) {
+        EditThreadDialog(ThreadItem threadItem) {
 
-            mThreadView = threadView;
+            mThreadItem = threadItem;
 
             this.setTitle(Tr.tr("Edit Thread"));
             this.setResizable(false);
@@ -298,7 +300,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
             // editable fields
             groupPanel.add(new WebLabel(Tr.tr("Subject:")));
-            String subj = mThreadView.getValue().getSubject();
+            String subj = mThreadItem.getValue().getSubject();
             mSubjectField = new WebTextField(subj, 22);
             mSubjectField.setInputPrompt(subj);
             mSubjectField.setHideInputPromptOnFocus(false);
@@ -308,7 +310,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             mColorChooserButton = new WebButton();
             mColorChooserButton.setMinimumHeight(25);
             Color oldColor =
-                    mThreadView.getValue().getViewSettings().getBGColor().orElse(DEFAULT_BG);
+                    mThreadItem.getValue().getViewSettings().getBGColor().orElse(DEFAULT_BG);
             mColorChooserButton.setBottomBgColor(oldColor);
             mColorChooserButton.addActionListener(new ActionListener () {
                 @Override
@@ -327,7 +329,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             mParticipantsList = new WebCheckBoxList();
             mParticipantsList.setVisibleRowCount(10);
             for (User oneUser : UserList.getInstance().getAll()) {
-                boolean selected = threadView.getValue().getUser().contains(oneUser);
+                boolean selected = threadItem.getValue().getUser().contains(oneUser);
                 mParticipantsList.getCheckBoxListModel().addCheckBoxElement(
                         new UserElement(oneUser),
                         selected);
@@ -393,16 +395,19 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
         private void saveThread() {
             if (!mSubjectField.getText().isEmpty()) {
-                mThreadView.getValue().setSubject(mSubjectField.getText());
+                mThreadItem.getValue().setSubject(mSubjectField.getText());
             }
             List<?> participants = mParticipantsList.getCheckedValues();
             Set<User> threadUser = new HashSet<>();
             for (Object o: participants) {
                 threadUser.add(((UserElement) o).user);
             }
-            mThreadView.getValue().setUser(threadUser);
-            if (!mColorChooser.getColor().equals(DEFAULT_BG))
-                mThreadView.getValue().getViewSettings().setBGColor(mColorChooser.getColor());
+            mThreadItem.getValue().setUser(threadUser);
+            if (!mColorChooser.getColor().equals(DEFAULT_BG)) {
+                Color c = mColorChooser.getColor();
+                mThreadItem.getValue().getViewSettings().setBGColor(c);
+                ThreadListView.this.mView.updateThreadViewSettings(mThreadItem.mValue, c);
+            }
         }
 
         private class UserElement {

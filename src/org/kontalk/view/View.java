@@ -476,6 +476,10 @@ public final class View implements Observer {
         mThreadView.loadDefaultBG();
     }
 
+    void updateThreadViewSettings(KonThread thread, Color color) {
+        mThreadView.updateViewSettings(thread, color);
+    }
+
     static Icon getIcon(String fileName) {
         return new ImageIcon(getImage(fileName));
     }
