@@ -82,6 +82,7 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
 import org.kontalk.util.Tr;
+import org.kontalk.view.ThreadListView.BGSettings;
 
 /**
  * Initialize and control the user interface.
@@ -476,8 +477,8 @@ public final class View implements Observer {
         mThreadView.loadDefaultBG();
     }
 
-    void updateThreadViewSettings(KonThread thread, Color color) {
-        mThreadView.updateViewSettings(thread, color);
+    void updateThreadViewSettings(KonThread thread, BGSettings settings) {
+        mThreadView.updateViewSettings(thread, settings);
     }
 
     static Icon getIcon(String fileName) {

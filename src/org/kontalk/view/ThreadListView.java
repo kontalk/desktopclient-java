@@ -22,6 +22,7 @@ import com.alee.extended.list.WebCheckBoxList;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.colorchooser.WebColorChooserDialog;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
@@ -38,6 +39,8 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -45,6 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import javax.swing.JDialog;
@@ -283,6 +287,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
         private final ThreadItem mThreadItem;
         private final WebTextField mSubjectField;
+        private final WebCheckBox mBGBox;
         private final WebButton mColorChooserButton;
         private final WebColorChooserDialog mColorChooser;
         WebCheckBoxList mParticipantsList;
@@ -307,10 +312,21 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             groupPanel.add(mSubjectField);
             groupPanel.add(new WebSeparator(true, true));
 
+            mBGBox = new WebCheckBox(Tr.tr("Custom Background"));
+            Optional<Color> optBGColor = mThreadItem.getValue().getViewSettings().getBGColor();
+            mBGBox.setSelected(optBGColor.isPresent());
+            mBGBox.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    mColorChooserButton.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                }
+            });
+            groupPanel.add(mBGBox);
+
             mColorChooserButton = new WebButton();
+            mColorChooserButton.setEnabled(optBGColor.isPresent());
             mColorChooserButton.setMinimumHeight(25);
-            Color oldColor =
-                    mThreadItem.getValue().getViewSettings().getBGColor().orElse(DEFAULT_BG);
+            Color oldColor = optBGColor.orElse(DEFAULT_BG);
             mColorChooserButton.setBottomBgColor(oldColor);
             mColorChooserButton.addActionListener(new ActionListener () {
                 @Override
@@ -403,10 +419,13 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
                 threadUser.add(((UserElement) o).user);
             }
             mThreadItem.getValue().setUser(threadUser);
-            if (!mColorChooser.getColor().equals(DEFAULT_BG)) {
-                Color c = mColorChooser.getColor();
-                mThreadItem.getValue().getViewSettings().setBGColor(c);
-                ThreadListView.this.mView.updateThreadViewSettings(mThreadItem.mValue, c);
+
+            Color c = mColorChooser.getColor();
+            Optional<Color> optC = Optional.ofNullable(mBGBox.isSelected() ? c : null);
+            if (!optC.equals(mThreadItem.getValue().getViewSettings().getBGColor())) {
+                mThreadItem.getValue().getViewSettings().setBGColor(optC);
+                BGSettings settings = mBGBox.isSelected() ? new BGSettings(c) : new BGSettings();
+                ThreadListView.this.mView.updateThreadViewSettings(mThreadItem.mValue, settings);
             }
         }
 
@@ -429,6 +448,18 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
                 return name.isEmpty() ? jid : name +" "+jid;
             }
         }
+    }
+
+    static class BGSettings {
+            final Optional<Color> color;
+
+            BGSettings() {
+                color = Optional.empty();
+            }
+
+            BGSettings(Color color) {
+                this.color = Optional.of(color);
+            }
     }
 
     private static String shorten(String s, int max_length) {

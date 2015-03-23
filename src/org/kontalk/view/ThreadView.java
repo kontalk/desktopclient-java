@@ -76,6 +76,7 @@ import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.system.KonConf;
 import org.kontalk.util.Tr;
+import org.kontalk.view.ThreadListView.BGSettings;
 
 /**
  * Pane that shows the currently selected thread.
@@ -166,12 +167,12 @@ final class ThreadView extends WebScrollPane {
         this.getViewport().repaint();
     }
 
-    void updateViewSettings(KonThread thread, Color color) {
+    void updateViewSettings(KonThread thread, BGSettings settings) {
         if (!mThreadCache.containsKey(thread.getID()))
             // no update needed
             return;
         MessageViewList view = mThreadCache.get(thread.getID());
-        view.updateViewSettings(color);
+        view.updateViewSettings(settings);
         if (view == this.getCurrentView().orElse(null))
             this.getViewport().repaint();
     }
@@ -275,9 +276,14 @@ final class ThreadView extends WebScrollPane {
             return mBackground;
         }
 
-        void updateViewSettings(Color color) {
+        void updateViewSettings(BGSettings settings) {
             // simply overwrite
-            mBackground = Optional.of(new Background(ThreadView.this.getViewport(), color));
+            if (!settings.color.isPresent()) {
+                mBackground = Optional.empty();
+                return;
+            }
+            Color c = settings.color.get();
+            mBackground = Optional.of(new Background(ThreadView.this.getViewport(), c));
         }
 
         @Override

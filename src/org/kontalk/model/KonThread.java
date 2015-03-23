@@ -369,11 +369,11 @@ public final class KonThread extends Observable {
             return mOptColor;
         }
 
-        public void setBGColor(Color color){
-            if (mOptColor.isPresent() && mOptColor.get().equals(color))
+        public void setBGColor(Optional<Color> color){
+            if (mOptColor.equals(color))
                 return;
 
-            mOptColor = Optional.of(color);
+            mOptColor = color;
             KonThread.this.save();
             KonThread.this.changed();
         }
