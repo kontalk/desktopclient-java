@@ -18,6 +18,8 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.filechooser.WebFileChooserField;
+import com.alee.extended.filefilter.ImageFilesFilter;
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
@@ -46,6 +48,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.security.cert.CertificateException;
@@ -82,7 +85,6 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.ControlCenter;
 import org.kontalk.util.Tr;
-import org.kontalk.view.ThreadListView.BGSettings;
 
 /**
  * Initialize and control the user interface.
@@ -477,10 +479,6 @@ public final class View implements Observer {
         mThreadView.loadDefaultBG();
     }
 
-    void updateThreadViewSettings(KonThread thread, BGSettings settings) {
-        mThreadView.updateViewSettings(thread, settings);
-    }
-
     static Icon getIcon(String fileName) {
         return new ImageIcon(getImage(fileName));
     }
@@ -492,6 +490,24 @@ public final class View implements Observer {
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
         }
         return Toolkit.getDefaultToolkit().createImage(imageUrl);
+    }
+
+    static WebFileChooserField createImageChooser(boolean enabled, String path) {
+        WebFileChooserField chooser = new WebFileChooserField();
+        chooser.setEnabled(enabled);
+        chooser.getChooseButton().setEnabled(enabled);
+        if (!path.isEmpty())
+            chooser.setSelectedFile(new File(path));
+        chooser.setMultiSelectionEnabled(false);
+        chooser.setShowRemoveButton(true);
+        chooser.getWebFileChooser().setFileFilter(new ImageFilesFilter());
+        File file = new File(path);
+        if (file.exists()) {
+            chooser.setSelectedFile(file);
+        }
+        if (file.getParentFile() != null && file.getParentFile().exists())
+            chooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
+        return chooser;
     }
 
     static String getErrorText(KonException ex) {

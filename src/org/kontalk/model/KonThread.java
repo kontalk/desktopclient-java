@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
@@ -82,7 +83,7 @@ public final class KonThread extends Observable {
     private HashMap<User, KonChatState> mUserMap;
     private String mSubject;
     private boolean mRead;
-    private final ViewSettings mViewSettings;
+    private ViewSettings mViewSettings;
     private boolean mDeleted = false;
 
     // used when creating a new thread
@@ -133,7 +134,7 @@ public final class KonThread extends Observable {
         this.setUserMap(user);
         mSubject = subject;
         mRead = read;
-        mViewSettings = new ViewSettings(jsonViewSettings);
+        mViewSettings = new ViewSettings(this, jsonViewSettings);
     }
 
     public SortedSet<KonMessage> getMessages() {
@@ -190,6 +191,16 @@ public final class KonThread extends Observable {
 
     public ViewSettings getViewSettings() {
         return mViewSettings;
+    }
+
+    public void setViewSettings(ViewSettings settings) {
+        if (settings.equals(mViewSettings))
+            return;
+
+        mViewSettings = settings;
+        this.save();
+        this.setChanged();
+        this.notifyObservers(mViewSettings);
     }
 
     public boolean isDeleted() {
@@ -340,42 +351,57 @@ public final class KonThread extends Observable {
         }
     }
 
-    public class ViewSettings {
+    public static class ViewSettings {
         private final static String JSON_BG_COLOR = "bg_color";
+        private final static String JSON_IMAGE_PATH = "img";
 
         // background color, if set
-        private Optional<Color> mOptColor;
+        private final Optional<Color> mOptColor;
+        // custom image, if set
+        private final String mImagePath;
 
-        private ViewSettings(String json) {
+        private ViewSettings(KonThread t, String json) {
             Object obj = JSONValue.parse(json);
             Optional<Color> optColor;
+            String imagePath;
             try {
                 Map<?, ?> map = (Map) obj;
                 optColor = map.containsKey(JSON_BG_COLOR) ?
                     Optional.of(new Color(((Long) map.get(JSON_BG_COLOR)).intValue())) :
                     Optional.<Color>empty();
+                imagePath = map.containsKey(JSON_IMAGE_PATH) ?
+                    (String) map.get(JSON_IMAGE_PATH) :
+                    "";
             } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON view settings", ex);
                 optColor = Optional.empty();
+                imagePath = "";
             }
             mOptColor = optColor;
+            mImagePath = imagePath;
         }
 
-        private ViewSettings() {
+        public ViewSettings() {
             mOptColor = Optional.empty();
+            mImagePath = "";
+        }
+
+        public ViewSettings(Color color) {
+            mOptColor = Optional.of(color);
+            mImagePath = "";
+        }
+
+        public ViewSettings(String imagePath) {
+            mOptColor = Optional.empty();
+            mImagePath = imagePath;
         }
 
         public Optional<Color> getBGColor() {
             return mOptColor;
         }
 
-        public void setBGColor(Optional<Color> color){
-            if (mOptColor.equals(color))
-                return;
-
-            mOptColor = color;
-            KonThread.this.save();
-            KonThread.this.changed();
+        public String getImagePath() {
+            return mImagePath;
         }
 
         // using legacy lib, raw types extend Object
@@ -383,8 +409,29 @@ public final class KonThread extends Observable {
         String toJSONString() {
             JSONObject json = new JSONObject();
             if (mOptColor.isPresent())
-                json.put(JSON_BG_COLOR,  mOptColor.get().getRGB());
+                json.put(JSON_BG_COLOR, mOptColor.get().getRGB());
+            if (!mImagePath.isEmpty())
+                json.put(JSON_IMAGE_PATH, mImagePath);
             return json.toJSONString();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+
+            if (!(obj instanceof ViewSettings)) return false;
+
+            ViewSettings o = (ViewSettings) obj;
+            return mOptColor.equals(o.mOptColor) &&
+                    mImagePath.equals(o.mImagePath);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 37 * hash + Objects.hashCode(this.mOptColor);
+            hash = 37 * hash + Objects.hashCode(this.mImagePath);
+            return hash;
         }
     }
 }

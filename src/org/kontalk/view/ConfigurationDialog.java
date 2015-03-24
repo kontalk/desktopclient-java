@@ -19,7 +19,6 @@
 package org.kontalk.view;
 
 import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.extended.filefilter.ImageFilesFilter;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
@@ -39,7 +38,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
-import java.io.File;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.swing.JFrame;
@@ -161,21 +159,7 @@ final class ConfigurationDialog extends WebDialog {
                 }
             });
 
-            mBGChooser = new WebFileChooserField();
-            mBGChooser.setEnabled(mBGBox.isSelected());
-            mBGChooser.getChooseButton().setEnabled(mBGBox.isSelected());
-            if (!bgPath.isEmpty())
-                mBGChooser.setSelectedFile(new File(bgPath));
-            mBGChooser.setMultiSelectionEnabled(false);
-            mBGChooser.setShowRemoveButton(true);
-            mBGChooser.getWebFileChooser().setFileFilter(new ImageFilesFilter());
-            File file = new File(bgPath);
-            if (file.exists()) {
-                mBGChooser.setSelectedFile(file);
-            }
-
-            if (file.getParentFile() != null && file.getParentFile().exists())
-                mBGChooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
+            mBGChooser = View.createImageChooser(mBGBox.isSelected(), bgPath);
 
             groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
 

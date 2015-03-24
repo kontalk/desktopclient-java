@@ -66,6 +66,7 @@ import java.util.logging.Level;
 import javax.imageio.ImageIO;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
 import org.kontalk.system.Downloader;
@@ -76,7 +77,6 @@ import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.system.KonConf;
 import org.kontalk.util.Tr;
-import org.kontalk.view.ThreadListView.BGSettings;
 
 /**
  * Pane that shows the currently selected thread.
@@ -167,16 +167,6 @@ final class ThreadView extends WebScrollPane {
         this.getViewport().repaint();
     }
 
-    void updateViewSettings(KonThread thread, BGSettings settings) {
-        if (!mThreadCache.containsKey(thread.getID()))
-            // no update needed
-            return;
-        MessageViewList view = mThreadCache.get(thread.getID());
-        view.updateViewSettings(settings);
-        if (view == this.getCurrentView().orElse(null))
-            this.getViewport().repaint();
-    }
-
     private void removeThread(KonThread thread) {
         mThreadCache.remove(thread.getID());
         if(this.getCurrentThread().orElse(null) == thread) {
@@ -259,11 +249,9 @@ final class ThreadView extends WebScrollPane {
                 }
             });
 
-            Optional<Color> optBGColor = mThread.getViewSettings().getBGColor();
-            if (optBGColor.isPresent())
-                mBackground = Optional.of(new Background(ThreadView.this.getViewport(), optBGColor.get()));
+            this.setBackground(mThread.getViewSettings());
 
-            this.updateOnEDT();
+            this.updateOnEDT(null);
 
             mThread.addObserver(this);
         }
@@ -276,31 +264,29 @@ final class ThreadView extends WebScrollPane {
             return mBackground;
         }
 
-        void updateViewSettings(BGSettings settings) {
-            // simply overwrite
-            if (!settings.color.isPresent()) {
-                mBackground = Optional.empty();
-                return;
-            }
-            Color c = settings.color.get();
-            mBackground = Optional.of(new Background(ThreadView.this.getViewport(), c));
-        }
-
         @Override
-        public void update(Observable o, Object arg) {
+        public void update(Observable o, final Object arg) {
             if (SwingUtilities.isEventDispatchThread()) {
-                this.updateOnEDT();
+                this.updateOnEDT(arg);
                 return;
             }
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    MessageViewList.this.updateOnEDT();
+                    MessageViewList.this.updateOnEDT(arg);
                 }
             });
         }
 
-        private void updateOnEDT() {
+        private void updateOnEDT(Object arg) {
+            if (arg instanceof KonThread.ViewSettings) {
+                this.setBackground((KonThread.ViewSettings) arg);
+                if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
+                    ThreadView.this.getViewport().repaint();
+                }
+                return;
+            }
+
             if (mThread.isDeleted()) {
                 ThreadView.this.removeThread(mThread);
             }
@@ -356,6 +342,19 @@ final class ThreadView extends WebScrollPane {
             MessageView messageView = (MessageView) mTableModel.getValueAt(row, 0);
             WebPopupMenu popupMenu = messageView.getPopupMenu();
             popupMenu.show(this, e.getX(), e.getY());
+        }
+
+        private void setBackground(KonThread.ViewSettings s) {
+            JViewport p = ThreadView.this.getViewport();
+            // simply overwrite
+            if (s.getBGColor().isPresent()) {
+                Color c = s.getBGColor().get();
+                mBackground = Optional.of(new Background(p, c));
+            } else if (!s.getImagePath().isEmpty()) {
+                mBackground = Optional.of(new Background(p, s.getImagePath()));
+            } else {
+                mBackground = Optional.empty();
+            }
         }
 
         /**
@@ -644,13 +643,13 @@ final class ThreadView extends WebScrollPane {
         private BufferedImage mCached = null;
         private Color mBottomColor = null;
 
-        /** Default, no thread specific settings view settings. */
+        /** Default, no thread specific settings. */
         Background(Component parent) {
             mParent = parent;
             mOrigin = View.getImage("thread_bg.png");
         }
 
-        /** Global image set by user. */
+        /** Image set by user (global or only for thread). */
         Background(Component parent, String imagePath) {
             mParent = parent;
             mOrigin = Toolkit.getDefaultToolkit().createImage(imagePath);

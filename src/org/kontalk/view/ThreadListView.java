@@ -18,21 +18,23 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.list.WebCheckBoxList;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
-import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.colorchooser.WebColorChooserDialog;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
+import com.alee.laf.radiobutton.WebRadioButton;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
 import com.alee.utils.swing.DialogOptions;
+import com.alee.utils.swing.UnselectableButtonGroup;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
@@ -63,6 +65,7 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.KonConf;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
+import org.kontalk.model.KonThread.ViewSettings;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
@@ -287,9 +290,11 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
         private final ThreadItem mThreadItem;
         private final WebTextField mSubjectField;
-        private final WebCheckBox mBGBox;
+        private final WebRadioButton mColorButton;
         private final WebButton mColorChooserButton;
         private final WebColorChooserDialog mColorChooser;
+        private final WebRadioButton mImgButton;
+        private final WebFileChooserField mImgChooser;
         WebCheckBoxList mParticipantsList;
 
         EditThreadDialog(ThreadItem threadItem) {
@@ -312,17 +317,16 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             groupPanel.add(mSubjectField);
             groupPanel.add(new WebSeparator(true, true));
 
-            mBGBox = new WebCheckBox(Tr.tr("Custom Background"));
+            groupPanel.add(new WebLabel(Tr.tr("Custom Background")));
+            mColorButton = new WebRadioButton(Tr.tr("Color:")+" ");
             Optional<Color> optBGColor = mThreadItem.getValue().getViewSettings().getBGColor();
-            mBGBox.setSelected(optBGColor.isPresent());
-            mBGBox.addItemListener(new ItemListener() {
+            mColorButton.setSelected(optBGColor.isPresent());
+            mColorButton.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {
                     mColorChooserButton.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
                 }
             });
-            groupPanel.add(mBGBox);
-
             mColorChooserButton = new WebButton();
             mColorChooserButton.setEnabled(optBGColor.isPresent());
             mColorChooserButton.setMinimumHeight(25);
@@ -337,8 +341,24 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             mColorChooser = new WebColorChooserDialog(this);
             mColorChooser.setColor(oldColor);
             groupPanel.add(new GroupPanel(GroupingType.fillLast,
-                    new WebLabel(Tr.tr("Color:")+" "),
+                    mColorButton,
                     mColorChooserButton));
+
+            mImgButton = new WebRadioButton(Tr.tr("Image:")+" ");
+            String imgPath = mThreadItem.getValue().getViewSettings().getImagePath();
+            mImgButton.setSelected(!imgPath.isEmpty());
+            mImgButton.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    mImgChooser.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                    mImgChooser.getChooseButton().setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                }
+            });
+            mImgChooser = View.createImageChooser(!imgPath.isEmpty(), imgPath);
+            groupPanel.add(new GroupPanel(GroupingType.fillLast,
+                    mImgButton,
+                    mImgChooser));
+            UnselectableButtonGroup.group(mColorButton, mImgButton);
             groupPanel.add(new WebSeparator());
 
             groupPanel.add(new WebLabel(Tr.tr("Participants:")));
@@ -420,12 +440,16 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             }
             mThreadItem.getValue().setUser(threadUser);
 
-            Color c = mColorChooser.getColor();
-            Optional<Color> optC = Optional.ofNullable(mBGBox.isSelected() ? c : null);
-            if (!optC.equals(mThreadItem.getValue().getViewSettings().getBGColor())) {
-                mThreadItem.getValue().getViewSettings().setBGColor(optC);
-                BGSettings settings = mBGBox.isSelected() ? new BGSettings(c) : new BGSettings();
-                ThreadListView.this.mView.updateThreadViewSettings(mThreadItem.mValue, settings);
+            ViewSettings newSettings;
+            if (mColorButton.isSelected())
+                newSettings = new ViewSettings(mColorChooser.getColor());
+            else if (mImgButton.isSelected() && !mImgChooser.getSelectedFiles().isEmpty())
+                newSettings = new ViewSettings(mImgChooser.getSelectedFiles().get(0).getAbsolutePath());
+            else
+                newSettings = new ViewSettings();
+
+            if (!newSettings.equals(mThreadItem.getValue().getViewSettings())) {
+                 mThreadItem.getValue().setViewSettings(newSettings);
             }
         }
 
@@ -448,18 +472,6 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
                 return name.isEmpty() ? jid : name +" "+jid;
             }
         }
-    }
-
-    static class BGSettings {
-            final Optional<Color> color;
-
-            BGSettings() {
-                color = Optional.empty();
-            }
-
-            BGSettings(Color color) {
-                this.color = Optional.of(color);
-            }
     }
 
     private static String shorten(String s, int max_length) {
