@@ -647,6 +647,7 @@ final class ThreadView extends WebScrollPane {
         Background(Component parent) {
             mParent = parent;
             mOrigin = View.getImage("thread_bg.png");
+            mBottomColor = new Color(255, 255, 255, 255);
         }
 
         /** Image set by user (global or only for thread). */
