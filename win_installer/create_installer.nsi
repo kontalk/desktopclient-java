@@ -3,8 +3,11 @@
 ;NSIS Modern User Interface
 ;Multilingual Example Script
 
+; simple Java installation, modified version of
+; http://nsis.sourceforge.net/New_installer_with_JRE_check_%28includes_fixes_from_%27Simple_installer_with_JRE_check%27_and_missing_jre.ini%29
+
 ;  !include "Library.nsh"
-  !include "MUI.nsh"
+!include "MUI.nsh"
 
 ;--------------------------------
 ;Defines  
@@ -14,6 +17,11 @@
 !define JARNAME "KontalkDesktopApp.jar"
 !define WEBSITE "kontalk.org"
 !define ICON "kontalk.ico"
+
+;Java
+!define JRE_VERSION "1.8"
+!define JRE_FILE "jre-8u40-windows-i586-iftw.exe"
+Var InstallJRE
   
 ;--------------------------------
 ;General
@@ -24,24 +32,24 @@ Name "${APPNAME} ${VERSION}"
 OutFile "KontalkInstaller.exe"
 ; The default installation directory
 InstallDir $PROGRAMFILES\Kontalk
-; The text to prompt the user to enter a directory
-;DirText "This will install the Kontalk Desktop Client on your computer. Choose a directory"
 
 BrandingText "${WEBSITE}"
-
-;Java stuff (unused)
- !define JRE_VERSION "1.8"
- !define JRE_URL "http://javadl.sun.com/webapps/download/AutoDL?BundleId=104777"
- ;!include "JREDyna_Inetc.nsh"
 
 ;--------------------------------
 ;Pages
 
+; Java
+  Page custom CheckInstalledJRE
+  !insertmacro MUI_PAGE_INSTFILES
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE myPreInstfiles
+  !define MUI_PAGE_CUSTOMFUNCTION_LEAVE RestoreSections
+
+; Kontalk
 #!insertmacro MUI_PAGE_LICENSE "license.rtf"
   !insertmacro MUI_PAGE_DIRECTORY
   !insertmacro MUI_PAGE_INSTFILES
   !insertmacro MUI_PAGE_FINISH
-  
+
   !insertmacro MUI_UNPAGE_CONFIRM
   !insertmacro MUI_UNPAGE_INSTFILES
   !insertmacro MUI_UNPAGE_FINISH
@@ -120,6 +128,27 @@ BrandingText "${WEBSITE}"
 ;--------------------------------
 ;Installer Sections
 
+; Java installation
+Section -installjre jre
+  Push $0
+  Push $1
+
+;  MessageBox MB_OK "Inside JRE Section"
+  Strcmp $InstallJRE "yes" InstallJRE End
+
+InstallJRE:
+  File /oname=$TEMP\jre_setup.exe "${JRE_FILE}"
+  Exec '"$TEMP\jre_setup.exe"'
+
+  DetailPrint "Setup finished"
+  Delete "$TEMP\jre_setup.exe"
+  Goto End
+
+End:
+  Pop $1	; Restore $1
+  Pop $0	; Restore $0
+SectionEnd
+
 ; The stuff to install
 Section foo SID
 
@@ -181,3 +210,96 @@ Delete $INSTDIR\${ICON}
 RMDir $INSTDIR
 
 SectionEnd 
+
+;--------------------------------
+;Installer Functions
+
+Function .onInit
+  !insertmacro SelectSection ${jre}
+  !insertmacro UnselectSection ${SID}
+FunctionEnd
+
+Function myPreInstfiles
+  Call RestoreSections
+  SetAutoClose true
+FunctionEnd
+
+Function RestoreSections
+  !insertmacro UnselectSection ${jre}
+  !insertmacro SelectSection ${SID}
+FunctionEnd
+
+Function CheckInstalledJRE
+  Push "${JRE_VERSION}"
+  Call DetectJRE
+  Exch $0	; Get return value from stack
+  StrCmp $0 "0" NoFound
+  StrCmp $0 "-1" NoFound
+  Goto JREAlreadyInstalled
+NoFound:
+  Exch $0	; $0 now has the installoptions page return value
+  ; Do something with return value here
+  Pop $0	; Restore $0
+  StrCpy $InstallJRE "yes"
+  Return
+JREAlreadyInstalled:
+  StrCpy $InstallJRE "no"
+  Pop $0		; Restore $0
+  Return
+FunctionEnd
+
+; Returns: 0 - JRE not found. -1 - JRE found but too old. Otherwise - Path to JAVA EXE
+; DetectJRE. Version requested is on the stack.
+; Returns (on stack)	"0" on failure (java too old or not installed), otherwise path to java interpreter
+; Stack value will be overwritten!
+Function DetectJRE
+  Exch $0	; Get version requested
+		; Now the previous value of $0 is on the stack, and the asked for version of JDK is in $0
+  Push $1	; $1 = Java version string (ie 1.5.0)
+  Push $2	; $2 = Javahome
+  Push $3	; $3 and $4 are used for checking the major/minor version of java
+  Push $4
+  ReadRegStr $1 HKLM "SOFTWARE\JavaSoft\Java Runtime Environment" "CurrentVersion"
+  StrCmp $1 "" DetectTry2
+  ReadRegStr $2 HKLM "SOFTWARE\JavaSoft\Java Runtime Environment\$1" "JavaHome"
+  StrCmp $2 "" DetectTry2
+  Goto GetJRE
+DetectTry2:
+  ReadRegStr $1 HKLM "SOFTWARE\JavaSoft\Java Development Kit" "CurrentVersion"
+  StrCmp $1 "" NoFound
+  ReadRegStr $2 HKLM "SOFTWARE\JavaSoft\Java Development Kit\$1" "JavaHome"
+  StrCmp $2 "" NoFound
+GetJRE:
+; $0 = version requested. $1 = version found. $2 = javaHome
+  IfFileExists "$2\bin\java.exe" 0 NoFound
+  StrCpy $3 $0 1			; Get major version. Example: $1 = 1.5.0, now $3 = 1
+  StrCpy $4 $1 1			; $3 = major version requested, $4 = major version found
+  IntCmp $4 $3 0 FoundOld FoundNew
+  StrCpy $3 $0 1 2
+  StrCpy $4 $1 1 2			; Same as above. $3 is minor version requested, $4 is minor version installed
+  IntCmp $4 $3 FoundNew FoundOld FoundNew
+NoFound:
+  Push "0"
+  Goto DetectJREEnd
+FoundOld:
+;  Push ${TEMP2}
+  Push "-1"
+  Goto DetectJREEnd
+FoundNew:
+  Push "$2\bin\java.exe"
+;  Push "OK"
+;  Return
+   Goto DetectJREEnd
+DetectJREEnd:
+	; Top of stack is return value, then r4,r3,r2,r1
+	Exch	; => r4,rv,r3,r2,r1,r0
+	Pop $4	; => rv,r3,r2,r1r,r0
+	Exch	; => r3,rv,r2,r1,r0
+	Pop $3	; => rv,r2,r1,r0
+	Exch 	; => r2,rv,r1,r0
+	Pop $2	; => rv,r1,r0
+	Exch	; => r1,rv,r0
+	Pop $1	; => rv,r0
+	Exch	; => r0,rv
+	Pop $0	; => rv
+FunctionEnd
