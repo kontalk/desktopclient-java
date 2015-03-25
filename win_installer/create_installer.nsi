@@ -19,7 +19,7 @@
 ;General
 
 ; The name of the installer
-Name "Kontalk Desktop"
+Name "${APPNAME} ${VERSION}"
 ; The file to write
 OutFile "KontalkInstaller.exe"
 ; The default installation directory
@@ -172,8 +172,10 @@ Delete "$SMPROGRAMS\Kontalk Desktop.lnk"
 Delete "$DESKTOP\Kontalk Desktop.lnk"
 
 ; files
-Delete $INSTDIR\${JARNAME}
-RMDir /r $INSTDIR\lib
+Delete "$INSTDIR\${JARNAME}"
+Delete "$INSTDIR\lib\*.jar"
+RMDir $INSTDIR\lib
+Delete $INSTDIR\${ICON}
 RMDir $INSTDIR
 
 SectionEnd 
