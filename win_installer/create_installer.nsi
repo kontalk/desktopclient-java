@@ -121,7 +121,7 @@ BrandingText "${WEBSITE}"
 ;Installer Sections
 
 ; The stuff to install
-Section foo sid
+Section foo SID
 
 ; Set output path to the installation directory.
 SetOutPath $INSTDIR
@@ -131,9 +131,10 @@ File ${JARNAME}
 File /r lib 
 File ${ICON}
 
+; shortcuts for all user
+SetShellVarContext all
 ; start menu shortcut
 CreateShortCut "$SMPROGRAMS\Kontalk Desktop.lnk" "$INSTDIR\${JARNAME}" "" "$INSTDIR\${ICON}"
-
 ; desktop icon
 CreateShortCut "$DESKTOP\Kontalk Desktop.lnk" "$INSTDIR\${JARNAME}" "" "$INSTDIR\${ICON}"
 
@@ -147,7 +148,7 @@ WriteRegStr HKLM "${ARP}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
 WriteRegStr HKLM "${ARP}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
 WriteRegStr HKLM "${ARP}" "Publisher" "Kontalk Dev Team"
 WriteRegStr HKLM "${ARP}" "DisplayVersion" "${VERSION}"
-SectionGetSize ${sid} $0
+SectionGetSize ${SID} $0
 WriteRegDWORD HKLM "${ARP}" "EstimatedSize" "$0"
 WriteRegStr HKLM "${ARP}" "HelpLink" "http://${WEBSITE}"
 WriteRegStr HKLM "${ARP}" "InstallLocation" "$INSTDIR"
@@ -166,6 +167,7 @@ Delete $INSTDIR\Uninstall.exe
 ; uninstaller reg key
 DeleteRegKey HKLM "${ARP}"
 
+SetShellVarContext all
 ; start menu shortcut
 Delete "$SMPROGRAMS\Kontalk Desktop.lnk"
 ; desktop icon
