@@ -13,6 +13,7 @@
 !define VERSION "0.01beta1"
 !define JARNAME "KontalkDesktopApp.jar"
 !define WEBSITE "kontalk.org"
+!define ICON "kontalk.ico"
   
 ;--------------------------------
 ;General
@@ -128,12 +129,13 @@ SetOutPath $INSTDIR
 ; files
 File ${JARNAME}
 File /r lib 
+File ${ICON}
 
 ; start menu shortcut
-CreateShortCut "$SMPROGRAMS\Kontalk Desktop.lnk" "$INSTDIR\${JARNAME}"
+CreateShortCut "$SMPROGRAMS\Kontalk Desktop.lnk" "$INSTDIR\${JARNAME}" "" "$INSTDIR\${ICON}"
 
 ; desktop icon
-CreateShortCut "$DESKTOP\Kontalk Desktop.lnk" "$INSTDIR\${JARNAME}" ""
+CreateShortCut "$DESKTOP\Kontalk Desktop.lnk" "$INSTDIR\${JARNAME}" "" "$INSTDIR\${ICON}"
 
 ; Tell the compiler to write an uninstaller and to look for a "Uninstall" section
 WriteUninstaller $INSTDIR\Uninstall.exe
