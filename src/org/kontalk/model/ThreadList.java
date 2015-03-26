@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -31,7 +32,7 @@ import java.util.logging.Logger;
 import org.kontalk.system.Database;
 
 /**
- *
+ * The global list of all threads.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class ThreadList extends Observable {
@@ -83,7 +84,9 @@ public final class ThreadList extends Observable {
                 String subject = Database.getString(threadRS, KonThread.COL_SUBJ);
                 boolean read = threadRS.getBoolean(KonThread.COL_READ);
                 String jsonViewSettings = Database.getString(threadRS, KonThread.COL_VIEW_SET);
-                mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read, jsonViewSettings));
+                synchronized (this) {
+                    mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read, jsonViewSettings));
+                }
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load threads from db", ex);
@@ -91,21 +94,23 @@ public final class ThreadList extends Observable {
         this.changed();
     }
 
-    public Collection<KonThread> getThreads() {
-        return mMap.values();
+    public synchronized Collection<KonThread> getThreads() {
+        return new ArrayList<>(mMap.values());
     }
 
-    public void save() {
+    public synchronized void save() {
         for (KonThread thread: mMap.values()) {
             thread.save();
         }
     }
 
     public KonThread getThreadByUser(User user) {
-        for (KonThread thread : mMap.values()) {
-            Set<User> threadUser = thread.getUser();
-            if (threadUser.size() == 1 && threadUser.contains(user))
-                return thread;
+        synchronized (this) {
+            for (KonThread thread : mMap.values()) {
+                Set<User> threadUser = thread.getUser();
+                if (threadUser.size() == 1 && threadUser.contains(user))
+                    return thread;
+            }
         }
         Set<User> userSet = new HashSet<>();
         userSet.add(user);
@@ -114,19 +119,21 @@ public final class ThreadList extends Observable {
 
     public KonThread createNewThread(Set<User> user) {
         KonThread newThread = new KonThread(user);
-        mMap.put(newThread.getID(), newThread);
+        synchronized (this) {
+            mMap.put(newThread.getID(), newThread);
+        }
         this.changed();
         return newThread;
     }
 
-    public Optional<KonThread> getThreadByID(int id) {
+    public synchronized Optional<KonThread> getThreadByID(int id) {
         KonThread thread = mMap.get(id);
         if (thread == null)
             LOGGER.warning("can't find thread with id: "+id);
         return Optional.ofNullable(thread);
     }
 
-    public Optional<KonThread> getThreadByXMPPID(String xmppThreadID) {
+    public synchronized Optional<KonThread> getThreadByXMPPID(String xmppThreadID) {
         if (xmppThreadID == null || xmppThreadID.isEmpty()) {
             return Optional.empty();
         }
@@ -137,7 +144,7 @@ public final class ThreadList extends Observable {
         return Optional.empty();
     }
 
-    public void deleteThreadWithID(int id) {
+    public synchronized void deleteThreadWithID(int id) {
         KonThread thread = mMap.remove(id);
         if (thread == null) {
             LOGGER.warning("can't delete thread, not found. id: "+id);
