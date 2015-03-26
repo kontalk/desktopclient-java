@@ -634,10 +634,10 @@ final class ThreadView extends WebScrollPane {
         }
     }
 
-    /** A background image of thread view with efficient reloading. */
+    /** A background image of thread view with efficient async reloading. */
     private class Background implements ImageObserver {
         private final Component mParent;
-        // background image from ressource or user selected
+        // background image from resource or user selected
         private Image mOrigin;
         // cached background with size of viewport
         private BufferedImage mCached = null;
@@ -653,6 +653,7 @@ final class ThreadView extends WebScrollPane {
         /** Image set by user (global or only for thread). */
         Background(Component parent, String imagePath) {
             mParent = parent;
+            // loading async!
             mOrigin = Toolkit.getDefaultToolkit().createImage(imagePath);
         }
 
@@ -662,32 +663,41 @@ final class ThreadView extends WebScrollPane {
             mBottomColor = bottomColor;
         }
 
+        /**
+         * Update the background image for this parent. Returns immediately, but
+         * repaints parent if updating is done asynchronously.
+         * @return if synchronized update is possible the updated image, else an
+         * old image if present
+         */
         Optional<BufferedImage> updateNowOrLater() {
-            int width = mParent.getWidth();
-            int height = mParent.getHeight();
             if (mCached == null ||
-                    mCached.getWidth() != width ||
-                    mCached.getHeight() != height) {
-                Image scaledImage = scale(mOrigin, width, height, true);
-                // if scaling is performed async, we continue updating the
-                // background from imageUpdate() later
-                if (scaledImage.getWidth(this) != -1)
-                    this.updateCachedBG(scaledImage);
+                    mCached.getWidth() != mParent.getWidth() ||
+                    mCached.getHeight() != mParent.getHeight()) {
+                if (this.loadOrigin()) {
+                    // goto 2
+                    this.scaleOrigin();
+                }
             }
             return Optional.ofNullable(mCached);
         }
 
-        @Override
-        public boolean imageUpdate(Image img, int infoflags, int x, int y, int w, int h) {
-            if ((infoflags & ImageObserver.ALLBITS) == 0) {
+        // step 1: ensure original image is loaded
+        private boolean loadOrigin() {
+            return mOrigin.getWidth(this) != -1;
+        }
+
+        // step 2: scale image
+        private boolean scaleOrigin() {
+            Image scaledImage = scale(mOrigin, mParent.getWidth(), mParent.getHeight(), true);
+            if (scaledImage.getWidth(this) != -1) {
+                // goto 3
+                this.updateCachedBG(scaledImage);
                 return true;
             }
-            // completely loaded
-            this.updateCachedBG(img);
-            mParent.repaint();
             return false;
         }
 
+        // step 3: paint cache from scaled image
         private void updateCachedBG(Image scaledImage) {
             int width = mParent.getWidth();
             int height = mParent.getHeight();
@@ -702,14 +712,33 @@ final class ThreadView extends WebScrollPane {
                 cachedG.fillRect(0, 0, width, getHeight());
             }
             // tiling
-            int iw = scaledImage.getWidth(this);
-            int ih = scaledImage.getHeight(this);
-            if (iw > 0 && ih > 0) {
-                for (int x = 0; x < width; x += iw) {
-                    for (int y = 0; y < height; y += ih) {
-                        cachedG.drawImage(scaledImage, x, y, iw, ih, this);
-                    }
+            int iw = scaledImage.getWidth(null);
+            int ih = scaledImage.getHeight(null);
+            for (int x = 0; x < width; x += iw) {
+                for (int y = 0; y < height; y += ih) {
+                    cachedG.drawImage(scaledImage, x, y, iw, ih, null);
                 }
+            }
+        }
+
+        @Override
+        public boolean imageUpdate(Image img, int infoflags, int x, int y, int w, int h) {
+            // ignore if image is not completely loaded
+            if ((infoflags & ImageObserver.ALLBITS) == 0) {
+                return true;
+            }
+
+            if (img.equals(mOrigin)) {
+                // original image done loading, goto 2
+                boolean sync = this.scaleOrigin();
+                if (sync)
+                    mParent.repaint();
+                return false;
+            } else {
+                // scaling done, goto 3
+                this.updateCachedBG(img);
+                mParent.repaint();
+                return false;
             }
         }
     }
@@ -754,10 +783,13 @@ final class ThreadView extends WebScrollPane {
     /**
      * Scale image down to maximum or minimum of width or height, preserving ratio.
      * @param max specifies if image is scaled to maximum or minimum of width/height
+     * @return the scaled image, loaded async
      */
     private static Image scale(Image image, int width, int height, boolean max) {
         int iw = image.getWidth(null);
         int ih = image.getHeight(null);
+        if (iw == -1)
+            LOGGER.warning("image not loaded yet");
         if (max && (iw <= width || ih <= height) ||
                 !max && (iw <= width && ih <= height))
             return image;
