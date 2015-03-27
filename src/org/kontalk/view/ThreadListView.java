@@ -200,9 +200,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             this.setMargin(5);
             this.setLayout(new BorderLayout(10, 5));
 
-            this.add(new WebLabel(Integer.toString(thread.getID())), BorderLayout.WEST);
-
-            mSubjectLabel = new WebLabel();
+            mSubjectLabel = new WebLabel("foo");
             mSubjectLabel.setFontSize(14);
             // if too long, draw three dots at the end
             Dimension size = mSubjectLabel.getPreferredSize();

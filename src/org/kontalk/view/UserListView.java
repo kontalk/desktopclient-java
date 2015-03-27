@@ -122,9 +122,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         mPopupMenu.show(this.getSelectedListItem(), this, e.getX(), e.getY());
     }
 
-    /**
-     * One item in the contact list representing a user.
-     */
+    /** One item in the contact list representing a user. */
     class UserItem extends ListView<UserItem, User>.ListItem {
 
         private final WebLabel mNameLabel;
@@ -140,30 +138,24 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             this.setMargin(5);
             this.setLayout(new BorderLayout(10, 5));
 
-            this.add(new WebLabel(Integer.toString(mValue.getID())), BorderLayout.WEST);
-
-            mNameLabel = new WebLabel();
+            mNameLabel = new WebLabel("foo");
             mNameLabel.setFontSize(14);
-            this.add(mNameLabel, BorderLayout.CENTER);
-
-            mJIDLabel = new WebLabel();
-            mJIDLabel.setForeground(Color.GRAY);
-            mJIDLabel.setFontSize(11);
-            this.add(mJIDLabel, BorderLayout.SOUTH);
-
             // if too long, draw three dots at the end
-            mJIDLabel.setText("dummy text");
-            Dimension size = mJIDLabel.getPreferredSize();
-            mJIDLabel.setMinimumSize(size);
-            mJIDLabel.setPreferredSize(size);
-            mNameLabel.setText("dummy text");
-            size = mNameLabel.getPreferredSize();
+            Dimension size = mNameLabel.getPreferredSize();
             mNameLabel.setMinimumSize(size);
             mNameLabel.setPreferredSize(size);
-
             String name = !mValue.getName().isEmpty() ? mValue.getName() : Tr.tr("<unknown>");
             mNameLabel.setText(name);
+            this.add(mNameLabel, BorderLayout.CENTER);
+
+            mJIDLabel = new WebLabel("foo");
+            mJIDLabel.setForeground(Color.GRAY);
+            mJIDLabel.setFontSize(11);
+            size = mJIDLabel.getPreferredSize();
+            mJIDLabel.setMinimumSize(size);
+            mJIDLabel.setPreferredSize(size);
             mJIDLabel.setText(mValue.getJID());
+            this.add(mJIDLabel, BorderLayout.SOUTH);
 
             mBackround = mValue.getAvailable() == User.Available.YES ? View.LIGHT_BLUE : Color.WHITE;
             this.setBackground(mBackround);
