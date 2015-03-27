@@ -63,9 +63,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 import java.util.Vector;
 import java.util.logging.Level;
-import javax.imageio.ImageIO;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
@@ -500,12 +498,10 @@ final class ThreadView extends WebScrollPane {
                     // rely on mime type in message
                     if (!optAttachment.get().getFileName().isEmpty() &&
                             optAttachment.get().getMimeType().startsWith("image")) {
-                        // file should be present and should be an image, show it
-                        BufferedImage image = readImage(path.toString());
-                        Image scaledImage = scale(image, 300, 200, false);
                         WebLinkLabel imageView = new WebLinkLabel();
                         imageView.setLink("", linkRunnable(path));
-                        imageView.setIcon(new ImageIcon(scaledImage));
+                        // file should be present and should be an image, show it
+                        ImageLoader.setImageIconAsync(imageView, path.toString());
                         mContentPanel.add(imageView, BorderLayout.SOUTH);
                     } else {
                         // show a link to the file
@@ -635,7 +631,7 @@ final class ThreadView extends WebScrollPane {
     }
 
     /** A background image of thread view with efficient async reloading. */
-    private class Background implements ImageObserver {
+    private final class Background implements ImageObserver {
         private final Component mParent;
         // background image from resource or user selected
         private Image mOrigin;
@@ -688,7 +684,7 @@ final class ThreadView extends WebScrollPane {
 
         // step 2: scale image
         private boolean scaleOrigin() {
-            Image scaledImage = scale(mOrigin, mParent.getWidth(), mParent.getHeight(), true);
+            Image scaledImage = ImageLoader.scale(mOrigin, mParent.getWidth(), mParent.getHeight(), true);
             if (scaledImage.getWidth(this) != -1) {
                 // goto 3
                 this.updateCachedBG(scaledImage);
@@ -743,17 +739,6 @@ final class ThreadView extends WebScrollPane {
         }
     }
 
-    private static BufferedImage readImage(String path) {
-        try {
-             BufferedImage image = ImageIO.read(new File(path));
-             if (image != null)
-                 return image;
-        } catch(IOException ex) {
-            LOGGER.log(Level.WARNING, "can't read image", ex);
-        }
-        return new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
-    }
-
     private static String getFromString(KonMessage message) {
         String from;
         if (!message.getUser().getName().isEmpty()) {
@@ -778,27 +763,5 @@ final class ThreadView extends WebScrollPane {
                     }
                 }
             };
-    }
-
-    /**
-     * Scale image down to maximum or minimum of width or height, preserving ratio.
-     * @param max specifies if image is scaled to maximum or minimum of width/height
-     * @return the scaled image, loaded async
-     */
-    private static Image scale(Image image, int width, int height, boolean max) {
-        int iw = image.getWidth(null);
-        int ih = image.getHeight(null);
-        if (iw == -1)
-            LOGGER.warning("image not loaded yet");
-        if (max && (iw <= width || ih <= height) ||
-                !max && (iw <= width && ih <= height))
-            return image;
-        double sw = width / (iw * 1.0);
-        double sh = height / (ih * 1.0);
-        double scale = max ? Math.max(sw, sh) : Math.min(sw, sh);
-        return image.getScaledInstance(
-                (int) (iw * scale),
-                (int) (ih * scale),
-                Image.SCALE_FAST);
     }
 }
