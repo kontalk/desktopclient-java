@@ -181,7 +181,6 @@ public class MessageContent {
         // coder status of file encryption
         private final CoderStatus mCoderStatus;
         // progress downloaded of (encrypted) file in percent
-        // no download/default: -1; unknown size: -2; download abort: -3
         private int mDownloadProgress = -1;
 
         private final static String JSON_URL = "url";
@@ -242,7 +241,7 @@ public class MessageContent {
             mFileName = fileName;
         }
 
-        public void setDecryptedFilename(String fileName) {
+        void setDecryptedFilename(String fileName) {
             mCoderStatus.setDecrypted();
             mFileName = fileName;
         }
@@ -251,6 +250,18 @@ public class MessageContent {
             return mCoderStatus;
         }
 
+        /** Download progress in percent.<br>
+         * -1: no download/default<br>
+         *  0: download started...<br>
+         * 100: ...download finished<br>
+         * -2: unknown size<br>
+         * -3: download aborted
+         */
+        public int getDownloadProgress() {
+            return mDownloadProgress;
+        }
+
+        /** Set download progress. See .getDownloadProgress() */
         void setDownloadProgress(int p) {
             mDownloadProgress = p;
         }

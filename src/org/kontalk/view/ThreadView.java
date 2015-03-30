@@ -67,12 +67,13 @@ import javax.swing.Icon;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingUtilities;
-import org.kontalk.system.Downloader;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
+import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.system.Downloader;
 import org.kontalk.system.KonConf;
 import org.kontalk.util.Tr;
 
@@ -407,7 +408,7 @@ final class ThreadView extends WebScrollPane {
                 // icons
                 mStatusIconLabel = new WebLabel();
 
-                this.update();
+                this.updateView(null);
 
                 // save the width that is requied to show the text in one line
                 // before line wrap and only once!
@@ -449,19 +450,62 @@ final class ThreadView extends WebScrollPane {
                 mTextArea.setSize(width, mTextArea.getPreferredSize().height);
             }
 
+            @Override
+            public void update(Observable o, final Object arg) {
+                if (SwingUtilities.isEventDispatchThread()) {
+                    this.updateOnEDT(arg);
+                    return;
+                }
+                SwingUtilities.invokeLater(new Runnable() {
+                    @Override
+                    public void run() {
+                        MessageView.this.updateOnEDT(arg);
+                    }
+                });
+            }
+
+            private void updateOnEDT(Object arg) {
+                this.updateView(arg);
+
+                // find row of item...
+                MessageViewList table = MessageViewList.this;
+                int row;
+                for (row = table.getRowCount()-1; row >= 0; row--)
+                    if (this == table.getModel().getValueAt(row, 0))
+                        break;
+                // ...set height...
+                table.setHeight(row);
+                // ...and scroll down
+                if (row == table.getRowCount()-1)
+                    table.mScrollDownOnResize = true;
+            }
+
             /**
              * Update what can change in a message: text, icon and attachment.
              */
-            private void update() {
-                // text in text area
+            private void updateView(Object arg) {
+                if (arg == null || arg instanceof String)
+                    this.updateText();
+
+                if (arg == null || arg instanceof KonMessage.Status)
+                    this.updateStatus();
+
+                if (arg == null || arg instanceof MessageContent.Attachment)
+                    this.updateAttachment();
+            }
+
+            // text in text area, before/after encryption
+            private void updateText() {
                 boolean encrypted = mMessage.getCoderStatus().isEncrypted();
                 String text = encrypted ? Tr.tr("[encrypted]") : mMessage.getContent().getText();
                 mTextArea.setFontStyle(false, encrypted);
                 mTextArea.setText(text);
                 // hide area if there is no text
                 mTextArea.setVisible(!text.isEmpty());
+            }
 
-                // status icon
+            // status icon
+            private void updateStatus() {
                 if (mMessage.getDir() == KonMessage.Direction.OUT) {
                     switch (mMessage.getReceiptStatus()) {
                         case PENDING :
@@ -480,45 +524,57 @@ final class ThreadView extends WebScrollPane {
                             LOGGER.warning("unknown message receipt status!?");
                     }
                 }
+            }
 
-                // attachment
-                // TODO loading many images can is very slow
+            // attachment / image
+            // TODO loading many images is very slow
+            private void updateAttachment() {
                 // remove possible old component (replacing does not work right)
                 BorderLayout layout = (BorderLayout) mContentPanel.getLayout();
                 Component oldComp = layout.getLayoutComponent(BorderLayout.SOUTH);
                 if (oldComp != null)
                     mContentPanel.remove(oldComp);
 
-                Optional<Attachment> optAttachment = mMessage.getContent().getAttachment();
-                if (optAttachment.isPresent()) {
-                    String base = Downloader.getInstance().getAttachmentDir();
-                    String fName = optAttachment.get().getFileName();
-                    Path path = Paths.get(base, fName);
+                Optional<MessageContent.Attachment> optAttachment =
+                        mMessage.getContent().getAttachment();
+                if (!optAttachment.isPresent())
+                    return;
 
-                    // rely on mime type in message
-                    if (!optAttachment.get().getFileName().isEmpty() &&
-                            optAttachment.get().getMimeType().startsWith("image")) {
-                        WebLinkLabel imageView = new WebLinkLabel();
-                        imageView.setLink("", linkRunnable(path));
-                        // file should be present and should be an image, show it
-                        ImageLoader.setImageIconAsync(imageView, path.toString());
-                        mContentPanel.add(imageView, BorderLayout.SOUTH);
-                    } else {
-                        // show a link to the file
-                        WebLabel attLabel;
-                        if (optAttachment.get().getFileName().isEmpty()) {
-                            attLabel = new WebLabel(Tr.tr("?"));
-                        } else {
-                            WebLinkLabel linkLabel = new WebLinkLabel();
-                            linkLabel.setLink(fName, linkRunnable(path));
-                            attLabel = linkLabel;
-                        }
-                        WebLabel labelLabel = new WebLabel(Tr.tr("Attachment:")+" ");
-                        labelLabel.setItalicFont();
-                        GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
-                        mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
-                    }
+                Attachment att = optAttachment.get();
+                String base = Downloader.getInstance().getAttachmentDir();
+                String fName = att.getFileName();
+                Path path = Paths.get(base, fName);
+
+                // rely on mime type in message
+                if (!att.getFileName().isEmpty() &&
+                        att.getMimeType().startsWith("image")) {
+                    WebLinkLabel imageView = new WebLinkLabel();
+                    imageView.setLink("", linkRunnable(path));
+                    // file should be present and should be an image, show it
+                    ImageLoader.setImageIconAsync(imageView, path.toString());
+                    mContentPanel.add(imageView, BorderLayout.SOUTH);
+                    return;
                 }
+
+                // show a link to the file
+                WebLabel attLabel;
+                if (att.getFileName().isEmpty()) {
+                    String statusText = Tr.tr("loading...");
+                    switch (att.getDownloadProgress()) {
+                        case 0:
+                        case -2: statusText = Tr.tr("downloading..."); break;
+                        case -3: statusText = Tr.tr("download failed"); break;
+                    }
+                    attLabel = new WebLabel(statusText);
+                } else {
+                    WebLinkLabel linkLabel = new WebLinkLabel();
+                    linkLabel.setLink(fName, linkRunnable(path));
+                    attLabel = linkLabel;
+                }
+                WebLabel labelLabel = new WebLabel(Tr.tr("Attachment:")+" ");
+                labelLabel.setItalicFont();
+                GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
+                mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
             }
 
             private WebPopupMenu getPopupMenu() {
@@ -557,36 +613,6 @@ final class ThreadView extends WebScrollPane {
                 String date = LONG_DATE_FORMAT.format(mMessage.getDate());
                 String from = getFromString(mMessage);
                 return date + " - " + from + " : " + mMessage.getContent().getText();
-            }
-
-            @Override
-            public void update(Observable o, Object arg) {
-                if (SwingUtilities.isEventDispatchThread()) {
-                    this.updateOnEDT();
-                    return;
-                }
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        MessageView.this.updateOnEDT();
-                    }
-                });
-            }
-
-            private void updateOnEDT() {
-                this.update();
-
-                // find row of item...
-                MessageViewList table = MessageViewList.this;
-                int row;
-                for (row = table.getRowCount()-1; row >= 0; row--)
-                    if (this == table.getModel().getValueAt(row, 0))
-                        break;
-                // ...set height...
-                table.setHeight(row);
-                // ...and scroll down
-                if (row == table.getRowCount()-1)
-                    table.mScrollDownOnResize = true;
             }
 
             @Override

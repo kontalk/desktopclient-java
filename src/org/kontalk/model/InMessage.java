@@ -34,7 +34,6 @@ public final class InMessage extends KonMessage {
     /**
      * Create a new incoming message from builder.
      * The message is not saved to database!
-     * @param builder
      */
     InMessage(KonMessage.Builder builder) {
         super(builder);
@@ -49,7 +48,7 @@ public final class InMessage extends KonMessage {
         mContent.setDecryptedContent(decryptedContent);
         mCoderStatus.setDecrypted();
         this.save();
-        this.changed();
+        this.changed(null);
     }
 
     public void setAttachmentFileName(String fileName) {
@@ -61,7 +60,7 @@ public final class InMessage extends KonMessage {
         this.save();
         // only tell view if file not encrypted
         if (!attachment.getCoderStatus().isEncrypted())
-            this.changed();
+            this.changed(attachment);
      }
 
     public void setAttachmentErrors(EnumSet<Coder.Error> errors) {
@@ -88,8 +87,8 @@ public final class InMessage extends KonMessage {
             return;
 
         attachment.setDownloadProgress(p);
-        // TODO
-        //this.changed();
+        if (p <= 0)
+            this.changed(attachment);
     }
 
     public void setDecryptedAttachment(String filename) {
@@ -99,7 +98,7 @@ public final class InMessage extends KonMessage {
 
         attachment.setDecryptedFilename(filename);
         this.save();
-        this.changed();
+        this.changed(attachment);
     }
 
     private Attachment getAttachment() {

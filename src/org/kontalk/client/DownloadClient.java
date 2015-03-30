@@ -164,8 +164,10 @@ public class DownloadClient {
                 CountingOutputStream cOut = new CountingOutputStream(out) {
                     @Override
                     protected synchronized void afterWrite(int n) {
+                        if (fileSize <= 0)
+                            return;
+
                         // inform listener
-                        if (fileSize <= 0) return;
                         mListener.updateProgress(
                                 (int) (this.getByteCount() /(fileSize * 1.0) * 100));
                     }

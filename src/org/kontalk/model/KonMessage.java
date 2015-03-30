@@ -94,7 +94,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // delivered (not implemented)
             "server_error TEXT, " +
             // if this combinations is equal we consider messages to be equal
-            // (see equals())
+            // (see .equals())
             "UNIQUE (direction, jid, xmpp_id, date), " +
             "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
             "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
@@ -292,9 +292,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return db.execDelete(TABLE, mID);
     }
 
-    protected synchronized void changed() {
+    protected synchronized void changed(Object arg) {
         this.setChanged();
-        this.notifyObservers();
+        this.notifyObservers(arg);
     }
 
     @Override
@@ -340,13 +340,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         public void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
 
-       KonMessage build() {
+        KonMessage build() {
             if (mDir == Direction.IN)
                 return new InMessage(this);
             else
                 return new OutMessage(this);
         }
-
     }
-
 }

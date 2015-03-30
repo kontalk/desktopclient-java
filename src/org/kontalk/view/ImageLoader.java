@@ -39,10 +39,12 @@ class ImageLoader {
 
     private ImageLoader() {}
 
+    // TODO Swing + async == a damn mess
     static void setImageIconAsync(WebLinkLabel view, String path) {
         AsyncLoader run = new AsyncLoader(view, path);
         // TODO all at once? queue not that good either
-        new Thread(run).start();
+        //new Thread(run).start();
+        run.run();
     }
 
     private static BufferedImage readImage(String path) {

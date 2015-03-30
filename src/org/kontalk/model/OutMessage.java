@@ -42,7 +42,7 @@ public final class OutMessage extends KonMessage {
             LOGGER.warning("unexpected new status of received message: "+status);
         mReceiptStatus = status;
         this.save();
-        this.changed();
+        this.changed(mReceiptStatus);
     }
 
 public static class Builder extends KonMessage.Builder {
