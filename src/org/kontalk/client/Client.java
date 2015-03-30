@@ -27,6 +27,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.PacketListener;
+import org.jivesoftware.smack.Roster;
 import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
@@ -50,6 +51,7 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
+import org.kontalk.model.User;
 import org.kontalk.system.Control;
 
 /**
@@ -69,9 +71,6 @@ public final class Client implements PacketListener, Runnable {
 
     private final Control mControl;
     private KonConnection mConn = null;
-
-    // Limited connection flag.
-    //protected boolean mLimited;
 
     public Client(Control control) {
         mControl = control;
@@ -304,6 +303,19 @@ public final class Client implements PacketListener, Runnable {
     @Override
     public void processPacket(Packet packet) {
         LOGGER.info("got packet (unhandled): "+packet.toXML());
+    }
+
+    public void addToRoster(User user) {
+        Roster roster = mConn.getRoster();
+        try {
+            // also sends presence subscription request
+            roster.createEntry(user.getJID(), user.getName(), null);
+        } catch (SmackException.NotLoggedInException |
+                SmackException.NoResponseException |
+                XMPPException.XMPPErrorException |
+                SmackException.NotConnectedException ex) {
+            LOGGER.log(Level.WARNING, "can't add user to roster", ex);
+        }
     }
 
     @Override

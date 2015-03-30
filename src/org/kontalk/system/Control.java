@@ -392,10 +392,18 @@ public final class Control extends Observable {
 
     /* private */
 
+    // only for new incoming messages
     private Optional<User> getOrAddUser(String jid) {
         UserList userList = UserList.getInstance();
 
-        Optional<User> optUser = userList.contains(jid) ? userList.get(jid) : this.addUser(jid, "");
+        Optional<User> optUser;
+        if (userList.contains(jid)) {
+            optUser = userList.get(jid);
+        } else {
+            optUser = this.addUser(jid, "");
+            if (optUser.isPresent())
+                mClient.addToRoster(optUser.get());
+        }
         return optUser;
     }
 
@@ -409,8 +417,6 @@ public final class Control extends Observable {
 
         // send request for public key
         mClient.sendPublicKeyRequest(optNewUser.get().getJID());
-
-        // TODO when to add new user to roster!?
 
         return optNewUser;
     }
