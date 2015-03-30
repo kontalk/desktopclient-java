@@ -11,7 +11,7 @@ import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  * Listener for vCard4 iq stanzas, deprecated!
@@ -21,9 +21,9 @@ import org.kontalk.system.ControlCenter;
 final class VCardListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(VCardListener.class.getName());
 
-    private final ControlCenter mControl;
+    private final Control mControl;
 
-    VCardListener(ControlCenter control) {
+    VCardListener(Control control) {
         mControl = control;
 
         ProviderManager.addIQProvider(VCard4.ELEMENT_NAME, VCard4.NAMESPACE, new VCard4.Provider());

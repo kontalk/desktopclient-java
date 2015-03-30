@@ -25,7 +25,7 @@ import org.jivesoftware.smack.RosterEntry;
 import org.jivesoftware.smack.RosterListener;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.RosterPacket;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  * Listener for events in the roster (a server-side contact list in XMPP).
@@ -36,9 +36,9 @@ final class KonRosterListener implements RosterListener {
 
     private final Roster mRoster;
     private final Client mClient;
-    private final ControlCenter mControl;
+    private final Control mControl;
 
-    KonRosterListener(Roster roster, Client client, ControlCenter control) {
+    KonRosterListener(Roster roster, Client client, Control control) {
         mRoster = roster;
         mClient = client;
         mControl = control;

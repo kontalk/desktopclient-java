@@ -26,7 +26,7 @@ import org.jivesoftware.smack.packet.PacketExtension;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  * Listen for presence packets. They also may include a custom Kontalk extension
@@ -38,9 +38,9 @@ public class PresenceListener implements PacketListener {
 
     private final Client mClient;
     private final Roster mRoster;
-    private final ControlCenter mControl;
+    private final Control mControl;
 
-    public PresenceListener(Client client, Roster roster, ControlCenter control) {
+    public PresenceListener(Client client, Roster roster, Control control) {
         mClient = client;
         mRoster = roster;
         mControl = control;

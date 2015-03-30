@@ -45,7 +45,7 @@ import java.util.Set;
 import javax.swing.ListSelectionModel;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 import org.kontalk.view.UserListView.UserItem;
 
@@ -282,9 +282,9 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
                 mUnblockMenuItem.setVisible(false);
             }
 
-            ControlCenter.Status status = UserListView.this.mView.getCurrentStatus();
-            mBlockMenuItem.setEnabled(status == ControlCenter.Status.CONNECTED);
-            mUnblockMenuItem.setEnabled(status == ControlCenter.Status.CONNECTED);
+            Control.Status status = UserListView.this.mView.getCurrentStatus();
+            mBlockMenuItem.setEnabled(status == Control.Status.CONNECTED);
+            mUnblockMenuItem.setEnabled(status == Control.Status.CONNECTED);
 
             this.show(invoker, x, y);
         }

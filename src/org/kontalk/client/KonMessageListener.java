@@ -34,7 +34,7 @@ import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  * Listen and handle all incoming XMPP message packets.
@@ -47,9 +47,9 @@ final public class KonMessageListener implements PacketListener {
     private final static String IGNORE_PLAIN_TEXT = "(encrypted)";
 
     private final Client mClient;
-    private final ControlCenter mControl;
+    private final Control mControl;
 
-    KonMessageListener(Client client, ControlCenter control) {
+    KonMessageListener(Client client, Control control) {
         mClient = client;
         mControl = control;
 

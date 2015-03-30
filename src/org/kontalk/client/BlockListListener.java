@@ -22,7 +22,7 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  *
@@ -31,9 +31,9 @@ import org.kontalk.system.ControlCenter;
 final class BlockListListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(BlockListListener.class.getName());
 
-    private final ControlCenter mControl;
+    private final Control mControl;
 
-    public BlockListListener(ControlCenter control) {
+    public BlockListListener(Control control) {
         mControl = control;
 
         ProviderManager.addIQProvider(BlockingCommand.BLOCKLIST,

@@ -50,7 +50,7 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  * Network client for an XMPP Kontalk Server.
@@ -67,13 +67,13 @@ public final class Client implements PacketListener, Runnable {
 
     private static enum Command {CONNECT, DISCONNECT};
 
-    private final ControlCenter mControl;
+    private final Control mControl;
     private KonConnection mConn = null;
 
     // Limited connection flag.
     //protected boolean mLimited;
 
-    public Client(ControlCenter control) {
+    public Client(Control control) {
         mControl = control;
         //mLimited = limited;
 
@@ -83,7 +83,7 @@ public final class Client implements PacketListener, Runnable {
 
     public void connect(PersonalKey key) {
         this.disconnect();
-        mControl.setStatus(ControlCenter.Status.CONNECTING);
+        mControl.setStatus(Control.Status.CONNECTING);
 
         Config config = Config.getInstance();
         // tigase: use hostname as network
@@ -102,7 +102,7 @@ public final class Client implements PacketListener, Runnable {
                     validateCertificate);
         } catch (PGPException ex) {
             LOGGER.log(Level.WARNING, "can't create connection", ex);
-            mControl.setStatus(ControlCenter.Status.FAILED);
+            mControl.setStatus(Control.Status.FAILED);
             mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECTION, ex));
             return;
         }
@@ -159,7 +159,7 @@ public final class Client implements PacketListener, Runnable {
                 mConn.connect();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't connect", ex);
-                mControl.setStatus(ControlCenter.Status.FAILED);
+                mControl.setStatus(Control.Status.FAILED);
                 mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
                 return;
             }
@@ -169,7 +169,7 @@ public final class Client implements PacketListener, Runnable {
                 mConn.login();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
-                mControl.setStatus(ControlCenter.Status.FAILED);
+                mControl.setStatus(Control.Status.FAILED);
                 mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
                 return;
             }
@@ -185,7 +185,7 @@ public final class Client implements PacketListener, Runnable {
 
         this.sendBlocklistRequest();
 
-        mControl.setStatus(ControlCenter.Status.CONNECTED);
+        mControl.setStatus(Control.Status.CONNECTED);
     }
 
     public void disconnect() {
@@ -194,7 +194,7 @@ public final class Client implements PacketListener, Runnable {
                 mConn.disconnect();
             }
         }
-        mControl.setStatus(ControlCenter.Status.DISCONNECTED);
+        mControl.setStatus(Control.Status.DISCONNECTED);
     }
 
     /**

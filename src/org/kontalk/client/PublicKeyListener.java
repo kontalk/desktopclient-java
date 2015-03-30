@@ -23,7 +23,7 @@ import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  *
@@ -32,9 +32,9 @@ import org.kontalk.system.ControlCenter;
 public class PublicKeyListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(PublicKeyListener.class.getName());
 
-    private final ControlCenter mControl;
+    private final Control mControl;
 
-    public PublicKeyListener(ControlCenter control) {
+    public PublicKeyListener(Control control) {
         mControl = control;
 
         ProviderManager.addIQProvider(PublicKeyPublish.ELEMENT_NAME,

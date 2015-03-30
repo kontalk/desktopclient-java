@@ -52,8 +52,8 @@ import org.kontalk.model.UserList;
  * Application control logic.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class ControlCenter extends Observable {
-    private final static Logger LOGGER = Logger.getLogger(ControlCenter.class.getName());
+public final class Control extends Observable {
+    private final static Logger LOGGER = Logger.getLogger(Control.class.getName());
 
     private final static String LEGACY_CUT_FROM_ID = " (NO COMMENT)";
 
@@ -72,7 +72,7 @@ public final class ControlCenter extends Observable {
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
-    public ControlCenter() {
+    public Control() {
         mClient = new Client(this);
     }
 

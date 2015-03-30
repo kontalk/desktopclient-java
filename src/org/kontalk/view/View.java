@@ -83,7 +83,7 @@ import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 
 /**
@@ -97,7 +97,7 @@ public final class View implements Observer {
     final static Color BLUE = new Color(130, 170, 240);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
 
-    private final ControlCenter mControl;
+    private final Control mControl;
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
     private final ThreadView mThreadView;
@@ -107,7 +107,7 @@ public final class View implements Observer {
     private final MainFrame mMainFrame;
     private TrayIcon mTrayIcon;
 
-    private View(ControlCenter control) {
+    private View(Control control) {
         mControl = control;
 
         WebLookAndFeel.install();
@@ -281,7 +281,7 @@ public final class View implements Observer {
         });
     }
 
-    ControlCenter.Status getCurrentStatus() {
+    Control.Status getCurrentStatus() {
         return mControl.getCurrentStatus();
     }
 
@@ -324,7 +324,7 @@ public final class View implements Observer {
     }
 
     private void statusChanged() {
-        ControlCenter.Status status = mControl.getCurrentStatus();
+        Control.Status status = mControl.getCurrentStatus();
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Connecting..."));
@@ -581,7 +581,7 @@ public final class View implements Observer {
         return errorText;
     }
 
-    public static Optional<View> create(final ControlCenter control) {
+    public static Optional<View> create(final Control control) {
         Optional<View> optView = invokeAndWait(new Callable<View>() {
             @Override
             public View call() throws Exception {

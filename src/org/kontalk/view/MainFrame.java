@@ -72,7 +72,7 @@ import org.kontalk.system.Config;
 import org.kontalk.Kontalk;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 
 /**
@@ -276,7 +276,7 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    final void statusChanged(ControlCenter.Status status) {
+    final void statusChanged(Control.Status status) {
         switch (status) {
             case CONNECTING:
                 mConnectMenuItem.setEnabled(false);

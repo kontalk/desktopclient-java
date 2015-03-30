@@ -24,7 +24,7 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.kontalk.model.KonMessage.Status;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  * Listener for acknowledged packets (Stream Management, XEP-0198).
@@ -33,9 +33,9 @@ import org.kontalk.system.ControlCenter;
 public final class AcknowledgedListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(AcknowledgedListener.class.getName());
 
-    private final ControlCenter mControl;
+    private final Control mControl;
 
-    public AcknowledgedListener(ControlCenter control) {
+    public AcknowledgedListener(Control control) {
         mControl = control;
     }
 

@@ -24,7 +24,7 @@ import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Packet;
-import org.kontalk.system.ControlCenter;
+import org.kontalk.system.Control;
 
 /**
  *
@@ -33,12 +33,12 @@ import org.kontalk.system.ControlCenter;
 final class BlockResponseListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(BlockResponseListener.class.getName());
 
-    private final ControlCenter mControl;
+    private final Control mControl;
     private final XMPPConnection mConn;
     private final boolean mBlocking;
     private final String mJID;
 
-    BlockResponseListener(ControlCenter control,
+    BlockResponseListener(Control control,
             XMPPConnection conn,
             boolean blocking,
             String jid){
