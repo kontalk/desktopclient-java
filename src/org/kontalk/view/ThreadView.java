@@ -74,7 +74,7 @@ import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.system.Downloader;
-import org.kontalk.system.KonConf;
+import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 
 /**
@@ -159,7 +159,7 @@ final class ThreadView extends WebScrollPane {
     }
 
     void loadDefaultBG() {
-        String imagePath = KonConf.getInstance().getString(KonConf.VIEW_THREAD_BG);
+        String imagePath = Config.getInstance().getString(Config.VIEW_THREAD_BG);
         mDefaultBG = !imagePath.isEmpty() ?
                 new Background(this.getViewport(), imagePath) :
                 new Background(this.getViewport());

@@ -35,7 +35,7 @@ import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.util.StringUtils;
-import org.kontalk.system.KonConf;
+import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.PGPUtils;
@@ -68,7 +68,7 @@ public final class Account {
         byte[] bridgeCertData = readBytesFromFile(BRIDGE_CERT_FILENAME);
 
         // load key
-        String passphrase = KonConf.getInstance().getString(KonConf.ACC_PASS);
+        String passphrase = Config.getInstance().getString(Config.ACC_PASS);
         try {
              return PersonalKey.load(
                      new ArmoredInputStream(new ByteArrayInputStream(privateKeyData)),
@@ -132,7 +132,7 @@ public final class Account {
 
         // success! use the new key
         mKey = key;
-        KonConf.getInstance().setProperty(KonConf.ACC_PASS, newPassword);
+        Config.getInstance().setProperty(Config.ACC_PASS, newPassword);
     }
 
     public static Account getInstance() {

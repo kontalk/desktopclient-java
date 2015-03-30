@@ -42,7 +42,7 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import javax.swing.JFrame;
 import javax.swing.text.NumberFormatter;
-import org.kontalk.system.KonConf;
+import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Account;
@@ -56,7 +56,7 @@ final class ConfigurationDialog extends WebDialog {
 
     private static enum ConfPage {MAIN, ACCOUNT};
 
-    private final KonConf mConf = KonConf.getInstance();
+    private final Config mConf = Config.getInstance();
     private final View mView;
 
     ConfigurationDialog(JFrame owner, final View view) {
@@ -121,12 +121,12 @@ final class ConfigurationDialog extends WebDialog {
 
             mConnectStartupBox = new WebCheckBox(Tr.tr("Connect on startup"));
             mConnectStartupBox.setAnimated(false);
-            mConnectStartupBox.setSelected(mConf.getBoolean(KonConf.MAIN_CONNECT_STARTUP));
+            mConnectStartupBox.setSelected(mConf.getBoolean(Config.MAIN_CONNECT_STARTUP));
             groupPanel.add(mConnectStartupBox);
 
             mTrayBox = new WebCheckBox(Tr.tr("Show tray icon"));
             mTrayBox.setAnimated(false);
-            mTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY));
+            mTrayBox.setSelected(mConf.getBoolean(Config.MAIN_TRAY));
             mTrayBox.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {
@@ -135,13 +135,13 @@ final class ConfigurationDialog extends WebDialog {
             });
             mCloseTrayBox = new WebCheckBox(Tr.tr("Close to tray"));
             mCloseTrayBox.setAnimated(false);
-            mCloseTrayBox.setSelected(mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE));
+            mCloseTrayBox.setSelected(mConf.getBoolean(Config.MAIN_TRAY_CLOSE));
             mCloseTrayBox.setEnabled(mTrayBox.isSelected());
             groupPanel.add(new GroupPanel(10, mTrayBox, mCloseTrayBox));
 
             mEnterSendsBox = new WebCheckBox(Tr.tr("Enter key sends"));
             mEnterSendsBox.setAnimated(false);
-            mEnterSendsBox.setSelected(mConf.getBoolean(KonConf.MAIN_ENTER_SENDS));
+            mEnterSendsBox.setSelected(mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             String enterSendsToolText =
                     Tr.tr("Enter key sends text, Control+Enter adds new line - or vice versa");
             TooltipManager.addTooltip(mEnterSendsBox, enterSendsToolText);
@@ -149,7 +149,7 @@ final class ConfigurationDialog extends WebDialog {
 
             mBGBox = new WebCheckBox(Tr.tr("Custom background:")+" ");
             mBGBox.setAnimated(false);
-            String bgPath = mConf.getString(KonConf.VIEW_THREAD_BG);
+            String bgPath = mConf.getString(Config.VIEW_THREAD_BG);
             mBGBox.setSelected(!bgPath.isEmpty());
             mBGBox.addItemListener(new ItemListener() {
                 @Override
@@ -167,11 +167,11 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void saveConfiguration() {
-            mConf.setProperty(KonConf.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
-            mConf.setProperty(KonConf.MAIN_TRAY, mTrayBox.isSelected());
-            mConf.setProperty(KonConf.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
+            mConf.setProperty(Config.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
+            mConf.setProperty(Config.MAIN_TRAY, mTrayBox.isSelected());
+            mConf.setProperty(Config.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
             mView.setTray();
-            mConf.setProperty(KonConf.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
+            mConf.setProperty(Config.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
             String bgPath;
             if (mBGBox.isSelected() && !mBGChooser.getSelectedFiles().isEmpty()) {
@@ -179,9 +179,9 @@ final class ConfigurationDialog extends WebDialog {
             } else {
                 bgPath = "";
             }
-            String oldBGPath = mConf.getString(KonConf.VIEW_THREAD_BG);
+            String oldBGPath = mConf.getString(Config.VIEW_THREAD_BG);
             if (!bgPath.equals(oldBGPath)) {
-                mConf.setProperty(KonConf.VIEW_THREAD_BG, bgPath);
+                mConf.setProperty(Config.VIEW_THREAD_BG, bgPath);
                 mView.reloadThreadBG();
             }
         }
@@ -204,12 +204,12 @@ final class ConfigurationDialog extends WebDialog {
             // server text field
             groupPanel.add(new WebLabel(Tr.tr("Server address:")));
             WebPanel serverPanel = new WebPanel(false);
-            mServerField = new WebTextField(mConf.getString(KonConf.SERV_HOST));
-            mServerField.setInputPrompt(KonConf.DEFAULT_SERV_HOST);
+            mServerField = new WebTextField(mConf.getString(Config.SERV_HOST));
+            mServerField.setInputPrompt(Config.DEFAULT_SERV_HOST);
             mServerField.setInputPromptFont(mServerField.getFont().deriveFont(Font.ITALIC));
             mServerField.setHideInputPromptOnFocus(false);
             serverPanel.add(mServerField);
-            int port = mConf.getInt(KonConf.SERV_PORT, KonConf.DEFAULT_SERV_PORT);
+            int port = mConf.getInt(Config.SERV_PORT, Config.DEFAULT_SERV_PORT);
             NumberFormat format = new DecimalFormat("#####");
             NumberFormatter formatter = new NumberFormatter(format);
             formatter.setMinimum(1);
@@ -222,7 +222,7 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(serverPanel);
             mDisableCertBox = new WebCheckBox(Tr.tr("Disable certificate validation"));
             mDisableCertBox.setAnimated(false);
-            mDisableCertBox.setSelected(!mConf.getBoolean(KonConf.SERV_CERT_VALIDATION));
+            mDisableCertBox.setSelected(!mConf.getBoolean(Config.SERV_CERT_VALIDATION));
             String disableCertText = Tr.tr("Disable SSL certificate server validation");
             TooltipManager.addTooltip(mDisableCertBox, disableCertText);
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
@@ -274,10 +274,10 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void saveConfiguration() {
-            mConf.setProperty(KonConf.SERV_HOST, mServerField.getText());
+            mConf.setProperty(Config.SERV_HOST, mServerField.getText());
             int port = Integer.parseInt(mPortField.getText());
-            mConf.setProperty(KonConf.SERV_PORT, port);
-            mConf.setProperty(KonConf.SERV_CERT_VALIDATION, !mDisableCertBox.isSelected());
+            mConf.setProperty(Config.SERV_PORT, port);
+            mConf.setProperty(Config.SERV_CERT_VALIDATION, !mDisableCertBox.isSelected());
         }
 
     }
@@ -295,7 +295,7 @@ final class ConfigurationDialog extends WebDialog {
 
             mChatStateBox = new WebCheckBox(Tr.tr("Send chatstate notification"));
             mChatStateBox.setAnimated(false);
-            mChatStateBox.setSelected(mConf.getBoolean(KonConf.NET_SEND_CHAT_STATE));
+            mChatStateBox.setSelected(mConf.getBoolean(Config.NET_SEND_CHAT_STATE));
 
             groupPanel.add(mChatStateBox);
 
@@ -303,7 +303,7 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void saveConfiguration() {
-            mConf.setProperty(KonConf.NET_SEND_CHAT_STATE, mChatStateBox.isSelected());
+            mConf.setProperty(Config.NET_SEND_CHAT_STATE, mChatStateBox.isSelected());
         }
     }
 }

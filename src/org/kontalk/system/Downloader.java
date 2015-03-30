@@ -83,7 +83,7 @@ public class Downloader implements Runnable {
             return;
         }
         X509Certificate bridgeCert = key.getBridgeCertificate();
-        boolean validateCertificate = KonConf.getInstance().getBoolean(KonConf.SERV_CERT_VALIDATION);
+        boolean validateCertificate = Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION);
         DownloadClient.ProgressListener listener = new DownloadClient.ProgressListener() {
             @Override
             public void updateProgress(int p) {

@@ -62,7 +62,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.system.KonConf;
+import org.kontalk.system.Config;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.KonThread.ViewSettings;
@@ -173,14 +173,13 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
     }
 
     void selectLastThread() {
-        int i = KonConf.getInstance().getInt(KonConf.VIEW_SELECTED_THREAD);
+        int i = Config.getInstance().getInt(Config.VIEW_SELECTED_THREAD);
         if (i < 0) i = 0;
         this.setSelectedIndex(i);
     }
 
     void save() {
-        KonConf.getInstance().setProperty(
-                KonConf.VIEW_SELECTED_THREAD,
+        Config.getInstance().setProperty(Config.VIEW_SELECTED_THREAD,
                 this.getSelectedIndex());
     }
 

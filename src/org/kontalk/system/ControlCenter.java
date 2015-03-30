@@ -80,9 +80,9 @@ public final class ControlCenter extends Observable {
         new Thread(mClient).start();
 
         // use password option to determine if account was imported
-        KonConf config = KonConf.getInstance();
-        boolean connect = config.getBoolean(KonConf.MAIN_CONNECT_STARTUP);
-        if (config.getString(KonConf.ACC_PASS).isEmpty()) {
+        Config config = Config.getInstance();
+        boolean connect = config.getBoolean(Config.MAIN_CONNECT_STARTUP);
+        if (config.getString(Config.ACC_PASS).isEmpty()) {
             this.setChanged();
             this.notifyObservers(new ViewEvent.MissingAccount(connect));
             return;
@@ -107,7 +107,7 @@ public final class ControlCenter extends Observable {
         } catch (RuntimeException ex) {
             // ignore
         }
-        KonConf.getInstance().saveToFile();
+        Config.getInstance().saveToFile();
 
         Kontalk.exit();
     }
@@ -365,7 +365,6 @@ public final class ControlCenter extends Observable {
             if (!userName.isEmpty())
                 user.setName(userName);
         }
-
     }
 
     public void setBlockedUser(List<String> jids) {

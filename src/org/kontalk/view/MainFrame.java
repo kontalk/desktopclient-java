@@ -68,7 +68,7 @@ import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import org.kontalk.system.KonConf;
+import org.kontalk.system.Config;
 import org.kontalk.Kontalk;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
@@ -84,7 +84,7 @@ final class MainFrame extends WebFrame {
 
     static enum Tab {THREADS, USER};
 
-    private final KonConf mConf = KonConf.getInstance();
+    private final Config mConf = Config.getInstance();
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
@@ -99,8 +99,8 @@ final class MainFrame extends WebFrame {
 
         // general view + behaviour
         this.setTitle("Kontalk Java Client");
-        this.setSize(mConf.getInt(KonConf.VIEW_FRAME_WIDTH),
-                mConf.getInt(KonConf.VIEW_FRAME_HEIGHT));
+        this.setSize(mConf.getInt(Config.VIEW_FRAME_WIDTH),
+                mConf.getInt(Config.VIEW_FRAME_HEIGHT));
 
         this.setIconImage(View.getImage("kontalk.png"));
 
@@ -109,7 +109,7 @@ final class MainFrame extends WebFrame {
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if (mConf.getBoolean(KonConf.MAIN_TRAY_CLOSE) &&
+                if (mConf.getBoolean(Config.MAIN_TRAY_CLOSE) &&
                         SystemTray.getSystemTray().getTrayIcons().length > 0)
                     MainFrame.this.toggleState();
                 else
@@ -262,8 +262,8 @@ final class MainFrame extends WebFrame {
     }
 
     void save() {
-        mConf.setProperty(KonConf.VIEW_FRAME_WIDTH, this.getWidth());
-        mConf.setProperty(KonConf.VIEW_FRAME_HEIGHT, this.getHeight());
+        mConf.setProperty(Config.VIEW_FRAME_WIDTH, this.getWidth());
+        mConf.setProperty(Config.VIEW_FRAME_HEIGHT, this.getHeight());
     }
 
     void toggleState() {
@@ -329,7 +329,7 @@ final class MainFrame extends WebFrame {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
-            String[] strings = mConf.getStringArray(KonConf.NET_STATUS_LIST);
+            String[] strings = mConf.getStringArray(Config.NET_STATUS_LIST);
             List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
             String currentStatus = "";
             if (!stats.isEmpty())
@@ -386,7 +386,7 @@ final class MainFrame extends WebFrame {
         private void saveStatus() {
             String newStatus = mStatusField.getText();
 
-            String[] strings = mConf.getStringArray(KonConf.NET_STATUS_LIST);
+            String[] strings = mConf.getStringArray(Config.NET_STATUS_LIST);
             List<String> stats = new ArrayList<>(Arrays.asList(strings));
 
             stats.remove(newStatus);
@@ -396,7 +396,7 @@ final class MainFrame extends WebFrame {
             if (stats.size() > 20)
                 stats = stats.subList(0, 20);
 
-            mConf.setProperty(KonConf.NET_STATUS_LIST, stats.toArray());
+            mConf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
         }
     }
 

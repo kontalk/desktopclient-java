@@ -33,10 +33,10 @@ import org.kontalk.Kontalk;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class KonConf extends PropertiesConfiguration {
-    private final static Logger LOGGER = Logger.getLogger(KonConf.class.getName());
+public final class Config extends PropertiesConfiguration {
+    private final static Logger LOGGER = Logger.getLogger(Config.class.getName());
 
-    private static KonConf INSTANCE = null;
+    private static Config INSTANCE = null;
 
     // all configuration property keys
     // disable network property for now -> same as server host
@@ -61,7 +61,7 @@ public final class KonConf extends PropertiesConfiguration {
     public final static String DEFAULT_SERV_HOST = "beta.kontalk.net";
     public final static int DEFAULT_SERV_PORT = 5999;
 
-    private KonConf() {
+    private Config() {
         super();
 
         String filePath = Kontalk.getConfigDir() + "/kontalk.properties";
@@ -110,9 +110,9 @@ public final class KonConf extends PropertiesConfiguration {
         }
     }
 
-    public static KonConf getInstance() {
+    public static Config getInstance() {
         if (INSTANCE == null)
-            INSTANCE = new KonConf();
+            INSTANCE = new Config();
         return INSTANCE;
     }
 }

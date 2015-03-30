@@ -72,7 +72,7 @@ import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.kontalk.Kontalk;
-import org.kontalk.system.KonConf;
+import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.ViewEvent;
@@ -161,7 +161,7 @@ public final class View implements Observer {
     }
 
     final void setTray() {
-        if (!KonConf.getInstance().getBoolean(KonConf.MAIN_TRAY)) {
+        if (!Config.getInstance().getBoolean(Config.MAIN_TRAY)) {
             this.removeTray();
             return;
         }
@@ -235,7 +235,7 @@ public final class View implements Observer {
     }
 
     void setHotkeys() {
-        final boolean enterSends = KonConf.getInstance().getBoolean(KonConf.MAIN_ENTER_SENDS);
+        final boolean enterSends = Config.getInstance().getBoolean(Config.MAIN_ENTER_SENDS);
 
         for (KeyListener l : mSendTextArea.getKeyListeners())
             mSendTextArea.removeKeyListener(l);

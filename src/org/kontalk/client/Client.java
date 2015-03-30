@@ -44,7 +44,7 @@ import org.jivesoftware.smack.tcp.sm.StreamManagementException;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.kontalk.system.KonConf;
+import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
@@ -85,14 +85,14 @@ public final class Client implements PacketListener, Runnable {
         this.disconnect();
         mControl.setStatus(ControlCenter.Status.CONNECTING);
 
-        KonConf config = KonConf.getInstance();
+        Config config = Config.getInstance();
         // tigase: use hostname as network
         //String network = config.getString(KonConf.SERV_NET);
-        String network = config.getString(KonConf.SERV_HOST);
-        String host = config.getString(KonConf.SERV_HOST);
-        int port = config.getInt(KonConf.SERV_PORT);
+        String network = config.getString(Config.SERV_HOST);
+        String host = config.getString(Config.SERV_HOST);
+        int port = config.getInt(Config.SERV_PORT);
         EndpointServer server = new EndpointServer(network, host, port);
-        boolean validateCertificate = config.getBoolean(KonConf.SERV_CERT_VALIDATION);
+        boolean validateCertificate = config.getBoolean(Config.SERV_CERT_VALIDATION);
 
         // create connection
         try {
@@ -222,8 +222,8 @@ public final class Client implements PacketListener, Runnable {
         smackMessage.setType(Message.Type.chat);
         smackMessage.setTo(message.getJID());
         smackMessage.addExtension(new DeliveryReceiptRequest());
-        KonConf conf = KonConf.getInstance();
-        if (conf.getBoolean(KonConf.NET_SEND_CHAT_STATE))
+        Config conf = Config.getInstance();
+        if (conf.getBoolean(Config.NET_SEND_CHAT_STATE))
             smackMessage.addExtension(new ChatStateExtension(ChatState.active));
 
         if (message.getCoderStatus().getEncryption() == Coder.Encryption.NOT &&
