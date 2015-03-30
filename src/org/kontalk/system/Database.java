@@ -44,6 +44,11 @@ import org.sqlite.SQLiteConfig;
 /**
  * Global database for permanently storing all model information.
  * Uses the JDBC API and SQLite as DBMS.
+ *
+ * Database access is not concurrent safe (connection pool is needed). At least
+ * writing is synchronized. Hopefully we don't see this no more:
+ * "SQLException: ResultSet already requested" or "ResultSet closed"
+ *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class Database {
@@ -79,6 +84,7 @@ public final class Database {
         }
 
         try {
+            // this is already the default
             mConn.setAutoCommit(true);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't set autocommit", ex);
@@ -132,10 +138,11 @@ public final class Database {
         LOGGER.info("updated to version 1");
     }
 
-    public void close() {
-        if(mConn == null)
-            return;
+    synchronized void close() {
         try {
+            if(mConn == null || mConn.isClosed())
+                return;
+            mConn.commit();
             mConn.close();
         } catch(SQLException ex) {
             LOGGER.log(Level.WARNING, "can't close db", ex);
@@ -173,12 +180,12 @@ public final class Database {
     }
 
     /**
-     * Add new model to database.
+     * Add a new model / row to database.
      * @param table table name the values are inserted into
-     * @param values arbitrary objects that are inserted
+     * @param values all objects / row fields that to insert
      * @return id value of inserted row, -1 if something went wrong
      */
-    public int execInsert(String table, List<Object> values) {
+    public synchronized int execInsert(String table, List<Object> values) {
         // first column is the id
         String insert = "INSERT INTO " + table + " VALUES (NULL,";
 
@@ -207,7 +214,7 @@ public final class Database {
      * @param id
      * @return id value of updated row, 0 if something went wrong
      */
-    public int execUpdate(String table, Map<String, Object> set, int id) {
+    public synchronized int execUpdate(String table, Map<String, Object> set, int id) {
         String update = "UPDATE OR FAIL " + table + " SET ";
 
         List<String> keyList = new ArrayList<>(set.keySet());
@@ -223,8 +230,6 @@ public final class Database {
         try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)) {
             insertValues(stat, keyList, set);
             stat.executeUpdate();
-            // TODO sometimes we get a "SQLException: ResultSet already requested" here,
-            // maybe its not thread safe!?
             ResultSet keys = stat.getGeneratedKeys();
             return keys.getInt(1);
         } catch (SQLException ex) {
@@ -233,7 +238,7 @@ public final class Database {
         }
     }
 
-    public boolean execDelete(String table, int id) {
+    public synchronized boolean execDelete(String table, int id) {
         LOGGER.info("deleting id "+id+" from table "+table);
         try (Statement stat = mConn.createStatement()) {
             stat.executeUpdate("DELETE FROM " + table + " WHERE _id = " + id);
@@ -313,5 +318,4 @@ public final class Database {
         }
         return INSTANCE;
     }
-
 }
