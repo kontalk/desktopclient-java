@@ -518,10 +518,10 @@ public final class View implements Observer {
         field.setEditable(false);
         field.setBackground(null);
         field.setBorder(null);
-        field.getCaret().setSelectionVisible(true);
         field.addMouseListener(new MouseAdapter() {
+            @Override
             public void mousePressed(MouseEvent e) {
-                    check(e);
+                check(e);
             }
             @Override
             public void mouseReleased(MouseEvent e) {

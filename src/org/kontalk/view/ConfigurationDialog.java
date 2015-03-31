@@ -192,7 +192,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebTextField mServerField;
         private final WebFormattedTextField mPortField;
         private final WebCheckBox mDisableCertBox;
-        private final WebTextField mFingerprintLabel;
+        private final WebTextField mFingerprintField;
 
         AccountPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -228,10 +228,10 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
             groupPanel.add(new WebSeparator(true, true));
-            mFingerprintLabel = View.createTextField("");
+            mFingerprintField = View.createTextField("");
             this.updateFingerprint();
             WebLabel fpLabel = new WebLabel(Tr.tr("Key fingerprint:")+" ");
-            groupPanel.add(new GroupPanel(fpLabel, mFingerprintLabel));
+            groupPanel.add(new GroupPanel(fpLabel, mFingerprintField));
 
             WebButton importButton = new WebButton(Tr.tr("Import new Account"));
             importButton.addActionListener(new ActionListener() {
@@ -271,7 +271,7 @@ final class ConfigurationDialog extends WebDialog {
             String fingerprint = "- "+Tr.tr("no key loaded")+" -";
             if (personalKey != null)
                 fingerprint = personalKey.getFingerprint();
-            mFingerprintLabel.setText(fingerprint);
+            mFingerprintField.setText(fingerprint);
         }
 
         private void saveConfiguration() {

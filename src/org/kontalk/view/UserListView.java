@@ -29,6 +29,7 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
+import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -324,15 +325,26 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             String hasKey = "<html>"+Tr.tr("Encryption Key")+": ";
             if (mUserView.getValue().hasKey()) {
                 hasKey += Tr.tr("Available")+"</html>";
+                WebLabel fpLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
+                WebTextField fpField = View.createTextField(mUserView.getValue().getFingerprint());
+                String fpText = Tr.tr("The unique ID of this contact's key");
+                TooltipManager.addTooltip(fpField, fpText);
+                groupPanel.add(new GroupPanel(new WebLabel(hasKey)));
+                groupPanel.add(new GroupPanel(fpLabel, fpField));
             } else {
+                WebLabel keyLabel = new WebLabel(hasKey);
                 hasKey += "<font color='red'>"+Tr.tr("Not Available")+"</font></html>";
+                String keyText = Tr.tr("The key for this user could not yet be received");
+                TooltipManager.addTooltip(keyLabel, keyText);
+                groupPanel.add(new GroupPanel(keyLabel));
             }
-            groupPanel.add(new WebLabel(hasKey));
 
-            mEncryptionBox = new WebCheckBox(Tr.tr("Encryption"));
+            mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));
             mEncryptionBox.setAnimated(false);
             mEncryptionBox.setSelected(mUserView.getValue().getEncrypted());
-            groupPanel.add(mEncryptionBox);
+            String encText = Tr.tr("Encrypt and sign all messages send to this contact");
+            TooltipManager.addTooltip(mEncryptionBox, encText);
+            groupPanel.add(new GroupPanel(mEncryptionBox, new WebSeparator()));
             groupPanel.add(new WebSeparator(true, true));
 
             groupPanel.add(new WebLabel("JID:"));
