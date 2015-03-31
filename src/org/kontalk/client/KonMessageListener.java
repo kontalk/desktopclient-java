@@ -180,7 +180,7 @@ final public class KonMessageListener implements PacketListener {
         PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
         if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
             if (m.getBody() != null && !m.getBody().equals(IGNORE_PLAIN_TEXT))
-                LOGGER.warning("message contains encryption and body (ignoring body)");
+                LOGGER.warning("message contains encryption and body (ignoring body): "+m.getBody());
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
             encryptedContent = Base64.getEncoder().encodeToString(encryption.getData());
         }
