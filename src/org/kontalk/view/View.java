@@ -74,6 +74,7 @@ import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
@@ -517,7 +518,6 @@ public final class View implements Observer {
         final WebTextField field = new WebTextField(text, false);
         field.setEditable(false);
         field.setBackground(null);
-        field.setBorder(null);
         field.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -621,6 +621,20 @@ public final class View implements Observer {
                 break;
         }
         return errorText;
+    }
+
+    static String shortenJID(String jid, int maxLength) {
+        if (jid.length() > maxLength) {
+            String local = shorten(XmppStringUtils.parseLocalpart(jid), (int)(maxLength * 0.4));
+            String domain = shorten(XmppStringUtils.parseDomain(jid), (int)(maxLength * 0.6));
+            jid = XmppStringUtils.completeJidFrom(local, domain);
+        }
+        return jid;
+    }
+
+    static String shorten(String s, int maxLength) {
+        if (maxLength < 6) maxLength = 6;
+        return s.length() >= maxLength ? s.substring(0, maxLength - 3) + "..." : s;
     }
 
     public static Optional<View> create(final Control control) {

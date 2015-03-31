@@ -19,6 +19,7 @@
 package org.kontalk.view;
 
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
@@ -38,6 +39,8 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
@@ -296,15 +299,14 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
 
         private final UserItem mUserView;
         private final WebTextField mNameField;
-        private final WebTextField mJIDField;
         private final WebCheckBox mEncryptionBox;
+        private String mJID;
 
         EditUserDialog(UserItem userView) {
-
             mUserView = userView;
 
             this.setTitle(Tr.tr("Edit Contact"));
-            //this.setSize(400, 280);
+            this.setMinimumSize(new Dimension(400, -1));
             this.setResizable(false);
             this.setModal(true);
 
@@ -347,11 +349,31 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             groupPanel.add(new GroupPanel(mEncryptionBox, new WebSeparator()));
             groupPanel.add(new WebSeparator(true, true));
 
-            groupPanel.add(new WebLabel("JID:"));
-            mJIDField = new WebTextField(mUserView.getValue().getJID(), 38);
-            mJIDField.setInputPrompt(mUserView.getValue().getJID());
-            mJIDField.setHideInputPromptOnFocus(false);
-            groupPanel.add(mJIDField);
+            final int l = 50;
+            mJID = mUserView.getValue().getJID();
+            final WebTextField jidField = new WebTextField(View.shortenJID(mJID, l));
+            jidField.setDrawBorder(false);
+            jidField.setMinimumHeight(20);
+            jidField.setInputPrompt(mJID);
+            jidField.setHideInputPromptOnFocus(false);
+            jidField.addFocusListener(new FocusListener() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    jidField.setText(mJID);
+                    jidField.setDrawBorder(true);
+                }
+                @Override
+                public void focusLost(FocusEvent e) {
+                    mJID = jidField.getText();
+                    jidField.setText(View.shortenJID(mJID, l));
+                    jidField.setDrawBorder(false);
+                }
+            });
+            String jidText = Tr.tr("The unique address of this contact");
+            TooltipManager.addTooltip(jidField, jidText);
+            groupPanel.add(new GroupPanel(GroupingType.fillLast,
+                    new WebLabel("JID: "),
+                    jidField));
             groupPanel.add(new WebSeparator(true, true));
 
             this.add(groupPanel, BorderLayout.CENTER);
@@ -385,7 +407,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         }
 
         private boolean isConfirmed() {
-            if (!mJIDField.getText().equals(mUserView.getValue().getJID())) {
+            if (!mJID.equals(mUserView.getValue().getJID())) {
                 String warningText =
                         Tr.tr("Changing the JID is only useful in very rare cases. Are you sure?");
                 int selectedOption = WebOptionPane.showConfirmDialog(this,
@@ -401,12 +423,14 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         }
 
         private void saveUser() {
-            if (!mNameField.getText().isEmpty()) {
+            String newName = mNameField.getText();
+            if (!newName.isEmpty() &&
+                    !newName.equals(mUserView.getValue().getName())) {
                 mUserView.getValue().setName(mNameField.getText());
             }
             mUserView.getValue().setEncrypted(mEncryptionBox.isSelected());
-            if (!mJIDField.getText().isEmpty()) {
-                mUserView.getValue().setJID(mJIDField.getText());
+            if (!mJID.isEmpty() && !mJID.equals(mUserView.getValue().getJID())) {
+                mUserView.getValue().setJID(mJID);
             }
         }
     }

@@ -61,7 +61,6 @@ import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringUtils;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
@@ -459,20 +458,10 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
             @Override
             public String toString() {
-                String jid = user.getJID();
-                if (jid.length() > 25) {
-                    String local = shorten(XmppStringUtils.parseLocalpart(jid), 16);
-                    String domain = shorten(XmppStringUtils.parseDomain(jid), 24);
-                    jid = "<" +XmppStringUtils.completeJidFrom(local, domain) + ">";
-                }
-                String name = shorten(user.getName(), 24);
-                return name.isEmpty() ? jid : name +" "+jid;
+                String jid = "<" + View.shortenJID(user.getJID(), 40) + ">";
+                String name = View.shorten(user.getName(), 24);
+                return name.isEmpty() ? jid : name +" " + jid;
             }
         }
-    }
-
-    private static String shorten(String s, int max_length) {
-        if (max_length < 6) max_length = 6;
-        return s.length() >= max_length ? s.substring(0, max_length / 2) + "..." : s;
     }
 }
