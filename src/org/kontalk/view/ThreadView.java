@@ -38,8 +38,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
@@ -595,17 +593,10 @@ final class ThreadView extends WebScrollPane {
                     });
                     popupMenu.add(decryptMenuItem);
                 }
-                WebMenuItem copyMenuItem = new WebMenuItem(Tr.tr("Copy"));
-                copyMenuItem.setToolTipText(Tr.tr("Copy message content"));
-                copyMenuItem.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent event) {
-                        String messageText = MessageView.this.toPrettyString();
-                        Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
-                        clip.setContents(new StringSelection(messageText), null);
-                    }
-                });
-                popupMenu.add(copyMenuItem);
+                WebMenuItem cItem = View.createCopyMenuItem(
+                        this.toPrettyString(),
+                        Tr.tr("Copy message content"));
+                popupMenu.add(cItem);
                 return popupMenu;
             }
 

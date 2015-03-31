@@ -29,6 +29,7 @@ import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.text.WebTextArea;
+import com.alee.laf.text.WebTextField;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyData;
 import com.alee.managers.notification.NotificationManager;
@@ -40,6 +41,8 @@ import java.awt.Image;
 import java.awt.SystemTray;
 import java.awt.Toolkit;
 import java.awt.TrayIcon;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -508,6 +511,45 @@ public final class View implements Observer {
         if (file.getParentFile() != null && file.getParentFile().exists())
             chooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
         return chooser;
+    }
+
+    static WebTextField createTextField(final String text) {
+        final WebTextField field = new WebTextField(text, false);
+        field.setEditable(false);
+        field.setBackground(null);
+        field.setBorder(null);
+        field.getCaret().setSelectionVisible(true);
+        field.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                    check(e);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                check(e);
+            }
+            private void check(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    WebPopupMenu popupMenu = new WebPopupMenu();
+                    popupMenu.add(View.createCopyMenuItem(field.getText(), ""));
+                    popupMenu.show(field, e.getX(), e.getY());
+                }
+            }
+        });
+        return field;
+    }
+
+    static WebMenuItem createCopyMenuItem(final String copyText, String toolTipText) {
+        WebMenuItem item = new WebMenuItem(Tr.tr("Copy"));
+        if (!toolTipText.isEmpty())
+            item.setToolTipText(toolTipText);
+        item.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
+                clip.setContents(new StringSelection(copyText), null);
+            }
+        });
+        return item;
     }
 
     static String getErrorText(KonException ex) {
