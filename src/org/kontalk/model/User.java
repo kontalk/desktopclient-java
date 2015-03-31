@@ -125,7 +125,11 @@ public final class User {
     }
 
     public void setJID(String jid) {
-        mJID = XmppStringUtils.parseBareJid(jid);
+        jid = XmppStringUtils.parseBareJid(jid);
+        if (jid.equals(mJID))
+            return;
+
+        mJID = jid;
         this.save();
         UserList.getInstance().changed();
     }
@@ -231,7 +235,6 @@ public final class User {
 
     @Override
     public String toString() {
-        String userName = mName.isEmpty() ? "<unnamed> " : mName;
-        return userName + " (" + mJID + ")";
+        return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint;
     }
 }
