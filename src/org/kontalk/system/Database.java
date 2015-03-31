@@ -142,7 +142,8 @@ public final class Database {
         try {
             if(mConn == null || mConn.isClosed())
                 return;
-            mConn.commit();
+            if (!mConn.getAutoCommit())
+                mConn.commit();
             mConn.close();
         } catch(SQLException ex) {
             LOGGER.log(Level.WARNING, "can't close db", ex);
