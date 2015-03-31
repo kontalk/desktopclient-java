@@ -45,6 +45,7 @@ import org.jivesoftware.smack.tcp.sm.StreamManagementException;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
@@ -307,9 +308,12 @@ public final class Client implements PacketListener, Runnable {
 
     public void addToRoster(User user) {
         Roster roster = mConn.getRoster();
+        String rosterName = user.getName();
+        if (rosterName.isEmpty())
+            rosterName = XmppStringUtils.parseLocalpart(rosterName);
         try {
             // also sends presence subscription request
-            roster.createEntry(user.getJID(), user.getName(), null);
+            roster.createEntry(user.getJID(), rosterName, null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
