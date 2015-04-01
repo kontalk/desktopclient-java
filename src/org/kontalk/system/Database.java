@@ -116,6 +116,8 @@ public final class Database {
                         KonMessage.TABLE +
                         " " +
                         KonMessage.CREATE_TABLE);
+                // set version
+                mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
             } catch (SQLException ex) {
                 LOGGER.log(Level.SEVERE, "can't create tables", ex);
                 throw new KonException(KonException.Error.DB, ex);
