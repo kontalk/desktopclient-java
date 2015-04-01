@@ -57,6 +57,7 @@ public final class Database {
     private static Database INSTANCE = null;
     private static final String DB_NAME = "kontalk_db.sqlite";
     private static final String DB_VERSION = "1";
+    private static final String SV = "schema_version";
     private static final String UV = "user_version";
 
     private Connection mConn = null;
@@ -90,27 +91,39 @@ public final class Database {
             LOGGER.log(Level.WARNING, "can't set autocommit", ex);
         }
 
-        // make sure tables are created
-        String create = "CREATE TABLE IF NOT EXISTS ";
-        try (Statement stat = mConn.createStatement()) {
-            stat.executeUpdate(create + User.TABLE + " " + User.CREATE_TABLE);
-            stat.executeUpdate(create +
-                    KonThread.TABLE +
-                    " " +
-                    KonThread.CREATE_TABLE);
-            stat.executeUpdate(create +
-                    KonThread.TABLE_RECEIVER +
-                    " " +
-                    KonThread.CREATE_TABLE_RECEIVER);
-            stat.executeUpdate(create +
-                    KonMessage.TABLE +
-                    " " +
-                    KonMessage.CREATE_TABLE);
+        boolean isNew;
+        try (ResultSet rs = this.execQuery("PRAGMA "+SV)) {
+            isNew = rs.getInt(SV) == 0;
         } catch (SQLException ex) {
-            LOGGER.log(Level.SEVERE, "can't create tables", ex);
+            LOGGER.log(Level.SEVERE, "can't get schema version", ex);
             throw new KonException(KonException.Error.DB, ex);
         }
 
+        if (isNew) {
+            LOGGER.info("new database, creating tables");
+            String create = "CREATE TABLE IF NOT EXISTS ";
+            try (Statement stat = mConn.createStatement()) {
+                stat.executeUpdate(create + User.TABLE + " " + User.CREATE_TABLE);
+                stat.executeUpdate(create +
+                        KonThread.TABLE +
+                        " " +
+                        KonThread.CREATE_TABLE);
+                stat.executeUpdate(create +
+                        KonThread.TABLE_RECEIVER +
+                        " " +
+                        KonThread.CREATE_TABLE_RECEIVER);
+                stat.executeUpdate(create +
+                        KonMessage.TABLE +
+                        " " +
+                        KonMessage.CREATE_TABLE);
+            } catch (SQLException ex) {
+                LOGGER.log(Level.SEVERE, "can't create tables", ex);
+                throw new KonException(KonException.Error.DB, ex);
+            }
+            return;
+        }
+
+        // update if needed
         int version;
         try (ResultSet rs = this.execQuery("PRAGMA "+UV)) {
             version = rs.getInt(UV);
@@ -119,7 +132,6 @@ public final class Database {
             return;
         }
         LOGGER.info("database version: "+version);
-
         try {
             this.update(version);
         } catch (SQLException ex) {
