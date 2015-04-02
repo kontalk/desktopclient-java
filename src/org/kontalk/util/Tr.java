@@ -80,12 +80,16 @@ public class Tr {
         // load translation file
         path = Kontalk.RES_PATH + I18N_DIR + STRING_FILE + "_" + lang + PROP_EXT;
         URL url = ClassLoader.getSystemResource(path);
+        if (url == null) {
+            LOGGER.info("can't find translation file: "+path);
+            return;
+        }
         PropertiesConfiguration tr = new PropertiesConfiguration();
         tr.setEncoding("UTF-8");
         try {
             tr.load(url);
         } catch (ConfigurationException ex) {
-            LOGGER.info("can't load translation file: "+url.toString());
+            LOGGER.log(Level.WARNING, "can't load translation file", ex);
             return;
         }
 
