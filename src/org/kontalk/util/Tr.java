@@ -18,6 +18,7 @@
 
 package org.kontalk.util;
 
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Locale;
@@ -57,7 +58,7 @@ public class Tr {
         return TR_MAP.get(s);
     }
 
-    public static void init(){
+    public static void init() {
         // get language
         String lang = Locale.getDefault().getLanguage();
         if (lang.equals(DEFAULT_LANG)) {
@@ -78,11 +79,13 @@ public class Tr {
 
         // load translation file
         path = Kontalk.RES_PATH + I18N_DIR + STRING_FILE + "_" + lang + PROP_EXT;
-        PropertiesConfiguration tr;
+        URL url = ClassLoader.getSystemResource(path);
+        PropertiesConfiguration tr = new PropertiesConfiguration();
+        tr.setEncoding("UTF-8");
         try {
-            tr = new PropertiesConfiguration(ClassLoader.getSystemResource(path));
+            tr.load(url);
         } catch (ConfigurationException ex) {
-            LOGGER.info("can't load translation file");
+            LOGGER.info("can't load translation file: "+url.toString());
             return;
         }
 
