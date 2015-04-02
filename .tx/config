@@ -1,0 +1,10 @@
+[main]
+host = https://www.transifex.com
+lang_map = nl_NL:nl,ru_RU:ru
+
+[kontalk-desktop-client.stringsproperties]
+file_filter = src/org/kontalk/res/i18n/strings_<lang>.properties
+source_file = src/org/kontalk/res/i18n/strings.properties
+source_lang = en
+trans.de = src/org/kontalk/res/i18n/strings_de.properties
+type = UNICODEPROPERTIES
