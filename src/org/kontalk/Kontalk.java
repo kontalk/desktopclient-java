@@ -38,6 +38,7 @@ import org.kontalk.model.ThreadList;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
 import org.kontalk.util.CryptoUtils;
+import org.kontalk.util.Tr;
 import org.kontalk.view.View;
 
 /**
@@ -54,7 +55,7 @@ public final class Kontalk {
 
     static {
         // initialize translation
-        //Tr.init();
+        Tr.init();
 
         // check java version
         String jVersion = System.getProperty("java.version");
