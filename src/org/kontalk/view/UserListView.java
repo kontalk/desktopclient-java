@@ -468,8 +468,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
 
         private void saveUser() {
             String newName = mNameField.getText();
-            if (!newName.isEmpty() &&
-                    !newName.equals(mUserView.getValue().getName())) {
+            if (!newName.equals(mUserView.getValue().getName())) {
                 mUserView.getValue().setName(mNameField.getText());
             }
             mUserView.getValue().setEncrypted(mEncryptionBox.isSelected());
