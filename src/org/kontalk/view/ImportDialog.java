@@ -111,7 +111,7 @@ final class ImportDialog extends WebDialog {
                 ImportDialog.this.dispose();
             }
         });
-        mFinishButton = new WebButton(Tr.tr("Finish"));
+        mFinishButton = new WebButton(Tr.tr("Done"));
         mFinishButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
