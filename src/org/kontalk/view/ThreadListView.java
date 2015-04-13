@@ -48,14 +48,11 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import javax.swing.JDialog;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
@@ -186,7 +183,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
            mPopupMenu.show(this, e.getX(), e.getY());
     }
 
-    protected class ThreadItem extends ListView<ThreadItem, KonThread>.ListItem implements Observer {
+    protected final class ThreadItem extends ListView<ThreadItem, KonThread>.ListItem {
 
         WebLabel mSubjectLabel;
         WebLabel mUserLabel;
@@ -240,20 +237,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         }
 
         @Override
-        public void update(Observable o, Object arg) {
-            if (SwingUtilities.isEventDispatchThread()) {
-                this.updateOnEDT();
-                return;
-            }
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    ThreadItem.this.updateOnEDT();
-                }
-            });
-        }
-
-        private void updateOnEDT() {
+        protected void updateOnEDT() {
             this.update();
             // needed for background repaint
             ThreadListView.this.repaint();

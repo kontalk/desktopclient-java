@@ -161,7 +161,7 @@ abstract class ListView<I extends ListView<I, V>.ListItem, V> extends WebList im
         mTip = tip;
     }
 
-    abstract class ListItem extends WebPanel {
+    abstract class ListItem extends WebPanel implements Observer {
 
         protected final V mValue;
 
@@ -180,6 +180,22 @@ abstract class ListView<I extends ListView<I, V>.ListItem, V> extends WebList im
         abstract String getTooltipText();
 
         protected abstract boolean contains(String search);
+
+        @Override
+        public void update(Observable o, Object arg) {
+            if (SwingUtilities.isEventDispatchThread()) {
+                this.updateOnEDT();
+                return;
+            }
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    ListItem.this.updateOnEDT();
+                }
+            });
+        }
+
+        protected abstract void updateOnEDT();
 
         // catch the event, when a tooltip should be shown for this item and
         // create a own one

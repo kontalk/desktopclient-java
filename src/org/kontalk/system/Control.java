@@ -325,7 +325,7 @@ public final class Control extends Observable {
             LOGGER.warning("(presence) can't find user with jid: "+jid);
             return;
         }
-        optUser.get().setPresence(type, status);
+        optUser.get().setOnline(type, status);
     }
 
     public void checkFingerprint(String jid, String fingerprint) {

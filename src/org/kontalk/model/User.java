@@ -34,7 +34,6 @@ import org.kontalk.system.Database;
 
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
- * TODO Change notifications are send to the user list.
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
@@ -42,10 +41,10 @@ public final class User extends Observable {
     private final static Logger LOGGER = Logger.getLogger(User.class.getName());
 
     /**
-     * Availability of one user (== is user currently online?).
+     * Online status of one user.
      * Not saved to database.
      */
-    public static enum Available {UNKNOWN, YES, NO};
+    public static enum Online {UNKNOWN, YES, NO};
 
     public final static String TABLE = "user";
     public final static String CREATE_TABLE = "(" +
@@ -65,23 +64,19 @@ public final class User extends Observable {
     private String mName;
     private String mStatus = "";
     private Optional<Date> mLastSeen = Optional.empty();
-    private Available mAvailable = Available.UNKNOWN;
+    private Online mAvailable = Online.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
     private String mFingerprint = "";
     private boolean mBlocked = false;
     //private ItemType mType;
 
-    /**
-     * Used for incoming messages of unknown user.
-     */
+    // used for incoming messages of unknown user
     User(String jid) {
         this(jid, "");
     }
 
-    /**
-     * Used for creating new users (eg from roster).
-     */
+    // used for creating new users (eg from roster)
     User(String jid, String name) {
         mJID = XmppStringUtils.parseBareJid(jid);
         mName = name;
@@ -100,9 +95,7 @@ public final class User extends Observable {
             LOGGER.log(Level.WARNING, "could not insert user");
     }
 
-    /**
-     * Used for loading users from database
-     */
+    // used for loading users from database
     User(int id,
             String jid,
             String name,
@@ -132,7 +125,7 @@ public final class User extends Observable {
 
         mJID = jid;
         this.save();
-        UserList.getInstance().changed();
+        this.changed();
     }
 
     public int getID() {
@@ -149,10 +142,8 @@ public final class User extends Observable {
 
         mName = name;
         this.save();
-        UserList.getInstance().changed();
         // TODO thread view not updated
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
     }
 
     public String getStatus() {
@@ -175,18 +166,18 @@ public final class User extends Observable {
         this.save();
     }
 
-    public Available getAvailable() {
+    public Online getOnline() {
         return this.mAvailable;
     }
 
-    public void setPresence(Presence.Type type, String status) {
+    public void setOnline(Presence.Type type, String status) {
         if (type == Presence.Type.available) {
-            mAvailable = Available.YES;
+            mAvailable = Online.YES;
             mLastSeen = Optional.of(new Date());
         } else if (type == Presence.Type.unavailable) {
-            mAvailable = Available.NO;
+            mAvailable = Online.NO;
         }
-        UserList.getInstance().changed();
+        this.changed();
 
         if (status != null && !status.isEmpty()) {
             mStatus = status;
@@ -213,8 +204,7 @@ public final class User extends Observable {
         mKey = Base64.getEncoder().encodeToString(rawKey);
         mFingerprint = fingerprint;
         this.save();
-        this.setChanged();
-        this.notifyObservers();
+        this.changed();
     }
 
     public boolean isBlocked() {
@@ -236,6 +226,11 @@ public final class User extends Observable {
         set.put("public_key", Database.setString(mKey));
         set.put("key_fingerprint", Database.setString(mFingerprint));
         db.execUpdate(TABLE, set, mID);
+    }
+
+    private void changed() {
+        this.setChanged();
+        this.notifyObservers();
     }
 
     @Override

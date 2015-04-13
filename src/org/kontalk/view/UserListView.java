@@ -119,7 +119,9 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         // TODO performance
         this.clearModel();
         for (User oneUser: mUserList.getAll()) {
-            this.addItem(new UserItem(oneUser));
+            UserItem newItem = new UserItem(oneUser);
+            oneUser.addObserver(newItem);
+            this.addItem(newItem);
         }
     }
 
@@ -129,16 +131,14 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
     }
 
     /** One item in the contact list representing a user. */
-    class UserItem extends ListView<UserItem, User>.ListItem {
+    final class UserItem extends ListView<UserItem, User>.ListItem {
 
         private final WebLabel mNameLabel;
         private final WebLabel mJIDLabel;
-        private final Color mBackround;
+        private Color mBackround;
 
         UserItem(User user) {
             super(user);
-
-            this.getValue();
 
             //this.setPaintFocus(true);
             this.setMargin(5);
@@ -150,8 +150,6 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             Dimension size = mNameLabel.getPreferredSize();
             mNameLabel.setMinimumSize(size);
             mNameLabel.setPreferredSize(size);
-            String name = !mValue.getName().isEmpty() ? mValue.getName() : Tr.tr("<unknown>");
-            mNameLabel.setText(name);
             this.add(mNameLabel, BorderLayout.CENTER);
 
             mJIDLabel = new WebLabel("foo");
@@ -160,11 +158,9 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             size = mJIDLabel.getPreferredSize();
             mJIDLabel.setMinimumSize(size);
             mJIDLabel.setPreferredSize(size);
-            mJIDLabel.setText(mValue.getJID());
             this.add(mJIDLabel, BorderLayout.SOUTH);
 
-            mBackround = mValue.getAvailable() == User.Available.YES ? View.LIGHT_BLUE : Color.WHITE;
-            this.setBackground(mBackround);
+            this.updateOnEDT();
         }
 
         @Override
@@ -172,13 +168,13 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             String no = Tr.tr("No");
             String dunno = Tr.tr("?");
 
-            String isAvailable;
-            if (mValue.getAvailable() == User.Available.YES)
-                isAvailable = Tr.tr("Yes");
-            else if (mValue.getAvailable() == User.Available.NO)
-                isAvailable = no;
+            String isOnline;
+            if (mValue.getOnline() == User.Online.YES)
+                isOnline = Tr.tr("Yes");
+            else if (mValue.getOnline() == User.Online.NO)
+                isOnline = no;
             else
-                isAvailable = dunno;
+                isOnline = dunno;
 
             String status = mValue.getStatus().isEmpty() ? dunno : mValue.getStatus();
 
@@ -190,7 +186,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             String html = "<html><body>" +
                     //"<h3>Header</h3>" +
                     "<br>" +
-                    Tr.tr("Available")+": " + isAvailable + "<br>" +
+                    Tr.tr("Available")+": " + isOnline + "<br>" +
                     Tr.tr("Status")+": " + status + "<br>" +
                     Tr.tr("Blocked")+": " + isBlocked + "<br>" +
                     Tr.tr("Last seen")+": " + lastSeen + "<br>" +
@@ -211,6 +207,20 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         protected boolean contains(String search) {
             return mValue.getName().toLowerCase().contains(search) ||
                     mValue.getJID().toLowerCase().contains(search);
+        }
+
+        @Override
+        protected void updateOnEDT() {
+            // may have changed (of user): JID, name, online
+            mJIDLabel.setText(mValue.getJID());
+            String name = !mValue.getName().isEmpty() ?
+                    mValue.getName() :
+                    Tr.tr("<unknown>");
+            mNameLabel.setText(name);
+            mBackround = mValue.getOnline() == User.Online.YES ?
+                    View.LIGHT_BLUE :
+                    Color.WHITE;
+            this.setBackground(mBackround);
         }
     }
 
@@ -239,6 +249,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
                 @Override
                 public void actionPerformed(ActionEvent event) {
                     EditUserDialog editUserDialog = new EditUserDialog(mSelectedUserView);
+                   // TODO reverse for garbage collection
                     mSelectedUserView.getValue().addObserver(editUserDialog);
                     editUserDialog.setVisible(true);
                 }
