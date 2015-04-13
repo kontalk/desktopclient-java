@@ -44,9 +44,11 @@ import java.awt.event.FocusListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
+import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
 import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
@@ -236,7 +238,8 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             editMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    WebDialog editUserDialog = new EditUserDialog(mSelectedUserView);
+                    EditUserDialog editUserDialog = new EditUserDialog(mSelectedUserView);
+                    mSelectedUserView.getValue().addObserver(editUserDialog);
                     editUserDialog.setVisible(true);
                 }
             });
@@ -295,10 +298,13 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
 
     }
 
-    private class EditUserDialog extends WebDialog {
+    private class EditUserDialog extends WebDialog implements Observer {
 
         private final UserItem mUserView;
         private final WebTextField mNameField;
+        private final WebLabel mKeyLabel;
+        private final WebLabel mFPLabel;
+        private final WebTextField mFPField;
         private final WebCheckBox mEncryptionBox;
         private String mJID;
 
@@ -317,29 +323,32 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             WebPanel namePanel = new WebPanel();
             namePanel.setLayout(new BorderLayout(10, 5));
             namePanel.add(new WebLabel(Tr.tr("Display Name:")), BorderLayout.WEST);
-            mNameField = new WebTextField(mUserView.getValue().getName());
-            mNameField.setInputPrompt(mUserView.getValue().getName());
+            mNameField = new WebTextField();
             mNameField.setHideInputPromptOnFocus(false);
             namePanel.add(mNameField, BorderLayout.CENTER);
             groupPanel.add(namePanel);
             groupPanel.add(new WebSeparator(true, true));
 
-            String hasKey = "<html>"+Tr.tr("Encryption Key")+": ";
-            if (mUserView.getValue().hasKey()) {
-                hasKey += Tr.tr("Available")+"</html>";
-                WebLabel fpLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
-                WebTextField fpField = View.createTextField(mUserView.getValue().getFingerprint());
-                String fpText = Tr.tr("The unique ID of this contact's key");
-                TooltipManager.addTooltip(fpField, fpText);
-                groupPanel.add(new GroupPanel(new WebLabel(hasKey)));
-                groupPanel.add(new GroupPanel(fpLabel, fpField));
-            } else {
-                WebLabel keyLabel = new WebLabel(hasKey);
-                hasKey += "<font color='red'>"+Tr.tr("Not Available")+"</font></html>";
-                String keyText = Tr.tr("The key for this user could not yet be received");
-                TooltipManager.addTooltip(keyLabel, keyText);
-                groupPanel.add(new GroupPanel(keyLabel));
-            }
+            mKeyLabel = new WebLabel();
+            WebButton updButton = new WebButton(View.getIcon("ic_ui_refresh.png"));
+            String updText = Tr.tr("Update key");
+            TooltipManager.addTooltip(updButton, updText);
+            updButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    UserListView.this.mView.callRequestKey(
+                            EditUserDialog.this.mUserView.getValue());
+                }
+            });
+            groupPanel.add(new GroupPanel(6, mKeyLabel, updButton));
+
+            mFPLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
+            mFPField = View.createTextField("");
+            String fpText = Tr.tr("The unique ID of this contact's key");
+            TooltipManager.addTooltip(mFPField, fpText);
+            groupPanel.add(new GroupPanel(mFPLabel, mFPField));
+
+            this.updateOnEDT();
 
             mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));
             mEncryptionBox.setAnimated(false);
@@ -404,6 +413,41 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             this.add(buttonPanel, BorderLayout.SOUTH);
 
             this.pack();
+        }
+
+        @Override
+        public void update(Observable o, final Object arg) {
+            if (SwingUtilities.isEventDispatchThread()) {
+                this.updateOnEDT();
+                return;
+            }
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    EditUserDialog.this.updateOnEDT();
+                }
+            });
+        }
+
+        private void updateOnEDT() {
+            // may have changed: user name and/or key
+            mNameField.setText(mUserView.getValue().getName());
+            mNameField.setInputPrompt(mUserView.getValue().getName());
+            String hasKey = "<html>"+Tr.tr("Encryption Key")+": ";
+            if (mUserView.getValue().hasKey()) {
+                hasKey += Tr.tr("Available")+"</html>";
+                TooltipManager.removeTooltips(mKeyLabel);
+                mFPField.setText(mUserView.getValue().getFingerprint());
+                mFPLabel.setVisible(true);
+                mFPField.setVisible(true);
+            } else {
+                hasKey += "<font color='red'>"+Tr.tr("Not Available")+"</font></html>";
+                String keyText = Tr.tr("The key for this user could not yet be received");
+                TooltipManager.addTooltip(mKeyLabel, keyText);
+                mFPLabel.setVisible(false);
+                mFPField.setVisible(false);
+            }
+            mKeyLabel.setText(hasKey);
         }
 
         private boolean isConfirmed() {

@@ -24,6 +24,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -33,11 +34,11 @@ import org.kontalk.system.Database;
 
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
- * Change notifications are send to the user list.
+ * TODO Change notifications are send to the user list.
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class User {
+public final class User extends Observable {
     private final static Logger LOGGER = Logger.getLogger(User.class.getName());
 
     /**
@@ -150,6 +151,8 @@ public final class User {
         this.save();
         UserList.getInstance().changed();
         // TODO thread view not updated
+        this.setChanged();
+        this.notifyObservers();
     }
 
     public String getStatus() {
@@ -210,6 +213,8 @@ public final class User {
         mKey = Base64.getEncoder().encodeToString(rawKey);
         mFingerprint = fingerprint;
         this.save();
+        this.setChanged();
+        this.notifyObservers();
     }
 
     public boolean isBlocked() {

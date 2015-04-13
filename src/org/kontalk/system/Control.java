@@ -156,6 +156,10 @@ public final class Control extends Observable {
         return ThreadList.getInstance().createNewThread(user);
     }
 
+    public void sendKeyRequest(User user) {
+        mClient.sendPublicKeyRequest(user.getJID());
+    }
+
     /* events from network client */
 
     public void setStatus(Status status) {
@@ -173,7 +177,7 @@ public final class Control extends Observable {
                 // TODO only for domains that are part of the Kontalk network
                 if (user.getFingerprint().isEmpty()) {
                     LOGGER.info("public key missing for user, requesting it...");
-                    mClient.sendPublicKeyRequest(user.getJID());
+                    this.sendKeyRequest(user);
                 }
             }
 
@@ -334,7 +338,7 @@ public final class Control extends Observable {
         User user = optUser.get();
         if (!user.getFingerprint().equals(fingerprint)) {
             LOGGER.info("detected public key change, requesting new key...");
-            mClient.sendPublicKeyRequest(user.getJID());
+            this.sendKeyRequest(user);
         }
     }
 
@@ -416,7 +420,7 @@ public final class Control extends Observable {
         }
 
         // send request for public key
-        mClient.sendPublicKeyRequest(optNewUser.get().getJID());
+        this.sendKeyRequest(optNewUser.get());
 
         return optNewUser;
     }

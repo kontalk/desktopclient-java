@@ -449,6 +449,10 @@ public final class View implements Observer {
         mControl.decryptAndDownload(message);
     }
 
+    void callRequestKey(User user) {
+        mControl.sendKeyRequest(user);
+    }
+
     /* view internal */
 
     void selectThreadByUser(User user) {
