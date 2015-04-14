@@ -31,7 +31,6 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
-import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -65,8 +64,6 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
     private final UserList mUserList;
     private final UserPopupMenu mPopupMenu;
 
-    private WebCustomTooltip mTip = null;
-
     UserListView(final View view, UserList userList) {
         super();
 
@@ -74,8 +71,8 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
         mUserList = userList;
 
-        this.setRowSelectionAllowed(true);
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        //this.setDragEnabled(true);
 
         // right click popup menu
         mPopupMenu = new UserPopupMenu();
@@ -84,7 +81,6 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
         this.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                super.mouseClicked(e);
                 if (e.getClickCount() == 2) {
                     mView.selectThreadByUser(UserListView.this.getSelectedValue());
                 }
@@ -103,11 +99,6 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
                     UserListView.this.setSelectedRow(row);
                     UserListView.this.showPopupMenu(e);
                 }
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (mTip != null)
-                    mTip.closeTooltip();
             }
         });
 

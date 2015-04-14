@@ -30,20 +30,17 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.EventObject;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Vector;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
-import javax.swing.event.CellEditorListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellEditor;
+import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * A generic list view for subclassing.
@@ -61,8 +58,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
     // TODO
     //private final DefaultTableModel mFilteredTableModel = new DefaultTableModel(0, 1);
 
-    final static SimpleDateFormat TOOLTIP_DATE_FORMAT =
-            new SimpleDateFormat("EEE, MMM d yyyy, HH:mm");
+    protected final static PrettyTime TOOLTIP_DATE_FORMAT = new PrettyTime();
 
     private WebCustomTooltip mTip = null;
 
@@ -101,9 +97,6 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
                     }
                 }
             });
-
-        // use custom editor (for mouse events)
-        this.setDefaultEditor(TableItem.class, new TableEditor());
 
         // trigger editing to forward mouse events
         this.addMouseMotionListener(new MouseMotionListener() {
@@ -284,43 +277,6 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
             panel.resize(table.getWidth());
             panel.repaint(isSelected);
             return panel;
-        }
-    }
-
-    // used only for correct mouse behaviour for components in items
-    private class TableEditor implements TableCellEditor {
-        @Override
-        public Component getTableCellEditorComponent(JTable table,
-                Object value,
-                boolean isSelected,
-                int row,
-                int column) {
-            return (TableItem) value;
-        }
-        @Override
-        public Object getCellEditorValue() {
-            return null;
-        }
-        @Override
-        public boolean isCellEditable(EventObject anEvent) {
-            return true;
-        }
-        @Override
-        public boolean shouldSelectCell(EventObject anEvent) {
-            return false;
-        }
-        @Override
-        public boolean stopCellEditing() {
-            return true;
-        }
-        @Override
-        public void cancelCellEditing() {
-        }
-        @Override
-        public void addCellEditorListener(CellEditorListener l) {
-        }
-        @Override
-        public void removeCellEditorListener(CellEditorListener l) {
         }
     }
 }

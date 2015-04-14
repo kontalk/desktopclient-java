@@ -59,9 +59,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 import java.util.logging.Level;
+import javax.swing.AbstractCellEditor;
 import javax.swing.Icon;
+import javax.swing.JTable;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.table.TableCellEditor;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
@@ -89,15 +92,15 @@ final class ThreadView extends WebScrollPane {
     private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
     private final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
 
-    private final View mModel;
+    private final View mView;
 
     private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
     private Background mDefaultBG;
 
-    ThreadView(View model) {
+    ThreadView(View view) {
         super(null);
 
-        mModel = model;
+        mView = view;
 
         this.setHorizontalScrollBarPolicy(
                 ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
@@ -197,6 +200,9 @@ final class ThreadView extends WebScrollPane {
             super();
 
             mThread = thread;
+
+            // use custom editor (for mouse events)
+            this.setDefaultEditor(TableView.TableItem.class, new TableEditor());
 
             //this.setEditable(false);
             //this.setAutoscrolls(true);
@@ -541,7 +547,7 @@ final class ThreadView extends WebScrollPane {
                                 LOGGER.warning("decrypted message not incoming message");
                                 return;
                             }
-                            ThreadView.this.mModel.callDecrypt((InMessage) m);
+                            ThreadView.this.mView.callDecrypt((InMessage) m);
                         }
                     });
                     popupMenu.add(decryptMenuItem);
@@ -706,6 +712,25 @@ final class ThreadView extends WebScrollPane {
                 mParent.repaint();
                 return false;
             }
+        }
+    }
+
+    // needed for correct mouse behaviour for components in items
+    // (and breaks selection behaviour somehow)
+    private class TableEditor extends AbstractCellEditor implements TableCellEditor {
+        private TableView.TableItem mValue;
+        @Override
+        public Component getTableCellEditorComponent(JTable table,
+                Object value,
+                boolean isSelected,
+                int row,
+                int column) {
+            mValue = (TableView.TableItem) value;
+            return mValue;
+        }
+        @Override
+        public Object getCellEditorValue() {
+            return mValue;
         }
     }
 
