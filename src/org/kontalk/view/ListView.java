@@ -39,11 +39,13 @@ import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * A generic list view for subclassing.
+ * TODO replace by TableView(?)
+ *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class ListView<I extends ListView<I, V>.ListItem, V> extends WebList implements Observer {
+abstract class ListView<I extends ListView<I, V>.ListItem, V extends Observable> extends WebList implements Observer {
 
     private final WebListModel<I> mListModel = new WebListModel<>();
 
@@ -89,6 +91,8 @@ abstract class ListView<I extends ListView<I, V>.ListItem, V> extends WebList im
     }
 
     protected void clearModel() {
+        for (I i: mListModel.getElements())
+            i.mValue.deleteObserver(i);
         mListModel.clear();
     }
 

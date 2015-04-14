@@ -29,7 +29,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.EventObject;
+import java.util.List;
+import java.util.Vector;
 import javax.swing.JTable;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.TableModelEvent;
@@ -40,12 +43,13 @@ import javax.swing.table.TableCellEditor;
 /**
  * A generic list view for subclassing.
  * Implemented as table with one column.
+ * TODO make items generic type
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 class TableView extends WebTable {
 
-    protected final DefaultTableModel mTableModel = new DefaultTableModel(0, 1);
+    private final DefaultTableModel mTableModel = new DefaultTableModel(0, 1);
 
     // TODO
     //private final DefaultTableModel mFilteredTableModel = new DefaultTableModel(0, 1);
@@ -103,6 +107,28 @@ class TableView extends WebTable {
                     mTip.closeTooltip();
             }
         });
+    }
+
+    protected List<TableItem> getItems() {
+        Vector vec = mTableModel.getDataVector();
+        List<TableItem> items = new ArrayList<>(vec.size());
+        for (Object v : vec) {
+            items.add((TableItem) ((Vector) v).elementAt(0));
+        }
+        return items;
+    }
+
+    protected void addItem(TableItem i) {
+        Object[] data = {i};
+        mTableModel.addRow(data);
+    }
+
+    protected TableItem getItemAt(int i) {
+        return (TableItem) mTableModel.getValueAt(i, 0);
+    }
+
+    protected void removeAllItems() {
+        mTableModel.setRowCount(0);
     }
 
     void filter(String search) {

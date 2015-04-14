@@ -53,13 +53,13 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
-import java.util.Vector;
 import java.util.logging.Level;
 import javax.swing.Icon;
 import javax.swing.JViewport;
@@ -138,7 +138,9 @@ final class ThreadView extends WebScrollPane {
     void showThread(KonThread thread) {
         boolean isNew = false;
         if (!mThreadCache.containsKey(thread.getID())) {
-            mThreadCache.put(thread.getID(), new MessageViewList(thread));
+            MessageViewList newMessageList = new MessageViewList(thread);
+            thread.addObserver(newMessageList);
+            mThreadCache.put(thread.getID(), newMessageList);
             isNew = true;
         }
         MessageViewList table = mThreadCache.get(thread.getID());
@@ -165,6 +167,10 @@ final class ThreadView extends WebScrollPane {
     }
 
     private void removeThread(KonThread thread) {
+        MessageViewList viewList = mThreadCache.get(thread.getID());
+        if (viewList != null)
+            viewList.removeMessageViews();
+        thread.deleteObserver(viewList);
         mThreadCache.remove(thread.getID());
         if(this.getCurrentThread().orElse(null) == thread) {
             this.setViewportView(null);
@@ -249,8 +255,6 @@ final class ThreadView extends WebScrollPane {
             this.setBackground(mThread.getViewSettings());
 
             this.updateOnEDT(null);
-
-            mThread.addObserver(this);
         }
 
         KonThread getThread() {
@@ -289,11 +293,11 @@ final class ThreadView extends WebScrollPane {
             }
 
             // check for new messages to add
-            if (mTableModel.getRowCount() < mThread.getMessages().size()) {
+            List<TableItem> items = this.getItems();
+            if (items.size() < mThread.getMessages().size()) {
                 Set<KonMessage> oldMessages = new HashSet<>();
-                for (Object vec : mTableModel.getDataVector()) {
-                    Object m = ((Vector) vec).elementAt(0);
-                    oldMessages.add(((MessageView) m).mMessage);
+                for (TableItem i : items) {
+                    oldMessages.add(((MessageView) i).mMessage);
                 }
 
                 for (KonMessage message: mThread.getMessages()) {
@@ -314,10 +318,18 @@ final class ThreadView extends WebScrollPane {
 
         private void addMessage(KonMessage message) {
             MessageView newMessageView = new MessageView(message);
-            Object[] data = {newMessageView};
-            mTableModel.addRow(data);
+            message.addObserver(newMessageView);
+            this.addItem(newMessageView);
 
             this.setHeight(this.getRowCount() -1);
+        }
+
+        private void removeMessageViews() {
+            for (TableItem i : this.getItems()) {
+                MessageView mv = (MessageView) i;
+                mv.mMessage.deleteObserver(mv);
+            }
+            this.removeAllItems();
         }
 
         /**
@@ -336,7 +348,7 @@ final class ThreadView extends WebScrollPane {
             if (row < 0)
                 return;
 
-            MessageView messageView = (MessageView) mTableModel.getValueAt(row, 0);
+            MessageView messageView = (MessageView) this.getItemAt(row);
             WebPopupMenu popupMenu = messageView.getPopupMenu();
             popupMenu.show(this, e.getX(), e.getY());
         }
@@ -435,8 +447,6 @@ final class ThreadView extends WebScrollPane {
                 } else {
                     this.add(messagePanel, BorderLayout.EAST);
                 }
-
-                mMessage.addObserver(this);
             }
 
             @Override

@@ -150,8 +150,6 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         });
 
         this.updateOnEDT();
-
-        mThreadList.addObserver(this);
     }
 
     @Override
@@ -161,6 +159,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         this.clearModel();
         for (KonThread thread: mThreadList.getThreads()) {
             ThreadItem newThreadItem = new ThreadItem(thread);
+            thread.addObserver(newThreadItem);
             this.addItem(newThreadItem);
         }
         // reselect thread
@@ -211,8 +210,6 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             this.update();
 
             this.setBackground(mBackround);
-
-            mValue.addObserver(this);
         }
 
         @Override

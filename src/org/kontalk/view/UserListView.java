@@ -110,8 +110,6 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         });
 
         this.updateOnEDT();
-
-        mUserList.addObserver(this);
     }
 
     @Override
@@ -249,7 +247,6 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
                 @Override
                 public void actionPerformed(ActionEvent event) {
                     EditUserDialog editUserDialog = new EditUserDialog(mSelectedUserView);
-                   // TODO reverse for garbage collection
                     mSelectedUserView.getValue().addObserver(editUserDialog);
                     editUserDialog.setVisible(true);
                 }
@@ -403,7 +400,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             cancelButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    EditUserDialog.this.dispose();
+                    EditUserDialog.this.close();
                 }
             });
             final WebButton saveButton = new WebButton("Save");
@@ -412,9 +409,8 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
                 public void actionPerformed(ActionEvent e) {
                     if (!EditUserDialog.this.isConfirmed())
                         return;
-
-                    EditUserDialog.this.saveUser();
-                    EditUserDialog.this.dispose();
+                    EditUserDialog.this.save();
+                    EditUserDialog.this.close();
                 }
             });
             this.getRootPane().setDefaultButton(saveButton);
@@ -477,7 +473,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             return true;
         }
 
-        private void saveUser() {
+        private void save() {
             String newName = mNameField.getText();
             if (!newName.equals(mUserView.getValue().getName())) {
                 mUserView.getValue().setName(mNameField.getText());
@@ -486,6 +482,11 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             if (!mJID.isEmpty() && !mJID.equals(mUserView.getValue().getJID())) {
                 mUserView.getValue().setJID(mJID);
             }
+        }
+
+        private void close() {
+            this.dispose();
+            this.mUserView.getValue().deleteObserver(this);
         }
     }
 }

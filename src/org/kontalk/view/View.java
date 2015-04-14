@@ -92,7 +92,7 @@ import org.kontalk.util.Tr;
 
 /**
  * Initialize and control the user interface.
- * TODO leaking 'this' in constructor everywhere
+ *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class View implements Observer {
@@ -119,9 +119,10 @@ public final class View implements Observer {
         ToolTipManager.sharedInstance().setInitialDelay(200);
 
         mUserListView = new UserListView(this, UserList.getInstance());
+        UserList.getInstance().addObserver(mUserListView);
         mThreadListView = new ThreadListView(this, ThreadList.getInstance());
-        // notify thread list of changes in user list (name changes)
-        UserList.getInstance().addObserver(mThreadListView);
+        ThreadList.getInstance().addObserver(mThreadListView);
+        // TODO notify threadlistview about user changes
 
         mThreadView = new ThreadView(this);
 
