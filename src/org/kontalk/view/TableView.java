@@ -161,6 +161,20 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         return item.mValue;
     }
 
+    void setSelectedItem(V value) {
+        // TODO performance
+        for (int i=0; i< mTableModel.getRowCount(); i++) {
+            if (this.getItemAt(i).mValue == value) {
+                this.setSelectedRow(i);
+                break;
+            }
+        }
+
+        if (this.getSelectedValue() != value)
+            // fallback
+            this.setSelectedRow(0);
+    }
+
     void filter(String search) {
         // TODO
     }

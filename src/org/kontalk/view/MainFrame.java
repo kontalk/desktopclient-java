@@ -64,8 +64,6 @@ import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.event.ListDataEvent;
-import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.system.Config;
@@ -91,7 +89,7 @@ final class MainFrame extends WebFrame {
 
     MainFrame(final View view,
             TableView<?, ?> userList,
-            final ListView<?, ?> threadList,
+            TableView<?, ?> threadList,
             Component threadView,
             Component sendTextField,
             Component sendButton,
@@ -218,7 +216,7 @@ final class MainFrame extends WebFrame {
         });
         String threadOverlayText =
                 Tr.tr("No threads to display. You can create new threads from your contacts");
-        WebPanel threadListPanel = createListPane(threadList,
+        WebPanel threadListPanel = createTablePane(threadList,
                 newThreadButton,
                 threadOverlayText);
         mTabbedPane.addTab("", threadListPanel);
@@ -474,85 +472,6 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    private static WebPanel createListPane(final ListView<?, ?> list,
-            Component newButton,
-            String overlayText) {
-        Icon clearIcon = View.getIcon("ic_ui_clear.png");
-        WebPanel listPanel = new WebPanel();
-
-        // search panel
-        WebPanel searchPanel = new WebPanel();
-        final WebTextField searchField = new WebTextField();
-        searchField.setInputPrompt(Tr.tr("Search..."));
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            private void filterList() {
-                list.filter(searchField.getText());
-            }
-        });
-        WebButton clearSearchButton = new WebButton(clearIcon);
-        clearSearchButton.setUndecorated(true);
-        clearSearchButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                searchField.clear();
-            }
-        });
-        searchField.setTrailingComponent(clearSearchButton);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        // TODO add new button
-        //searchPanel.add(newButton, BorderLayout.EAST);
-        listPanel.add(searchPanel, BorderLayout.NORTH);
-
-        WebScrollPane scrollPane = new ScrollPane(list);
-        // overlay for empty list
-        WebOverlay listOverlayPanel = new WebOverlay(scrollPane);
-        listOverlayPanel.setOverlayMargin(20);
-        final WebTextArea overlayArea = new WebTextArea();
-        overlayArea.setText(overlayText);
-        overlayArea.setLineWrap(true);
-        overlayArea.setWrapStyleWord(true);
-        overlayArea.setMargin(10);
-        overlayArea.setFontSize(15);
-        overlayArea.setEditable(false);
-        BorderPainter<WebTextArea> borderPainter = new BorderPainter<>(Color.LIGHT_GRAY);
-        borderPainter.setRound(15);
-        overlayArea.setPainter(borderPainter);
-        list.addListDataListener(new ListDataListener() {
-            @Override
-            public void intervalAdded(ListDataEvent e) {
-                this.setOverlay();
-            }
-            @Override
-            public void intervalRemoved(ListDataEvent e) {
-                this.setOverlay();
-            }
-            @Override
-            public void contentsChanged(ListDataEvent e) {
-            }
-            private void setOverlay() {
-                overlayArea.setVisible(list.getModelSize() == 0);
-            }
-        });
-        // TODO
-        //listOverlayPanel.addOverlay(new GroupPanel(false, overlayArea));
-        //listPanel.add(listOverlayPanel, BorderLayout.CENTER);
-        listPanel.add(scrollPane, BorderLayout.CENTER);
-        return listPanel;
-    }
-
-    // TODO
     private static WebPanel createTablePane(final TableView<?, ?> table,
             Component newButton,
             String overlayText) {

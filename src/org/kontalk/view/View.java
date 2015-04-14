@@ -433,7 +433,7 @@ public final class View implements Observer {
     }
 
     private void callSendText() {
-       KonThread thread = mThreadListView.getSelectedListValue();
+       KonThread thread = mThreadListView.getSelectedValue();
        if (thread == null) {
            // nothing selected
            return;
@@ -465,7 +465,7 @@ public final class View implements Observer {
     }
 
     private void showThread(KonThread thread) {
-        mThreadListView.selectItem(thread);
+        mThreadListView.setSelectedItem(thread);
         mMainFrame.selectTab(MainFrame.Tab.THREADS);
     }
 

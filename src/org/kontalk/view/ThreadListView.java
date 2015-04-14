@@ -66,14 +66,13 @@ import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.util.Tr;
-import static org.kontalk.view.ListView.TOOLTIP_DATE_FORMAT;
 import org.kontalk.view.ThreadListView.ThreadItem;
 
 /**
  * Show a brief list of all threads.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class ThreadListView extends ListView<ThreadItem, KonThread> {
+final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
     private final static Color DEFAULT_BG = Color.WHITE;
 
@@ -94,7 +93,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         editMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                ThreadItem t = ThreadListView.this.getSelectedListItem();
+                ThreadItem t = ThreadListView.this.getSelectedItem();
                 JDialog editUserDialog = new EditThreadDialog(t);
                 editUserDialog.setVisible(true);
             }
@@ -113,20 +112,20 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
                         WebOptionPane.OK_CANCEL_OPTION,
                         WebOptionPane.WARNING_MESSAGE);
                 if (selectedOption == WebOptionPane.OK_OPTION) {
-                    ThreadItem threadItem = ThreadListView.this.getSelectedListItem();
-                    mThreadList.deleteThreadWithID(threadItem.getValue().getID());
+                    ThreadItem threadItem = ThreadListView.this.getSelectedItem();
+                    mThreadList.deleteThreadWithID(threadItem.mValue.getID());
                 }
             }
         });
         mPopupMenu.add(deleteMenuItem);
 
         // actions triggered by selection
-        this.addListSelectionListener(new ListSelectionListener() {
+        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                mView.selectedThreadChanged(ThreadListView.this.getSelectedListValue());
+                mView.selectedThreadChanged(ThreadListView.this.getSelectedValue());
             }
         });
 
@@ -142,21 +141,21 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    ThreadListView.this.setSelectedIndex(
-                            ThreadListView.this.locationToIndex(e.getPoint()));
+                    int row = ThreadListView.this.rowAtPoint(e.getPoint());
+                    ThreadListView.this.setSelectedRow(row);
                     ThreadListView.this.showPopupMenu(e);
                 }
             }
         });
 
-        this.updateOnEDT();
+        this.updateOnEDT(null);
     }
 
     @Override
-    protected void updateOnEDT() {
+    protected void updateOnEDT(Object arg) {
         // TODO, performance
-        KonThread currentThread = this.getSelectedListValue();
-        this.clearModel();
+        KonThread currentThread = this.getSelectedValue();
+        this.clearItems();
         for (KonThread thread: mThreadList.getThreads()) {
             ThreadItem newThreadItem = new ThreadItem(thread);
             thread.addObserver(newThreadItem);
@@ -164,25 +163,25 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         }
         // reselect thread
         if (currentThread != null)
-            this.selectItem(currentThread);
+            this.setSelectedItem(currentThread);
     }
 
     void selectLastThread() {
         int i = Config.getInstance().getInt(Config.VIEW_SELECTED_THREAD);
         if (i < 0) i = 0;
-        this.setSelectedIndex(i);
+        this.setSelectedRow(i);
     }
 
     void save() {
         Config.getInstance().setProperty(Config.VIEW_SELECTED_THREAD,
-                this.getSelectedIndex());
+                this.getSelectedRow());
     }
 
     private void showPopupMenu(MouseEvent e) {
            mPopupMenu.show(this, e.getX(), e.getY());
     }
 
-    protected final class ThreadItem extends ListView<ThreadItem, KonThread>.ListItem {
+    protected final class ThreadItem extends TableView<ThreadItem, KonThread>.TableItem {
 
         WebLabel mSubjectLabel;
         WebLabel mUserLabel;
@@ -221,8 +220,8 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         }
 
         @Override
-        String getTooltipText() {
-            SortedSet<KonMessage> messageSet = this.getValue().getMessages();
+        protected String getTooltipText() {
+            SortedSet<KonMessage> messageSet = this.mValue.getMessages();
             String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
                         TOOLTIP_DATE_FORMAT.format(messageSet.last().getDate());
 
@@ -234,7 +233,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
         }
 
         @Override
-        protected void updateOnEDT() {
+        protected void updateOnEDT(Object arg) {
             this.update();
             // needed for background repaint
             ThreadListView.this.repaint();
@@ -287,7 +286,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
             // editable fields
             groupPanel.add(new WebLabel(Tr.tr("Subject:")));
-            String subj = mThreadItem.getValue().getSubject();
+            String subj = mThreadItem.mValue.getSubject();
             mSubjectField = new WebTextField(subj, 22);
             mSubjectField.setInputPrompt(subj);
             mSubjectField.setHideInputPromptOnFocus(false);
@@ -296,7 +295,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
             groupPanel.add(new WebLabel(Tr.tr("Custom Background")));
             mColorButton = new WebRadioButton(Tr.tr("Color:")+" ");
-            Optional<Color> optBGColor = mThreadItem.getValue().getViewSettings().getBGColor();
+            Optional<Color> optBGColor = mThreadItem.mValue.getViewSettings().getBGColor();
             mColorButton.setSelected(optBGColor.isPresent());
             mColorButton.addItemListener(new ItemListener() {
                 @Override
@@ -322,7 +321,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
                     mColorChooserButton));
 
             mImgButton = new WebRadioButton(Tr.tr("Image:")+" ");
-            String imgPath = mThreadItem.getValue().getViewSettings().getImagePath();
+            String imgPath = mThreadItem.mValue.getViewSettings().getImagePath();
             mImgButton.setSelected(!imgPath.isEmpty());
             mImgButton.addItemListener(new ItemListener() {
                 @Override
@@ -342,7 +341,7 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             mParticipantsList = new WebCheckBoxList();
             mParticipantsList.setVisibleRowCount(10);
             for (User oneUser : UserList.getInstance().getAll()) {
-                boolean selected = threadItem.getValue().getUser().contains(oneUser);
+                boolean selected = threadItem.mValue.getUser().contains(oneUser);
                 mParticipantsList.getCheckBoxListModel().addCheckBoxElement(
                         new UserElement(oneUser),
                         selected);
@@ -408,14 +407,14 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
 
         private void saveThread() {
             if (!mSubjectField.getText().isEmpty()) {
-                mThreadItem.getValue().setSubject(mSubjectField.getText());
+                mThreadItem.mValue.setSubject(mSubjectField.getText());
             }
             List<?> participants = mParticipantsList.getCheckedValues();
             Set<User> threadUser = new HashSet<>();
             for (Object o: participants) {
                 threadUser.add(((UserElement) o).user);
             }
-            mThreadItem.getValue().setUser(threadUser);
+            mThreadItem.mValue.setUser(threadUser);
 
             ViewSettings newSettings;
             if (mColorButton.isSelected())
@@ -425,8 +424,8 @@ final class ThreadListView extends ListView<ThreadItem, KonThread> {
             else
                 newSettings = new ViewSettings();
 
-            if (!newSettings.equals(mThreadItem.getValue().getViewSettings())) {
-                 mThreadItem.getValue().setViewSettings(newSettings);
+            if (!newSettings.equals(mThreadItem.mValue.getViewSettings())) {
+                 mThreadItem.mValue.setViewSettings(newSettings);
             }
         }
 
