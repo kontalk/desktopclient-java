@@ -25,6 +25,8 @@ import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.TooltipWay;
 import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
@@ -87,6 +89,19 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         // use custom renderer
         this.setDefaultRenderer(TableItem.class, new TableRenderer());
 
+        this.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    // this table was resized, the size of each item might have
+                    // changed and each row height must be adjusted
+                    // TODO efficient?
+                    TableView table = TableView.this;
+                    for (int row = 0; row < table.getRowCount(); row++) {
+                        table.setHeight(row);
+                    }
+                }
+            });
+
         // use custom editor (for mouse events)
         this.setDefaultEditor(TableItem.class, new TableEditor());
 
@@ -102,7 +117,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
                         TableView.this.editCellAt(row, 0);
                     }
                 }
-            });
+        });
 
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
@@ -132,8 +147,23 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         return (I) mTableModel.getValueAt(i, 0);
     }
 
-    protected void removeAllItems() {
+    protected void clearItems() {
+        for (TableItem i : this.getItems()) {
+            i.mValue.deleteObserver(i);
+        }
         mTableModel.setRowCount(0);
+    }
+
+    protected I getSelectedItem() {
+        return (I) mTableModel.getValueAt(this.getSelectedRow(), 0);
+    }
+
+    // nullable
+    protected V getSelectedValue() {
+        if (this.getSelectedRow() == -1)
+            return null;
+        TableItem item = this.getSelectedItem();
+        return item.mValue;
     }
 
     void filter(String search) {
@@ -142,6 +172,17 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
     private void resetFiltering() {
         // TODO
+    }
+
+    /**
+     * Row height must be adjusted manually to component height.
+     * source: https://stackoverflow.com/a/1784601
+     * @param row the row that gets set
+     */
+    protected void setHeight(int row) {
+        Component comp = this.prepareRenderer(this.getCellRenderer(row, 0), row, 0);
+        int height = Math.max(this.getRowHeight(), comp.getPreferredSize().height);
+        this.setRowHeight(row, height);
     }
 
     private void showTooltip(TableItem messageView) {
@@ -178,7 +219,13 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
     abstract protected void updateOnEDT(Object arg);
 
-    abstract class TableItem extends WebPanel {
+    abstract class TableItem extends WebPanel implements Observer {
+
+        protected final V mValue;
+
+        protected TableItem(V value) {
+            mValue = value;
+        }
 
         void resize(int listWidth) {};
 
@@ -193,6 +240,22 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
          * @return
          */
         protected abstract boolean contains(String search);
+
+        @Override
+        public void update(Observable o, final Object arg) {
+            if (SwingUtilities.isEventDispatchThread()) {
+                this.updateOnEDT(arg);
+                return;
+            }
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    TableItem.this.updateOnEDT(arg);
+                }
+            });
+        }
+
+        protected abstract void updateOnEDT(Object arg);
 
         // catch the event, when a tooltip should be shown for this item and
         // create a own one

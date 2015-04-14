@@ -55,8 +55,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Observable;
-import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -64,7 +62,6 @@ import java.util.logging.Level;
 import javax.swing.Icon;
 import javax.swing.JViewport;
 import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingUtilities;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
@@ -169,7 +166,7 @@ final class ThreadView extends WebScrollPane {
     private void removeThread(KonThread thread) {
         MessageViewList viewList = mThreadCache.get(thread.getID());
         if (viewList != null)
-            viewList.removeMessageViews();
+            viewList.clearItems();
         thread.deleteObserver(viewList);
         mThreadCache.remove(thread.getID());
         if(this.getCurrentThread().orElse(null) == thread) {
@@ -190,7 +187,7 @@ final class ThreadView extends WebScrollPane {
     /**
      * View all messages of one thread in a left/right MIM style list.
      */
-    private class MessageViewList extends TableView<MessageViewList.MessageView, KonMessage> {
+    private final class MessageViewList extends TableView<MessageViewList.MessageItem, KonMessage> {
 
         private final KonThread mThread;
         private boolean mScrollDownOnResize = false;
@@ -208,18 +205,10 @@ final class ThreadView extends WebScrollPane {
             this.addComponentListener(new ComponentAdapter() {
                 @Override
                 public void componentResized(ComponentEvent e) {
-                    // this table was resized, the size of each item might have
-                    // changed and each row height must be adjusted
-                    // TODO efficient?
-                    MessageViewList table = MessageViewList.this;
-
-                    for (int row = 0; row < table.getRowCount(); row++) {
-                        table.setHeight(row);
-                    }
-
-                    // another issue: scrolling to a new component in the table
+                    // scrolling to a new component in the table
                     // is only possible after the component was rendered (which
                     // is now)
+                    MessageViewList table = MessageViewList.this;
                     if (mScrollDownOnResize) {
                         table.scrollToRow(table.getRowCount() - 1);
                         mScrollDownOnResize = false;
@@ -280,11 +269,11 @@ final class ThreadView extends WebScrollPane {
             }
 
             // check for new messages to add
-            List<MessageView> items = this.getItems();
+            List<MessageItem> items = this.getItems();
             if (items.size() < mThread.getMessages().size()) {
                 Set<KonMessage> oldMessages = new HashSet<>();
-                for (MessageView i : items) {
-                    oldMessages.add(i.mMessage);
+                for (MessageItem i : items) {
+                    oldMessages.add(i.mValue);
                 }
 
                 for (KonMessage message: mThread.getMessages()) {
@@ -304,30 +293,11 @@ final class ThreadView extends WebScrollPane {
         }
 
         private void addMessage(KonMessage message) {
-            MessageView newMessageView = new MessageView(message);
+            MessageItem newMessageView = new MessageItem(message);
             message.addObserver(newMessageView);
             this.addItem(newMessageView);
 
             this.setHeight(this.getRowCount() -1);
-        }
-
-        private void removeMessageViews() {
-            for (TableItem i : this.getItems()) {
-                MessageView mv = (MessageView) i;
-                mv.mMessage.deleteObserver(mv);
-            }
-            this.removeAllItems();
-        }
-
-        /**
-         * Row height must be adjusted manually to component height.
-         * source: https://stackoverflow.com/a/1784601
-         * @param row the row that gets set
-         */
-        private void setHeight(int row) {
-            Component comp = this.prepareRenderer(this.getCellRenderer(row, 0), row, 0);
-            int height = Math.max(this.getRowHeight(), comp.getPreferredSize().height);
-            this.setRowHeight(row, height);
         }
 
         private void showPopupMenu(MouseEvent e) {
@@ -335,7 +305,7 @@ final class ThreadView extends WebScrollPane {
             if (row < 0)
                 return;
 
-            MessageView messageView = this.getItemAt(row);
+            MessageItem messageView = this.getItemAt(row);
             WebPopupMenu popupMenu = messageView.getPopupMenu();
             popupMenu.show(this, e.getX(), e.getY());
         }
@@ -357,16 +327,15 @@ final class ThreadView extends WebScrollPane {
          * View for one message.
          * The content is added to a panel inside this panel.
          */
-        final class MessageView extends TableView<MessageView, KonMessage>.TableItem implements Observer {
+        final class MessageItem extends TableView<MessageItem, KonMessage>.TableItem {
 
-            private final KonMessage mMessage;
             private final WebPanel mContentPanel;
             private final WebTextArea mTextArea;
             private final WebLabel mStatusIconLabel;
             private final int mPreferredTextAreaWidth;
 
-            MessageView(KonMessage message) {
-                mMessage = message;
+            MessageItem(KonMessage message) {
+                super(message);
 
                 this.setOpaque(false);
                 this.setMargin(2);
@@ -375,14 +344,14 @@ final class ThreadView extends WebScrollPane {
                 WebPanel messagePanel = new WebPanel(true);
                 messagePanel.setWebColoredBackground(false);
                 messagePanel.setMargin(5);
-                if (mMessage.getDir().equals(KonMessage.Direction.IN))
+                if (mValue.getDir().equals(KonMessage.Direction.IN))
                     messagePanel.setBackground(Color.WHITE);
                 else
                     messagePanel.setBackground(View.LIGHT_BLUE);
 
                 // from label
-                if (mMessage.getDir().equals(KonMessage.Direction.IN)) {
-                    String from = getFromString(mMessage);
+                if (mValue.getDir().equals(KonMessage.Direction.IN)) {
+                    String from = getFromString(mValue);
                     WebLabel fromLabel = new WebLabel(" "+from);
                     fromLabel.setFontSize(12);
                     fromLabel.setForeground(Color.BLUE);
@@ -423,13 +392,13 @@ final class ThreadView extends WebScrollPane {
                 }
                 statusPanel.add(encryptIconLabel);
                 // date label
-                WebLabel dateLabel = new WebLabel(SHORT_DATE_FORMAT.format(mMessage.getDate()));
+                WebLabel dateLabel = new WebLabel(SHORT_DATE_FORMAT.format(mValue.getDate()));
                 dateLabel.setForeground(Color.GRAY);
                 dateLabel.setFontSize(11);
                 statusPanel.add(dateLabel);
                 messagePanel.add(statusPanel, BorderLayout.SOUTH);
 
-                if (mMessage.getDir().equals(KonMessage.Direction.IN)) {
+                if (mValue.getDir().equals(KonMessage.Direction.IN)) {
                     this.add(messagePanel, BorderLayout.WEST);
                 } else {
                     this.add(messagePanel, BorderLayout.EAST);
@@ -446,20 +415,7 @@ final class ThreadView extends WebScrollPane {
             }
 
             @Override
-            public void update(Observable o, final Object arg) {
-                if (SwingUtilities.isEventDispatchThread()) {
-                    this.updateOnEDT(arg);
-                    return;
-                }
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        MessageView.this.updateOnEDT(arg);
-                    }
-                });
-            }
-
-            private void updateOnEDT(Object arg) {
+            protected void updateOnEDT(Object arg) {
                 this.updateView(arg);
 
                 // find row of item...
@@ -491,8 +447,8 @@ final class ThreadView extends WebScrollPane {
 
             // text in text area, before/after encryption
             private void updateText() {
-                boolean encrypted = mMessage.getCoderStatus().isEncrypted();
-                String text = encrypted ? Tr.tr("[encrypted]") : mMessage.getContent().getText();
+                boolean encrypted = mValue.getCoderStatus().isEncrypted();
+                String text = encrypted ? Tr.tr("[encrypted]") : mValue.getContent().getText();
                 mTextArea.setFontStyle(false, encrypted);
                 mTextArea.setText(text);
                 // hide area if there is no text
@@ -501,8 +457,8 @@ final class ThreadView extends WebScrollPane {
 
             // status icon
             private void updateStatus() {
-                if (mMessage.getDir() == KonMessage.Direction.OUT) {
-                    switch (mMessage.getReceiptStatus()) {
+                if (mValue.getDir() == KonMessage.Direction.OUT) {
+                    switch (mValue.getReceiptStatus()) {
                         case PENDING :
                             mStatusIconLabel.setIcon(PENDING_ICON);
                             break;
@@ -531,7 +487,7 @@ final class ThreadView extends WebScrollPane {
                     mContentPanel.remove(oldComp);
 
                 Optional<MessageContent.Attachment> optAttachment =
-                        mMessage.getContent().getAttachment();
+                        mValue.getContent().getAttachment();
                 if (!optAttachment.isPresent())
                     return;
 
@@ -574,13 +530,13 @@ final class ThreadView extends WebScrollPane {
 
             private WebPopupMenu getPopupMenu() {
                 WebPopupMenu popupMenu = new WebPopupMenu();
-                if (mMessage.getCoderStatus().isEncrypted()) {
+                if (mValue.getCoderStatus().isEncrypted()) {
                     WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
                     decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
                     decryptMenuItem.addActionListener(new ActionListener() {
                         @Override
                         public void actionPerformed(ActionEvent event) {
-                            KonMessage m = MessageView.this.mMessage;
+                            KonMessage m = MessageItem.this.mValue;
                             if (!(m instanceof InMessage)) {
                                 LOGGER.warning("decrypted message not incoming message");
                                 return;
@@ -598,30 +554,30 @@ final class ThreadView extends WebScrollPane {
             }
 
             private String toPrettyString() {
-                String date = LONG_DATE_FORMAT.format(mMessage.getDate());
-                String from = getFromString(mMessage);
-                return date + " - " + from + " : " + mMessage.getContent().getText();
+                String date = LONG_DATE_FORMAT.format(mValue.getDate());
+                String from = getFromString(mValue);
+                return date + " - " + from + " : " + mValue.getContent().getText();
             }
 
             @Override
             protected String getTooltipText() {
                 String encryption = Tr.tr("unknown");
-                switch (mMessage.getCoderStatus().getEncryption()) {
+                switch (mValue.getCoderStatus().getEncryption()) {
                     case NOT: encryption = Tr.tr("not encrypted"); break;
                     case ENCRYPTED: encryption = Tr.tr("encrypted"); break;
                     case DECRYPTED: encryption = Tr.tr("decrypted"); break;
                 }
                 String verification = Tr.tr("unknown");
-                switch (mMessage.getCoderStatus().getSigning()) {
+                switch (mValue.getCoderStatus().getSigning()) {
                     case NOT: verification = Tr.tr("not signed"); break;
                     case SIGNED: verification = Tr.tr("signed"); break;
                     case VERIFIED: verification = Tr.tr("verified"); break;
                 }
                 String problems = "";
-                if (mMessage.getCoderStatus().getErrors().isEmpty()) {
+                if (mValue.getCoderStatus().getErrors().isEmpty()) {
                     problems = Tr.tr("none");
                 } else {
-                  for (Coder.Error error: mMessage.getCoderStatus().getErrors()) {
+                  for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
                       problems += error.toString() + " <br> ";
                   }
                 }
@@ -638,8 +594,8 @@ final class ThreadView extends WebScrollPane {
             @Override
             protected boolean contains(String search) {
                 return mTextArea.getText().toLowerCase().contains(search) ||
-                        mMessage.getUser().getName().toLowerCase().contains(search) ||
-                        mMessage.getJID().toLowerCase().contains(search);
+                        mValue.getUser().getName().toLowerCase().contains(search) ||
+                        mValue.getJID().toLowerCase().contains(search);
             }
         }
     }
