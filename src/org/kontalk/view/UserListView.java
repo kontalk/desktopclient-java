@@ -59,7 +59,7 @@ import org.kontalk.view.UserListView.UserItem;
  * Display all user (aka contacts) in a brief list.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class UserListView extends ListView<UserItem, User> implements Observer {
+final class UserListView extends TableView<UserItem, User> implements Observer {
 
     private final View mView;
     private final UserList mUserList;
@@ -74,6 +74,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
 
         mUserList = userList;
 
+        this.setRowSelectionAllowed(true);
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         // right click popup menu
@@ -85,7 +86,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             public void mouseClicked(MouseEvent e) {
                 super.mouseClicked(e);
                 if (e.getClickCount() == 2) {
-                    mView.selectThreadByUser(UserListView.this.getSelectedListValue());
+                    mView.selectThreadByUser(UserListView.this.getSelectedValue());
                 }
             }
             @Override
@@ -98,7 +99,8 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    UserListView.this.setSelectedIndex(locationToIndex(e.getPoint()));
+                    int row = UserListView.this.rowAtPoint(e.getPoint());
+                    UserListView.this.setSelectedRow(row);
                     UserListView.this.showPopupMenu(e);
                 }
             }
@@ -109,13 +111,13 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             }
         });
 
-        this.updateOnEDT();
+        this.updateOnEDT(null);
     }
 
     @Override
-    protected void updateOnEDT() {
+    protected void updateOnEDT(Object arg) {
         // TODO performance
-        this.clearModel();
+        this.clearItems();
         for (User oneUser: mUserList.getAll()) {
             UserItem newItem = new UserItem(oneUser);
             oneUser.addObserver(newItem);
@@ -125,11 +127,11 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
 
     private void showPopupMenu(MouseEvent e) {
         // note: only work when right click does also selection
-        mPopupMenu.show(this.getSelectedListItem(), this, e.getX(), e.getY());
+        mPopupMenu.show(this.getSelectedItem(), this, e.getX(), e.getY());
     }
 
     /** One item in the contact list representing a user. */
-    final class UserItem extends ListView<UserItem, User>.ListItem {
+    final class UserItem extends TableView<UserItem, User>.TableItem {
 
         private final WebLabel mNameLabel;
         private final WebLabel mJIDLabel;
@@ -158,7 +160,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             mJIDLabel.setPreferredSize(size);
             this.add(mJIDLabel, BorderLayout.SOUTH);
 
-            this.updateOnEDT();
+            this.updateOnEDT(null);
         }
 
         @Override
@@ -208,7 +210,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         }
 
         @Override
-        protected void updateOnEDT() {
+        protected void updateOnEDT(Object arg) {
             // may have changed (of user): JID, name, online
             mJIDLabel.setText(mValue.getJID());
             String name = !mValue.getName().isEmpty() ?
@@ -235,7 +237,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
                 @Override
                 public void actionPerformed(ActionEvent event) {
                     Set<User> user = new HashSet<>();
-                    user.add(mSelectedUserView.getValue());
+                    user.add(mSelectedUserView.mValue);
                     UserListView.this.mView.callCreateNewThread(user);
                 }
             });
@@ -247,7 +249,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
                 @Override
                 public void actionPerformed(ActionEvent event) {
                     EditUserDialog editUserDialog = new EditUserDialog(mSelectedUserView);
-                    mSelectedUserView.getValue().addObserver(editUserDialog);
+                    mSelectedUserView.mValue.addObserver(editUserDialog);
                     editUserDialog.setVisible(true);
                 }
             });
@@ -258,7 +260,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             mBlockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.getValue(), true);
+                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.mValue, true);
                 }
             });
             this.add(mBlockMenuItem);
@@ -268,7 +270,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
             mUnblockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.getValue(), false);
+                    UserListView.this.mView.callSetUserBlocking(mSelectedUserView.mValue, false);
                 }
             });
             this.add(mUnblockMenuItem);
@@ -289,7 +291,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         void show(UserItem selectedUserView, Component invoker, int x, int y) {
             mSelectedUserView = selectedUserView;
 
-            if (mSelectedUserView.getValue().isBlocked()) {
+            if (mSelectedUserView.mValue.isBlocked()) {
                 mBlockMenuItem.setVisible(false);
                 mUnblockMenuItem.setVisible(true);
             } else {
@@ -345,7 +347,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     UserListView.this.mView.callRequestKey(
-                            EditUserDialog.this.mUserView.getValue());
+                            EditUserDialog.this.mUserView.mValue);
                 }
             });
             groupPanel.add(new GroupPanel(6, mKeyLabel, updButton));
@@ -360,14 +362,14 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
 
             mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));
             mEncryptionBox.setAnimated(false);
-            mEncryptionBox.setSelected(mUserView.getValue().getEncrypted());
+            mEncryptionBox.setSelected(mUserView.mValue.getEncrypted());
             String encText = Tr.tr("Encrypt and sign all messages send to this contact");
             TooltipManager.addTooltip(mEncryptionBox, encText);
             groupPanel.add(new GroupPanel(mEncryptionBox, new WebSeparator()));
             groupPanel.add(new WebSeparator(true, true));
 
             final int l = 50;
-            mJID = mUserView.getValue().getJID();
+            mJID = mUserView.mValue.getJID();
             final WebTextField jidField = new WebTextField(View.shortenJID(mJID, l));
             jidField.setDrawBorder(false);
             jidField.setMinimumHeight(20);
@@ -438,13 +440,13 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
 
         private void updateOnEDT() {
             // may have changed: user name and/or key
-            mNameField.setText(mUserView.getValue().getName());
-            mNameField.setInputPrompt(mUserView.getValue().getName());
+            mNameField.setText(mUserView.mValue.getName());
+            mNameField.setInputPrompt(mUserView.mValue.getName());
             String hasKey = "<html>"+Tr.tr("Encryption Key")+": ";
-            if (mUserView.getValue().hasKey()) {
+            if (mUserView.mValue.hasKey()) {
                 hasKey += Tr.tr("Available")+"</html>";
                 TooltipManager.removeTooltips(mKeyLabel);
-                mFPField.setText(mUserView.getValue().getFingerprint());
+                mFPField.setText(mUserView.mValue.getFingerprint());
                 mFPLabel.setVisible(true);
                 mFPField.setVisible(true);
             } else {
@@ -458,7 +460,7 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
         }
 
         private boolean isConfirmed() {
-            if (!mJID.equals(mUserView.getValue().getJID())) {
+            if (!mJID.equals(mUserView.mValue.getJID())) {
                 String warningText =
                         Tr.tr("Changing the JID is only useful in very rare cases. Are you sure?");
                 int selectedOption = WebOptionPane.showConfirmDialog(this,
@@ -475,18 +477,18 @@ final class UserListView extends ListView<UserItem, User> implements Observer {
 
         private void save() {
             String newName = mNameField.getText();
-            if (!newName.equals(mUserView.getValue().getName())) {
-                mUserView.getValue().setName(mNameField.getText());
+            if (!newName.equals(mUserView.mValue.getName())) {
+                mUserView.mValue.setName(mNameField.getText());
             }
-            mUserView.getValue().setEncrypted(mEncryptionBox.isSelected());
-            if (!mJID.isEmpty() && !mJID.equals(mUserView.getValue().getJID())) {
-                mUserView.getValue().setJID(mJID);
+            mUserView.mValue.setEncrypted(mEncryptionBox.isSelected());
+            if (!mJID.isEmpty() && !mJID.equals(mUserView.mValue.getJID())) {
+                mUserView.mValue.setJID(mJID);
             }
         }
 
         private void close() {
             this.dispose();
-            this.mUserView.getValue().deleteObserver(this);
+            this.mUserView.mValue.deleteObserver(this);
         }
     }
 }

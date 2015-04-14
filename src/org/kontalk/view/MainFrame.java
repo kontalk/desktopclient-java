@@ -90,7 +90,7 @@ final class MainFrame extends WebFrame {
     private final WebTabbedPane mTabbedPane;
 
     MainFrame(final View view,
-            ListView<?, ?> userList,
+            TableView<?, ?> userList,
             final ListView<?, ?> threadList,
             Component threadView,
             Component sendTextField,
@@ -234,7 +234,7 @@ final class MainFrame extends WebFrame {
             }
         });
         String userOverlayText = Tr.tr("No contacts to display. You have no friends ;(");
-        WebPanel userListPanel = createListPane(userList,
+        WebPanel userListPanel = createTablePane(userList,
                 newUserButton,
                 userOverlayText);
         mTabbedPane.addTab("", userListPanel);
@@ -546,6 +546,85 @@ final class MainFrame extends WebFrame {
             }
         });
         // TODO
+        //listOverlayPanel.addOverlay(new GroupPanel(false, overlayArea));
+        //listPanel.add(listOverlayPanel, BorderLayout.CENTER);
+        listPanel.add(scrollPane, BorderLayout.CENTER);
+        return listPanel;
+    }
+
+    // TODO
+    private static WebPanel createTablePane(final TableView<?, ?> table,
+            Component newButton,
+            String overlayText) {
+        Icon clearIcon = View.getIcon("ic_ui_clear.png");
+        WebPanel listPanel = new WebPanel();
+
+        // search panel
+        WebPanel searchPanel = new WebPanel();
+        final WebTextField searchField = new WebTextField();
+        searchField.setInputPrompt(Tr.tr("Search..."));
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            private void filterList() {
+                table.filter(searchField.getText());
+            }
+        });
+        WebButton clearSearchButton = new WebButton(clearIcon);
+        clearSearchButton.setUndecorated(true);
+        clearSearchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                searchField.clear();
+            }
+        });
+        searchField.setTrailingComponent(clearSearchButton);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        // TODO add new button
+        //searchPanel.add(newButton, BorderLayout.EAST);
+        listPanel.add(searchPanel, BorderLayout.NORTH);
+
+        WebScrollPane scrollPane = new ScrollPane(table);
+        // overlay for empty list
+        WebOverlay listOverlayPanel = new WebOverlay(scrollPane);
+        listOverlayPanel.setOverlayMargin(20);
+        final WebTextArea overlayArea = new WebTextArea();
+        overlayArea.setText(overlayText);
+        overlayArea.setLineWrap(true);
+        overlayArea.setWrapStyleWord(true);
+        overlayArea.setMargin(10);
+        overlayArea.setFontSize(15);
+        overlayArea.setEditable(false);
+        BorderPainter<WebTextArea> borderPainter = new BorderPainter<>(Color.LIGHT_GRAY);
+        borderPainter.setRound(15);
+        overlayArea.setPainter(borderPainter);
+        // TODO
+//        table.addListDataListener(new ListDataListener() {
+//            @Override
+//            public void intervalAdded(ListDataEvent e) {
+//                this.setOverlay();
+//            }
+//            @Override
+//            public void intervalRemoved(ListDataEvent e) {
+//                this.setOverlay();
+//            }
+//            @Override
+//            public void contentsChanged(ListDataEvent e) {
+//            }
+//            private void setOverlay() {
+//                overlayArea.setVisible(table.getModelSize() == 0);
+//            }
+//        });
         //listOverlayPanel.addOverlay(new GroupPanel(false, overlayArea));
         //listPanel.add(listOverlayPanel, BorderLayout.CENTER);
         listPanel.add(scrollPane, BorderLayout.CENTER);
