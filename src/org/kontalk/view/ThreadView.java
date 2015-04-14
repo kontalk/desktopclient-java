@@ -190,7 +190,7 @@ final class ThreadView extends WebScrollPane {
     /**
      * View all messages of one thread in a left/right MIM style list.
      */
-    private class MessageViewList extends TableView implements Observer {
+    private class MessageViewList extends TableView<MessageViewList.MessageView, KonMessage> {
 
         private final KonThread mThread;
         private boolean mScrollDownOnResize = false;
@@ -266,20 +266,7 @@ final class ThreadView extends WebScrollPane {
         }
 
         @Override
-        public void update(Observable o, final Object arg) {
-            if (SwingUtilities.isEventDispatchThread()) {
-                this.updateOnEDT(arg);
-                return;
-            }
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    MessageViewList.this.updateOnEDT(arg);
-                }
-            });
-        }
-
-        private void updateOnEDT(Object arg) {
+        protected void updateOnEDT(Object arg) {
             if (arg instanceof KonThread.ViewSettings) {
                 this.setBackground((KonThread.ViewSettings) arg);
                 if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
@@ -293,11 +280,11 @@ final class ThreadView extends WebScrollPane {
             }
 
             // check for new messages to add
-            List<TableItem> items = this.getItems();
+            List<MessageView> items = this.getItems();
             if (items.size() < mThread.getMessages().size()) {
                 Set<KonMessage> oldMessages = new HashSet<>();
-                for (TableItem i : items) {
-                    oldMessages.add(((MessageView) i).mMessage);
+                for (MessageView i : items) {
+                    oldMessages.add(i.mMessage);
                 }
 
                 for (KonMessage message: mThread.getMessages()) {
@@ -348,7 +335,7 @@ final class ThreadView extends WebScrollPane {
             if (row < 0)
                 return;
 
-            MessageView messageView = (MessageView) this.getItemAt(row);
+            MessageView messageView = this.getItemAt(row);
             WebPopupMenu popupMenu = messageView.getPopupMenu();
             popupMenu.show(this, e.getX(), e.getY());
         }
@@ -370,7 +357,7 @@ final class ThreadView extends WebScrollPane {
          * View for one message.
          * The content is added to a panel inside this panel.
          */
-        private class MessageView extends TableItem implements Observer {
+        final class MessageView extends TableView<MessageView, KonMessage>.TableItem implements Observer {
 
             private final KonMessage mMessage;
             private final WebPanel mContentPanel;

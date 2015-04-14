@@ -32,8 +32,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.EventObject;
 import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Vector;
 import javax.swing.JTable;
+import javax.swing.SwingUtilities;
 import javax.swing.event.CellEditorListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
@@ -46,8 +49,10 @@ import javax.swing.table.TableCellEditor;
  * TODO make items generic type
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @param <I> the view item in this list
+ * @param <V> the value of one view item
  */
-class TableView extends WebTable {
+abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
 
     private final DefaultTableModel mTableModel = new DefaultTableModel(0, 1);
 
@@ -109,11 +114,11 @@ class TableView extends WebTable {
         });
     }
 
-    protected List<TableItem> getItems() {
+    protected List<I> getItems() {
         Vector vec = mTableModel.getDataVector();
-        List<TableItem> items = new ArrayList<>(vec.size());
+        List<I> items = new ArrayList<>(vec.size());
         for (Object v : vec) {
-            items.add((TableItem) ((Vector) v).elementAt(0));
+            items.add((I) ((Vector) v).elementAt(0));
         }
         return items;
     }
@@ -123,8 +128,8 @@ class TableView extends WebTable {
         mTableModel.addRow(data);
     }
 
-    protected TableItem getItemAt(int i) {
-        return (TableItem) mTableModel.getValueAt(i, 0);
+    protected I getItemAt(int i) {
+        return (I) mTableModel.getValueAt(i, 0);
     }
 
     protected void removeAllItems() {
@@ -156,6 +161,22 @@ class TableView extends WebTable {
         // always the same
         return TableItem.class;
     }
+
+    @Override
+    public void update(Observable o, final Object arg) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            this.updateOnEDT(arg);
+            return;
+        }
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                TableView.this.updateOnEDT(arg);
+            }
+        });
+    }
+
+    abstract protected void updateOnEDT(Object arg);
 
     abstract class TableItem extends WebPanel {
 
