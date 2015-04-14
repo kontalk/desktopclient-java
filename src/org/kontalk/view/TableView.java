@@ -45,7 +45,6 @@ import org.ocpsoft.prettytime.PrettyTime;
 /**
  * A generic list view for subclassing.
  * Implemented as table with one column.
- * TODO make items generic type
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  * @param <I> the view item in this list
@@ -91,7 +90,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
                     // this table was resized, the size of each item might have
                     // changed and each row height must be adjusted
                     // TODO efficient?
-                    TableView table = TableView.this;
+                    TableView<?, ?> table = TableView.this;
                     for (int row = 0; row < table.getRowCount(); row++) {
                         table.setHeight(row);
                     }
@@ -122,6 +121,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         });
     }
 
+    @SuppressWarnings({"rawtypes", "unchecked"})
     protected List<I> getItems() {
         Vector vec = mTableModel.getDataVector();
         List<I> items = new ArrayList<>(vec.size());
@@ -136,6 +136,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         mTableModel.addRow(data);
     }
 
+    @SuppressWarnings("unchecked")
     protected I getItemAt(int i) {
         return (I) mTableModel.getValueAt(i, 0);
     }
@@ -147,6 +148,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         mTableModel.setRowCount(0);
     }
 
+    @SuppressWarnings("unchecked")
     protected I getSelectedItem() {
         return (I) mTableModel.getValueAt(this.getSelectedRow(), 0);
     }
@@ -265,7 +267,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         // return for each item (value) in the list/table the component to
         // render - which is the item itself here
         @Override
-        @SuppressWarnings("rawtypes")
+        @SuppressWarnings("unchecked")
         public Component getTableCellRendererComponent(JTable table,
                 Object value,
                 boolean isSelected,

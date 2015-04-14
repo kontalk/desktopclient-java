@@ -718,7 +718,7 @@ final class ThreadView extends WebScrollPane {
     // needed for correct mouse behaviour for components in items
     // (and breaks selection behaviour somehow)
     private class TableEditor extends AbstractCellEditor implements TableCellEditor {
-        private TableView.TableItem mValue;
+        private TableView<?, ?>.TableItem mValue;
         @Override
         public Component getTableCellEditorComponent(JTable table,
                 Object value,
