@@ -96,7 +96,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
                     int row = UserListView.this.rowAtPoint(e.getPoint());
-                    UserListView.this.setSelectedRow(row);
+                    UserListView.this.setSelectedItem(row);
                     UserListView.this.showPopupMenu(e);
                 }
             }
@@ -107,13 +107,9 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        // TODO performance
-        this.clearItems();
-        for (User oneUser: mUserList.getAll()) {
-            UserItem newItem = new UserItem(oneUser);
-            oneUser.addObserver(newItem);
-            this.addItem(newItem);
-        }
+        for (User oneUser: mUserList.getAll())
+            if (!this.containsValue(oneUser))
+                this.addItem(new UserItem(oneUser));
     }
 
     private void showPopupMenu(MouseEvent e) {

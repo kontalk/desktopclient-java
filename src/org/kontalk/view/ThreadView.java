@@ -52,11 +52,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import javax.swing.AbstractCellEditor;
@@ -99,7 +96,6 @@ final class ThreadView extends WebScrollPane {
 
     ThreadView(View view) {
         super(null);
-
         mView = view;
 
         this.setHorizontalScrollBarPolicy(
@@ -198,7 +194,6 @@ final class ThreadView extends WebScrollPane {
 
         MessageViewList(KonThread thread) {
             super();
-
             mThread = thread;
 
             // use custom editor (for mouse events)
@@ -224,11 +219,6 @@ final class ThreadView extends WebScrollPane {
 
             // disable selection
             this.setSelectionModel(new UnselectableListModel());
-
-            // insert messages
-            for (KonMessage message: mThread.getMessages()) {
-                this.addMessage(message);
-            }
 
             // actions triggered by mouse events
             this.addMouseListener(new MouseAdapter() {
@@ -275,35 +265,24 @@ final class ThreadView extends WebScrollPane {
             }
 
             // check for new messages to add
-            List<MessageItem> items = this.getItems();
-            if (items.size() < mThread.getMessages().size()) {
-                Set<KonMessage> oldMessages = new HashSet<>();
-                for (MessageItem i : items) {
-                    oldMessages.add(i.mValue);
-                }
-
-                for (KonMessage message: mThread.getMessages()) {
-                    if (!oldMessages.contains(message)) {
-                        // always inserted at the end, timestamp of message is
-                        // ignored. Let's call it a feature.
-                        this.addMessage(message);
-                        // trigger scrolling
-                        mScrollDownOnResize = true;
-                    }
-                }
-            }
+            if (this.getItems().size() < mThread.getMessages().size())
+                this.insertMessages();
 
             if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
                 mThread.setRead();
             }
         }
 
-        private void addMessage(KonMessage message) {
-            MessageItem newMessageView = new MessageItem(message);
-            message.addObserver(newMessageView);
-            this.addItem(newMessageView);
-
-            this.setHeight(this.getRowCount() -1);
+        private void insertMessages() {
+            // TODO performance
+            for (KonMessage message: mThread.getMessages()) {
+                if (!this.containsValue(message)) {
+                    this.addItem(new MessageItem(message));
+                    this.setHeight(this.getRowCount() - 1);
+                    // trigger scrolling
+                    mScrollDownOnResize = true;
+                }
+            }
         }
 
         private void showPopupMenu(MouseEvent e) {
@@ -311,7 +290,7 @@ final class ThreadView extends WebScrollPane {
             if (row < 0)
                 return;
 
-            MessageItem messageView = this.getItemAt(row);
+            MessageItem messageView = this.getDisplayedItemAt(row);
             WebPopupMenu popupMenu = messageView.getPopupMenu();
             popupMenu.show(this, e.getX(), e.getY());
         }

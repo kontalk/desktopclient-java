@@ -30,15 +30,13 @@ import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.Vector;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
-import javax.swing.event.TableModelEvent;
-import javax.swing.event.TableModelListener;
 import javax.swing.table.DefaultTableModel;
 import org.ocpsoft.prettytime.PrettyTime;
 
@@ -52,10 +50,13 @@ import org.ocpsoft.prettytime.PrettyTime;
  */
 abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
 
-    private final DefaultTableModel mTableModel = new DefaultTableModel(0, 1);
+    /** The items in this list . */
+    protected final SortedMap<V, I> mItems = new TreeMap<>();
+    /** The currently displayed items. A subset of mItems */
+    private final DefaultTableModel mFilteredTableModel = new DefaultTableModel(0, 1);
 
-    // TODO
-    //private final DefaultTableModel mFilteredTableModel = new DefaultTableModel(0, 1);
+    /** The current search string */
+    private String mSearch = "";
 
     protected final static PrettyTime TOOLTIP_DATE_FORMAT = new PrettyTime();
 
@@ -64,16 +65,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
     TableView() {
-        mTableModel.addTableModelListener(new TableModelListener() {
-            @Override
-            public void tableChanged(TableModelEvent e) {
-                TableView.this.resetFiltering();
-            }
-        });
-
-        // TODO
-        //this.setModel(mFilteredTableModel);
-        this.setModel(mTableModel);
+        this.setModel(mFilteredTableModel);
 
         // hide header
         this.setTableHeader(null);
@@ -121,36 +113,38 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         });
     }
 
-    @SuppressWarnings({"rawtypes", "unchecked"})
-    protected List<I> getItems() {
-        Vector vec = mTableModel.getDataVector();
-        List<I> items = new ArrayList<>(vec.size());
-        for (Object v : vec) {
-            items.add((I) ((Vector) v).elementAt(0));
-        }
-        return items;
+    protected Collection<I> getItems() {
+        return mItems.values();
     }
 
-    protected void addItem(TableItem i) {
-        Object[] data = {i};
-        mTableModel.addRow(data);
+    protected boolean containsValue(V value) {
+        return mItems.containsKey(value);
+    }
+
+    protected void addItem(I item) {
+        item.mValue.addObserver(item);
+        // TODO sorting?
+        mItems.put(item.mValue, item);
+        if (item.contains(mSearch.toLowerCase()))
+            mFilteredTableModel.addRow(new Object[]{item});
     }
 
     @SuppressWarnings("unchecked")
-    protected I getItemAt(int i) {
-        return (I) mTableModel.getValueAt(i, 0);
+    protected I getDisplayedItemAt(int i) {
+        return (I) mFilteredTableModel.getValueAt(i, 0);
     }
 
     protected void clearItems() {
         for (TableItem i : this.getItems()) {
             i.mValue.deleteObserver(i);
         }
-        mTableModel.setRowCount(0);
+        mItems.clear();
+        this.filterItems("");
     }
 
     @SuppressWarnings("unchecked")
     protected I getSelectedItem() {
-        return (I) mTableModel.getValueAt(this.getSelectedRow(), 0);
+        return (I) mFilteredTableModel.getValueAt(this.getSelectedRow(), 0);
     }
 
     // nullable
@@ -161,26 +155,37 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         return item.mValue;
     }
 
+    /** Resets filtering and selects the item containing the value specified. */
     void setSelectedItem(V value) {
         // TODO performance
-        for (int i=0; i< mTableModel.getRowCount(); i++) {
-            if (this.getItemAt(i).mValue == value) {
-                this.setSelectedRow(i);
+        this.filterItems("");
+        for (int i=0; i< mItems.size(); i++) {
+            if (this.getDisplayedItemAt(i).mValue == value) {
+                this.setSelectedItem(i);
                 break;
             }
         }
 
         if (this.getSelectedValue() != value)
             // fallback
-            this.setSelectedRow(0);
+            this.setSelectedItem(0);
     }
 
-    void filter(String search) {
-        // TODO
+    protected void setSelectedItem(int i) {
+        if (i >= mFilteredTableModel.getRowCount())
+            return;
+        this.setSelectedRow(i);
     }
 
-    private void resetFiltering() {
-        // TODO
+    void filterItems(String search) {
+        mSearch = search;
+
+        // TODO performance
+        mFilteredTableModel.setRowCount(0);
+        for (I item : this.getItems()) {
+            if (item.contains(search.toLowerCase()))
+                mFilteredTableModel.addRow(new Object[]{item});
+        }
     }
 
     /**
@@ -245,8 +250,6 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         /**
          * Return if the content of the item contains the search string.
          * Used for filtering.
-         * @param search
-         * @return
          */
         protected abstract boolean contains(String search);
 

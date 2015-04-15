@@ -142,7 +142,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
                     int row = ThreadListView.this.rowAtPoint(e.getPoint());
-                    ThreadListView.this.setSelectedRow(row);
+                    ThreadListView.this.setSelectedItem(row);
                     ThreadListView.this.showPopupMenu(e);
                 }
             }
@@ -154,22 +154,15 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
     @Override
     protected void updateOnEDT(Object arg) {
         // TODO, performance
-        KonThread currentThread = this.getSelectedValue();
-        this.clearItems();
-        for (KonThread thread: mThreadList.getThreads()) {
-            ThreadItem newThreadItem = new ThreadItem(thread);
-            thread.addObserver(newThreadItem);
-            this.addItem(newThreadItem);
-        }
-        // reselect thread
-        if (currentThread != null)
-            this.setSelectedItem(currentThread);
+        for (KonThread thread: mThreadList.getThreads())
+            if (!this.containsValue(thread))
+                this.addItem(new ThreadItem(thread));
     }
 
     void selectLastThread() {
         int i = Config.getInstance().getInt(Config.VIEW_SELECTED_THREAD);
         if (i < 0) i = 0;
-        this.setSelectedRow(i);
+        this.setSelectedItem(i);
     }
 
     void save() {

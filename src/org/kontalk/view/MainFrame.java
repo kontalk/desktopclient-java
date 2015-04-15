@@ -496,7 +496,7 @@ final class MainFrame extends WebFrame {
                 this.filterList();
             }
             private void filterList() {
-                table.filter(searchField.getText());
+                table.filterItems(searchField.getText());
             }
         });
         WebButton clearSearchButton = new WebButton(clearIcon);
