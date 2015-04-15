@@ -39,7 +39,7 @@ import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * A generic list view for subclassing.
- * TODO replace by TableView(?)
+ * TODO unused
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  * @param <I> the view item in this list
@@ -85,9 +85,6 @@ abstract class ListView<I extends ListView<I, V>.ListItem, V extends Observable>
                     mTip.closeTooltip();
             }
         });
-
-        // TODO JLists in Swing don't forward mouse events to their items, we
-        // need to do this manually here
     }
 
     protected void clearModel() {

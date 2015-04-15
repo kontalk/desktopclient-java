@@ -51,11 +51,11 @@ import org.ocpsoft.prettytime.PrettyTime;
 abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
 
     /** The items in this list . */
-    protected final SortedMap<V, I> mItems = new TreeMap<>();
+    private final SortedMap<V, I> mItems = new TreeMap<>();
     /** The currently displayed items. A subset of mItems */
     private final DefaultTableModel mFilteredTableModel = new DefaultTableModel(0, 1);
 
-    /** The current search string */
+    /** The current search string. */
     private String mSearch = "";
 
     protected final static PrettyTime TOOLTIP_DATE_FORMAT = new PrettyTime();
@@ -123,7 +123,6 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
     protected void addItem(I item) {
         item.mValue.addObserver(item);
-        // TODO sorting?
         mItems.put(item.mValue, item);
         if (item.contains(mSearch.toLowerCase()))
             mFilteredTableModel.addRow(new Object[]{item});
@@ -199,13 +198,13 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         this.setRowHeight(row, height);
     }
 
-    private void showTooltip(TableItem messageView) {
+    private void showTooltip(TableItem item) {
         if (mTip != null)
             mTip.closeTooltip();
 
         WebCustomTooltip tip = TooltipManager.showOneTimeTooltip(this,
                 this.getMousePosition(),
-                messageView.getTooltipText(),
+                item.getTooltipText(),
                 TooltipWay.down);
         mTip = tip;
     }

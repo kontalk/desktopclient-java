@@ -91,7 +91,7 @@ final class ThreadView extends WebScrollPane {
 
     private final View mView;
 
-    private final Map<Integer, MessageViewList> mThreadCache = new HashMap<>();
+    private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
     private Background mDefaultBG;
 
     ThreadView(View view) {
@@ -117,15 +117,15 @@ final class ThreadView extends WebScrollPane {
         this.loadDefaultBG();
     }
 
-    private Optional<MessageViewList> getCurrentView() {
+    private Optional<MessageList> getCurrentView() {
         Component view = this.getViewport().getView();
         if (view == null)
             return Optional.empty();
-        return Optional.of((MessageViewList) view);
+        return Optional.of((MessageList) view);
     }
 
     Optional<KonThread> getCurrentThread() {
-        Optional<MessageViewList> optview = this.getCurrentView();
+        Optional<MessageList> optview = this.getCurrentView();
         return optview.isPresent() ?
                 Optional.of(optview.get().getThread()) :
                 Optional.<KonThread>empty();
@@ -134,12 +134,12 @@ final class ThreadView extends WebScrollPane {
     void showThread(KonThread thread) {
         boolean isNew = false;
         if (!mThreadCache.containsKey(thread.getID())) {
-            MessageViewList newMessageList = new MessageViewList(thread);
+            MessageList newMessageList = new MessageList(thread);
             thread.addObserver(newMessageList);
             mThreadCache.put(thread.getID(), newMessageList);
             isNew = true;
         }
-        MessageViewList table = mThreadCache.get(thread.getID());
+        MessageList table = mThreadCache.get(thread.getID());
         this.getViewport().setView(table);
 
         if (table.getRowCount() > 0 && isNew) {
@@ -163,7 +163,7 @@ final class ThreadView extends WebScrollPane {
     }
 
     private void removeThread(KonThread thread) {
-        MessageViewList viewList = mThreadCache.get(thread.getID());
+        MessageList viewList = mThreadCache.get(thread.getID());
         if (viewList != null)
             viewList.clearItems();
         thread.deleteObserver(viewList);
@@ -174,7 +174,7 @@ final class ThreadView extends WebScrollPane {
     }
 
     private Background getCurrentBackground() {
-        Optional<MessageViewList> optView = this.getCurrentView();
+        Optional<MessageList> optView = this.getCurrentView();
         if (!optView.isPresent())
             return mDefaultBG;
         Optional<Background> optBG = optView.get().getBG();
@@ -186,13 +186,13 @@ final class ThreadView extends WebScrollPane {
     /**
      * View all messages of one thread in a left/right MIM style list.
      */
-    private final class MessageViewList extends TableView<MessageViewList.MessageItem, KonMessage> {
+    private final class MessageList extends TableView<MessageList.MessageItem, KonMessage> {
 
         private final KonThread mThread;
         private boolean mScrollDownOnResize = false;
         private Optional<Background> mBackground = Optional.empty();
 
-        MessageViewList(KonThread thread) {
+        MessageList(KonThread thread) {
             super();
             mThread = thread;
 
@@ -209,7 +209,7 @@ final class ThreadView extends WebScrollPane {
                     // scrolling to a new component in the table
                     // is only possible after the component was rendered (which
                     // is now)
-                    MessageViewList table = MessageViewList.this;
+                    MessageList table = MessageList.this;
                     if (mScrollDownOnResize) {
                         table.scrollToRow(table.getRowCount() - 1);
                         mScrollDownOnResize = false;
@@ -232,7 +232,7 @@ final class ThreadView extends WebScrollPane {
                 }
                 private void check(MouseEvent e) {
                     if (e.isPopupTrigger()) {
-                        MessageViewList.this.showPopupMenu(e);
+                        MessageList.this.showPopupMenu(e);
                     }
                 }
             });
@@ -359,7 +359,7 @@ final class ThreadView extends WebScrollPane {
                 // icons
                 mStatusIconLabel = new WebLabel();
 
-                this.updateView(null);
+                this.update(null);
 
                 // save the width that is requied to show the text in one line
                 // before line wrap and only once!
@@ -401,10 +401,10 @@ final class ThreadView extends WebScrollPane {
 
             @Override
             protected void updateOnEDT(Object arg) {
-                this.updateView(arg);
+                this.update(arg);
 
                 // find row of item...
-                MessageViewList table = MessageViewList.this;
+                MessageList table = MessageList.this;
                 int row;
                 for (row = table.getRowCount()-1; row >= 0; row--)
                     if (this == table.getModel().getValueAt(row, 0))
@@ -419,7 +419,7 @@ final class ThreadView extends WebScrollPane {
             /**
              * Update what can change in a message: text, icon and attachment.
              */
-            private void updateView(Object arg) {
+            private void update(Object arg) {
                 if (arg == null || arg instanceof String)
                     this.updateText();
 
@@ -727,15 +727,15 @@ final class ThreadView extends WebScrollPane {
 
     private static Runnable linkRunnable(final Path path) {
         return new Runnable () {
-                @Override
-                public void run () {
-                    Desktop dt = Desktop.getDesktop();
-                    try {
-                        dt.open(new File(path.toString()));
-                    } catch (IOException ex) {
-                        LOGGER.log(Level.WARNING, "can't open attachment", ex);
-                    }
+            @Override
+            public void run () {
+                Desktop dt = Desktop.getDesktop();
+                try {
+                    dt.open(new File(path.toString()));
+                } catch (IOException ex) {
+                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
                 }
-            };
+            }
+        };
     }
 }
