@@ -399,7 +399,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
         }
 
         private void saveThread() {
-            if (!mSubjectField.getText().isEmpty()) {
+            if (!mSubjectField.getText().equals(mThreadItem.mValue.getSubject())) {
                 mThreadItem.mValue.setSubject(mSubjectField.getText());
             }
             List<?> participants = mParticipantsList.getCheckedValues();
