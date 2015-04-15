@@ -19,6 +19,7 @@
 package org.kontalk.system;
 
 import java.util.Date;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
@@ -190,6 +191,13 @@ public final class Control extends Observable {
     }
 
     public void handleSecurityErrors(KonMessage message) {
+        EnumSet<Coder.Error> errors = message.getCoderStatus().getErrors();
+        if (errors.contains(Coder.Error.KEY_UNAVAILABLE) ||
+                errors.contains(Coder.Error.INVALID_SIGNATURE) ||
+                errors.contains(Coder.Error.INVALID_SENDER)) {
+            // maybe there is something wrong with the senders key
+            this.sendKeyRequest(message.getUser());
+        }
         this.setChanged();
         this.notifyObservers(new ViewEvent.SecurityError(message));
     }
