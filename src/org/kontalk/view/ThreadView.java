@@ -359,7 +359,7 @@ final class ThreadView extends WebScrollPane {
                 // icons
                 mStatusIconLabel = new WebLabel();
 
-                this.update(null);
+                this.updateView(null);
 
                 // save the width that is requied to show the text in one line
                 // before line wrap and only once!
@@ -401,7 +401,7 @@ final class ThreadView extends WebScrollPane {
 
             @Override
             protected void updateOnEDT(Object arg) {
-                this.update(arg);
+                this.updateView(arg);
 
                 // find row of item...
                 MessageList table = MessageList.this;
@@ -419,7 +419,7 @@ final class ThreadView extends WebScrollPane {
             /**
              * Update what can change in a message: text, icon and attachment.
              */
-            private void update(Object arg) {
+            private void updateView(Object arg) {
                 if (arg == null || arg instanceof String)
                     this.updateText();
 
