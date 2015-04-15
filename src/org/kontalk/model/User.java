@@ -37,7 +37,7 @@ import org.kontalk.system.Database;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class User extends Observable {
+public final class User extends Observable implements Comparable<User> {
     private final static Logger LOGGER = Logger.getLogger(User.class.getName());
 
     /**
@@ -236,5 +236,10 @@ public final class User extends Observable {
     @Override
     public String toString() {
         return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint;
+    }
+
+    @Override
+    public int compareTo(User o) {
+        return Integer.compare(this.mID, o.mID);
     }
 }

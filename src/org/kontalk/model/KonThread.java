@@ -44,7 +44,7 @@ import org.kontalk.system.Database;
  * A model for a conversation thread consisting of an ordered list of messages.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class KonThread extends Observable {
+public final class KonThread extends Observable implements Comparable<KonThread> {
     private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());
 
     public static final String TABLE = "threads";
@@ -433,5 +433,10 @@ public final class KonThread extends Observable {
             hash = 37 * hash + Objects.hashCode(this.mImagePath);
             return hash;
         }
+    }
+
+    @Override
+    public int compareTo(KonThread o) {
+        return Integer.compare(this.mID, o.mID);
     }
 }
