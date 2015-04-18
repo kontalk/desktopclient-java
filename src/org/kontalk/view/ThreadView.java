@@ -26,12 +26,14 @@ import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.text.WebTextArea;
+import com.alee.laf.text.WebEditorPane;
+import com.alee.laf.text.WebTextPane;
 import com.alee.laf.viewport.WebViewport;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
@@ -315,7 +317,7 @@ final class ThreadView extends WebScrollPane {
         final class MessageItem extends TableView<MessageItem, KonMessage>.TableItem {
 
             private final WebPanel mContentPanel;
-            private final WebTextArea mTextArea;
+            private final WebTextPane mTextPane;
             private final WebLabel mStatusIconLabel;
             private final int mPreferredTextAreaWidth;
 
@@ -347,10 +349,17 @@ final class ThreadView extends WebScrollPane {
                 mContentPanel = new WebPanel();
                 mContentPanel.setOpaque(false);
                 // text area
-                mTextArea = new WebTextArea();
-                mTextArea.setOpaque(false);
-                mTextArea.setFontSize(13);
-                mContentPanel.add(mTextArea, BorderLayout.CENTER);
+                mTextPane = new WebTextPane();
+                mTextPane.setEditable(false);
+                mTextPane.setOpaque(false);
+                //mTextPane.setFontSize(12);
+                // sets default font
+                mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
+                //for detecting clicks
+                mTextPane.addMouseListener(LinkUtils.CLICK_LISTENER);
+                //for detecting motion
+                mTextPane.addMouseMotionListener(LinkUtils.MOTION_LISTENER);
+                mContentPanel.add(mTextPane, BorderLayout.CENTER);
                 messagePanel.add(mContentPanel, BorderLayout.CENTER);
 
                 WebPanel statusPanel = new WebPanel();
@@ -361,12 +370,9 @@ final class ThreadView extends WebScrollPane {
 
                 this.updateView(null);
 
-                // save the width that is requied to show the text in one line
+                // save the width that is requied to show the text in one line;
                 // before line wrap and only once!
-                mPreferredTextAreaWidth = mTextArea.getPreferredSize().width;
-
-                mTextArea.setLineWrap(true);
-                mTextArea.setWrapStyleWord(true);
+                mPreferredTextAreaWidth = mTextPane.getPreferredSize().width;
 
                 statusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
@@ -396,7 +402,10 @@ final class ThreadView extends WebScrollPane {
                 int maxWidth = (int)(listWidth * 0.8);
                 int width = Math.min(mPreferredTextAreaWidth, maxWidth);
                 // height is reset later
-                mTextArea.setSize(width, mTextArea.getPreferredSize().height);
+                mTextPane.setSize(width, -1);
+                // textArea does not need this but textPane does, and editorPane
+                // is again totally different; I love Swing
+                mTextPane.setPreferredSize(new Dimension(width, mTextPane.getMinimumSize().height));
             }
 
             @Override
@@ -434,10 +443,11 @@ final class ThreadView extends WebScrollPane {
             private void updateText() {
                 boolean encrypted = mValue.getCoderStatus().isEncrypted();
                 String text = encrypted ? Tr.tr("[encrypted]") : mValue.getContent().getText();
-                mTextArea.setFontStyle(false, encrypted);
-                mTextArea.setText(text);
+                //mTextPane.setFontStyle(false, encrypted);
+                //mTextPane.setText(text);
+                LinkUtils.linkify(mTextPane.getStyledDocument(), text);
                 // hide area if there is no text
-                mTextArea.setVisible(!text.isEmpty());
+                mTextPane.setVisible(!text.isEmpty());
             }
 
             // status icon
@@ -578,7 +588,7 @@ final class ThreadView extends WebScrollPane {
 
             @Override
             protected boolean contains(String search) {
-                return mTextArea.getText().toLowerCase().contains(search) ||
+                return mTextPane.getText().toLowerCase().contains(search) ||
                         mValue.getUser().getName().toLowerCase().contains(search) ||
                         mValue.getJID().toLowerCase().contains(search);
             }
