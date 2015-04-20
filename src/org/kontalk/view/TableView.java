@@ -199,12 +199,16 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
     }
 
     private void showTooltip(TableItem item) {
+        String text = item.getTooltipText();
+        if (text.isEmpty())
+            return;
+
         if (mTip != null)
             mTip.closeTooltip();
 
         WebCustomTooltip tip = TooltipManager.showOneTimeTooltip(this,
                 this.getMousePosition(),
-                item.getTooltipText(),
+                text,
                 TooltipWay.down);
         mTip = tip;
     }
@@ -244,7 +248,9 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
         void repaint(boolean isSelected) {};
 
-        protected abstract String getTooltipText();
+        protected String getTooltipText() {
+            return "";
+        };
 
         /**
          * Return if the content of the item contains the search string.
@@ -271,7 +277,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         // catch the event, when a tooltip should be shown for this item and
         // create a own one
         // note: together with the cell renderer the tooltip can be added
-        // directly the item, but the behaviour is buggy so we keep this
+        // directly to the item, but the behaviour is buggy so we keep this
         @Override
         public String getToolTipText(MouseEvent event) {
             TableView.this.showTooltip(this);

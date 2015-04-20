@@ -33,6 +33,7 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
+import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.swing.DialogOptions;
 import com.alee.utils.swing.UnselectableButtonGroup;
 import java.awt.BorderLayout;
@@ -242,6 +243,8 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
             for (User user : mValue.getUser())
                 nameList.add(user.getName().isEmpty() ? Tr.tr("<unknown>") : user.getName());
             mUserLabel.setText(StringUtils.join(nameList, ", "));
+
+            TooltipManager.setTooltip(this, this.getTooltipText());
         }
 
         @Override

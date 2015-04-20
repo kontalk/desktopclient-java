@@ -29,6 +29,7 @@ import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.laf.viewport.WebViewport;
+import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -318,6 +319,7 @@ final class ThreadView extends WebScrollPane {
 
             private final WebPanel mContentPanel;
             private final WebTextPane mTextPane;
+            private final WebPanel mStatusPanel;
             private final WebLabel mStatusIconLabel;
             private final int mPreferredTextAreaWidth;
 
@@ -362,9 +364,10 @@ final class ThreadView extends WebScrollPane {
                 mContentPanel.add(mTextPane, BorderLayout.CENTER);
                 messagePanel.add(mContentPanel, BorderLayout.CENTER);
 
-                WebPanel statusPanel = new WebPanel();
-                statusPanel.setOpaque(false);
-                statusPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
+                mStatusPanel = new WebPanel();
+                mStatusPanel.setOpaque(false);
+                TooltipManager.addTooltip(mStatusPanel, "???");
+                mStatusPanel.setLayout(new FlowLayout());
                 // icons
                 mStatusIconLabel = new WebLabel();
 
@@ -374,20 +377,24 @@ final class ThreadView extends WebScrollPane {
                 // before line wrap and only once!
                 mPreferredTextAreaWidth = mTextPane.getPreferredSize().width;
 
-                statusPanel.add(mStatusIconLabel);
+                mStatusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
                 if (message.getCoderStatus().isSecure()) {
                     encryptIconLabel.setIcon(CRYPT_ICON);
                 } else {
                     encryptIconLabel.setIcon(UNENCRYPT_ICON);
                 }
-                statusPanel.add(encryptIconLabel);
+                mStatusPanel.add(encryptIconLabel);
                 // date label
                 WebLabel dateLabel = new WebLabel(SHORT_DATE_FORMAT.format(mValue.getDate()));
                 dateLabel.setForeground(Color.GRAY);
                 dateLabel.setFontSize(11);
-                statusPanel.add(dateLabel);
-                messagePanel.add(statusPanel, BorderLayout.SOUTH);
+                mStatusPanel.add(dateLabel);
+
+                WebPanel southPanel = new WebPanel();
+                southPanel.setOpaque(false);
+                southPanel.add(mStatusPanel, BorderLayout.EAST);
+                messagePanel.add(southPanel, BorderLayout.SOUTH);
 
                 if (mValue.getDir().equals(KonMessage.Direction.IN)) {
                     this.add(messagePanel, BorderLayout.WEST);
@@ -470,6 +477,36 @@ final class ThreadView extends WebScrollPane {
                             LOGGER.warning("unknown message receipt status!?");
                     }
                 }
+
+                // tooltip
+                String encryption = Tr.tr("unknown");
+                switch (mValue.getCoderStatus().getEncryption()) {
+                    case NOT: encryption = Tr.tr("not encrypted"); break;
+                    case ENCRYPTED: encryption = Tr.tr("encrypted"); break;
+                    case DECRYPTED: encryption = Tr.tr("decrypted"); break;
+                }
+                String verification = Tr.tr("unknown");
+                switch (mValue.getCoderStatus().getSigning()) {
+                    case NOT: verification = Tr.tr("not signed"); break;
+                    case SIGNED: verification = Tr.tr("signed"); break;
+                    case VERIFIED: verification = Tr.tr("verified"); break;
+                }
+                String problems = "";
+                if (mValue.getCoderStatus().getErrors().isEmpty()) {
+                    problems = Tr.tr("none");
+                } else {
+                    for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
+                        problems += error.toString() + " <br> ";
+                    }
+                }
+
+                String html = "<html><body>" +
+                        //"<h3>Header</h3>" +
+                        "<br>" +
+                        Tr.tr("Security")+": " + encryption + " / " + verification + "<br>" +
+                        Tr.tr("Problems")+": " + problems;
+
+                TooltipManager.setTooltip(mStatusPanel, html);
             }
 
             // attachment / image
@@ -495,7 +532,7 @@ final class ThreadView extends WebScrollPane {
                 if (!att.getFileName().isEmpty() &&
                         att.getMimeType().startsWith("image")) {
                     WebLinkLabel imageView = new WebLinkLabel();
-                    imageView.setLink("", linkRunnable(path));
+                    imageView.setLink("", createLinkRunnable(path));
                     // file should be present and should be an image, show it
                     ImageLoader.setImageIconAsync(imageView, path.toString());
                     mContentPanel.add(imageView, BorderLayout.SOUTH);
@@ -514,7 +551,7 @@ final class ThreadView extends WebScrollPane {
                     attLabel = new WebLabel(statusText);
                 } else {
                     WebLinkLabel linkLabel = new WebLinkLabel();
-                    linkLabel.setLink(fName, linkRunnable(path));
+                    linkLabel.setLink(fName, createLinkRunnable(path));
                     attLabel = linkLabel;
                 }
                 WebLabel labelLabel = new WebLabel(Tr.tr("Attachment:")+" ");
@@ -552,38 +589,6 @@ final class ThreadView extends WebScrollPane {
                 String date = LONG_DATE_FORMAT.format(mValue.getDate());
                 String from = getFromString(mValue);
                 return date + " - " + from + " : " + mValue.getContent().getText();
-            }
-
-            @Override
-            protected String getTooltipText() {
-                String encryption = Tr.tr("unknown");
-                switch (mValue.getCoderStatus().getEncryption()) {
-                    case NOT: encryption = Tr.tr("not encrypted"); break;
-                    case ENCRYPTED: encryption = Tr.tr("encrypted"); break;
-                    case DECRYPTED: encryption = Tr.tr("decrypted"); break;
-                }
-                String verification = Tr.tr("unknown");
-                switch (mValue.getCoderStatus().getSigning()) {
-                    case NOT: verification = Tr.tr("not signed"); break;
-                    case SIGNED: verification = Tr.tr("signed"); break;
-                    case VERIFIED: verification = Tr.tr("verified"); break;
-                }
-                String problems = "";
-                if (mValue.getCoderStatus().getErrors().isEmpty()) {
-                    problems = Tr.tr("none");
-                } else {
-                  for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
-                      problems += error.toString() + " <br> ";
-                  }
-                }
-
-                String html = "<html><body>" +
-                        //"<h3>Header</h3>" +
-                        "<br>" +
-                        Tr.tr("Security")+": " + encryption + " / " + verification + "<br>" +
-                        Tr.tr("Problems")+": " + problems;
-
-                return html;
             }
 
             @Override
@@ -670,7 +675,7 @@ final class ThreadView extends WebScrollPane {
                         0, 0, new Color(0, 0, 0, 0),
                         0, height, mBottomColor);
                 cachedG.setPaint(p2);
-                cachedG.fillRect(0, 0, width, getHeight());
+                cachedG.fillRect(0, 0, width, ThreadView.this.getHeight());
             }
             // tiling
             int iw = scaledImage.getWidth(null);
@@ -735,7 +740,7 @@ final class ThreadView extends WebScrollPane {
         return from;
     }
 
-    private static Runnable linkRunnable(final Path path) {
+    private static Runnable createLinkRunnable(final Path path) {
         return new Runnable () {
             @Override
             public void run () {
