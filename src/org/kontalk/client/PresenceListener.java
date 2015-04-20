@@ -58,10 +58,6 @@ public class PresenceListener implements PacketListener {
         Presence presence = (Presence) packet;
 
         String jid = XmppStringUtils.parseBareJid(presence.getFrom());
-        if (jid.equals(XmppStringUtils.parseBareJid(mClient.getOwnJID())))
-            // this is a presence for/from myself, ignore it
-            return;
-
         Presence bestPresence = mRoster.getPresence(jid);
 
         // NOTE: a delay extension is sometimes included, don't know why

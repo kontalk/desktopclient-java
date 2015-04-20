@@ -107,5 +107,4 @@ final class KonRosterListener implements RosterListener {
                 bestPresence.getType(),
                 bestPresence.getStatus());
     }
-
 }

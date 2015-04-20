@@ -328,6 +328,11 @@ public final class Control extends Observable {
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
+        if (jid.equals(XmppStringUtils.parseBareJid(mClient.getOwnJID()))
+                && !UserList.getInstance().contains(jid))
+            // don't wanna see myself
+            return;
+
         Optional<User> optUser = UserList.getInstance().get(jid);
         if (!optUser.isPresent()) {
             LOGGER.warning("(presence) can't find user with jid: "+jid);
