@@ -25,6 +25,8 @@ import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.TooltipWay;
 import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
@@ -206,10 +208,16 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         if (mTip != null)
             mTip.closeTooltip();
 
+        // weblaf currently cant show tooltips for comps with table/list/...
+        // renderer, we need to set the position ourself
+        Point p = this.getMousePosition();
+        if (p == null)
+            return;
+        Rectangle rec = this.getCellRect(this.rowAtPoint(p), 0, false);
         WebCustomTooltip tip = TooltipManager.showOneTimeTooltip(this,
-                this.getMousePosition(),
+                new Point(rec.x + rec.width, rec.y + rec.height / 2),
                 text,
-                TooltipWay.down);
+                TooltipWay.right);
         mTip = tip;
     }
 
@@ -296,11 +304,11 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
                 boolean hasFocus,
                 int row,
                 int column) {
-            TableItem panel = (TableItem) value;
+            TableItem item = (TableItem) value;
             // TODO do this here?
-            panel.resize(table.getWidth());
-            panel.repaint(isSelected);
-            return panel;
+            item.resize(table.getWidth());
+            item.repaint(isSelected);
+            return item;
         }
     }
 }

@@ -172,7 +172,6 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
             String html = "<html><body>" +
                     //"<h3>Header</h3>" +
-                    "<br>" +
                     Tr.tr("Available")+": " + isOnline + "<br>" +
                     Tr.tr("Status")+": " + status + "<br>" +
                     Tr.tr("Blocked")+": " + isBlocked + "<br>" +
