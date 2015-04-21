@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.crypto.Coder;
@@ -48,11 +49,11 @@ public final class OutMessage extends KonMessage {
 public static class Builder extends KonMessage.Builder {
 
         public Builder(KonThread thread, User user, boolean encrypted) {
-            super(-1, thread, Direction.OUT, user);
+            super(-1, thread, Direction.OUT, user, new Date());
 
             mJID = user.getJID();
             mXMPPID = "Kon_" + StringUtils.randomString(8);
-            mDate = new Date();
+            mServerDate = Optional.empty();
             mReceiptStatus = Status.PENDING;
 
             mCoderStatus = new CoderStatus(
@@ -71,7 +72,7 @@ public static class Builder extends KonMessage.Builder {
         public void xmppID(String xmppID) { throw new UnsupportedOperationException(); }
 
         @Override
-        public void date(Date date) { throw new UnsupportedOperationException(); }
+        public void serverDate(Optional<Date> date) { throw new UnsupportedOperationException(); }
         @Override
         public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
 

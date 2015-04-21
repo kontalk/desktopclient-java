@@ -225,7 +225,11 @@ public final class Control extends Observable {
      * receipts): Create, save and process the message.
      * @return true on success or message is a duplicate, false on unexpected failure
      */
-    public boolean newInMessage(String from, String xmppID, String xmppThreadID, Date date, MessageContent content) {
+    public boolean newInMessage(String from,
+            String xmppID,
+            String xmppThreadID,
+            Optional<Date> serverDate,
+            MessageContent content) {
         String jid = XmppStringUtils.parseBareJid(from);
         Optional<User> optUser = this.getOrAddUser(jid);
         if (!optUser.isPresent()) {
@@ -240,7 +244,7 @@ public final class Control extends Observable {
         InMessage.Builder builder = new InMessage.Builder(thread, user);
         builder.jid(from);
         builder.xmppID(xmppID);
-        builder.date(date);
+        builder.serverDate(serverDate);
         builder.content(content);
         InMessage newMessage = builder.build();
         boolean added = MessageList.getInstance().add(newMessage);
@@ -287,11 +291,16 @@ public final class Control extends Observable {
     /**
      * Inform model (and view) about a received chat state notification.
      */
-    public void processChatState(String from, String xmppThreadID, Date date, String chatStateString) {
-        long diff = new Date().getTime() - date.getTime();
-        if (diff > TimeUnit.SECONDS.toMillis(10)) {
-            // too old
-            return;
+    public void processChatState(String from,
+            String xmppThreadID,
+            Optional<Date> serverDate,
+            String chatStateString) {
+        if (serverDate.isPresent()) {
+            long diff = new Date().getTime() - serverDate.get().getTime();
+            if (diff > TimeUnit.SECONDS.toMillis(10)) {
+                // too old
+                return;
+            }
         }
         ChatState chatState;
         try {

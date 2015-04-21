@@ -22,6 +22,7 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.Optional;
 import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
@@ -64,10 +65,7 @@ final public class KonMessageListener implements PacketListener {
         if (m.getType() == Message.Type.chat) {
             // somebody has news for us
             this.processChatMessage(m);
-        }
-
-        // error message
-        else if (m.getType() == Message.Type.error) {
+        } else if (m.getType() == Message.Type.error) {
             LOGGER.warning("got an error message: "+m.toXML());
             String xmppID = m.getPacketID();
             if (xmppID == null || xmppID.isEmpty()) {
@@ -82,7 +80,7 @@ final public class KonMessageListener implements PacketListener {
     }
 
     private void processChatMessage(Message m) {
-        LOGGER.info("got message: "+m.toXML());
+        LOGGER.info("got message: "+StringUtils.abbreviate(m.toXML().toString(), 300));
         // note: thread and subject are null if message comes from the Kontalk
         // Android client
 
@@ -100,16 +98,12 @@ final public class KonMessageListener implements PacketListener {
         if (delay == null) {
             delay = m.getExtension("x", "jabber:x:delay");
         }
-        Date date;
+        Optional<Date> serverDate = Optional.empty();
         if (delay != null && delay instanceof DelayInformation) {
-                date = ((DelayInformation) delay).getStamp();
-                if (date.after(new Date())) {
-                    LOGGER.info("delay date is in future (reset to 'now'): "+date);
-                    date = new Date();
-                }
-        } else {
-            // apparently there was no delay, so use the current time
-            date = new Date();
+                Date date = ((DelayInformation) delay).getStamp();
+                if (date.after(new Date()))
+                    LOGGER.warning("delay time is in future: "+date);
+                serverDate = Optional.of(date);
         }
 
         // process possible chat state notification (XEP-0085)
@@ -118,7 +112,7 @@ final public class KonMessageListener implements PacketListener {
             LOGGER.info("got chatstate: " + chatstate.getElementName());
             mControl.processChatState(m.getFrom(),
                     threadID,
-                    date,
+                    serverDate,
                     chatstate.getElementName());
             if (!chatstate.getElementName().equals(ChatState.active.name()))
                 // we assume there is no other content
@@ -159,7 +153,7 @@ final public class KonMessageListener implements PacketListener {
         boolean success = mControl.newInMessage(m.getFrom(),
                 xmppID,
                 threadID,
-                date,
+                serverDate,
                 content);
 
         // on success, send a 'received' for a request (XEP-0184)

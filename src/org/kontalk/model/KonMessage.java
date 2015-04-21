@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Observable;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.system.Database;
@@ -77,7 +78,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // a random string if not in message for model consistency
             // Note: must be unique only within a stream (RFC 6120)
             "xmpp_id TEXT NOT NULL, " +
-            // unix time, create/received timestamp
+            // unix time, local creation timestamp
             "date INTEGER NOT NULL, " +
             // enum, server receipt status
             "receipt_status INTEGER NOT NULL, " +
@@ -93,6 +94,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // error child element in JSON format if message could not be
             // delivered (not implemented)
             "server_error TEXT, " +
+            // unix time, transmission/delay timestamp
+            "server_date INTEGER, " +
             // if this combinations is equal we consider messages to be equal
             // (see .equals())
             "UNIQUE (direction, jid, xmpp_id, date), " +
@@ -108,7 +111,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     private final String mJID;
     private final String mXMPPID;
 
+    // (local) creation time
     private final Date mDate;
+    // last timestamp of server transmission packet
+    // incoming: (delayed) sent; outgoing: send/received/error
+    private Optional<Date> mServerDate;
     protected Status mReceiptStatus;
     protected final MessageContent mContent;
 
@@ -126,6 +133,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mJID = builder.mJID;
         mXMPPID = builder.mXMPPID;
         mDate = builder.mDate;
+        mServerDate = builder.mServerDate;
         mReceiptStatus = builder.mReceiptStatus;
         mContent = builder.mContent;
         mCoderStatus = builder.mCoderStatus;
@@ -133,6 +141,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         if (mJID == null ||
                 mXMPPID == null ||
                 mDate == null ||
+                mServerDate == null ||
                 mReceiptStatus == null ||
                 mContent == null ||
                 mCoderStatus == null)
@@ -227,7 +236,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     /**
      * Java's "natural ordering", used for sorting the messages in the order
-     * they are received/created.
+     * they were created.
      * Inconsistent with equals!
      */
     @Override
@@ -259,6 +268,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mCoderStatus.getSigning());
         values.add(mCoderStatus.getErrors());
         values.add(mServerError);
+        values.add(mServerDate);
 
         int id = db.execInsert(TABLE, values);
         if (id <= 0) {
@@ -284,6 +294,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         set.put("encryption_status", mCoderStatus.getEncryption());
         set.put("signing_status", mCoderStatus.getSigning());
         set.put("coder_errors", mCoderStatus.getErrors());
+        set.put("server_date", mServerDate);
         db.execUpdate(TABLE, set, mID);
     }
 
@@ -300,7 +311,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     @Override
     public String toString() {
         return "M:id="+mID+",thread="+mThread+",dir="+mDir+",mUser="+mUser
-                +",jid="+mJID+",xmppid="+mXMPPID+",date="+mDate
+                +",jid="+mJID+",xmppid="+mXMPPID
+                +",date="+mDate+",sdate="+mServerDate
                 +",recstat="+mReceiptStatus+",cont="+mContent
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
@@ -310,11 +322,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         private final KonThread mThread;
         private final Direction mDir;
         private final User mUser;
+        private final Date mDate;
 
         protected String mJID = null;
         protected String mXMPPID = null;
 
-        protected Date mDate = null;
+        protected Optional<Date> mServerDate = null;
         protected Status mReceiptStatus = null;
         protected MessageContent mContent = null;
 
@@ -324,17 +337,19 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         Builder(int id,
                 KonThread thread,
                 Direction dir,
-                User user) {
+                User user,
+                Date date) {
             mID = id;
             mThread = thread;
             mDir = dir;
             mUser = user;
+            mDate = date;
         }
 
         public void jid(String jid) { mJID = jid; }
         public void xmppID(String xmppID) { mXMPPID = xmppID; }
 
-        public void date(Date date) { mDate = date; }
+        public void serverDate(Optional<Date> date) { mServerDate = date; }
         public void receiptStatus(Status status) { mReceiptStatus = status; }
         public void content(MessageContent content) { mContent = content; }
 

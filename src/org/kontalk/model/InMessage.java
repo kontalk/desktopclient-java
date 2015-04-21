@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -29,7 +30,7 @@ import org.kontalk.model.MessageContent.Attachment;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class InMessage extends KonMessage {
-    private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
+    private final static Logger LOGGER = Logger.getLogger(InMessage.class.getName());
 
     /**
      * Create a new incoming message from builder.
@@ -113,7 +114,7 @@ public final class InMessage extends KonMessage {
     public static class Builder extends KonMessage.Builder {
 
         public Builder(KonThread thread, User user) {
-            super(-1, thread, Direction.IN, user);
+            super(-1, thread, Direction.IN, user, new Date());
 
             mReceiptStatus = Status.IN;
         }
@@ -145,5 +146,4 @@ public final class InMessage extends KonMessage {
             return new InMessage(this);
         }
     }
-
 }

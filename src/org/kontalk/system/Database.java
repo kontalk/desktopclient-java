@@ -56,7 +56,7 @@ public final class Database {
 
     private static Database INSTANCE = null;
     private static final String DB_NAME = "kontalk_db.sqlite";
-    private static final String DB_VERSION = "1";
+    private static final int DB_VERSION = 2;
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
 
@@ -142,14 +142,21 @@ public final class Database {
     }
 
     private void update(int fromVersion) throws SQLException {
-        if (fromVersion >= 1)
+        if (fromVersion >= DB_VERSION)
             return;
-        mConn.createStatement().execute("ALTER TABLE "+KonThread.TABLE+
-                " ADD COLUMN "+KonThread.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
+
+        if (fromVersion < 1) {
+            mConn.createStatement().execute("ALTER TABLE "+KonThread.TABLE+
+                    " ADD COLUMN "+KonThread.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
+        }
+        if (fromVersion < 2) {
+            mConn.createStatement().execute("ALTER TABLE "+KonMessage.TABLE+
+                    " ADD COLUMN server_date DEFAULT NULL");
+        }
 
         // set new version
         mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
-        LOGGER.info("updated to version 1");
+        LOGGER.info("updated to version "+DB_VERSION);
     }
 
     synchronized void close() {
