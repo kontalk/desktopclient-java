@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -88,6 +89,7 @@ final class ThreadView extends ScrollPane {
     private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
 
     private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
+    private final static SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
     private final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
 
     private final View mView;
@@ -453,23 +455,39 @@ final class ThreadView extends ScrollPane {
 
             // status icon
             private void updateStatus() {
+                String sent = Tr.tr("Sent:")+" ";
+                final String firstStat;
+                final Date firstDate;
+                String secStat = null;
+                final Date secDate;
                 if (mValue.getDir() == KonMessage.Direction.OUT) {
+                    firstStat = Tr.tr("Created:")+" ";
+                    firstDate = mValue.getDate();
+                    secDate = mValue.getServerDate().orElse(null);
                     switch (mValue.getReceiptStatus()) {
                         case PENDING :
                             mStatusIconLabel.setIcon(PENDING_ICON);
                             break;
                         case SENT :
                             mStatusIconLabel.setIcon(SENT_ICON);
+                            secStat = sent;
                             break;
                         case RECEIVED:
                             mStatusIconLabel.setIcon(DELIVERED_ICON);
+                            secStat = Tr.tr("Delivered:")+" ";
                             break;
                         case ERROR:
                             mStatusIconLabel.setIcon(ERROR_ICON);
+                            secStat = Tr.tr("Error report:")+" ";
                             break;
                         default:
                             LOGGER.warning("unknown message receipt status!?");
                     }
+                } else {
+                    firstStat = sent;
+                    firstDate = mValue.getServerDate().orElse(null);
+                    secStat = Tr.tr("Received: ")+" ";
+                    secDate = mValue.getDate();
                 }
 
                 // tooltip
@@ -486,19 +504,19 @@ final class ThreadView extends ScrollPane {
                     case VERIFIED: verification = Tr.tr("verified"); break;
                 }
                 String problems = "";
-                if (mValue.getCoderStatus().getErrors().isEmpty()) {
-                    problems = Tr.tr("none");
-                } else {
-                    for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
-                        problems += error.toString() + " <br> ";
-                    }
+                for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
+                    problems += error.toString() + " <br> ";
                 }
 
-                String html = "<html><body>" +
-                        //"<h3>Header</h3>" +
-                        "<br>" +
-                        Tr.tr("Security")+": " + encryption + " / " + verification + "<br>" +
-                        Tr.tr("Problems")+": " + problems;
+                String html = "<html><body>" + //"<h3>Header</h3>"+
+                        "<br>";
+                if (firstDate != null)
+                    html += firstStat + MID_DATE_FORMAT.format(firstDate) + "<br>";
+                if (secStat != null && secDate != null)
+                    html += secStat + MID_DATE_FORMAT.format(secDate) + "<br>";
+                html += Tr.tr("Security")+": " + encryption + " / " + verification + "<br>";
+                if (!problems.isEmpty())
+                    html += Tr.tr("Problems")+": " + problems;
 
                 TooltipManager.setTooltip(mStatusPanel, html);
             }
