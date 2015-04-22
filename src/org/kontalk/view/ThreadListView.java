@@ -431,7 +431,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
             @Override
             public String toString() {
                 String jid = "<" + View.shortenJID(user.getJID(), 40) + ">";
-                String name = View.shorten(user.getName(), 24);
+                String name = StringUtils.abbreviate(user.getName(), 24);
                 return name.isEmpty() ? jid : name +" " + jid;
             }
         }

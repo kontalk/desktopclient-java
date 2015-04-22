@@ -70,6 +70,7 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
+import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
@@ -633,16 +634,11 @@ public final class View implements Observer {
 
     static String shortenJID(String jid, int maxLength) {
         if (jid.length() > maxLength) {
-            String local = shorten(XmppStringUtils.parseLocalpart(jid), (int)(maxLength * 0.4));
-            String domain = shorten(XmppStringUtils.parseDomain(jid), (int)(maxLength * 0.6));
+            String local = StringUtils.abbreviate(XmppStringUtils.parseLocalpart(jid), (int)(maxLength * 0.4));
+            String domain = StringUtils.abbreviate(XmppStringUtils.parseDomain(jid), (int)(maxLength * 0.6));
             jid = XmppStringUtils.completeJidFrom(local, domain);
         }
         return jid;
-    }
-
-    static String shorten(String s, int maxLength) {
-        if (maxLength < 6) maxLength = 6;
-        return s.length() >= maxLength ? s.substring(0, maxLength - 3) + "..." : s;
     }
 
     public static Optional<View> create(final Control control) {
