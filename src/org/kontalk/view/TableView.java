@@ -205,20 +205,21 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         if (text.isEmpty())
             return;
 
-        if (mTip != null)
-            mTip.closeTooltip();
-
         // weblaf currently cant show tooltips for comps with table/list/...
         // renderer, we need to set the position ourself
         Point p = this.getMousePosition();
         if (p == null)
             return;
         Rectangle rec = this.getCellRect(this.rowAtPoint(p), 0, false);
-        WebCustomTooltip tip = TooltipManager.showOneTimeTooltip(this,
-                new Point(rec.x + rec.width, rec.y + rec.height / 2),
-                text,
-                TooltipWay.right);
-        mTip = tip;
+        Point pos = new Point(rec.x + rec.width, rec.y + rec.height / 2);
+
+        if (mTip != null && pos.equals(mTip.getDisplayLocation()) && mTip.isShowing())
+            return;
+
+        if (mTip != null)
+            mTip.closeTooltip();
+
+        mTip = TooltipManager.showOneTimeTooltip(this, pos, text, TooltipWay.right);
     }
 
     // JTabel uses this to determine the renderer
