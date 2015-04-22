@@ -25,7 +25,6 @@ import com.alee.laf.list.UnselectableListModel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
-import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.laf.viewport.WebViewport;
@@ -63,7 +62,6 @@ import javax.swing.AbstractCellEditor;
 import javax.swing.Icon;
 import javax.swing.JTable;
 import javax.swing.JViewport;
-import javax.swing.ScrollPaneConstants;
 import javax.swing.table.TableCellEditor;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
@@ -79,7 +77,7 @@ import org.kontalk.util.Tr;
  * Pane that shows the currently selected thread.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class ThreadView extends WebScrollPane {
+final class ThreadView extends ScrollPane {
     private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
 
     private final static Icon PENDING_ICON = View.getIcon("ic_msg_pending.png");;
@@ -100,10 +98,6 @@ final class ThreadView extends WebScrollPane {
     ThreadView(View view) {
         super(null);
         mView = view;
-
-        this.setHorizontalScrollBarPolicy(
-                ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
-        this.getVerticalScrollBar().setUnitIncrement(25);
 
         this.setViewport(new WebViewport() {
             @Override
