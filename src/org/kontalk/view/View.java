@@ -395,6 +395,9 @@ public final class View implements Observer {
                 case KEY_UNAVAILABLE:
                     errorText += Tr.tr("Key for receiver not found.");
                     break;
+                case INVALID_PRIVATE_KEY:
+                    errorText += Tr.tr("This message was encrypted with and old or invalid key");
+                    break;
                 default:
                     errorText += Tr.tr("Unusual coder error")+": " + error.toString();
             }
