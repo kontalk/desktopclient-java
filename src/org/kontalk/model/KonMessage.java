@@ -114,8 +114,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     // (local) creation time
     private final Date mDate;
     // last timestamp of server transmission packet
-    // incoming: (delayed) sent; outgoing: send/received/error
-    private Optional<Date> mServerDate;
+    // incoming: (delayed) sent; outgoing: sent/received/error
+    protected Optional<Date> mServerDate;
     protected Status mReceiptStatus;
     protected final MessageContent mContent;
 
@@ -183,6 +183,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     public Date getDate() {
         return mDate;
+    }
+
+    public Optional<Date> getServerDate() {
+        return mServerDate;
     }
 
     public Status getReceiptStatus() {
@@ -333,7 +337,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         protected CoderStatus mCoderStatus = null;
 
-        // used when loading from database
+        // used by subclasses and when loading from database
         Builder(int id,
                 KonThread thread,
                 Direction dir,

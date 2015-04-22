@@ -42,6 +42,7 @@ public final class OutMessage extends KonMessage {
         if (status == Status.RECEIVED && mReceiptStatus != Status.SENT)
             LOGGER.warning("unexpected new status of received message: "+status);
         mReceiptStatus = status;
+        mServerDate = Optional.of(new Date());
         this.save();
         this.changed(mReceiptStatus);
     }
