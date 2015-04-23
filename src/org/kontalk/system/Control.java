@@ -154,7 +154,7 @@ public final class Control extends Observable {
     }
 
     public KonThread createNewThread(Set<User> user) {
-        return ThreadList.getInstance().createNewThread(user);
+        return ThreadList.getInstance().createNew(user);
     }
 
     public void sendKeyRequest(User user) {
@@ -170,7 +170,7 @@ public final class Control extends Observable {
 
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (OutMessage m : MessageList.getInstance().getPendingMessages()) {
+            for (OutMessage m : MessageList.getInstance().getPending()) {
                 mClient.sendMessage(m);
             }
             // send public key requests for Kontalk users with missing key
@@ -280,7 +280,7 @@ public final class Control extends Observable {
      * @param status new receipt status of message
      */
     public void setMessageStatus(String xmppID, KonMessage.Status status) {
-        Optional<OutMessage> optMessage = MessageList.getInstance().getUncompletedMessage(xmppID);
+        Optional<OutMessage> optMessage = MessageList.getInstance().getUncompleted(xmppID);
         if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message");
             return;
@@ -449,7 +449,7 @@ public final class Control extends Observable {
 
     private static KonThread getThread(String xmppThreadID, User user) {
         ThreadList threadList = ThreadList.getInstance();
-        Optional<KonThread> optThread = threadList.getThreadByXMPPID(xmppThreadID);
-        return optThread.orElse(threadList.getThreadByUser(user));
+        Optional<KonThread> optThread = threadList.get(xmppThreadID);
+        return optThread.orElse(threadList.get(user));
     }
 }

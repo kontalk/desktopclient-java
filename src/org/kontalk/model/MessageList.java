@@ -66,7 +66,7 @@ public final class MessageList extends Observable {
                 int id = resultSet.getInt("_id");
                 int threadID = resultSet.getInt("thread_id");
                 Optional<KonThread> optThread =
-                        ThreadList.getInstance().getThreadByID(threadID);
+                        ThreadList.getInstance().get(threadID);
                 if (!optThread.isPresent()) {
                     LOGGER.warning("can't find thread, id:"+threadID);
                     continue;
@@ -151,7 +151,7 @@ public final class MessageList extends Observable {
     /**
      * Get all outgoing messages with status "PENDING".
      */
-    public synchronized Collection<OutMessage> getPendingMessages() {
+    public synchronized Collection<OutMessage> getPending() {
         // TODO performance, probably additional map needed
         Set<OutMessage> s = new HashSet<>();
         for (List<KonMessage> l : mMap.values()) {
@@ -168,9 +168,9 @@ public final class MessageList extends Observable {
 
     /**
      * Get the newest (ie last received) outgoing message that has not the status
-     * "RECEIVED".
+     * "RECEIVED" with the specified XMPP ID.
      */
-    public synchronized Optional<OutMessage> getUncompletedMessage(String xmppID) {
+    public synchronized Optional<OutMessage> getUncompleted(String xmppID) {
         if (!mMap.containsKey(xmppID)) {
             LOGGER.warning("can't find message with XMPP ID: " + xmppID);
             return Optional.empty();

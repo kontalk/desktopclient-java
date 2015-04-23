@@ -281,7 +281,7 @@ public final class View implements Observer {
             public void run() {
                 View.this.mThreadListView.selectLastThread();
 
-                if (ThreadList.getInstance().getThreads().isEmpty())
+                if (ThreadList.getInstance().getAll().isEmpty())
                     mMainFrame.selectTab(MainFrame.Tab.USER);
             }
         });
@@ -464,7 +464,7 @@ public final class View implements Observer {
         if (user == null)
             return;
 
-        KonThread thread = ThreadList.getInstance().getThreadByUser(user);
+        KonThread thread = ThreadList.getInstance().get(user);
         this.showThread(thread);
     }
 

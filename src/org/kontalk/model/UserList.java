@@ -20,18 +20,19 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Observable;
 import java.util.Optional;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
 
 /**
- * Central list of all contacts known to this Kontalk entity.
+ * The global list of all contacts known.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 public final class UserList extends Observable {
@@ -39,6 +40,7 @@ public final class UserList extends Observable {
 
     private final static UserList INSTANCE = new UserList();
 
+    /** JID to user map. */
     private final HashMap<String, User> mMap = new HashMap<>();
 
     private UserList() {
@@ -59,7 +61,9 @@ public final class UserList extends Observable {
                 boolean encr = resultSet.getBoolean("encrypted");
                 String key = Database.getString(resultSet, "public_key");
                 String fp = Database.getString(resultSet, "key_fingerprint");
-                mMap.put(jid, new User(id, jid, name, status, lastSeen, encr, key, fp));
+                synchronized (this) {
+                    mMap.put(jid, new User(id, jid, name, status, lastSeen, encr, key, fp));
+                }
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load users from db", ex);
@@ -67,8 +71,8 @@ public final class UserList extends Observable {
         this.changed();
     }
 
-    public Collection<User> getAll() {
-            return mMap.values();
+    public synchronized SortedSet<User> getAll() {
+        return new TreeSet<>(mMap.values());
     }
 
     /**
@@ -77,7 +81,7 @@ public final class UserList extends Observable {
      * @param name nickname of new user, use an empty string if not known
      * @return the newly created user, if one was created
      */
-    public Optional<User> add(String jid, String name) {
+    public synchronized Optional<User> add(String jid, String name) {
         jid = XmppStringUtils.parseBareJid(jid);
         if (mMap.containsKey(jid)) {
             LOGGER.warning("user already exists, jid: "+jid);
@@ -90,13 +94,13 @@ public final class UserList extends Observable {
         return Optional.of(newUser);
     }
 
-    public void save() {
+    public synchronized void save() {
         for (User user: mMap.values()) {
             user.save();
         }
     }
 
-    public Optional<User> get(int id) {
+    synchronized Optional<User> get(int id) {
         // TODO performance
         for (User user: mMap.values()) {
             if (user.getID() == id)
@@ -112,7 +116,7 @@ public final class UserList extends Observable {
      * @param jid
      * @return
      */
-    public Optional<User> get(String jid) {
+    public synchronized Optional<User> get(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
         return Optional.ofNullable(mMap.get(jid));
     }
@@ -123,7 +127,7 @@ public final class UserList extends Observable {
      * @param jid
      * @return
      */
-    public boolean contains(String jid) {
+    public synchronized boolean contains(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
         return mMap.containsKey(jid);
     }
@@ -136,5 +140,4 @@ public final class UserList extends Observable {
     public static UserList getInstance() {
         return INSTANCE;
     }
-
 }

@@ -113,7 +113,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
                         WebOptionPane.WARNING_MESSAGE);
                 if (selectedOption == WebOptionPane.OK_OPTION) {
                     ThreadItem threadItem = ThreadListView.this.getSelectedItem();
-                    mThreadList.deleteThreadWithID(threadItem.mValue.getID());
+                    mThreadList.delete(threadItem.mValue.getID());
                 }
             }
         });
@@ -154,7 +154,8 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
     @Override
     protected void updateOnEDT(Object arg) {
         // TODO, performance
-        for (KonThread thread: mThreadList.getThreads())
+
+        for (KonThread thread: mThreadList.getAll())
             if (!this.containsValue(thread))
                 this.addItem(new ThreadItem(thread));
     }

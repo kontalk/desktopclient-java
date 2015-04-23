@@ -20,13 +20,13 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.system.Database;
@@ -94,8 +94,8 @@ public final class ThreadList extends Observable {
         this.changed();
     }
 
-    public synchronized Collection<KonThread> getThreads() {
-        return new ArrayList<>(mMap.values());
+    public synchronized SortedSet<KonThread> getAll() {
+        return new TreeSet<>(mMap.values());
     }
 
     public synchronized void save() {
@@ -104,7 +104,7 @@ public final class ThreadList extends Observable {
         }
     }
 
-    public KonThread getThreadByUser(User user) {
+    public KonThread get(User user) {
         synchronized (this) {
             for (KonThread thread : mMap.values()) {
                 Set<User> threadUser = thread.getUser();
@@ -114,10 +114,10 @@ public final class ThreadList extends Observable {
         }
         Set<User> userSet = new HashSet<>();
         userSet.add(user);
-        return this.createNewThread(userSet);
+        return this.createNew(userSet);
     }
 
-    public KonThread createNewThread(Set<User> user) {
+    public KonThread createNew(Set<User> user) {
         KonThread newThread = new KonThread(user);
         synchronized (this) {
             mMap.put(newThread.getID(), newThread);
@@ -126,14 +126,14 @@ public final class ThreadList extends Observable {
         return newThread;
     }
 
-    public synchronized Optional<KonThread> getThreadByID(int id) {
+    public synchronized Optional<KonThread> get(int id) {
         KonThread thread = mMap.get(id);
         if (thread == null)
             LOGGER.warning("can't find thread with id: "+id);
         return Optional.ofNullable(thread);
     }
 
-    public synchronized Optional<KonThread> getThreadByXMPPID(String xmppThreadID) {
+    public synchronized Optional<KonThread> get(String xmppThreadID) {
         if (xmppThreadID == null || xmppThreadID.isEmpty()) {
             return Optional.empty();
         }
@@ -144,7 +144,7 @@ public final class ThreadList extends Observable {
         return Optional.empty();
     }
 
-    public synchronized void deleteThreadWithID(int id) {
+    public synchronized void delete(int id) {
         KonThread thread = mMap.remove(id);
         if (thread == null) {
             LOGGER.warning("can't delete thread, not found. id: "+id);
