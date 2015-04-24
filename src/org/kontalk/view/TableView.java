@@ -35,8 +35,10 @@ import java.awt.event.MouseMotionListener;
 import java.util.Collection;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.logging.Logger;
 import javax.swing.JTable;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
@@ -51,6 +53,7 @@ import org.ocpsoft.prettytime.PrettyTime;
  * @param <V> the value of one view item
  */
 abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
+    private final static Logger LOGGER = Logger.getLogger(TableView.class.getName());
 
     /** The items in this list . */
     private final SortedMap<V, I> mItems = new TreeMap<>();
@@ -123,11 +126,21 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         return mItems.containsKey(value);
     }
 
-    protected void addItem(I item) {
-        item.mValue.addObserver(item);
-        mItems.put(item.mValue, item);
-        if (item.contains(mSearch.toLowerCase()))
-            mFilteredTableModel.addRow(new Object[]{item});
+    protected void sync(Set<V> values, Set<I> newItems) {
+        // TODO performance
+        // remove old
+        //mItems.keySet().retainAll(values);
+        for (V value: mItems.keySet())
+            if (!values.contains(value))
+                mItems.remove(value);
+        // add new
+        for (I item: newItems) {
+            item.mValue.addObserver(item);
+            I replaced = mItems.put(item.mValue, item);
+            if (replaced != null)
+                LOGGER.warning("replaced item in table view, value: "+item.mValue);
+        }
+        this.filterItems(mSearch);
     }
 
     @SuppressWarnings("unchecked")
@@ -180,12 +193,12 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
     void filterItems(String search) {
         mSearch = search;
-
         // TODO performance
         mFilteredTableModel.setRowCount(0);
         for (I item : this.getItems()) {
-            if (item.contains(search.toLowerCase()))
+            if (item.contains(search.toLowerCase())) {
                 mFilteredTableModel.addRow(new Object[]{item});
+            }
         }
     }
 

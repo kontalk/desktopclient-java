@@ -107,9 +107,12 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        for (User oneUser: mUserList.getAll())
+        Set<UserItem> newItems = new HashSet<>();
+        Set<User> user = mUserList.getAll();
+        for (User oneUser: user)
             if (!this.containsValue(oneUser))
-                this.addItem(new UserItem(oneUser));
+                newItems.add(new UserItem(oneUser));
+        this.sync(user, newItems);
     }
 
     private void showPopupMenu(MouseEvent e) {

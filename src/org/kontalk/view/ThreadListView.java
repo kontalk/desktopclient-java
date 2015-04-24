@@ -154,10 +154,12 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
     @Override
     protected void updateOnEDT(Object arg) {
         // TODO, performance
-
-        for (KonThread thread: mThreadList.getAll())
+        Set<ThreadItem> newItems = new HashSet<>();
+        Set<KonThread> threads = mThreadList.getAll();
+        for (KonThread thread: threads)
             if (!this.containsValue(thread))
-                this.addItem(new ThreadItem(thread));
+                newItems.add(new ThreadItem(thread));
+        this.sync(threads, newItems);
     }
 
     void selectLastThread() {

@@ -55,8 +55,10 @@ import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 import javax.swing.AbstractCellEditor;
@@ -208,8 +210,8 @@ final class ThreadView extends ScrollPane {
                     // scrolling to a new component in the table
                     // is only possible after the component was rendered (which
                     // is now)
-                    MessageList table = MessageList.this;
                     if (mScrollDownOnResize) {
+                        MessageList table = MessageList.this;
                         table.scrollToRow(table.getRowCount() - 1);
                         mScrollDownOnResize = false;
                     }
@@ -273,15 +275,17 @@ final class ThreadView extends ScrollPane {
         }
 
         private void insertMessages() {
-            // TODO performance
+            // TODO performance, we need some general solution here. Creating
+            // 100+ panes with content just takes some time
+            Set<MessageItem> newItems = new HashSet<>();
             for (KonMessage message: mThread.getMessages()) {
                 if (!this.containsValue(message)) {
-                    this.addItem(new MessageItem(message));
-                    this.setHeight(this.getRowCount() - 1);
+                    newItems.add(new MessageItem(message));
                     // trigger scrolling
                     mScrollDownOnResize = true;
                 }
             }
+            this.sync(mThread.getMessages(), newItems);
         }
 
         private void showPopupMenu(MouseEvent e) {
@@ -367,7 +371,7 @@ final class ThreadView extends ScrollPane {
                 // icons
                 mStatusIconLabel = new WebLabel();
 
-                this.updateView(null);
+                this.updateOnEDT(null);
 
                 // save the width that is requied to show the text in one line;
                 // before line wrap and only once!
@@ -411,27 +415,11 @@ final class ThreadView extends ScrollPane {
                 mTextPane.setPreferredSize(new Dimension(width, mTextPane.getMinimumSize().height));
             }
 
-            @Override
-            protected void updateOnEDT(Object arg) {
-                this.updateView(arg);
-
-                // find row of item...
-                MessageList table = MessageList.this;
-                int row;
-                for (row = table.getRowCount()-1; row >= 0; row--)
-                    if (this == table.getModel().getValueAt(row, 0))
-                        break;
-                // ...set height...
-                table.setHeight(row);
-                // ...and scroll down
-                if (row == table.getRowCount()-1)
-                    table.mScrollDownOnResize = true;
-            }
-
             /**
              * Update what can change in a message: text, icon and attachment.
              */
-            private void updateView(Object arg) {
+            @Override
+            protected void updateOnEDT(Object arg) {
                 if (arg == null || arg instanceof String)
                     this.updateText();
 
@@ -440,6 +428,10 @@ final class ThreadView extends ScrollPane {
 
                 if (arg == null || arg instanceof MessageContent.Attachment)
                     this.updateAttachment();
+
+                // TODO find row of item, set height and scroll down?
+//                if (row == table.getRowCount()-1)
+//                    table.mScrollDownOnResize = true;
             }
 
             // text in text area, before/after encryption
