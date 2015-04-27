@@ -42,8 +42,8 @@ import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
+import java.awt.event.AdjustmentEvent;
+import java.awt.event.AdjustmentListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -99,9 +99,25 @@ final class ThreadView extends ScrollPane {
     private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
     private Background mDefaultBG;
 
+    private boolean mScrollDown = false;
+
     ThreadView(View view) {
         super(null);
         mView = view;
+
+        this.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+            @Override
+            public void adjustmentValueChanged(AdjustmentEvent e) {
+                // this is still not perfect: after adding all items, they still
+                // dont have any content and so their height is unknown
+                // (== very small). While rendering content is added and we force
+                // scrolling down WHILE rendering until the final bottom is reached
+                if (e.getValueIsAdjusting())
+                    mScrollDown = false;
+                if (mScrollDown)
+                    e.getAdjustable().setValue(e.getAdjustable().getMaximum());
+            }
+        });
 
         this.setViewport(new WebViewport() {
             @Override
@@ -133,20 +149,13 @@ final class ThreadView extends ScrollPane {
     }
 
     void showThread(KonThread thread) {
-        boolean isNew = false;
         if (!mThreadCache.containsKey(thread.getID())) {
             MessageList newMessageList = new MessageList(thread);
             thread.addObserver(newMessageList);
             mThreadCache.put(thread.getID(), newMessageList);
-            isNew = true;
         }
         MessageList table = mThreadCache.get(thread.getID());
         this.getViewport().setView(table);
-
-        if (table.getRowCount() > 0 && isNew) {
-            // trigger scrolling down
-            table.mScrollDownOnResize = true;
-        }
 
         thread.setRead();
     }
@@ -190,7 +199,6 @@ final class ThreadView extends ScrollPane {
     private final class MessageList extends TableView<MessageList.MessageItem, KonMessage> {
 
         private final KonThread mThread;
-        private boolean mScrollDownOnResize = false;
         private Optional<Background> mBackground = Optional.empty();
 
         MessageList(KonThread thread) {
@@ -203,20 +211,6 @@ final class ThreadView extends ScrollPane {
             //this.setEditable(false);
             //this.setAutoscrolls(true);
             this.setOpaque(false);
-
-            this.addComponentListener(new ComponentAdapter() {
-                @Override
-                public void componentResized(ComponentEvent e) {
-                    // scrolling to a new component in the table
-                    // is only possible after the component was rendered (which
-                    // is now)
-                    if (mScrollDownOnResize) {
-                        MessageList table = MessageList.this;
-                        table.scrollToRow(table.getRowCount() - 1);
-                        mScrollDownOnResize = false;
-                    }
-                }
-            });
 
             // disable selection
             this.setSelectionModel(new UnselectableListModel());
@@ -240,7 +234,9 @@ final class ThreadView extends ScrollPane {
 
             this.setBackground(mThread.getViewSettings());
 
+            this.setVisible(false);
             this.updateOnEDT(null);
+            this.setVisible(true);
         }
 
         KonThread getThread() {
@@ -275,14 +271,12 @@ final class ThreadView extends ScrollPane {
         }
 
         private void insertMessages() {
-            // TODO performance, we need some general solution here. Creating
-            // 100+ panes with content just takes some time
             Set<MessageItem> newItems = new HashSet<>();
             for (KonMessage message: mThread.getMessages()) {
                 if (!this.containsValue(message)) {
                     newItems.add(new MessageItem(message));
                     // trigger scrolling
-                    mScrollDownOnResize = true;
+                    mScrollDown = true;
                 }
             }
             this.sync(mThread.getMessages(), newItems);
@@ -313,15 +307,17 @@ final class ThreadView extends ScrollPane {
 
         /**
          * View for one message.
-         * The content is added to a panel inside this panel.
+         * The content is added to a panel inside this panel. For performance
+         * reasons the content is created when the item is rendered in the table
          */
         final class MessageItem extends TableView<MessageItem, KonMessage>.TableItem {
 
-            private final WebPanel mContentPanel;
-            private final WebTextPane mTextPane;
-            private final WebPanel mStatusPanel;
-            private final WebLabel mStatusIconLabel;
-            private final int mPreferredTextAreaWidth;
+            private WebPanel mContentPanel;
+            private WebTextPane mTextPane;
+            private WebPanel mStatusPanel;
+            private WebLabel mStatusIconLabel;
+            private int mPreferredTextAreaWidth;
+            private boolean mCreated = false;
 
             MessageItem(KonMessage message) {
                 super(message);
@@ -329,6 +325,12 @@ final class ThreadView extends ScrollPane {
                 this.setOpaque(false);
                 this.setMargin(2);
                 //this.setBorder(new EmptyBorder(10, 10, 10, 10));
+            }
+
+            private void createContent() {
+                if (mCreated)
+                    return;
+                mCreated = true;
 
                 WebPanel messagePanel = new WebPanel(true);
                 messagePanel.setWebColoredBackground(false);
@@ -350,6 +352,7 @@ final class ThreadView extends ScrollPane {
 
                 mContentPanel = new WebPanel();
                 mContentPanel.setOpaque(false);
+                mContentPanel.setMargin(10);
                 // text area
                 mTextPane = new WebTextPane();
                 mTextPane.setEditable(false);
@@ -379,7 +382,7 @@ final class ThreadView extends ScrollPane {
 
                 mStatusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
-                if (message.getCoderStatus().isSecure()) {
+                if (mValue.getCoderStatus().isSecure()) {
                     encryptIconLabel.setIcon(CRYPT_ICON);
                 } else {
                     encryptIconLabel.setIcon(UNENCRYPT_ICON);
@@ -404,7 +407,9 @@ final class ThreadView extends ScrollPane {
             }
 
             @Override
-            protected void resize(int listWidth) {
+            protected void render(int listWidth, boolean isSelected) {
+                this.createContent();
+
                 // note: on the very first call the list width is zero
                 int maxWidth = (int)(listWidth * 0.8);
                 int width = Math.min(mPreferredTextAreaWidth, maxWidth);
@@ -420,6 +425,9 @@ final class ThreadView extends ScrollPane {
              */
             @Override
             protected void updateOnEDT(Object arg) {
+                if (!mCreated)
+                    return;
+
                 if (arg == null || arg instanceof String)
                     this.updateText();
 
@@ -597,7 +605,7 @@ final class ThreadView extends ScrollPane {
 
             @Override
             protected boolean contains(String search) {
-                return mTextPane.getText().toLowerCase().contains(search) ||
+                return mValue.getContent().getText().toLowerCase().contains(search) ||
                         mValue.getUser().getName().toLowerCase().contains(search) ||
                         mValue.getJID().toLowerCase().contains(search);
             }

@@ -27,8 +27,6 @@ import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
@@ -47,6 +45,7 @@ import org.ocpsoft.prettytime.PrettyTime;
 /**
  * A generic list view for subclassing.
  * Implemented as table with one column.
+ * TODO use row sorter / row filter!?
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  * @param <I> the view item in this list
@@ -55,7 +54,7 @@ import org.ocpsoft.prettytime.PrettyTime;
 abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
     private final static Logger LOGGER = Logger.getLogger(TableView.class.getName());
 
-    /** The items in this list . */
+    /** The items in this list. */
     private final SortedMap<V, I> mItems = new TreeMap<>();
     /** The currently displayed items. A subset of mItems */
     private final DefaultTableModel mFilteredTableModel = new DefaultTableModel(0, 1);
@@ -80,19 +79,6 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
         // use custom renderer
         this.setDefaultRenderer(TableItem.class, new TableRenderer());
-
-        this.addComponentListener(new ComponentAdapter() {
-                @Override
-                public void componentResized(ComponentEvent e) {
-                    // this table was resized, the size of each item might have
-                    // changed and each row height must be adjusted
-                    // TODO efficient?
-                    TableView<?, ?> table = TableView.this;
-                    for (int row = 0; row < table.getRowCount(); row++) {
-                        table.setHeight(row);
-                    }
-                }
-            });
 
         // trigger editing to forward mouse events
         this.addMouseMotionListener(new MouseMotionListener() {
@@ -129,7 +115,6 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
     protected void sync(Set<V> values, Set<I> newItems) {
         // TODO performance
         // remove old
-        //mItems.keySet().retainAll(values);
         for (V value: mItems.keySet())
             if (!values.contains(value))
                 mItems.remove(value);
@@ -202,17 +187,6 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         }
     }
 
-    /**
-     * Row height must be adjusted manually to component height.
-     * source: https://stackoverflow.com/a/1784601
-     * @param row the row that gets set
-     */
-    protected void setHeight(int row) {
-        Component comp = this.prepareRenderer(this.getCellRenderer(row, 0), row, 0);
-        int height = Math.max(this.getRowHeight(), comp.getPreferredSize().height);
-        this.setRowHeight(row, height);
-    }
-
     private void showTooltip(TableItem item) {
         String text = item.getTooltipText();
         if (text.isEmpty())
@@ -266,9 +240,8 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
             mValue = value;
         }
 
-        void resize(int listWidth) {};
-
-        void repaint(boolean isSelected) {};
+        /** Set internal properties before rendering this item. */
+        abstract protected void render(int tableWidth, boolean isSelected);
 
         protected String getTooltipText() {
             return "";
@@ -319,9 +292,13 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
                 int row,
                 int column) {
             TableItem item = (TableItem) value;
-            // TODO do this here?
-            item.resize(table.getWidth());
-            item.repaint(isSelected);
+
+            item.render(table.getWidth(), isSelected);
+
+            int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
+            if (height != table.getRowHeight(row))
+                // note: this calls resizeAndRepaint()
+                table.setRowHeight(row, height);
             return item;
         }
     }

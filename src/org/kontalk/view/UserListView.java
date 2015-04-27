@@ -185,7 +185,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
         }
 
         @Override
-        void repaint(boolean isSelected) {
+        protected void render(int tableWidth, boolean isSelected) {
             if (isSelected)
                 this.setBackground(View.BLUE);
             else
