@@ -446,7 +446,7 @@ final class ThreadView extends ScrollPane {
             private void updateText() {
                 boolean encrypted = mValue.getCoderStatus().isEncrypted();
                 String text = encrypted ? Tr.tr("[encrypted]") : mValue.getContent().getText();
-                //mTextPane.setFontStyle(false, encrypted);
+                mTextPane.setFontStyle(false, encrypted);
                 //mTextPane.setText(text);
                 LinkUtils.linkify(mTextPane.getStyledDocument(), text);
                 // hide area if there is no text
