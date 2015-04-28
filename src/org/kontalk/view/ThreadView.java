@@ -334,7 +334,7 @@ final class ThreadView extends ScrollPane {
 
                 WebPanel messagePanel = new WebPanel(true);
                 messagePanel.setWebColoredBackground(false);
-                messagePanel.setMargin(5);
+                messagePanel.setMargin(2);
                 if (mValue.getDir().equals(KonMessage.Direction.IN))
                     messagePanel.setBackground(Color.WHITE);
                 else
@@ -352,7 +352,7 @@ final class ThreadView extends ScrollPane {
 
                 mContentPanel = new WebPanel();
                 mContentPanel.setOpaque(false);
-                mContentPanel.setMargin(10);
+                mContentPanel.setMargin(5);
                 // text area
                 mTextPane = new WebTextPane();
                 mTextPane.setEditable(false);
