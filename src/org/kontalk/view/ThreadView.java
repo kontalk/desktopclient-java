@@ -316,7 +316,7 @@ final class ThreadView extends ScrollPane {
             private WebTextPane mTextPane;
             private WebPanel mStatusPanel;
             private WebLabel mStatusIconLabel;
-            private int mPreferredTextAreaWidth;
+            private int mPreferredTextWidth;
             private boolean mCreated = false;
 
             MessageItem(KonMessage message) {
@@ -378,7 +378,7 @@ final class ThreadView extends ScrollPane {
 
                 // save the width that is requied to show the text in one line;
                 // before line wrap and only once!
-                mPreferredTextAreaWidth = mTextPane.getPreferredSize().width;
+                mPreferredTextWidth = mTextPane.getPreferredSize().width;
 
                 mStatusPanel.add(mStatusIconLabel);
                 WebLabel encryptIconLabel = new WebLabel();
@@ -412,7 +412,7 @@ final class ThreadView extends ScrollPane {
 
                 // note: on the very first call the list width is zero
                 int maxWidth = (int)(listWidth * 0.8);
-                int width = Math.min(mPreferredTextAreaWidth, maxWidth);
+                int width = Math.min(mPreferredTextWidth, maxWidth);
                 // height is reset later
                 mTextPane.setSize(width, -1);
                 // textArea does not need this but textPane does, and editorPane

@@ -296,6 +296,8 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
             item.render(table.getWidth(), isSelected);
 
             int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
+            // the text pane font in thread view items needs a little more
+            height += 1;
             if (height != table.getRowHeight(row))
                 // note: this calls resizeAndRepaint()
                 table.setRowHeight(row, height);
