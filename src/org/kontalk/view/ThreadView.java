@@ -66,6 +66,16 @@ import javax.swing.Icon;
 import javax.swing.JTable;
 import javax.swing.JViewport;
 import javax.swing.table.TableCellEditor;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.BoxView;
+import javax.swing.text.ComponentView;
+import javax.swing.text.Element;
+import javax.swing.text.IconView;
+import javax.swing.text.LabelView;
+import javax.swing.text.ParagraphView;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledEditorKit;
+import javax.swing.text.ViewFactory;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
@@ -364,6 +374,8 @@ final class ThreadView extends ScrollPane {
                 mTextPane.addMouseListener(LinkUtils.CLICK_LISTENER);
                 //for detecting motion
                 mTextPane.addMouseMotionListener(LinkUtils.MOTION_LISTENER);
+                // fix word wrap for long words
+                mTextPane.setEditorKit(FIX_WRAP_KIT);
                 mContentPanel.add(mTextPane, BorderLayout.CENTER);
                 messagePanel.add(mContentPanel, BorderLayout.CENTER);
 
@@ -764,5 +776,58 @@ final class ThreadView extends ScrollPane {
                 }
             }
         };
+    }
+
+    private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();
+
+    /**
+     * Fix for the infamous "Wrap long words" problem in Java 7+.
+     * Source: https://stackoverflow.com/a/13375811
+     */
+    private static class WrapEditorKit extends StyledEditorKit {
+        ViewFactory defaultFactory = new WrapColumnFactory();
+        @Override
+        public ViewFactory getViewFactory() {
+            return defaultFactory;
+        }
+
+        private static class WrapColumnFactory implements ViewFactory {
+            @Override
+            public javax.swing.text.View create(Element elem) {
+                String kind = elem.getName();
+                if (kind != null) {
+                    if (kind.equals(AbstractDocument.ContentElementName)) {
+                        return new WrapLabelView(elem);
+                    } else if (kind.equals(AbstractDocument.ParagraphElementName)) {
+                        return new ParagraphView(elem);
+                    } else if (kind.equals(AbstractDocument.SectionElementName)) {
+                        return new BoxView(elem, javax.swing.text.View.Y_AXIS);
+                    } else if (kind.equals(StyleConstants.ComponentElementName)) {
+                        return new ComponentView(elem);
+                    } else if (kind.equals(StyleConstants.IconElementName)) {
+                        return new IconView(elem);
+                    }
+                }
+                // default to text display
+                return new LabelView(elem);
+            }
+        }
+
+        private static class WrapLabelView extends LabelView {
+            public WrapLabelView(Element elem) {
+                super(elem);
+            }
+            @Override
+            public float getMinimumSpan(int axis) {
+                switch (axis) {
+                    case javax.swing.text.View.X_AXIS:
+                        return 0;
+                    case javax.swing.text.View.Y_AXIS:
+                        return super.getMinimumSpan(axis);
+                    default:
+                        throw new IllegalArgumentException("Invalid axis: " + axis);
+                }
+            }
+        }
     }
 }
