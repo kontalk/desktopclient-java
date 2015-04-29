@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Observable;
+import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
@@ -42,9 +43,10 @@ import org.kontalk.system.Database;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
+ * Changes of user in this thread are forwarded.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class KonThread extends Observable implements Comparable<KonThread> {
+public final class KonThread extends Observable implements Comparable<KonThread>, Observer {
     private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());
 
     public static final String TABLE = "threads";
@@ -80,7 +82,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
      */
     private final SortedSet<KonMessage> mSet =
             Collections.synchronizedSortedSet(new TreeSet<KonMessage>());
-    private HashMap<User, KonChatState> mUserMap;
+    private final HashMap<User, KonChatState> mUserMap = new HashMap<>();
     private String mSubject;
     private boolean mRead;
     private ViewSettings mViewSettings;
@@ -321,9 +323,14 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
     private void setUserMap(Set<User> user){
         // TODO only apply differences to preserve chat states
-        mUserMap = new HashMap<>();
-        for (User oneUser : user)
+        for (User oneUser: mUserMap.keySet())
+            oneUser.deleteObserver(this);
+
+        mUserMap.clear();
+        for (User oneUser : user) {
+            oneUser.addObserver(this);
             mUserMap.put(oneUser, new KonChatState());
+        }
     }
 
     private synchronized void changed() {
@@ -334,6 +341,16 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     @Override
     public String toString() {
         return "T:id="+mID+",xmppid="+mXMPPID+",subject="+mSubject;
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        this.changed();
+    }
+
+    @Override
+    public int compareTo(KonThread o) {
+        return Integer.compare(this.mID, o.mID);
     }
 
     private class KonChatState {
@@ -433,10 +450,5 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             hash = 37 * hash + Objects.hashCode(this.mImagePath);
             return hash;
         }
-    }
-
-    @Override
-    public int compareTo(KonThread o) {
-        return Integer.compare(this.mID, o.mID);
     }
 }
