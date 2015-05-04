@@ -95,6 +95,9 @@ public final class MessageList extends Observable {
                 int errorFlags = resultSet.getInt("coder_errors");
                 EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(Coder.Error.class, errorFlags);
                 CoderStatus coderStatus = new CoderStatus(encryption, signing, coderErrors);
+                String jsonServerError = resultSet.getString("server_error");
+                KonMessage.ServerError serverError =
+                        KonMessage.ServerError.fromJSON(jsonServerError);
                 long sDate = resultSet.getLong("server_date");
                 Optional<Date> serverDate = sDate == 0 ?
                         Optional.<Date>empty() :
@@ -111,6 +114,7 @@ public final class MessageList extends Observable {
                 builder.receiptStatus(status);
                 builder.content(content);
                 builder.coderStatus(coderStatus);
+                builder.serverError(serverError);
 
                 KonMessage newMessage = builder.build();
 

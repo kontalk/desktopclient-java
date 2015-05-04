@@ -19,6 +19,8 @@
 package org.kontalk.util;
 
 import java.util.EnumSet;
+import java.util.Map;
+import org.json.simple.JSONObject;
 
 public final class EncodingUtils {
 
@@ -65,5 +67,17 @@ public final class EncodingUtils {
             b += 1 << ((Enum) o).ordinal();
         }
         return b;
+    }
+
+    // using legacy lib, raw types extend Object
+    @SuppressWarnings("unchecked")
+    public static void putJSON(JSONObject json, String key, String value) {
+        if (!value.isEmpty())
+            json.put(key, value);
+    }
+
+    public static String getJSON(Map<?, ?> map, String key) {
+        String value = (String) map.get(key);
+        return value == null ? "" : value;
     }
 }

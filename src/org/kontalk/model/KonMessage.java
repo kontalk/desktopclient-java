@@ -29,8 +29,11 @@ import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
+import org.kontalk.util.EncodingUtils;
 
 /**
  * Base class for incoming and outgoing XMMP messages.
@@ -91,8 +94,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             "signing_status INTEGER NOT NULL, " +
             // enum set, encryption and signing errors of content
             "coder_errors INTEGER NOT NULL, " +
-            // error child element in JSON format if message could not be
-            // delivered (not implemented)
+            // optional error reply in JSON format
             "server_error TEXT, " +
             // unix time, transmission/delay timestamp
             "server_date INTEGER, " +
@@ -121,8 +123,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     protected CoderStatus mCoderStatus;
 
-    // TODO use me
-    private String mServerError = "";
+    protected ServerError mServerError;
 
     protected KonMessage(Builder builder) {
         mID = builder.mID;
@@ -137,6 +138,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mReceiptStatus = builder.mReceiptStatus;
         mContent = builder.mContent;
         mCoderStatus = builder.mCoderStatus;
+        mServerError = builder.mServerError;
 
         if (mJID == null ||
                 mXMPPID == null ||
@@ -144,7 +146,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
                 mServerDate == null ||
                 mReceiptStatus == null ||
                 mContent == null ||
-                mCoderStatus == null)
+                mCoderStatus == null ||
+                mServerError == null)
             throw new IllegalStateException();
 
         if (mID < 0)
@@ -271,7 +274,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mCoderStatus.getEncryption());
         values.add(mCoderStatus.getSigning());
         values.add(mCoderStatus.getErrors());
-        values.add(mServerError);
+        values.add(mServerError.toJSON());
         values.add(mServerDate);
 
         int id = db.execInsert(TABLE, values);
@@ -321,12 +324,52 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
+    public final static class ServerError {
+        private final static String JSON_COND = "cond";
+        private final static String JSON_TEXT = "text";
+
+        public final String condition;
+        public final String text;
+
+        private ServerError() {
+            this("", "");
+        }
+
+        ServerError(String condition, String text) {
+            this.condition = condition;
+            this.text = text;
+        }
+
+        private String toJSON() {
+            JSONObject json = new JSONObject();
+            EncodingUtils.putJSON(json, JSON_COND, condition);
+            EncodingUtils.putJSON(json, JSON_TEXT, text);
+            return json.toJSONString();
+        }
+
+        @Override
+        public String toString() {
+            return this.toJSON();
+        }
+
+        static ServerError fromJSON(String jsonContent) {
+            Object obj = JSONValue.parse(jsonContent);
+            Map<?, ?> map = (Map) obj;
+            if (map == null) return new ServerError();
+            String condition = EncodingUtils.getJSON(map, JSON_COND);
+            String text = EncodingUtils.getJSON(map, JSON_TEXT);
+            return new ServerError(condition, text);
+        }
+    }
+
     static class Builder {
         private final int mID;
         private final KonThread mThread;
         private final Direction mDir;
         private final User mUser;
         private final Date mDate;
+
+        private ServerError mServerError = new ServerError();
 
         protected String mJID = null;
         protected String mXMPPID = null;
@@ -354,10 +397,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         public void xmppID(String xmppID) { mXMPPID = xmppID; }
 
         public void serverDate(Optional<Date> date) { mServerDate = date; }
-        public void receiptStatus(Status status) { mReceiptStatus = status; }
         public void content(MessageContent content) { mContent = content; }
 
-        public void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
+        void receiptStatus(Status status) { mReceiptStatus = status; }
+        void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
+        void serverError(ServerError error) { mServerError = error; }
 
         KonMessage build() {
             if (mDir == Direction.IN)
