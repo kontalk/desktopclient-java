@@ -27,6 +27,7 @@ import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
 import org.jivesoftware.smack.packet.PacketExtension;
+import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
@@ -66,14 +67,19 @@ final public class KonMessageListener implements PacketListener {
             // somebody has news for us
             this.processChatMessage(m);
         } else if (m.getType() == Message.Type.error) {
-            LOGGER.warning("got an error message: "+m.toXML());
+            LOGGER.warning("got error message: "+m.toXML());
             String xmppID = m.getPacketID();
             if (xmppID == null || xmppID.isEmpty()) {
                 LOGGER.warning("error message has invalid XMPP ID: "+xmppID);
                 return;
             }
-            mControl.setMessageStatus(xmppID, Status.ERROR);
-            // TODO save the error text somewhere
+            XMPPError error = m.getError();
+            if (error == null) {
+                LOGGER.warning("error message does not contain error");
+                return;
+            }
+            String text = StringUtils.defaultString(error.getDescriptiveText());
+            mControl.setMessageError(xmppID, error.getCondition(), text);
         } else {
             LOGGER.warning("unknown message type: "+m.getType());
         }

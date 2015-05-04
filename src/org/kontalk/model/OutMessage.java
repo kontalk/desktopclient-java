@@ -47,6 +47,13 @@ public final class OutMessage extends KonMessage {
         this.changed(mReceiptStatus);
     }
 
+    public void setError(String condition, String text) {
+        if (mReceiptStatus != Status.SENT)
+            LOGGER.warning("unexpected status of message with error: "+mReceiptStatus);
+        mServerError = new KonMessage.ServerError(condition, text);
+        this.setStatus(Status.ERROR);
+    }
+
 public static class Builder extends KonMessage.Builder {
 
         public Builder(KonThread thread, User user, boolean encrypted) {

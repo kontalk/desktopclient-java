@@ -28,6 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smack.util.StringUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jxmpp.util.XmppStringUtils;
@@ -286,6 +287,15 @@ public final class Control extends Observable {
             return;
         }
         optMessage.get().setStatus(status);
+    }
+
+    public void setMessageError(String xmppID, Condition condition, String errorText) {
+        Optional<OutMessage> optMessage = MessageList.getInstance().getUncompleted(xmppID);
+        if (!optMessage.isPresent()) {
+            LOGGER.warning("can't find message for error");
+            return ;
+        }
+        optMessage.get().setError(condition.toString(), errorText);
     }
 
     /**
