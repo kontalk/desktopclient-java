@@ -64,41 +64,41 @@ public final class MessageList extends Observable {
         try (ResultSet resultSet = db.execSelectAll(KonMessage.TABLE)) {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");
-                int threadID = resultSet.getInt("thread_id");
+                int threadID = resultSet.getInt(KonMessage.COL_THREAD_ID);
                 Optional<KonThread> optThread =
                         ThreadList.getInstance().get(threadID);
                 if (!optThread.isPresent()) {
                     LOGGER.warning("can't find thread, id:"+threadID);
                     continue;
                 }
-                int dirIndex = resultSet.getInt("direction");
+                int dirIndex = resultSet.getInt(KonMessage.COL_DIR);
                 KonMessage.Direction dir = dirValues[dirIndex];
-                int userID = resultSet.getInt("user_id");
+                int userID = resultSet.getInt(KonMessage.COL_USER_ID);
                 Optional<User> optUser =
                         UserList.getInstance().get(userID);
                 if (!optUser.isPresent()) {
                     LOGGER.warning("can't find user, id:"+userID);
                     continue;
                 }
-                String jid = resultSet.getString("jid");
-                String xmppID = Database.getString(resultSet, "xmpp_id");
-                Date date = new Date(resultSet.getLong("date"));
-                int statusIndex = resultSet.getInt("receipt_status");
+                String jid = resultSet.getString(KonMessage.COL_JID);
+                String xmppID = Database.getString(resultSet, KonMessage.COL_XMPP_ID);
+                Date date = new Date(resultSet.getLong(KonMessage.COL_DATE));
+                int statusIndex = resultSet.getInt(KonMessage.COL_REC_STAT);
                 KonMessage.Status status = statusValues[statusIndex];
-                String jsonContent = resultSet.getString("content");
+                String jsonContent = resultSet.getString(KonMessage.COL_CONTENT);
                 MessageContent content = MessageContent.fromJSONString(jsonContent);
 
-                int encryptionIndex = resultSet.getInt("encryption_status");
+                int encryptionIndex = resultSet.getInt(KonMessage.COL_ENCR_STAT);
                 Coder.Encryption encryption = encryptionValues[encryptionIndex];
-                int signingIndex = resultSet.getInt("signing_status");
+                int signingIndex = resultSet.getInt(KonMessage.COL_SIGN_STAT);
                 Coder.Signing signing = signingValues[signingIndex];
-                int errorFlags = resultSet.getInt("coder_errors");
+                int errorFlags = resultSet.getInt(KonMessage.COL_COD_ERR);
                 EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(Coder.Error.class, errorFlags);
                 CoderStatus coderStatus = new CoderStatus(encryption, signing, coderErrors);
-                String jsonServerError = resultSet.getString("server_error");
+                String jsonServerError = resultSet.getString(KonMessage.COL_SERV_ERR);
                 KonMessage.ServerError serverError =
                         KonMessage.ServerError.fromJSON(jsonServerError);
-                long sDate = resultSet.getLong("server_date");
+                long sDate = resultSet.getLong(KonMessage.COL_SERV_DATE);
                 Optional<Date> serverDate = sDate == 0 ?
                         Optional.<Date>empty() :
                         Optional.of(new Date(sDate));

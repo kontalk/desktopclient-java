@@ -151,7 +151,7 @@ public final class Database {
         }
         if (fromVersion < 2) {
             mConn.createStatement().execute("ALTER TABLE "+KonMessage.TABLE+
-                    " ADD COLUMN server_date DEFAULT NULL");
+                    " ADD COLUMN "+KonMessage.COL_SERV_DATE+" DEFAULT NULL");
         }
 
         // set new version

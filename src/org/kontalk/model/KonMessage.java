@@ -68,36 +68,49 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     };
 
     public final static String TABLE = "messages";
+    public static final String COL_THREAD_ID = "thread_id";
+    public static final String COL_DIR = "direction";
+    public static final String COL_USER_ID = "user_id";
+    public static final String COL_JID = "jid";
+    public static final String COL_XMPP_ID = "xmpp_id";
+    public static final String COL_DATE = "date";
+    public static final String COL_REC_STAT = "receipt_status";
+    public static final String COL_CONTENT = "content";
+    public static final String COL_ENCR_STAT = "encryption_status";
+    public static final String COL_SIGN_STAT = "signing_status";
+    public static final String COL_COD_ERR = "coder_errors";
+    public static final String COL_SERV_ERR = "server_error";
+    public static final String COL_SERV_DATE = "server_date";
     public final static String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "thread_id INTEGER NOT NULL, " +
+            COL_THREAD_ID + " INTEGER NOT NULL, " +
             // enum, in- or outgoing
-            "direction INTEGER NOT NULL, " +
+            COL_DIR + " INTEGER NOT NULL, " +
             // from or to user
-            "user_id INTEGER NOT NULL, " +
+            COL_USER_ID + " INTEGER NOT NULL, " +
             // full jid with ressource
-            "jid TEXT NOT NULL, " +
+            COL_JID + " TEXT NOT NULL, " +
             // XMPP ID attribute; only recommended (RFC 6120), but we generate
             // a random string if not in message for model consistency
             // Note: must be unique only within a stream (RFC 6120)
-            "xmpp_id TEXT NOT NULL, " +
+            COL_XMPP_ID + " TEXT NOT NULL, " +
             // unix time, local creation timestamp
-            "date INTEGER NOT NULL, " +
+            COL_DATE + " INTEGER NOT NULL, " +
             // enum, server receipt status
-            "receipt_status INTEGER NOT NULL, " +
+            COL_REC_STAT + " INTEGER NOT NULL, " +
             // message content in JSON format
-            "content TEXT NOT NULL, " +
+            COL_CONTENT + " TEXT NOT NULL, " +
             // enum, determines if content is encrypted
-            "encryption_status INTEGER NOT NULL, " +
+            COL_ENCR_STAT + " INTEGER NOT NULL, " +
             // enum, determines if content is verified
             // can only tell if signed after encryption attempt
-            "signing_status INTEGER NOT NULL, " +
+            COL_SIGN_STAT + " INTEGER NOT NULL, " +
             // enum set, encryption and signing errors of content
-            "coder_errors INTEGER NOT NULL, " +
+            COL_COD_ERR + " INTEGER NOT NULL, " +
             // optional error reply in JSON format
-            "server_error TEXT, " +
+            COL_SERV_ERR + " TEXT, " +
             // unix time, transmission/delay timestamp
-            "server_date INTEGER, " +
+            COL_SERV_DATE + " INTEGER, " +
             // if this combinations is equal we consider messages to be equal
             // (see .equals())
             "UNIQUE (direction, jid, xmpp_id, date), " +
@@ -296,12 +309,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         }
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
-        set.put("receipt_status", mReceiptStatus);
-        set.put("content", mContent.toJSONString());
-        set.put("encryption_status", mCoderStatus.getEncryption());
-        set.put("signing_status", mCoderStatus.getSigning());
-        set.put("coder_errors", mCoderStatus.getErrors());
-        set.put("server_date", mServerDate);
+        set.put(COL_REC_STAT, mReceiptStatus);
+        set.put(COL_CONTENT, mContent.toJSONString());
+        set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
+        set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
+        set.put(COL_COD_ERR, mCoderStatus.getErrors());
+        set.put(COL_SERV_DATE, mServerDate);
         db.execUpdate(TABLE, set, mID);
     }
 
