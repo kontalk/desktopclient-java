@@ -131,12 +131,10 @@ public class MessageContent {
     @SuppressWarnings("unchecked")
     String toJSONString() {
         JSONObject json = new JSONObject();
-        if (!mPlainText.isEmpty())
-            json.put(JSON_PLAIN_TEXT, mPlainText);
+        EncodingUtils.putJSON(json, JSON_PLAIN_TEXT, mPlainText);
         if (mOptAttachment.isPresent())
             json.put(JSON_ATTACHMENT, mOptAttachment.get().toJSONString());
-        if (!mEncryptedContent.isEmpty())
-            json.put(JSON_ENC_CONTENT, mEncryptedContent);
+        EncodingUtils.putJSON(json, JSON_ENC_CONTENT, mEncryptedContent);
         if (mOptDecryptedContent.isPresent())
             json.put(JSON_DEC_CONTENT, mOptDecryptedContent.get().toJSONString());
         return json.toJSONString();
