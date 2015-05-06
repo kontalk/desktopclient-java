@@ -51,16 +51,16 @@ public final class UserList extends Observable {
         try (ResultSet resultSet = db.execSelectAll(User.TABLE)) {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");
-                String jid = resultSet.getString("jid");
-                String name = resultSet.getString("name");
-                String status = resultSet.getString("status");
-                long l = resultSet.getLong("last_seen");
+                String jid = resultSet.getString(User.COL_JID);
+                String name = resultSet.getString(User.COL_NAME);
+                String status = resultSet.getString(User.COL_STAT);
+                long l = resultSet.getLong(User.COL_LAST_SEEN);
                 Optional<Date> lastSeen = l == 0 ?
                         Optional.<Date>empty() :
                         Optional.<Date>of(new Date(l));
-                boolean encr = resultSet.getBoolean("encrypted");
-                String key = Database.getString(resultSet, "public_key");
-                String fp = Database.getString(resultSet, "key_fingerprint");
+                boolean encr = resultSet.getBoolean(User.COL_ENCR);
+                String key = Database.getString(resultSet, User.COL_PUB_KEY);
+                String fp = Database.getString(resultSet, User.COL_KEY_FP);
                 synchronized (this) {
                     mMap.put(jid, new User(id, jid, name, status, lastSeen, encr, key, fp));
                 }

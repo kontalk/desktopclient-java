@@ -47,16 +47,23 @@ public final class User extends Observable implements Comparable<User> {
     public static enum Online {UNKNOWN, YES, NO};
 
     public final static String TABLE = "user";
+    public final static String COL_JID = "jid";
+    public final static String COL_NAME = "name";
+    public final static String COL_STAT = "status";
+    public final static String COL_LAST_SEEN = "last_seen";
+    public final static String COL_ENCR = "encrypted";
+    public final static String COL_PUB_KEY = "public_key";
+    public final static String COL_KEY_FP = "key_fingerprint";
     public final static String CREATE_TABLE = "(" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "jid TEXT NOT NULL UNIQUE, " +
-            "name TEXT, " +
-            "status TEXT, " +
-            "last_seen INTEGER, " +
+            COL_JID + " TEXT NOT NULL UNIQUE, " +
+            COL_NAME + " TEXT, " +
+            COL_STAT + " TEXT, " +
+            COL_LAST_SEEN + " INTEGER, " +
             // boolean, send messages encrypted?
-            "encrypted INTEGER NOT NULL, " +
-            "public_key TEXT UNIQUE, " +
-            "key_fingerprint TEXT UNIQUE" +
+            COL_ENCR + " INTEGER NOT NULL, " +
+            COL_PUB_KEY + " TEXT UNIQUE, " +
+            COL_KEY_FP + " TEXT UNIQUE" +
             ")";
 
     private final int mID;
@@ -218,13 +225,13 @@ public final class User extends Observable implements Comparable<User> {
     public void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
-        set.put("jid", mJID);
-        set.put("name", mName);
-        set.put("status", mStatus);
-        set.put("last_seen", mLastSeen);
-        set.put("encrypted", mEncrypted);
-        set.put("public_key", Database.setString(mKey));
-        set.put("key_fingerprint", Database.setString(mFingerprint));
+        set.put(COL_JID, mJID);
+        set.put(COL_NAME, mName);
+        set.put(COL_STAT, mStatus);
+        set.put(COL_LAST_SEEN, mLastSeen);
+        set.put(COL_ENCR, mEncrypted);
+        set.put(COL_PUB_KEY, Database.setString(mKey));
+        set.put(COL_KEY_FP, Database.setString(mFingerprint));
         db.execUpdate(TABLE, set, mID);
     }
 
