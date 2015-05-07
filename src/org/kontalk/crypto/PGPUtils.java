@@ -60,25 +60,15 @@ public final class PGPUtils {
     private PGPUtils() {
     }
 
-    public static final class PGPDecryptedKeyPairRing {
-        /* Master (signing) key. */
-        PGPKeyPair signKey;
-        /* Sub (encryption) key. */
-        PGPKeyPair encryptKey;
+    static final class PGPDecryptedKeyPairRing {
+        /** Master (signing) key. */
+        final PGPKeyPair signKey;
+        /** Sub (encryption) key. */
+        final PGPKeyPair encryptKey;
 
         public PGPDecryptedKeyPairRing(PGPKeyPair sign, PGPKeyPair encrypt) {
             this.signKey = sign;
             this.encryptKey = encrypt;
-        }
-    }
-
-    public static final class PGPKeyPairRing {
-        public PGPPublicKeyRing publicKey;
-        public PGPSecretKeyRing secretKey;
-
-        PGPKeyPairRing(PGPPublicKeyRing publicKey, PGPSecretKeyRing secretKey) {
-            this.publicKey = publicKey;
-            this.secretKey = secretKey;
         }
     }
 
@@ -87,9 +77,9 @@ public final class PGPUtils {
      * fingerprint (from signing key).
      */
     public static final class PGPCoderKey {
-        PGPPublicKey encryptKey;
-        public String userID;
-        public String fingerprint;
+        final PGPPublicKey encryptKey;
+        public final String userID;
+        public final String fingerprint;
 
         public PGPCoderKey(PGPPublicKey encryptKey, String userID, String fingerprint) {
             this.encryptKey = encryptKey;
@@ -148,7 +138,7 @@ public final class PGPUtils {
     		sKeyConverter = new JcaPGPKeyConverter().setProvider(PGPUtils.PROVIDER);
     }
 
-    public static PrivateKey convertPrivateKey(PGPPrivateKey key) throws PGPException {
+    static PrivateKey convertPrivateKey(PGPPrivateKey key) throws PGPException {
     	ensureKeyConverter();
     	return sKeyConverter.getPrivateKey(key);
     }
