@@ -46,7 +46,6 @@ import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPEncryptedDataGenerator;
 import org.bouncycastle.openpgp.PGPEncryptedDataList;
 import org.bouncycastle.openpgp.PGPException;
-import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPLiteralData;
 import org.bouncycastle.openpgp.PGPLiteralDataGenerator;
 import org.bouncycastle.openpgp.PGPObjectFactory;
@@ -214,11 +213,10 @@ public final class Coder {
             OutputStream compressedOut = compGen.open(encryptedOut, new byte[BUFFER_SIZE]);
 
             // setup signature generator
-            PGPKeyPair encryptKeyPair = keys.myKey.getEncryptKeyPair();
-            int algo = encryptKeyPair.getPublicKey().getAlgorithm();
+            int algo = keys.myKey.getPublicEncryptionKey().getAlgorithm();
             PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
                     new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA1));
-            sigGen.init(PGPSignature.BINARY_DOCUMENT, encryptKeyPair.getPrivateKey());
+            sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getPrivateEncryptionKey());
 
             PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
             spGen.setSignerUserID(false, keys.myKey.getUserId());
@@ -468,14 +466,14 @@ public final class Coder {
             Iterator<?> it = encDataList.getEncryptedDataObjects();
             PGPPrivateKey sKey = null;
             PGPPublicKeyEncryptedData pbe = null;
-            long myKeyID = myKey.getEncryptKeyPair().getPrivateKey().getKeyID();
+            long myKeyID = myKey.getPrivateEncryptionKey().getKeyID();
             while (sKey == null && it.hasNext()) {
                 Object i = it.next();
                 if (!(i instanceof PGPPublicKeyEncryptedData))
                     continue;
                 pbe = (PGPPublicKeyEncryptedData) i;
                 if (pbe.getKeyID() == myKeyID)
-                    sKey = myKey.getEncryptKeyPair().getPrivateKey();
+                    sKey = myKey.getPrivateEncryptionKey();
             }
             if (sKey == null || pbe == null) {
                 LOGGER.warning("private key for message not found");

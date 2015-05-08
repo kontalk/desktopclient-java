@@ -39,35 +39,32 @@ import org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
-import org.kontalk.crypto.PGPUtils.PGPDecryptedKeyPairRing;
 import org.kontalk.util.EncodingUtils;
 
 /**
  * Personal asymmetric encryption key.
- * Note: There are two key pairs: one for encryption, one for signing.
  */
 public final class PersonalKey {
 
-    /** Decrypted key pair (for direct usage). */
-    private final PGPDecryptedKeyPairRing mPair;
+    /** Decrypted master (signing) key. */
+    private final PGPKeyPair mSignKey;
+    /** Decrypted sub (encryption) key. */
+    private final PGPKeyPair mEncryptKey;
     /** X.509 bridge certificate. */
-    private X509Certificate mBridgeCert;
+    private final X509Certificate mBridgeCert;
 
-    private PersonalKey(PGPDecryptedKeyPairRing keyPair, X509Certificate bridgeCert) {
-        mPair = keyPair;
+    private PersonalKey(PGPKeyPair signKp, PGPKeyPair encryptKp, X509Certificate bridgeCert) {
+        mSignKey = signKp;
+        mEncryptKey = encryptKp;
         mBridgeCert = bridgeCert;
     }
 
-    private PersonalKey(PGPKeyPair signKp, PGPKeyPair encryptKp, X509Certificate bridgeCert) {
-        this(new PGPDecryptedKeyPairRing(signKp, encryptKp), bridgeCert);
+    PGPPrivateKey getPrivateEncryptionKey() {
+        return mEncryptKey.getPrivateKey();
     }
 
-    public PGPKeyPair getEncryptKeyPair() {
-        return mPair.encryptKey;
-    }
-
-    public PGPKeyPair getSignKeyPair() {
-        return mPair.signKey;
+    PGPPublicKey getPublicEncryptionKey() {
+        return mEncryptKey.getPublicKey();
     }
 
     public X509Certificate getBridgeCertificate() {
@@ -75,19 +72,19 @@ public final class PersonalKey {
     }
 
     public PrivateKey getBridgePrivateKey() throws PGPException {
-    	return PGPUtils.convertPrivateKey(mPair.signKey.getPrivateKey());
+    	return PGPUtils.convertPrivateKey(mSignKey.getPrivateKey());
     }
 
     public byte[] getEncodedPublicKeyRing() throws IOException {
     	ByteArrayOutputStream out = new ByteArrayOutputStream();
-    	mPair.signKey.getPublicKey().encode(out);
-    	mPair.encryptKey.getPublicKey().encode(out);
+    	mSignKey.getPublicKey().encode(out);
+    	mEncryptKey.getPublicKey().encode(out);
     	return out.toByteArray();
     }
 
     /** Returns the first user ID on the key that matches the given network. */
     public String getUserId() {
-        PGPPublicKey key = mPair.signKey.getPublicKey();
+        PGPPublicKey key = mSignKey.getPublicKey();
         Iterator<?> uidIt = key.getUserIDs();
         if (!uidIt.hasNext())
             throw new IllegalStateException("no UID in personal key");
@@ -95,7 +92,7 @@ public final class PersonalKey {
     }
 
     public String getFingerprint() {
-    	return EncodingUtils.bytesToHex(mPair.signKey.getPublicKey().getFingerprint());
+    	return EncodingUtils.bytesToHex(mSignKey.getPublicKey().getFingerprint());
     }
 
     /** Creates a {@link PersonalKey} from private and public key byte buffers. */

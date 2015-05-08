@@ -29,7 +29,6 @@ import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPException;
-import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
@@ -58,18 +57,6 @@ public final class PGPUtils {
     private static JcaPGPKeyConverter sKeyConverter;
 
     private PGPUtils() {
-    }
-
-    static final class PGPDecryptedKeyPairRing {
-        /** Master (signing) key. */
-        final PGPKeyPair signKey;
-        /** Sub (encryption) key. */
-        final PGPKeyPair encryptKey;
-
-        public PGPDecryptedKeyPairRing(PGPKeyPair sign, PGPKeyPair encrypt) {
-            this.signKey = sign;
-            this.encryptKey = encrypt;
-        }
     }
 
     /**
@@ -149,12 +136,6 @@ public final class PGPUtils {
         // load the secret key ring
         KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
         PGPSecretKeyRing secRing = new PGPSecretKeyRing(privateKeyData, fpr);
-
-        return copySecretKeyRingWithNewPassword(secRing, oldPassphrase, newPassphrase);
-    }
-
-    private static PGPSecretKeyRing copySecretKeyRingWithNewPassword(PGPSecretKeyRing secRing,
-            String oldPassphrase, String newPassphrase) throws PGPException {
 
         PGPDigestCalculatorProvider sha1CalcProv = new JcaPGPDigestCalculatorProviderBuilder().build();
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(sha1CalcProv)
