@@ -56,19 +56,17 @@ final class ImportDialog extends WebDialog {
     private static enum ImportPage {INTRO, SETTINGS, RESULT};
     private static enum Direction {BACK, FORTH};
 
-    private final EnumMap<ImportPage, WebPanel> mPanels;
+    private final EnumMap<ImportPage, ImportPanel> mPanels;
     private final WebButton mBackButton;
     private final WebButton mNextButton;
     private final WebButton mCancelButton;
     private final WebButton mFinishButton;
 
-    private final WebFileChooserField mZipFileChooser;
-    private final WebPasswordField mPassField;
-
-    private final WebLabel mResultLabel;
-    private final WebLabel mErrorLabel;
-
     private ImportPage mCurrentPage;
+
+    // exchanged between panels
+    private String mZipPath = "";
+    private char[] mPasswd = {};
 
     ImportDialog(final View view, final boolean connect) {
         this.setTitle(Tr.tr("Import Wizard"));
@@ -76,12 +74,6 @@ final class ImportDialog extends WebDialog {
 
         this.setResizable(false);
         this.setModal(true);
-
-        mZipFileChooser = createFileChooser(".kontalk-keys.zip");
-        mPassField = new WebPasswordField(42);
-
-        mResultLabel = new WebLabel();
-        mErrorLabel = new WebLabel();
 
         // panels
         mPanels = new EnumMap<>(ImportPage.class);
@@ -126,74 +118,37 @@ final class ImportDialog extends WebDialog {
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
 
-        this.updatePage(ImportPage.INTRO);
+        this.setPage(ImportPage.INTRO);
     }
 
     private void switchPage(Direction dir) {
         int step = dir == Direction.BACK ? -1 : +1;
         ImportPage[] pages = ImportPage.values();
         ImportPage newPage = pages[mCurrentPage.ordinal() + step];
-        this.remove(mPanels.get(mCurrentPage));
-        this.updatePage(newPage);
+        ImportPanel oldPanel = mPanels.get(mCurrentPage);
+        if (dir == Direction.FORTH)
+            oldPanel.onNext();
+        this.remove(oldPanel);
+        this.setPage(newPage);
     }
 
-    private void updatePage(ImportPage newPage) {
+    private void setPage(ImportPage newPage) {
         mCurrentPage = newPage;
-        switch (mCurrentPage) {
-            case INTRO :
-                mBackButton.setVisible(false);
-                mNextButton.setEnabled(true);
-                break;
-            case SETTINGS :
-                mBackButton.setVisible(true);
-                mNextButton.setVisible(true);
-                mCancelButton.setVisible(true);
-                mFinishButton.setVisible(false);
-                this.checkNextButton();
-                break;
-            case RESULT :
-                boolean success = ImportDialog.this.importAccount();
-                mNextButton.setVisible(false);
-                if (success) {
-                    mCancelButton.setVisible(false);
-                    mFinishButton.setVisible(true);
-                }
-                break;
-        }
-        this.add(mPanels.get(mCurrentPage), BorderLayout.CENTER);
+        ImportPanel newPanel = mPanels.get(mCurrentPage);
+        newPanel.onShow();
+        this.add(newPanel, BorderLayout.CENTER);
         // swing is messy again
         this.repaint();
     }
 
-    private void checkNextButton() {
-        mNextButton.setEnabled(!mZipFileChooser.getSelectedFiles().isEmpty() &&
-                        !String.valueOf(mPassField.getPassword()).isEmpty());
+    private abstract class ImportPanel extends WebPanel {
+
+        abstract protected void onShow();
+
+        protected void onNext() {};
     }
 
-    private boolean importAccount() {
-        if (mZipFileChooser.getSelectedFiles().isEmpty()) {
-            LOGGER.warning("no zip file selected");
-            return false;
-        }
-        String zipPath = mZipFileChooser.getSelectedFiles().get(0).getAbsolutePath();
-        String password = new String(mPassField.getPassword());
-
-        String errorText = null;
-        try {
-            Account.getInstance().importAccount(zipPath, password);
-        } catch (KonException ex) {
-            errorText = View.getErrorText(ex);
-        }
-
-        String result = errorText == null ? Tr.tr("Success!") : Tr.tr("Error");
-        mResultLabel.setText(Tr.tr("Import process finished with:")+" "+result);
-        mErrorLabel.setText(errorText == null ?
-                "" :
-                "<html>"+Tr.tr("Error description:")+" \n\n"+errorText+"</html>");
-        return errorText == null;
-    }
-
-    private class IntroPanel extends WebPanel {
+    private class IntroPanel extends ImportPanel {
 
         IntroPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -213,11 +168,19 @@ final class ImportDialog extends WebDialog {
             this.add(groupPanel);
         }
 
+        @Override
+        protected void onShow() {
+            mBackButton.setVisible(false);
+            mNextButton.setEnabled(true);
+        }
     }
 
-    private class SettingsPanel extends WebPanel {
+    private class SettingsPanel extends ImportPanel {
 
-         SettingsPanel() {
+        private final WebFileChooserField mZipFileChooser;
+        private final WebPasswordField mPassField;
+
+        SettingsPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
 
@@ -227,10 +190,11 @@ final class ImportDialog extends WebDialog {
             // file chooser for key files
             groupPanel.add(new WebLabel(Tr.tr("Zip archive containing personal key:")));
 
+            mZipFileChooser = createFileChooser(".kontalk-keys.zip");
             mZipFileChooser.addSelectedFilesListener(new FilesSelectionListener() {
                 @Override
                 public void selectionChanged(List<File> files) {
-                        ImportDialog.this.checkNextButton();
+                        SettingsPanel.this.checkNextButton();
                 }
             });
             groupPanel.add(mZipFileChooser);
@@ -238,20 +202,21 @@ final class ImportDialog extends WebDialog {
 
             // text field for passphrase
             groupPanel.add(new WebLabel(Tr.tr("Decryption password for key:")));
+            mPassField = new WebPasswordField(42);
             mPassField.setInputPrompt(Tr.tr("Enter password..."));
             mPassField.setHideInputPromptOnFocus(false);
             mPassField.getDocument().addDocumentListener(new DocumentListener() {
                 @Override
                 public void insertUpdate(DocumentEvent e) {
-                    ImportDialog.this.checkNextButton();
+                    SettingsPanel.this.checkNextButton();
                 }
                 @Override
                 public void removeUpdate(DocumentEvent e) {
-                    ImportDialog.this.checkNextButton();
+                    SettingsPanel.this.checkNextButton();
                 }
                 @Override
                 public void changedUpdate(DocumentEvent e) {
-                    ImportDialog.this.checkNextButton();
+                    SettingsPanel.this.checkNextButton();
                 }
             });
             groupPanel.add(mPassField);
@@ -269,6 +234,79 @@ final class ImportDialog extends WebDialog {
             this.add(groupPanel);
         }
 
+        private void checkNextButton() {
+            mNextButton.setEnabled(!mZipFileChooser.getSelectedFiles().isEmpty() &&
+                    !String.valueOf(mPassField.getPassword()).isEmpty());
+        }
+
+        @Override
+        protected void onShow() {
+            mBackButton.setVisible(true);
+            mNextButton.setVisible(true);
+            mCancelButton.setVisible(true);
+            mFinishButton.setVisible(false);
+            this.checkNextButton();
+        }
+
+        @Override
+        protected void onNext() {
+            if (!mZipFileChooser.getSelectedFiles().isEmpty())
+                mZipPath = mZipFileChooser.getSelectedFiles().get(0).getAbsolutePath();
+            mPasswd = mPassField.getPassword();
+        }
+    }
+
+    private class ResultPanel extends ImportPanel {
+
+        private final WebLabel mResultLabel;
+        private final WebLabel mErrorLabel;
+
+        ResultPanel() {
+            GroupPanel groupPanel = new GroupPanel(10, false);
+            groupPanel.setMargin(5);
+
+            groupPanel.add(new WebLabel(Tr.tr("Import results")).setBoldFont());
+            groupPanel.add(new WebSeparator(true, true));
+
+            mResultLabel = new WebLabel();
+            groupPanel.add(mResultLabel);
+            mErrorLabel = new WebLabel();
+            groupPanel.add(mErrorLabel);
+
+            this.add(groupPanel);
+        }
+
+        private boolean importAccount() {
+            if (mZipPath.isEmpty()) {
+                LOGGER.warning("no zip file path");
+                return false;
+            }
+            String password = new String(mPasswd);
+
+            String errorText = null;
+            try {
+                Account.getInstance().importAccount(mZipPath, password);
+            } catch (KonException ex) {
+                errorText = View.getErrorText(ex);
+            }
+
+            String result = errorText == null ? Tr.tr("Success!") : Tr.tr("Error");
+            mResultLabel.setText(Tr.tr("Import process finished with:")+" "+result);
+            mErrorLabel.setText(errorText == null ?
+                    "" :
+                    "<html>"+Tr.tr("Error description:")+" \n\n"+errorText+"</html>");
+            return errorText == null;
+        }
+
+        @Override
+        protected void onShow() {
+            mNextButton.setVisible(false);
+            boolean success = this.importAccount();
+            if (success) {
+                mCancelButton.setVisible(false);
+                mFinishButton.setVisible(true);
+            }
+        }
     }
 
     private static WebFileChooserField createFileChooser(String path) {
@@ -301,22 +339,4 @@ final class ImportDialog extends WebDialog {
 
         return fileChooser;
     }
-
-    private class ResultPanel extends WebPanel {
-
-        ResultPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
-
-            groupPanel.add(new WebLabel(Tr.tr("Import results")).setBoldFont());
-            groupPanel.add(new WebSeparator(true, true));
-
-            groupPanel.add(mResultLabel);
-            groupPanel.add(mErrorLabel);
-
-            this.add(groupPanel);
-        }
-
-    }
-
 }
