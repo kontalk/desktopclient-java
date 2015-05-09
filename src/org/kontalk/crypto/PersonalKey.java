@@ -18,9 +18,7 @@
 
 package org.kontalk.crypto;
 
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
@@ -45,7 +43,6 @@ import org.kontalk.util.EncodingUtils;
  * Personal asymmetric encryption key.
  */
 public final class PersonalKey {
-
     /** Decrypted master (signing) key. */
     private final PGPKeyPair mSignKey;
     /** Decrypted sub (encryption) key. */
@@ -75,13 +72,6 @@ public final class PersonalKey {
     	return PGPUtils.convertPrivateKey(mSignKey.getPrivateKey());
     }
 
-    public byte[] getEncodedPublicKeyRing() throws IOException {
-    	ByteArrayOutputStream out = new ByteArrayOutputStream();
-    	mSignKey.getPublicKey().encode(out);
-    	mEncryptKey.getPublicKey().encode(out);
-    	return out.toByteArray();
-    }
-
     /** Returns the first user ID on the key that matches the given network. */
     public String getUserId() {
         PGPPublicKey key = mSignKey.getPublicKey();
@@ -97,8 +87,8 @@ public final class PersonalKey {
 
     /** Creates a {@link PersonalKey} from private and public key byte buffers. */
     @SuppressWarnings("unchecked")
-    public static PersonalKey load(InputStream privateKeyData,
-            InputStream publicKeyData,
+    public static PersonalKey load(byte[] privateKeyData,
+            byte[] publicKeyData,
             String passphrase,
             byte[] bridgeCertData)
             throws PGPException, IOException, CertificateException, NoSuchProviderException {
@@ -150,12 +140,15 @@ public final class PersonalKey {
         // X.509 bridge certificate
         X509Certificate bridgeCert = X509Bridge.load(bridgeCertData);
 
-        if (encPriv != null && encPub != null && signPriv != null && signPub != null && bridgeCert != null) {
-            signKp = new PGPKeyPair(signPub, signPriv);
-            encryptKp = new PGPKeyPair(encPub, encPriv);
-            return new PersonalKey(signKp, encryptKp, bridgeCert);
-        }
+        if (encPriv == null ||
+                encPub == null ||
+                signPriv == null ||
+                signPub == null ||
+                bridgeCert == null)
+            throw new PGPException("invalid key data");
 
-        throw new PGPException("invalid key data");
+        signKp = new PGPKeyPair(signPub, signPriv);
+        encryptKp = new PGPKeyPair(encPub, encPriv);
+        return new PersonalKey(signKp, encryptKp, bridgeCert);
     }
 }

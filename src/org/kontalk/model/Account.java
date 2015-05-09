@@ -68,13 +68,12 @@ public final class Account {
         byte[] bridgeCertData = readBytesFromFile(BRIDGE_CERT_FILENAME);
 
         // load key
-        String passphrase = Config.getInstance().getString(Config.ACC_PASS);
+        String password = Config.getInstance().getString(Config.ACC_PASS);
         try {
-             return PersonalKey.load(
-                     new ArmoredInputStream(new ByteArrayInputStream(privateKeyData)),
-                     new ArmoredInputStream(new ByteArrayInputStream(publicKeyData)),
-                     passphrase,
-                     bridgeCertData);
+            return PersonalKey.load(disarm(privateKeyData),
+                    disarm(publicKeyData),
+                    password,
+                    bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't load personal key", ex);
             throw new KonException(KonException.Error.RELOAD_KEY, ex);
@@ -98,10 +97,13 @@ public final class Account {
 
         // try to load key
         PersonalKey key;
+        byte[] encodedPublicKey;
+        byte[] encodedPrivateKey;
         try {
-             key = PersonalKey.load(
-                    new ArmoredInputStream(new ByteArrayInputStream(privateKeyData)),
-                    new ArmoredInputStream(new ByteArrayInputStream(publicKeyData)),
+            encodedPublicKey = disarm(publicKeyData);
+            encodedPrivateKey = disarm(privateKeyData);
+            key = PersonalKey.load(encodedPrivateKey,
+                    encodedPublicKey,
                     password,
                     bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
@@ -110,33 +112,48 @@ public final class Account {
         }
 
         // key seems valid. Copy to config dir
-        try {
-            publicKeyData = key.getEncodedPublicKeyRing();
-            privateKeyData = IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(privateKeyData)));
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't load personal key for exporting", ex);
-            throw new KonException(KonException.Error.IMPORT_KEY, ex);
-        }
-        writeBytesToFile(publicKeyData, PUBLIC_KEY_FILENAME, true);
-
-        String newPassword = StringUtils.randomString(40);
-        try {
-            privateKeyData = PGPUtils.copySecretKeyRingWithNewPassword(privateKeyData,
-                    password, newPassword).getEncoded();
-        } catch (IOException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't change password", ex);
-            throw new KonException(KonException.Error.IMPORT_CHANGE_PASSWORD, ex);
-        }
-        writeBytesToFile(privateKeyData, PRIVATE_KEY_FILENAME, true);
+        writeBytesToFile(encodedPublicKey, PUBLIC_KEY_FILENAME, true);
         writeBytesToFile(bridgeCertData, BRIDGE_CERT_FILENAME, false);
+        writePrivateKey(encodedPrivateKey, password);
 
         // success! use the new key
         mKey = key;
-        Config.getInstance().setProperty(Config.ACC_PASS, newPassword);
     }
 
-    public static Account getInstance() {
-        return INSTANCE;
+    public void setPassword(String newPassword) throws KonException {
+        byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
+        String oldPassword = Config.getInstance().getString(Config.ACC_PASS);
+        writePrivateKey(privateKeyData, oldPassword, newPassword);
+        Config.getInstance().setProperty(Config.ACC_PASS, "");
+    }
+
+    public void setNewPassword(String oldPassword, String newPassword) throws KonException {
+        byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
+        writePrivateKey(privateKeyData, oldPassword, newPassword);
+        Config.getInstance().setProperty(Config.ACC_PASS, "");
+    }
+
+    private static byte[] disarm(byte[] key) throws IOException {
+        return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
+    }
+
+    private static void writePrivateKey(byte[] privateKeyData, String oldPassword) throws KonException {
+        String newPassword = StringUtils.randomString(40);
+        writePrivateKey(privateKeyData, oldPassword, newPassword);
+        Config.getInstance().setProperty(Config.ACC_PASS, newPassword);
+     }
+
+    private static void writePrivateKey(byte[] privateKeyData,
+            String oldPassword,
+            String newPassword) throws KonException {
+        try {
+            privateKeyData = PGPUtils.copySecretKeyRingWithNewPassword(privateKeyData,
+                    oldPassword, newPassword).getEncoded();
+        } catch (IOException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't change password", ex);
+            throw new KonException(KonException.Error.CHANGE_PASSWORD, ex);
+        }
+        writeBytesToFile(privateKeyData, PRIVATE_KEY_FILENAME, true);
     }
 
     private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
@@ -158,7 +175,7 @@ public final class Account {
             bytes = Files.readAllBytes(new File(configDir, filename).toPath());
         } catch (IOException ex) {
             LOGGER.warning("can't read key file: "+ex.getLocalizedMessage());
-            throw new KonException(KonException.Error.RELOAD_READ_FILE, ex);
+            throw new KonException(KonException.Error.READ_FILE, ex);
         }
         return bytes;
     }
@@ -173,8 +190,11 @@ public final class Account {
             outStream.close();
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't write key file", ex);
-            throw new KonException(KonException.Error.IMPORT_WRITE_FILE, ex);
+            throw new KonException(KonException.Error.WRITE_FILE, ex);
         }
     }
 
+    public static Account getInstance() {
+        return INSTANCE;
+    }
 }

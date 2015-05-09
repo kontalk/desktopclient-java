@@ -123,7 +123,6 @@ public final class View implements Observer {
         UserList.getInstance().addObserver(mUserListView);
         mThreadListView = new ThreadListView(this, ThreadList.getInstance());
         ThreadList.getInstance().addObserver(mThreadListView);
-        // TODO notify threadlistview about user changes
 
         mThreadView = new ThreadView(this);
 
@@ -584,16 +583,16 @@ public final class View implements Observer {
                     errorText += eol + Tr.tr("Is the passphrase correct?");
                 }
                 break;
-            case IMPORT_CHANGE_PASSWORD:
+            case CHANGE_PASSWORD:
                 errorText = Tr.tr("Can't change password. Internal error(!?)");
                 break;
-            case IMPORT_WRITE_FILE:
+            case WRITE_FILE:
                 errorText = Tr.tr("Can't write key files to configuration directory.");
                 break;
-            case RELOAD_READ_FILE:
+            case READ_FILE:
             case RELOAD_KEY:
                 switch (ex.getError()) {
-                    case RELOAD_READ_FILE:
+                    case READ_FILE:
                         errorText = Tr.tr("Can't read key files from configuration directory.");
                         break;
                     case RELOAD_KEY:
