@@ -40,8 +40,10 @@ public final class UserList extends Observable {
 
     private final static UserList INSTANCE = new UserList();
 
-    /** JID to user map. */
-    private final HashMap<String, User> mMap = new HashMap<>();
+    /** JID to user. */
+    private final HashMap<String, User> mJIDMap = new HashMap<>();
+    /** Database ID to user. */
+    private final HashMap<Integer, User> mIDMap = new HashMap<>();
 
     private UserList() {
     }
@@ -61,8 +63,10 @@ public final class UserList extends Observable {
                 boolean encr = resultSet.getBoolean(User.COL_ENCR);
                 String key = Database.getString(resultSet, User.COL_PUB_KEY);
                 String fp = Database.getString(resultSet, User.COL_KEY_FP);
+                User newUser = new User(id, jid, name, status, lastSeen, encr, key, fp);
                 synchronized (this) {
-                    mMap.put(jid, new User(id, jid, name, status, lastSeen, encr, key, fp));
+                    mJIDMap.put(jid, newUser);
+                    mIDMap.put(id, newUser);
                 }
             }
         } catch (SQLException ex) {
@@ -72,7 +76,7 @@ public final class UserList extends Observable {
     }
 
     public synchronized SortedSet<User> getAll() {
-        return new TreeSet<>(mMap.values());
+        return new TreeSet<>(mJIDMap.values());
     }
 
     /**
@@ -83,31 +87,29 @@ public final class UserList extends Observable {
      */
     public synchronized Optional<User> add(String jid, String name) {
         jid = XmppStringUtils.parseBareJid(jid);
-        if (mMap.containsKey(jid)) {
+        if (mJIDMap.containsKey(jid)) {
             LOGGER.warning("user already exists, jid: "+jid);
             return Optional.empty();
         }
         User newUser = new User(jid, name);
-        mMap.put(jid, newUser);
+        mJIDMap.put(jid, newUser);
+        mIDMap.put(newUser.getID(), newUser);
         this.save();
         this.changed();
         return Optional.of(newUser);
     }
 
     public synchronized void save() {
-        for (User user: mMap.values()) {
+        for (User user: mJIDMap.values()) {
             user.save();
         }
     }
 
     synchronized Optional<User> get(int id) {
-        // TODO performance
-        for (User user: mMap.values()) {
-            if (user.getID() == id)
-                return Optional.of(user);
-        }
-        LOGGER.warning("can't find user with ID: "+id);
-        return Optional.empty();
+        Optional<User> optUser = Optional.ofNullable(mIDMap.get(id));
+        if (!optUser.isPresent())
+            LOGGER.warning("can't find user with ID: "+id);
+        return optUser;
     }
 
     /**
@@ -118,7 +120,7 @@ public final class UserList extends Observable {
      */
     public synchronized Optional<User> get(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
-        return Optional.ofNullable(mMap.get(jid));
+        return Optional.ofNullable(mJIDMap.get(jid));
     }
 
     /**
@@ -129,7 +131,7 @@ public final class UserList extends Observable {
      */
     public synchronized boolean contains(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
-        return mMap.containsKey(jid);
+        return mJIDMap.containsKey(jid);
     }
 
     public synchronized void changed() {
