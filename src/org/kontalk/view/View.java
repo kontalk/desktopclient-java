@@ -435,6 +435,10 @@ public final class View implements Observer {
         this.showThread(thread);
     }
 
+    void callCreateNewUser(String jid, String name, boolean encrypted) {
+        mControl.createNewUser(jid, name, encrypted);
+    }
+
     private void callSendText() {
        KonThread thread = mThreadListView.getSelectedValue();
        if (thread == null) {

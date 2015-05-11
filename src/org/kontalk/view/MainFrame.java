@@ -57,8 +57,6 @@ import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-import java.util.logging.Logger;
 import javax.swing.Icon;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
@@ -68,8 +66,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.system.Config;
 import org.kontalk.Kontalk;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 
@@ -78,10 +74,10 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class MainFrame extends WebFrame {
-    private final static Logger LOGGER = Logger.getLogger(MainFrame.class.getName());
 
     static enum Tab {THREADS, USER};
 
+    private final View mView;
     private final Config mConf = Config.getInstance();
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
@@ -94,6 +90,7 @@ final class MainFrame extends WebFrame {
             Component sendTextField,
             Component sendButton,
             Component statusBar) {
+        mView = view;
 
         // general view + behaviour
         this.setTitle("Kontalk Java Client");
@@ -111,7 +108,7 @@ final class MainFrame extends WebFrame {
                         SystemTray.getSystemTray().getTrayIcons().length > 0)
                     MainFrame.this.toggleState();
                 else
-                    view.callShutDown();
+                    mView.callShutDown();
             }
         });
 
@@ -128,7 +125,7 @@ final class MainFrame extends WebFrame {
         mConnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                view.callConnect();
+                mView.callConnect();
             }
         });
         konNetMenu.add(mConnectMenuItem);
@@ -139,7 +136,7 @@ final class MainFrame extends WebFrame {
         mDisconnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                view.callDisconnect();
+                mView.callDisconnect();
             }
         });
         konNetMenu.add(mDisconnectMenuItem);
@@ -164,7 +161,7 @@ final class MainFrame extends WebFrame {
         exitMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                view.callShutDown();
+                mView.callShutDown();
             }
         });
         konNetMenu.add(exitMenuItem);
@@ -180,7 +177,7 @@ final class MainFrame extends WebFrame {
         conConfMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                view.showConfig();
+                mView.showConfig();
             }
         });
         optionsMenu.add(conConfMenuItem);
@@ -460,15 +457,9 @@ final class MainFrame extends WebFrame {
         }
 
         private void saveUser() {
-            // TODO move to control!
-            Optional<User> optNewUser = UserList.getInstance().add(
-                    mJIDField.getText(),
-                    mNameField.getText());
-            if (!optNewUser.isPresent()) {
-                LOGGER.warning("can't add user");
-                return;
-            }
-            optNewUser.get().setEncrypted(mEncryptionBox.isSelected());
+            mView.callCreateNewUser(mJIDField.getText(),
+                    mNameField.getText(),
+                    mEncryptionBox.isSelected());
         }
     }
 

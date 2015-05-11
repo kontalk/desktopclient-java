@@ -158,6 +158,15 @@ public final class Control extends Observable {
         return ThreadList.getInstance().createNew(user);
     }
 
+    public void createNewUser(String jid, String name, boolean encrypted) {
+        Optional<User> optNewUser = UserList.getInstance().add(jid, name);
+        if (!optNewUser.isPresent()) {
+            LOGGER.warning("can't create new user");
+            return;
+        }
+        optNewUser.get().setEncrypted(encrypted);
+    }
+
     public void sendKeyRequest(User user) {
         mClient.sendPublicKeyRequest(user.getJID());
     }
