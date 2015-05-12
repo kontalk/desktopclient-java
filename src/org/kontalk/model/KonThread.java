@@ -226,7 +226,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             return;
         }
         state.setState(chatState);
-        this.changed(chatState);
+        this.changed(state);
     }
 
     /**
@@ -330,7 +330,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         mUserMap.clear();
         for (User oneUser : user) {
             oneUser.addObserver(this);
-            mUserMap.put(oneUser, new KonChatState());
+            mUserMap.put(oneUser, new KonChatState(oneUser));
         }
     }
 
@@ -355,12 +355,25 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     public class KonChatState {
+        private final User mUser;
         private ChatState mState = ChatState.gone;
         // note: the Android client does not set active states when only viewing
         // the thread (not necessary according to XEP-0085), this makes the
         // extra date field a bit useless
         // TODO save last active date to DB
         private Optional<Date> mLastActive = Optional.empty();
+
+        private KonChatState(User user) {
+            mUser = user;
+        }
+
+        public User getUser() {
+            return mUser;
+        }
+
+        public ChatState getState() {
+            return mState;
+        }
 
         private void setState(ChatState state) {
             mState = state;

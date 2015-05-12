@@ -28,6 +28,9 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.laf.viewport.WebViewport;
+import com.alee.managers.notification.NotificationManager;
+import com.alee.managers.notification.WebNotificationPopup;
+import com.alee.managers.popup.PopupStyle;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -213,7 +216,7 @@ final class ThreadView extends ScrollPane {
         private final KonThread mThread;
         private Optional<Background> mBackground = Optional.empty();
 
-        MessageList(KonThread thread) {
+        private MessageList(KonThread thread) {
             super();
             mThread = thread;
 
@@ -282,7 +285,7 @@ final class ThreadView extends ScrollPane {
             }
 
             if (arg instanceof KonChatState) {
-                // TODO show this somehow
+                this.showChatNotification((KonChatState) arg);
                 return;
             }
 
@@ -328,6 +331,29 @@ final class ThreadView extends ScrollPane {
             MessageItem messageView = this.getDisplayedItemAt(row);
             WebPopupMenu popupMenu = messageView.getPopupMenu();
             popupMenu.show(this, e.getX(), e.getY());
+        }
+
+        private void showChatNotification(KonChatState state) {
+            String activity = null;
+            switch(state.getState()) {
+                case composing: activity = Tr.tr("is writing..."); break;
+                //case paused: activity = Tr.tr("has paused"); break;
+                case inactive: activity = Tr.tr("is inactive"); break;
+            }
+            if (activity == null)
+                return;
+
+            NotificationManager.hideAllNotifications();
+            WebNotificationPopup popup = new WebNotificationPopup(PopupStyle.dark);
+            WebLabel textLabel = new WebLabel(state.getUser().getName()+" "+activity);
+            textLabel.setForeground(Color.WHITE);
+            textLabel.setMargin(5);
+            popup.setContent(textLabel);
+            popup.setDisplayTime(15 * 1000);
+            // TODO dont see nothing with this
+            //PopupManager.showPopup(this, popup);
+            //popup.showPopup(ThreadView.this);
+            NotificationManager.showNotification(ThreadView.this, popup);
         }
 
         private void setBackground(KonThread.ViewSettings s) {
