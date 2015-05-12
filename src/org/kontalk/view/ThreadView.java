@@ -120,9 +120,9 @@ final class ThreadView extends ScrollPane {
         this.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
-                // this is still not perfect: after adding all items, they still
+                // this is not perfect at all: after adding all items, they still
                 // dont have any content and so their height is unknown
-                // (== very small). While rendering content is added and we force
+                // (== very small). While rendering, content is added and we force
                 // scrolling down WHILE rendering until the final bottom is reached
                 if (e.getValueIsAdjusting())
                     mScrollDown = false;
@@ -277,7 +277,8 @@ final class ThreadView extends ScrollPane {
             }
 
             if (arg instanceof KonMessage) {
-                // TODO thread got one new message
+                this.insertMessage((KonMessage) arg);
+                return;
             }
 
             if (arg instanceof KonChatState) {
@@ -309,6 +310,14 @@ final class ThreadView extends ScrollPane {
                 }
             }
             this.sync(mThread.getMessages(), newItems);
+        }
+
+        private void insertMessage(KonMessage message) {
+            Set<MessageItem> newItems = new HashSet<>();
+            newItems.add(new MessageItem(message));
+            this.sync(mThread.getMessages(), newItems);
+            // trigger scrolling
+            mScrollDown = true;
         }
 
         private void showPopupMenu(MouseEvent e) {
