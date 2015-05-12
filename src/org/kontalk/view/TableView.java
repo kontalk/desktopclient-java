@@ -116,8 +116,11 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         // TODO performance
         // remove old
         for (V value: mItems.keySet())
-            if (!values.contains(value))
-                mItems.remove(value);
+            if (!values.contains(value)) {
+                I item = mItems.remove(value);
+                //item.onRemove();
+                value.deleteObserver(item);
+            }
         // add new
         for (I item: newItems) {
             item.mValue.addObserver(item);
@@ -278,6 +281,8 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
             TableView.this.showTooltip(this);
             return null;
         }
+
+        protected void onRemove() {};
     }
 
     private class TableRenderer extends WebTableCellRenderer {

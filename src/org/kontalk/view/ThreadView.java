@@ -82,6 +82,7 @@ import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.User;
 import org.kontalk.system.Downloader;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
@@ -322,6 +323,7 @@ final class ThreadView extends ScrollPane {
          */
         final class MessageItem extends TableView<MessageItem, KonMessage>.TableItem {
 
+            private WebLabel mFromLabel;
             private WebPanel mContentPanel;
             private WebTextPane mTextPane;
             private WebPanel mStatusPanel;
@@ -352,12 +354,11 @@ final class ThreadView extends ScrollPane {
 
                 // from label
                 if (mValue.getDir().equals(KonMessage.Direction.IN)) {
-                    String from = getFromString(mValue);
-                    WebLabel fromLabel = new WebLabel(" "+from);
-                    fromLabel.setFontSize(12);
-                    fromLabel.setForeground(Color.BLUE);
-                    fromLabel.setItalicFont();
-                    messagePanel.add(fromLabel, BorderLayout.NORTH);
+                    mFromLabel = new WebLabel();
+                    mFromLabel.setFontSize(12);
+                    mFromLabel.setForeground(Color.BLUE);
+                    mFromLabel.setItalicFont();
+                    messagePanel.add(mFromLabel, BorderLayout.NORTH);
                 }
 
                 mContentPanel = new WebPanel();
@@ -416,6 +417,8 @@ final class ThreadView extends ScrollPane {
                 } else {
                     this.add(messagePanel, BorderLayout.EAST);
                 }
+
+                mValue.getUser().addObserver(this);
             }
 
             @Override
@@ -440,6 +443,10 @@ final class ThreadView extends ScrollPane {
                 if (!mCreated)
                     return;
 
+                if ((arg == null || arg instanceof User) &&
+                        mValue.getDir().equals(KonMessage.Direction.IN))
+                    mFromLabel.setText(" "+getFromString(mValue));
+
                 if (arg == null || arg instanceof String)
                     this.updateText();
 
@@ -449,9 +456,8 @@ final class ThreadView extends ScrollPane {
                 if (arg == null || arg instanceof MessageContent.Attachment)
                     this.updateAttachment();
 
-                // TODO find row of item, set height and scroll down?
-//                if (row == table.getRowCount()-1)
-//                    table.mScrollDownOnResize = true;
+                // TODO solved?
+                MessageList.this.resizeAndRepaint();
             }
 
             // text in text area, before/after encryption
@@ -620,6 +626,11 @@ final class ThreadView extends ScrollPane {
                 return mValue.getContent().getText().toLowerCase().contains(search) ||
                         mValue.getUser().getName().toLowerCase().contains(search) ||
                         mValue.getJID().toLowerCase().contains(search);
+            }
+
+            @Override
+            protected void onRemove() {
+                mValue.getUser().deleteObserver(this);
             }
         }
     }
@@ -796,16 +807,17 @@ final class ThreadView extends ScrollPane {
             public javax.swing.text.View create(Element elem) {
                 String kind = elem.getName();
                 if (kind != null) {
-                    if (kind.equals(AbstractDocument.ContentElementName)) {
-                        return new WrapLabelView(elem);
-                    } else if (kind.equals(AbstractDocument.ParagraphElementName)) {
-                        return new ParagraphView(elem);
-                    } else if (kind.equals(AbstractDocument.SectionElementName)) {
-                        return new BoxView(elem, javax.swing.text.View.Y_AXIS);
-                    } else if (kind.equals(StyleConstants.ComponentElementName)) {
-                        return new ComponentView(elem);
-                    } else if (kind.equals(StyleConstants.IconElementName)) {
-                        return new IconView(elem);
+                    switch (kind) {
+                        case AbstractDocument.ContentElementName:
+                            return new WrapLabelView(elem);
+                        case AbstractDocument.ParagraphElementName:
+                            return new ParagraphView(elem);
+                        case AbstractDocument.SectionElementName:
+                            return new BoxView(elem, javax.swing.text.View.Y_AXIS);
+                        case StyleConstants.ComponentElementName:
+                            return new ComponentView(elem);
+                        case StyleConstants.IconElementName:
+                            return new IconView(elem);
                     }
                 }
                 // default to text display

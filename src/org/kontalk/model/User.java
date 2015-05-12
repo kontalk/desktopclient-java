@@ -132,7 +132,7 @@ public final class User extends Observable implements Comparable<User> {
 
         mJID = jid;
         this.save();
-        this.changed();
+        this.changed(mJID);
     }
 
     public int getID() {
@@ -149,8 +149,8 @@ public final class User extends Observable implements Comparable<User> {
 
         mName = name;
         this.save();
-        // TODO thread view not updated
-        this.changed();
+        // user itself as argument for thread view items
+        this.changed(this);
     }
 
     public String getStatus() {
@@ -184,7 +184,7 @@ public final class User extends Observable implements Comparable<User> {
         } else if (type == Presence.Type.unavailable) {
             mAvailable = Online.NO;
         }
-        this.changed();
+        this.changed(mAvailable);
 
         if (status != null && !status.isEmpty()) {
             mStatus = status;
@@ -211,7 +211,7 @@ public final class User extends Observable implements Comparable<User> {
         mKey = Base64.getEncoder().encodeToString(rawKey);
         mFingerprint = fingerprint;
         this.save();
-        this.changed();
+        this.changed(null);
     }
 
     public boolean isBlocked() {
@@ -235,9 +235,9 @@ public final class User extends Observable implements Comparable<User> {
         db.execUpdate(TABLE, set, mID);
     }
 
-    private void changed() {
+    private void changed(Object arg) {
         this.setChanged();
-        this.notifyObservers();
+        this.notifyObservers(arg);
     }
 
     @Override
