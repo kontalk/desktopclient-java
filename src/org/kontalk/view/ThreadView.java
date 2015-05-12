@@ -80,6 +80,7 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
+import org.kontalk.model.KonThread.KonChatState;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.User;
@@ -260,6 +261,13 @@ final class ThreadView extends ScrollPane {
 
         @Override
         protected void updateOnEDT(Object arg) {
+            if (arg instanceof Set ||
+                    arg instanceof String ||
+                    arg instanceof Boolean) {
+                // users, subject or read status changed, nothing to do here
+                return;
+            }
+
             if (arg instanceof KonThread.ViewSettings) {
                 this.setBackground((KonThread.ViewSettings) arg);
                 if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
@@ -268,8 +276,18 @@ final class ThreadView extends ScrollPane {
                 return;
             }
 
+            if (arg instanceof KonMessage) {
+                // TODO thread got one new message
+            }
+
+            if (arg instanceof KonChatState) {
+                // TODO show this somehow
+                return;
+            }
+
             if (mThread.isDeleted()) {
                 ThreadView.this.removeThread(mThread);
+                return;
             }
 
             // check for new messages to add

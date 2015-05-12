@@ -236,6 +236,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
         private void update() {
             mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
+
             String subject = mValue.getSubject();
             if (subject.isEmpty()) subject = Tr.tr("<unnamed>");
             mSubjectLabel.setText(subject);

@@ -55,6 +55,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     public static final String COL_VIEW_SET = "view_settings";
     public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            // optional XMPP thread ID
             "xmpp_id TEXT UNIQUE, " +
             COL_SUBJ+" TEXT, " +
             // boolean, contains unread messages?
@@ -160,7 +161,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             return;
 
         this.setUserMap(user);
-        this.changed();
+        this.changed(user);
     }
 
     /**
@@ -176,7 +177,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
         mSubject = subject;
         this.save();
-        this.changed();
+        this.changed(subject);
     }
 
     public boolean isRead() {
@@ -188,7 +189,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             return;
 
         mRead = true;
-        this.changed();
+        this.changed(mRead);
     }
 
     public ViewSettings getViewSettings() {
@@ -214,7 +215,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         if (added) {
             if (message.getDir() == KonMessage.Direction.IN)
                 mRead = false;
-            this.changed();
+            this.changed(message);
         }
     }
 
@@ -225,7 +226,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             return;
         }
         state.setState(chatState);
-        // TODO notify
+        this.changed(chatState);
     }
 
     /**
@@ -285,7 +286,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         // delete thread itself
         db.execDelete(TABLE, mID);
         mDeleted = true;
-        this.changed();
+        this.changed(null);
     }
 
     private Map<Integer, Integer> loadReceiver() {
@@ -333,9 +334,9 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         }
     }
 
-    private synchronized void changed() {
+    private synchronized void changed(Object arg) {
         this.setChanged();
-        this.notifyObservers();
+        this.notifyObservers(arg);
     }
 
     @Override
@@ -345,7 +346,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
     @Override
     public void update(Observable o, Object arg) {
-        this.changed();
+        this.changed(o);
     }
 
     @Override
@@ -353,7 +354,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         return Integer.compare(this.mID, o.mID);
     }
 
-    private class KonChatState {
+    public class KonChatState {
         private ChatState mState = ChatState.gone;
         // note: the Android client does not set active states when only viewing
         // the thread (not necessary according to XEP-0085), this makes the
