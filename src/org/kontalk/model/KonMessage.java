@@ -64,7 +64,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         RECEIVED,
         /** Outgoing message, an error occurred somewhere in the transmission. */
         ERROR
-        // TODO maybe use two error states: for sending, and for server errors
     };
 
     public final static String TABLE = "messages";

@@ -39,8 +39,8 @@ import javax.swing.text.StyledDocument;
 
 /**
  * Static methods/field for parsing web links in the text of a WebTextPane.
- * Cause Android has Linkify and I have to write this myself .( Some stuff taken
- * from: https://community.oracle.com/thread/2089990
+ * Cause Android has Linkify and I have to write this myself .(
+ * Some parts taken from: https://community.oracle.com/thread/2089990
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
@@ -100,10 +100,9 @@ final class LinkUtils {
             WebTextPane textPane = (WebTextPane) e.getComponent();
             StyledDocument doc = textPane.getStyledDocument();
             Element elem = doc.getCharacterElement(textPane.viewToModel(e.getPoint()));
-            if (!elem.getAttributes().isDefined(URL_ATT_NAME)) // not a link
-            {
+            if (!elem.getAttributes().isDefined(URL_ATT_NAME))
+                // not a link
                 return;
-            }
 
             int len = elem.getEndOffset() - elem.getStartOffset();
             final String url;
