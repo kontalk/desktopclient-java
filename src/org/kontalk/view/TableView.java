@@ -30,34 +30,37 @@ import java.awt.Rectangle;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.logging.Logger;
 import javax.swing.JTable;
+import javax.swing.RowFilter;
+import javax.swing.RowFilter.Entry;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * A generic list view for subclassing.
  * Implemented as table with one column.
- * TODO use row sorter / row filter!?
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(TableView.class.getName());
+abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable & Comparable<V>> extends WebTable implements Observer {
 
-    /** The items in this list. */
+    private final DefaultTableModel mModel;
+    private final TableRowSorter<DefaultTableModel> mRowSorter;
+    /** Map synced with model for faster access. */
     private final SortedMap<V, I> mItems = new TreeMap<>();
-    /** The currently displayed items. A subset of mItems */
-    private final DefaultTableModel mFilteredTableModel = new DefaultTableModel(0, 1);
 
     /** The current search string. */
     private String mSearch = "";
@@ -69,7 +72,33 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
     TableView() {
-        this.setModel(mFilteredTableModel);
+        // model
+        mModel = new DefaultTableModel(0, 1) {
+            // row sorter needs this
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                return TableView.this.getColumnClass(columnIndex);
+            }
+        };
+        this.setModel(mModel);
+
+        // sorter
+        mRowSorter = new TableRowSorter<>(mModel);
+        List<RowSorter.SortKey> sortKeys = new ArrayList<>();
+        sortKeys.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
+        mRowSorter.setSortKeys(sortKeys);
+        mRowSorter.setSortsOnUpdates(true);
+        mRowSorter.sort();
+        // filter
+        RowFilter<DefaultTableModel, Integer> rowFilter = new RowFilter<DefaultTableModel, Integer>() {
+        @Override
+        public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                I i = (I) entry.getValue(0);
+                return i.contains(mSearch);
+            }
+        };
+        mRowSorter.setRowFilter(rowFilter);
+        this.setRowSorter(mRowSorter);
 
         // hide header
         this.setTableHeader(null);
@@ -104,64 +133,61 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         });
     }
 
-    protected Collection<I> getItems() {
-        return mItems.values();
-    }
-
     protected boolean containsValue(V value) {
         return mItems.containsKey(value);
     }
 
+    @SuppressWarnings("unchecked")
     protected void sync(Set<V> values, Set<I> newItems) {
         // TODO performance
         // remove old
-        for (V value: mItems.keySet())
-            if (!values.contains(value)) {
-                I item = mItems.remove(value);
-                //item.onRemove();
-                value.deleteObserver(item);
+        for (int i=0; i < mModel.getRowCount(); i++) {
+            I item = (I) mModel.getValueAt(i, 0);
+            if (!values.contains(item.mValue)) {
+                item.onRemove();
+                item.mValue.deleteObserver(item);
+                mModel.removeRow(i);
+                i--;
             }
-        // add new
-        for (I item: newItems) {
-            item.mValue.addObserver(item);
-            I replaced = mItems.put(item.mValue, item);
-            if (replaced != null)
-                LOGGER.warning("replaced item in table view, value: "+item.mValue);
         }
-        this.filterItems(mSearch);
+        // add new
+        for (I item : newItems) {
+            item.mValue.addObserver(item);
+            mItems.put(item.mValue, item);
+            mModel.addRow(new Object[]{item});
+        }
     }
 
     @SuppressWarnings("unchecked")
     protected I getDisplayedItemAt(int i) {
-        return (I) mFilteredTableModel.getValueAt(i, 0);
+        return (I) mModel.getValueAt(mRowSorter.convertRowIndexToModel(i), 0);
     }
 
     protected void clearItems() {
-        for (TableItem i : this.getItems()) {
+        for (TableItem i : mItems.values()) {
             i.mValue.deleteObserver(i);
         }
+        mModel.setRowCount(0);
         mItems.clear();
-        this.filterItems("");
     }
 
     @SuppressWarnings("unchecked")
     protected I getSelectedItem() {
-        return (I) mFilteredTableModel.getValueAt(this.getSelectedRow(), 0);
+        return (I) mModel.getValueAt(mRowSorter.convertRowIndexToModel(this.getSelectedRow()), 0);
     }
 
     // nullable
     protected V getSelectedValue() {
         if (this.getSelectedRow() == -1)
             return null;
-        TableItem item = this.getSelectedItem();
-        return item.mValue;
+        return this.getSelectedItem().mValue;
     }
 
     /** Resets filtering and selects the item containing the value specified. */
     void setSelectedItem(V value) {
         // TODO performance
         this.filterItems("");
-        for (int i=0; i< mItems.size(); i++) {
+        for (int i=0; i< mModel.getRowCount(); i++) {
             if (this.getDisplayedItemAt(i).mValue == value) {
                 this.setSelectedItem(i);
                 break;
@@ -174,20 +200,14 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
     }
 
     protected void setSelectedItem(int i) {
-        if (i >= mFilteredTableModel.getRowCount())
+        if (i >= mModel.getRowCount())
             return;
         this.setSelectedRow(i);
     }
 
     void filterItems(String search) {
         mSearch = search;
-        // TODO performance
-        mFilteredTableModel.setRowCount(0);
-        for (I item : this.getItems()) {
-            if (item.contains(search.toLowerCase())) {
-                mFilteredTableModel.addRow(new Object[]{item});
-            }
-        }
+        mRowSorter.sort();
     }
 
     private void showTooltip(TableItem item) {
@@ -215,7 +235,6 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
     // JTabel uses this to determine the renderer
     @Override
     public Class<?> getColumnClass(int column) {
-        // always the same
         return TableItem.class;
     }
 
@@ -235,7 +254,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
     abstract protected void updateOnEDT(Object arg);
 
-    abstract class TableItem extends WebPanel implements Observer {
+    abstract class TableItem extends WebPanel implements Observer, Comparable<TableItem> {
 
         protected final V mValue;
 
@@ -283,6 +302,11 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         }
 
         protected void onRemove() {};
+
+        @Override
+        public int compareTo(TableItem o) {
+            return mValue.compareTo(o.mValue);
+        }
     }
 
     private class TableRenderer extends WebTableCellRenderer {
@@ -301,7 +325,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
             item.render(table.getWidth(), isSelected);
 
             int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
-            // the text pane font in thread view items needs a little more
+            // view item needs a little more then it preferres
             height += 1;
             if (height != table.getRowHeight(row))
                 // note: this calls resizeAndRepaint()

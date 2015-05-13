@@ -295,7 +295,7 @@ final class ThreadView extends ScrollPane {
             }
 
             // check for new messages to add
-            if (this.getItems().size() < mThread.getMessages().size())
+            if (this.getModel().getRowCount() < mThread.getMessages().size())
                 this.insertMessages();
 
             if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
