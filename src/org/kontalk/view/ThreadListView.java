@@ -37,7 +37,6 @@ import com.alee.utils.swing.DialogOptions;
 import com.alee.utils.swing.UnselectableButtonGroup;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -191,10 +190,6 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
             mSubjectLabel = new WebLabel("foo");
             mSubjectLabel.setFontSize(14);
-            // if too long, draw three dots at the end
-            Dimension size = mSubjectLabel.getPreferredSize();
-            mSubjectLabel.setMinimumSize(size);
-            mSubjectLabel.setPreferredSize(size);
             this.add(mSubjectLabel, BorderLayout.CENTER);
 
             mUserLabel = new WebLabel();

@@ -311,7 +311,6 @@ final class ImportDialog extends WebDialog {
 
     private static WebFileChooserField createFileChooser(String path) {
         final WebFileChooserField fileChooser = new WebFileChooserField();
-        fileChooser.setPreferredWidth(100);
         fileChooser.setMultiSelectionEnabled(false);
         fileChooser.setShowFileShortName(false);
         fileChooser.setShowRemoveButton(false);

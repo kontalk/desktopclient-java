@@ -349,8 +349,6 @@ final class MainFrame extends WebFrame {
                 }
             });
             WebScrollPane listScrollPane = new ScrollPane(mStatusList);
-            listScrollPane.setPreferredHeight(100);
-            listScrollPane.setPreferredWidth(0);
             groupPanel.add(listScrollPane);
             this.add(groupPanel, BorderLayout.CENTER);
 

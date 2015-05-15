@@ -34,7 +34,6 @@ import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -136,18 +135,11 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
             mNameLabel = new WebLabel("foo");
             mNameLabel.setFontSize(14);
-            // if too long, draw three dots at the end
-            Dimension size = mNameLabel.getPreferredSize();
-            mNameLabel.setMinimumSize(size);
-            mNameLabel.setPreferredSize(size);
             this.add(mNameLabel, BorderLayout.CENTER);
 
             mJIDLabel = new WebLabel("foo");
             mJIDLabel.setForeground(Color.GRAY);
             mJIDLabel.setFontSize(11);
-            size = mJIDLabel.getPreferredSize();
-            mJIDLabel.setMinimumSize(size);
-            mJIDLabel.setPreferredSize(size);
             this.add(mJIDLabel, BorderLayout.SOUTH);
 
             this.updateOnEDT(null);
@@ -310,7 +302,6 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
             mItem = item;
 
             this.setTitle(Tr.tr("Edit Contact"));
-            this.setMinimumSize(new Dimension(400, -1));
             this.setResizable(false);
             this.setModal(true);
 
