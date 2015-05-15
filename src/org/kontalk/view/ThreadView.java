@@ -28,7 +28,6 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.laf.viewport.WebViewport;
-import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.notification.WebNotificationPopup;
 import com.alee.managers.popup.PopupStyle;
 import com.alee.managers.tooltip.TooltipManager;
@@ -115,6 +114,7 @@ final class ThreadView extends ScrollPane {
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
+    private WebNotificationPopup mPopup = null;
 
     ThreadView(View view) {
         super(null);
@@ -334,6 +334,9 @@ final class ThreadView extends ScrollPane {
         }
 
         private void showChatNotification(KonChatState state) {
+            if (ThreadView.this.getCurrentView().orElse(null) != this)
+                return;
+
             String activity = null;
             switch(state.getState()) {
                 case composing: activity = Tr.tr("is writing..."); break;
@@ -343,17 +346,17 @@ final class ThreadView extends ScrollPane {
             if (activity == null)
                 return;
 
-            NotificationManager.hideAllNotifications();
-            WebNotificationPopup popup = new WebNotificationPopup(PopupStyle.dark);
+            if (mPopup != null)
+                mPopup.hidePopup();
+            mPopup = new WebNotificationPopup(PopupStyle.dark);
             WebLabel textLabel = new WebLabel(state.getUser().getName()+" "+activity);
             textLabel.setForeground(Color.WHITE);
             textLabel.setMargin(5);
-            popup.setContent(textLabel);
-            popup.setDisplayTime(15 * 1000);
-            // TODO dont see nothing with this
-            //PopupManager.showPopup(this, popup);
-            //popup.showPopup(ThreadView.this);
-            NotificationManager.showNotification(ThreadView.this, popup);
+            mPopup.setContent(textLabel);
+            mPopup.setDisplayTime(15 * 1000);
+            mPopup.revalidate();
+            // TODO show notification really inside this message list
+            mPopup.showPopup(ThreadView.this, 10, ThreadView.this.getHeight() - 50);
         }
 
         private void setBackground(KonThread.ViewSettings s) {
@@ -376,7 +379,7 @@ final class ThreadView extends ScrollPane {
          */
         final class MessageItem extends TableView<MessageItem, KonMessage>.TableItem {
 
-            private WebLabel mFromLabel;
+            private WebLabel mFromLabel = null;
             private WebPanel mContentPanel;
             private WebTextPane mTextPane;
             private WebPanel mStatusPanel;
@@ -496,8 +499,7 @@ final class ThreadView extends ScrollPane {
                 if (!mCreated)
                     return;
 
-                if ((arg == null || arg instanceof User) &&
-                        mValue.getDir().equals(KonMessage.Direction.IN))
+                if ((arg == null || arg instanceof User) && mFromLabel != null)
                     mFromLabel.setText(" "+getFromString(mValue));
 
                 if (arg == null || arg instanceof String)
