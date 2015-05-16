@@ -21,15 +21,12 @@ package org.kontalk.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
@@ -155,9 +152,9 @@ public final class MessageList extends Observable {
     /**
      * Get all outgoing messages with status "PENDING".
      */
-    public synchronized Collection<OutMessage> getPending() {
+    public synchronized SortedSet<OutMessage> getPending() {
         // TODO performance, probably additional map needed
-        Set<OutMessage> s = new HashSet<>();
+        SortedSet<OutMessage> s = new TreeSet<>();
         for (List<KonMessage> l : mMap.values()) {
             // TODO use lambda in near future
             for (KonMessage m : l) {
