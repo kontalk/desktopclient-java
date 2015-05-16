@@ -559,7 +559,7 @@ final class ThreadView extends ScrollPane {
                 } else {
                     firstStat = sent;
                     firstDate = mValue.getServerDate().orElse(null);
-                    secStat = Tr.tr("Received: ")+" ";
+                    secStat = Tr.tr("Received:")+" ";
                     secDate = mValue.getDate();
                 }
 
