@@ -168,26 +168,21 @@ public final class MessageList extends Observable {
     }
 
     /**
-     * Get the newest (ie last received) outgoing message that has not the status
-     * "RECEIVED" with the specified XMPP ID.
+     * Get the newest (ie last received) outgoing message.
      */
-    public synchronized Optional<OutMessage> getUncompleted(String xmppID) {
-        if (!mMap.containsKey(xmppID)) {
-            LOGGER.warning("can't find message with XMPP ID: " + xmppID);
-            return Optional.empty();
-        }
-        SortedSet<OutMessage> s = new TreeSet<>();
-        for (KonMessage m : mMap.get(xmppID)) {
-            if (m instanceof OutMessage &&
-                    m.getReceiptStatus() != KonMessage.Status.RECEIVED) {
-                s.add((OutMessage) m);
+    public synchronized Optional<OutMessage> getLast(String xmppID) {
+        if (mMap.containsKey(xmppID)) {
+            SortedSet<OutMessage> s = new TreeSet<>();
+            for (KonMessage m : mMap.get(xmppID)) {
+                if (m instanceof OutMessage) {
+                    s.add((OutMessage) m);
+                }
             }
+            if (!s.isEmpty())
+                return Optional.of(s.last());
         }
-        if (s.isEmpty()) {
-            LOGGER.warning("can't find any not received outgoing message, XMPP ID: " + xmppID);
-            return Optional.empty();
-        }
-        return Optional.of(s.last());
+        LOGGER.warning("can't find any outgoing message with XMPP ID: " + xmppID);
+        return Optional.empty();
     }
 
     public static MessageList getInstance() {

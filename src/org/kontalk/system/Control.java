@@ -59,7 +59,7 @@ public final class Control extends Observable {
 
     private final static String LEGACY_CUT_FROM_ID = " (NO COMMENT)";
 
-    /** The current application state. **/
+    /** The current application state. */
     public enum Status {
         DISCONNECTING,
         DISCONNECTED,
@@ -169,6 +169,10 @@ public final class Control extends Observable {
 
     public void sendKeyRequest(User user) {
         mClient.sendPublicKeyRequest(user.getJID());
+    }
+
+    public void handleChatStateEvent(KonThread thread, User user, ChatState state) {
+        // TODO
     }
 
     /* events from network client */
@@ -290,16 +294,20 @@ public final class Control extends Observable {
      * @param status new receipt status of message
      */
     public void setMessageStatus(String xmppID, KonMessage.Status status) {
-        Optional<OutMessage> optMessage = MessageList.getInstance().getUncompleted(xmppID);
-        if (!optMessage.isPresent()) {
-            LOGGER.warning("can't find message");
+        Optional<OutMessage> optMessage = MessageList.getInstance().getLast(xmppID);
+        if (!optMessage.isPresent())
             return;
-        }
-        optMessage.get().setStatus(status);
+        OutMessage m = optMessage.get();
+
+        if (m.getReceiptStatus() == KonMessage.Status.RECEIVED)
+            // probably by another client
+            return;
+
+        m.setStatus(status);
     }
 
     public void setMessageError(String xmppID, Condition condition, String errorText) {
-        Optional<OutMessage> optMessage = MessageList.getInstance().getUncompleted(xmppID);
+        Optional<OutMessage> optMessage = MessageList.getInstance().getLast(xmppID);
         if (!optMessage.isPresent()) {
             LOGGER.warning("can't find message for error");
             return ;
