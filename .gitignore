@@ -5,6 +5,8 @@ nbproject/private/
 kontalk.db
 kontalk.properties
 *.pgp
+.gradle/
+build_gradle/
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
