@@ -14,12 +14,8 @@ buildDir = 'build_gradle'
 sourceSets {
     main {
         java {
-            srcDir 'src'
             srcDir 'client-common-java/src/main/java'
         }
-//        resources {
-//            srcDir 'src/org/kontalk/res'
-//        }
     }
 }
 
