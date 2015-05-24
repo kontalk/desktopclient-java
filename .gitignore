@@ -7,6 +7,7 @@ kontalk.properties
 *.pgp
 .gradle/
 build_gradle/
+.nb-gradle/
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
