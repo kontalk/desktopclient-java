@@ -511,8 +511,8 @@ final class ThreadView extends ScrollPane {
                 if (arg == null || arg instanceof MessageContent.Attachment)
                     this.updateAttachment();
 
-                // changes are not instantly painted
-                MessageList.this.repaint();
+                // TODO solved?
+                MessageList.this.resizeAndRepaint();
             }
 
             // text in text area, before/after encryption
@@ -594,7 +594,8 @@ final class ThreadView extends ScrollPane {
                 TooltipManager.setTooltip(mStatusPanel, html);
             }
 
-            // attachment / image, note: loading many images is very slow
+            // attachment / image
+            // TODO loading many images is very slow
             private void updateAttachment() {
                 // remove possible old component (replacing does not work right)
                 BorderLayout layout = (BorderLayout) mContentPanel.getLayout();
