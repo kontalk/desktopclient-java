@@ -1,17 +1,21 @@
 *.class
 
 # EDIT:
-nbproject/private/
-kontalk.db
-kontalk.properties
+/nbproject/private/
+/kontalk.db
+/kontalk.properties
 *.pgp
-.gradle/
-build_gradle/
-.nb-gradle/
-.idea/workspace.xml
-.idea/tasks.xml
-.idea/gradle.xml
-.idea/libraries/
+# Gradle
+/.gradle/
+/build_gradle/
+# Gradle Netbeans plugin
+/.nb-gradle/
+# IntelliJ Idea
+/.idea/workspace.xml
+/.idea/tasks.xml
+/.idea/gradle.xml
+/.idea/libraries/
+/*.iml
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
