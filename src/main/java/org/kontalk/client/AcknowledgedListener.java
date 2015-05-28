@@ -19,9 +19,9 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.PacketListener;
+import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.system.Control;
@@ -30,7 +30,7 @@ import org.kontalk.system.Control;
  * Listener for acknowledged packets (Stream Management, XEP-0198).
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class AcknowledgedListener implements PacketListener {
+public final class AcknowledgedListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(AcknowledgedListener.class.getName());
 
     private final Control mControl;
@@ -40,23 +40,23 @@ public final class AcknowledgedListener implements PacketListener {
     }
 
     @Override
-    public void processPacket(Packet p) {
+    public void processPacket(Stanza p) {
         // note: the packet is not the acknowledgement itself but the packet that
         // is acknowledged
         if (!(p instanceof Message)) {
             // we are only interested in acks for messages
             return;
         }
+        Message m = (Message) p;
+        LOGGER.info("got acknowledgement for message: "+m.toXML());
 
-        LOGGER.info("got acknowledgement for message: "+p.toXML());
-
-        if (DeliveryReceipt.from(p) != null) {
+        if (DeliveryReceipt.from(m) != null) {
             // this is an ack for a 'received' message send by
             // KonMessageListener (XEP-0184), nothing must be done
             return;
         }
 
-        String xmppID = p.getPacketID();
+        String xmppID = m.getStanzaId();
         if (xmppID == null || xmppID.isEmpty()) {
             LOGGER.warning("acknowledged message has invalid XMPP ID: "+xmppID);
             return;

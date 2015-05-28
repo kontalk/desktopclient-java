@@ -17,7 +17,7 @@ sourceSets {
 }
 
 ext.bcVersion = '1.50'
-ext.smackVersion = '4.1.0-alpha6'
+ext.smackVersion = '4.1.0'
 
 dependencies {
     compile fileTree(dir: 'lib', include: ['*.jar'])
@@ -36,9 +36,7 @@ dependencies {
     compile group: 'org.ocpsoft.prettytime', name: 'prettytime', version: "3.2.7.Final"
     //compile group: 'org.igniterealtime.smack', name: 'smack-core', version: "$smackVersion"
     compile group: 'org.igniterealtime.smack', name: 'smack-extensions', version: "$smackVersion"
-    // TODO bug in alpha6 prevents connecting
-    //compile group: 'org.igniterealtime.smack', name: 'smack-java7', version: "$smackVersion"
-    compile group: 'org.igniterealtime.smack', name: 'smack-sasl-provided', version: "$smackVersion"
+    compile group: 'org.igniterealtime.smack', name: 'smack-java7', version: "$smackVersion"
     compile group: 'org.igniterealtime.smack', name: 'smack-tcp', version: "$smackVersion"
     compile group: 'org.xerial', name: 'sqlite-jdbc', version: "3.8.6"
     compile group: 'de.sciss', name: 'weblaf', version: "1.27"

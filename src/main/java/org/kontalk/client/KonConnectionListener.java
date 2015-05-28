@@ -43,8 +43,14 @@ public final class KonConnectionListener implements ConnectionListener {
         LOGGER.info("connected");
     }
 
+    /**
+     * Notification that the connection has been authenticated.
+     *
+     * @param connection the XMPPConnection which successfully authenticated.
+     * @param resumed    true if a previous XMPP session's stream was resumed.
+     */
     @Override
-    public void authenticated(XMPPConnection connection) {
+    public void authenticated(XMPPConnection connection, boolean resumed) {
         LOGGER.info("authenticated as "+connection.getUser());
     }
 

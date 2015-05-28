@@ -19,9 +19,9 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.PacketListener;
+import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.packet.IQ;
-import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.kontalk.system.Control;
 
@@ -29,7 +29,7 @@ import org.kontalk.system.Control;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class PublicKeyListener implements PacketListener {
+public class PublicKeyListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(PublicKeyListener.class.getName());
 
     private final Control mControl;
@@ -43,7 +43,7 @@ public class PublicKeyListener implements PacketListener {
     }
 
     @Override
-    public void processPacket(Packet packet) {
+    public void processPacket(Stanza packet) {
         LOGGER.info("got public key: "+packet.toXML());
 
         PublicKeyPublish publicKeyPacket = (PublicKeyPublish) packet;

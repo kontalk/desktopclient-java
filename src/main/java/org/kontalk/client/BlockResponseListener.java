@@ -19,18 +19,18 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.packet.IQ;
-import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.Stanza;
 import org.kontalk.system.Control;
 
 /**
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class BlockResponseListener implements PacketListener {
+final class BlockResponseListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(BlockResponseListener.class.getName());
 
     private final Control mControl;
@@ -49,11 +49,11 @@ final class BlockResponseListener implements PacketListener {
     }
 
     @Override
-    public void processPacket(Packet packet)
+    public void processPacket(Stanza packet)
             throws SmackException.NotConnectedException {
         LOGGER.info("got block response: "+packet.toXML());
 
-        mConn.removePacketListener(this);
+        mConn.removeSyncStanzaListener(this);
 
         if (!(packet instanceof IQ)) {
             LOGGER.warning("block response not an IQ packet");

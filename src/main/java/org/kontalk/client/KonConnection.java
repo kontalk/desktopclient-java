@@ -35,7 +35,6 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.SASLAuthentication;
-import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.kontalk.util.TrustUtils;
@@ -75,8 +74,7 @@ public final class KonConnection extends XMPPTCPConnection {
             PrivateKey privateKey,
             X509Certificate bridgeCert,
             boolean validateCertificate) {
-        XMPPTCPConnectionConfiguration.XMPPTCPConnectionConfigurationBuilder builder =
-            XMPPTCPConnectionConfiguration.builder();
+        XMPPTCPConnectionConfiguration.Builder builder =  XMPPTCPConnectionConfiguration.builder();
 
         builder
             .setHost(server.getHost())
@@ -85,7 +83,7 @@ public final class KonConnection extends XMPPTCPConnection {
             .setResource(resource)
             // the dummy value is not actually used
             // server does authentification based purely on the pgp key
-            .setUsernameAndPassword(null, "dummy")
+            //.setUsernameAndPassword(null,null)
             .setCallbackHandler(new CallbackHandler() {
                 @Override
                 public void handle(Callback[] callbacks)
@@ -94,8 +92,6 @@ public final class KonConnection extends XMPPTCPConnection {
                         LOGGER.info("got callback!?: " + cb);
                 }
             })
-            // we need the roster
-            .setRosterLoadedAtLogin(true)
             // enable compression
             .setCompressionEnabled(true)
             // enable encryption
@@ -103,8 +99,9 @@ public final class KonConnection extends XMPPTCPConnection {
             // we will send a custom presence
             // -> no, send initial default presence
             //.setSendPresence(false)
-            // disable session initiation
-            .setLegacySessionDisabled(true);
+            .allowEmptyOrNullUsernames();
+
+        //SASLAuthentication.
 
         // setup SSL
         if (!validateCertificate)
@@ -131,11 +128,7 @@ public final class KonConnection extends XMPPTCPConnection {
     @Override
     public void disconnect() {
         LOGGER.info("disconnecting");
-        try {
-            super.disconnect();
-        } catch (SmackException.NotConnectedException ex) {
-            LOGGER.info("can't disconnect, not connected");
-        }
+        super.disconnect();
     }
 
     public String getDestination() {

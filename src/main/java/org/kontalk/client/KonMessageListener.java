@@ -23,10 +23,10 @@ import java.util.Date;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
-import org.jivesoftware.smack.PacketListener;
+import org.jivesoftware.smack.StanzaListener;
+import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.Packet;
-import org.jivesoftware.smack.packet.PacketExtension;
+import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -42,7 +42,7 @@ import org.kontalk.system.Control;
  * Listen and handle all incoming XMPP message packets.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final public class KonMessageListener implements PacketListener {
+final public class KonMessageListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
 
     // plain text body added by Android client
@@ -61,14 +61,14 @@ final public class KonMessageListener implements PacketListener {
     }
 
     @Override
-    public void processPacket(Packet packet) {
+    public void processPacket(Stanza packet) {
         Message m = (Message) packet;
         if (m.getType() == Message.Type.chat) {
             // somebody has news for us
             this.processChatMessage(m);
         } else if (m.getType() == Message.Type.error) {
             LOGGER.warning("got error message: "+m.toXML());
-            String xmppID = m.getPacketID();
+            String xmppID = m.getStanzaId();
             if (xmppID == null || xmppID.isEmpty()) {
                 LOGGER.warning("error message has invalid XMPP ID: "+xmppID);
                 return;
@@ -99,7 +99,7 @@ final public class KonMessageListener implements PacketListener {
         // delayed deliver extension is the first the be processed
         // because it's used also in delivery receipts
         // first: new XEP-0203 specification
-        PacketExtension delay = m.getExtension("delay", "urn:xmpp:delay");
+        ExtensionElement delay = m.getExtension("delay", "urn:xmpp:delay");
         // fallback: obsolete XEP-0091 specification
         if (delay == null) {
             delay = m.getExtension("x", "jabber:x:delay");
@@ -113,7 +113,7 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // process possible chat state notification (XEP-0085)
-        PacketExtension chatstate = m.getExtension("http://jabber.org/protocol/chatstates");
+        ExtensionElement chatstate = m.getExtension("http://jabber.org/protocol/chatstates");
         if (chatstate != null) {
             LOGGER.info("got chatstate: " + chatstate.getElementName());
             mControl.processChatState(m.getFrom(),
@@ -150,7 +150,7 @@ final public class KonMessageListener implements PacketListener {
             return;
         }
 
-        String xmppID = m.getPacketID() != null ? m.getPacketID() : "";
+        String xmppID = m.getStanzaId() != null ? m.getStanzaId() : "";
         if (xmppID.isEmpty()) {
             LOGGER.warning("message does not have a XMPP ID");
         }
@@ -177,7 +177,7 @@ final public class KonMessageListener implements PacketListener {
 
         // encryption extension, decrypted later
         String encryptedContent = "";
-        PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
+        ExtensionElement encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
         if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
             if (m.getBody() != null && !m.getBody().equals(IGNORE_PLAIN_TEXT))
                 LOGGER.warning("message contains encryption and body (ignoring body): "+m.getBody());
@@ -187,7 +187,7 @@ final public class KonMessageListener implements PacketListener {
 
         // Out of Band Data: a URI to a file
         Optional<Attachment> optAttachment = Optional.empty();
-        PacketExtension oobExt = m.getExtension("x", "jabber:x:oob");
+        ExtensionElement oobExt = m.getExtension("x", "jabber:x:oob");
         if (oobExt!= null && oobExt instanceof OutOfBandData) {
             LOGGER.info("Parsing Out of Band Data");
             OutOfBandData oobData = (OutOfBandData) oobExt;
@@ -199,5 +199,4 @@ final public class KonMessageListener implements PacketListener {
         }
         return new MessageContent(plainText, optAttachment, encryptedContent);
     }
-
 }
