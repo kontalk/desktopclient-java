@@ -59,6 +59,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -67,6 +69,7 @@ import javax.swing.AbstractCellEditor;
 import javax.swing.Icon;
 import javax.swing.JTable;
 import javax.swing.JViewport;
+import javax.swing.SwingUtilities;
 import javax.swing.table.TableCellEditor;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.BoxView;
@@ -85,6 +88,7 @@ import org.kontalk.model.KonThread;
 import org.kontalk.model.KonThread.KonChatState;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.system.Downloader;
 import org.kontalk.system.Config;
@@ -94,7 +98,7 @@ import org.kontalk.util.Tr;
  * Pane that shows the currently selected thread.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class ThreadView extends ScrollPane {
+final class ThreadView extends ScrollPane implements Observer {
     private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
 
     private final static Icon PENDING_ICON = View.getIcon("ic_msg_pending.png");;
@@ -187,17 +191,6 @@ final class ThreadView extends ScrollPane {
         this.getViewport().repaint();
     }
 
-    private void removeThread(KonThread thread) {
-        MessageList viewList = mThreadCache.get(thread.getID());
-        if (viewList != null)
-            viewList.clearItems();
-        thread.deleteObserver(viewList);
-        mThreadCache.remove(thread.getID());
-        if(this.getCurrentThread().orElse(null) == thread) {
-            this.setViewportView(null);
-        }
-    }
-
     private Background getCurrentBackground() {
         Optional<MessageList> optView = this.getCurrentView();
         if (!optView.isPresent())
@@ -206,6 +199,37 @@ final class ThreadView extends ScrollPane {
         if (!optBG.isPresent())
             return mDefaultBG;
         return optBG.get();
+    }
+
+    @Override
+    public void update(Observable o, final Object arg) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            this.updateOnEDT(arg);
+            return;
+        }
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                ThreadView.this.updateOnEDT(arg);
+            }
+        });
+    }
+
+    private void updateOnEDT(Object arg) {
+        if (arg instanceof KonThread) {
+            KonThread thread = (KonThread) arg;
+            if (!ThreadList.getInstance().contains(thread.getID())) {
+                // thread was deleted
+                MessageList viewList = mThreadCache.get(thread.getID());
+                if (viewList != null)
+                    viewList.clearItems();
+                thread.deleteObserver(viewList);
+                mThreadCache.remove(thread.getID());
+                if(this.getCurrentThread().orElse(null) == thread) {
+                    this.setViewportView(null);
+                }
+            }
+        }
     }
 
     /**
@@ -286,11 +310,6 @@ final class ThreadView extends ScrollPane {
 
             if (arg instanceof KonChatState) {
                 this.showChatNotification((KonChatState) arg);
-                return;
-            }
-
-            if (mThread.isDeleted()) {
-                ThreadView.this.removeThread(mThread);
                 return;
             }
 

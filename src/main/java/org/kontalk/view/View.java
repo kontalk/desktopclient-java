@@ -125,6 +125,7 @@ public final class View implements Observer {
         ThreadList.getInstance().addObserver(mThreadListView);
 
         mThreadView = new ThreadView(this);
+        ThreadList.getInstance().addObserver(mThreadView);
 
         // text field
         mSendTextArea = new WebTextArea();

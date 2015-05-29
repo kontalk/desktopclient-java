@@ -87,7 +87,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     private String mSubject;
     private boolean mRead;
     private ViewSettings mViewSettings;
-    private boolean mDeleted = false;
 
     // used when creating a new thread
     KonThread(Set<User> user) {
@@ -206,10 +205,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         this.notifyObservers(mViewSettings);
     }
 
-    public boolean isDeleted() {
-        return mDeleted;
-    }
-
     public void addMessage(KonMessage message) {
         boolean added = this.add(message);
         if (added) {
@@ -285,8 +280,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
         // delete thread itself
         db.execDelete(TABLE, mID);
-        mDeleted = true;
-        this.changed(null);
     }
 
     private Map<Integer, Integer> loadReceiver() {

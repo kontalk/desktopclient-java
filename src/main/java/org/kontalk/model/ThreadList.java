@@ -91,7 +91,7 @@ public final class ThreadList extends Observable {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load threads from db", ex);
         }
-        this.changed();
+        this.changed(null);
     }
 
     public synchronized SortedSet<KonThread> getAll() {
@@ -122,7 +122,7 @@ public final class ThreadList extends Observable {
         synchronized (this) {
             mMap.put(newThread.getID(), newThread);
         }
-        this.changed();
+        this.changed(newThread);
         return newThread;
     }
 
@@ -144,6 +144,10 @@ public final class ThreadList extends Observable {
         return Optional.empty();
     }
 
+    public boolean contains(int id) {
+        return mMap.containsKey(id);
+    }
+
     public synchronized void delete(int id) {
         KonThread thread = mMap.remove(id);
         if (thread == null) {
@@ -151,12 +155,12 @@ public final class ThreadList extends Observable {
             return;
         }
         thread.delete();
-        this.changed();
+        this.changed(thread);
     }
 
-    private synchronized void changed() {
+    private synchronized void changed(KonThread thread) {
         this.setChanged();
-        this.notifyObservers();
+        this.notifyObservers(thread);
     }
 
     public static ThreadList getInstance() {
