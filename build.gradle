@@ -23,18 +23,18 @@ dependencies {
     compile fileTree(dir: 'lib', include: ['*.jar'])
 
     compile group: 'org.bouncycastle', name: 'bcpg-jdk15on', version: "$bcVersion"
-    //compile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: "$bcVersion"
+    compile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: "$bcVersion"
     compile group: 'com.googlecode.json-simple', name: 'json-simple', version: "1.1.1"
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: "4.3.5"
-    //compile group: 'org.apache.httpcomponents', name: 'httpcore', version: "4.3.2"
+    compile group: 'org.apache.httpcomponents', name: 'httpcore', version: "4.3.2"
     compile group: 'commons-configuration', name: 'commons-configuration', version: "1.10"
     //compile group: 'commons-lang', name: 'commons-lang', version: "2.6"
     compile group: 'commons-io', name: 'commons-io', version: "2.4"
-    //compile group: 'org.jcraft', name: 'jorbis', version: "0.0.17"
+    compile group: 'org.jcraft', name: 'jorbis', version: "0.0.17"
     //compile group: 'org.jxmpp', name: 'jxmpp-core', version: "0.4.0"
     //compile group: 'org.jxmpp', name: 'jxmpp-util-cache', version: "0.4.0"
     compile group: 'org.ocpsoft.prettytime', name: 'prettytime', version: "3.2.7.Final"
-    //compile group: 'org.igniterealtime.smack', name: 'smack-core', version: "$smackVersion"
+    compile group: 'org.igniterealtime.smack', name: 'smack-core', version: "$smackVersion"
     compile group: 'org.igniterealtime.smack', name: 'smack-extensions', version: "$smackVersion"
     // TODO bug in alpha6 prevents connecting
     //compile group: 'org.igniterealtime.smack', name: 'smack-java7', version: "$smackVersion"
