@@ -32,7 +32,7 @@ applications on your computer!**
 
 #### For building
 
-- Apache Ant (https://ant.apache.org)
+- [Gradle](http://gradle.org) (wrapper included in project)
 
 ## Included dependencies
 
