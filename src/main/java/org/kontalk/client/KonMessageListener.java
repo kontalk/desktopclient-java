@@ -46,7 +46,6 @@ final public class KonMessageListener implements PacketListener {
     private final static Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
 
     // plain text body added by Android client
-    private final static String IGNORE_PLAIN_TEXT = "(encrypted)";
 
     private final Client mClient;
     private final Control mControl;
@@ -179,8 +178,8 @@ final public class KonMessageListener implements PacketListener {
         String encryptedContent = "";
         PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
         if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
-            if (m.getBody() != null && !m.getBody().equals(IGNORE_PLAIN_TEXT))
-                LOGGER.warning("message contains encryption and body (ignoring body): "+m.getBody());
+            if (m.getBody() != null)
+                LOGGER.info("message contains encryption and body (ignoring body): "+m.getBody());
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
             encryptedContent = Base64.getEncoder().encodeToString(encryption.getData());
         }
