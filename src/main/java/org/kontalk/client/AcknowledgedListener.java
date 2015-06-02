@@ -22,6 +22,7 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.PacketListener;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.system.Control;
@@ -47,12 +48,19 @@ public final class AcknowledgedListener implements PacketListener {
             // we are only interested in acks for messages
             return;
         }
+        Message m = (Message) p;
 
-        LOGGER.info("got acknowledgement for message: "+p.toXML());
+        LOGGER.info("got acknowledgement for message: "+m.toXML());
 
-        if (DeliveryReceipt.from(p) != null) {
+        if (DeliveryReceipt.from(m) != null) {
             // this is an ack for a 'received' message send by
             // KonMessageListener (XEP-0184), nothing must be done
+            return;
+        }
+
+        if (m.getBody() == null && m.getExtensions().size() == 1 &&
+                m.getExtension(ChatStateExtension.NAMESPACE) != null) {
+            // this is an ack for a chat state notification (XEP-0085), ignore
             return;
         }
 
