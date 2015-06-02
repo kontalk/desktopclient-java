@@ -171,8 +171,21 @@ public final class Control extends Observable {
         mClient.sendPublicKeyRequest(user.getJID());
     }
 
-    public void handleChatStateEvent(KonThread thread, User user, ChatState state) {
-        // TODO
+    public void handleOwnChatStateEvent(KonThread thread, ChatState state) {
+        if (state == thread.getMyChatState())
+            // ignore state weare already in
+            return;
+
+        thread.setMyChatState(state);
+
+        Set<User> user = thread.getUser();
+        if (user.size() > 1)
+            // don't send for groups
+            return;
+
+        for (User oneUser : user)
+            // TODO not for myself
+            mClient.sendChatState(oneUser.getJID(), thread.getXMPPID(), state);
     }
 
     /* events from network client */

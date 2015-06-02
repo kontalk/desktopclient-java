@@ -217,10 +217,8 @@ public final class Client implements PacketListener, Runnable {
             return;
         }
 
-        Message smackMessage = new Message();
+        Message smackMessage = new Message(message.getJID(), Message.Type.chat);
         smackMessage.setPacketID(message.getXMPPID());
-        smackMessage.setType(Message.Type.chat);
-        smackMessage.setTo(message.getJID());
         smackMessage.addExtension(new DeliveryReceiptRequest());
         Config conf = Config.getInstance();
         if (conf.getBoolean(Config.NET_SEND_CHAT_STATE))
@@ -290,6 +288,18 @@ public final class Client implements PacketListener, Runnable {
         Presence subscribeRequest = new Presence(Presence.Type.subscribe);
         subscribeRequest.setTo(jid);
         this.sendPacket(subscribeRequest);
+    }
+
+    public void sendChatState(String jid, Optional<String> optThreadID, ChatState state) {
+        if (!Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
+            return;
+
+        Message message = new Message(jid, Message.Type.chat);
+        if (optThreadID.isPresent())
+            message.setThread(optThreadID.get());
+        message.addExtension(new ChatStateExtension(state));
+
+        this.sendPacket(message);
     }
 
     synchronized void sendPacket(Packet p) {
