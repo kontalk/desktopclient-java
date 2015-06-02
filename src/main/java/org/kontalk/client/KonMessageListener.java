@@ -30,6 +30,7 @@ import org.jivesoftware.smack.packet.PacketExtension;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.chatstates.ChatState;
+import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
@@ -98,7 +99,8 @@ final public class KonMessageListener implements PacketListener {
         // delayed deliver extension is the first the be processed
         // because it's used also in delivery receipts
         // first: new XEP-0203 specification
-        PacketExtension delay = m.getExtension("delay", "urn:xmpp:delay");
+        PacketExtension delay = m.getExtension(DelayInformation.ELEMENT,
+                DelayInformation.NAMESPACE);
         // fallback: obsolete XEP-0091 specification
         if (delay == null) {
             delay = m.getExtension("x", "jabber:x:delay");
@@ -112,7 +114,7 @@ final public class KonMessageListener implements PacketListener {
         }
 
         // process possible chat state notification (XEP-0085)
-        PacketExtension chatstate = m.getExtension("http://jabber.org/protocol/chatstates");
+        PacketExtension chatstate = m.getExtension(ChatStateExtension.NAMESPACE);
         if (chatstate != null) {
             LOGGER.info("got chatstate: " + chatstate.getElementName());
             mControl.processChatState(m.getFrom(),
@@ -174,9 +176,9 @@ final public class KonMessageListener implements PacketListener {
         // default body
         String plainText = m.getBody() != null ? m.getBody() : "";
 
-        // encryption extension, decrypted later
+        // encryption extension (RFC 3923), decrypted later
         String encryptedContent = "";
-        PacketExtension encryptionExt = m.getExtension("e2e", "urn:ietf:params:xml:ns:xmpp-e2e");
+        PacketExtension encryptionExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
         if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
             if (m.getBody() != null)
                 LOGGER.info("message contains encryption and body (ignoring body): "+m.getBody());
@@ -186,7 +188,7 @@ final public class KonMessageListener implements PacketListener {
 
         // Out of Band Data: a URI to a file
         Optional<Attachment> optAttachment = Optional.empty();
-        PacketExtension oobExt = m.getExtension("x", "jabber:x:oob");
+        PacketExtension oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
         if (oobExt!= null && oobExt instanceof OutOfBandData) {
             LOGGER.info("Parsing Out of Band Data");
             OutOfBandData oobData = (OutOfBandData) oobExt;
@@ -198,5 +200,4 @@ final public class KonMessageListener implements PacketListener {
         }
         return new MessageContent(plainText, optAttachment, encryptedContent);
     }
-
 }
