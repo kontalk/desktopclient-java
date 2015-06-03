@@ -176,6 +176,7 @@ public final class Control extends Observable {
             // ignore state weare already in
             return;
 
+        // currently send states in XEP-0085: active, inactive, composing
         thread.setMyChatState(state);
 
         Set<User> user = thread.getUser();
@@ -184,8 +185,8 @@ public final class Control extends Observable {
             return;
 
         for (User oneUser : user)
-            // TODO not for myself
-            mClient.sendChatState(oneUser.getJID(), thread.getXMPPID(), state);
+            if (!oneUser.isMe())
+                mClient.sendChatState(oneUser.getJID(), thread.getXMPPID(), state);
     }
 
     /* events from network client */
