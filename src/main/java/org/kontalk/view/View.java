@@ -43,13 +43,7 @@ import java.awt.Toolkit;
 import java.awt.TrayIcon;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
+import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -70,11 +64,15 @@ import javax.swing.ImageIcon;
 import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
+import javax.swing.event.DocumentEvent;
+
+import com.alee.utils.swing.DocumentChangeListener;
 import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
+import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.system.Config;
@@ -126,12 +124,17 @@ public final class View implements Observer {
 
         mThreadView = new ThreadView(this);
         ThreadList.getInstance().addObserver(mThreadView);
-
         // text field
         mSendTextArea = new WebTextArea();
         mSendTextArea.setMargin(5);
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
+        mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
+            @Override
+            public void documentChanged(DocumentEvent e) {
+                View.this.handleKeyTypeEvent();
+            }
+        });
 
         // send button
         mSendButton = new WebButton(Tr.tr("Send"));
@@ -462,6 +465,10 @@ public final class View implements Observer {
         mControl.sendKeyRequest(user);
     }
 
+    void callHandleOwnChatStateEvent(KonThread thread, ChatState state) {
+        mControl.handleOwnChatStateEvent(thread, state);
+    }
+
     /* view internal */
 
     void selectThreadByUser(User user) {
@@ -482,6 +489,14 @@ public final class View implements Observer {
             return;
 
         mThreadView.showThread(thread);
+    }
+
+    private void handleKeyTypeEvent() {
+        Optional<KonThread> optThread = mThreadView.getCurrentThread();
+        if (!optThread.isPresent())
+            return;
+
+        mControl.handleOwnChatStateEvent(optThread.get(), ChatState.composing);
     }
 
     Optional<KonThread> getCurrentShownThread() {
