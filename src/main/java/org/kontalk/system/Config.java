@@ -45,6 +45,7 @@ public final class Config extends PropertiesConfiguration {
     public final static String SERV_PORT = "server.port";
     public final static String SERV_CERT_VALIDATION = "server.cert_validation";
     public final static String ACC_PASS = "account.passphrase";
+    public final static String ACC_JID = "account.jid";
     public final static String VIEW_FRAME_WIDTH = "view.frame.width";
     public final static String VIEW_FRAME_HEIGHT = "view.frame.height";
     public final static String VIEW_SELECTED_THREAD = "view.thread";
@@ -84,6 +85,7 @@ public final class Config extends PropertiesConfiguration {
         map.put(SERV_PORT, DEFAULT_SERV_PORT);
         map.put(SERV_CERT_VALIDATION, true);
         map.put(ACC_PASS, "");
+        map.put(ACC_JID, "");
         map.put(VIEW_FRAME_WIDTH, 600);
         map.put(VIEW_FRAME_HEIGHT, 650);
         map.put(VIEW_SELECTED_THREAD, -1);

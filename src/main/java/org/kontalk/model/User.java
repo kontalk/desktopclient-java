@@ -30,6 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.system.Config;
 import org.kontalk.system.Database;
 
 /**
@@ -220,6 +221,11 @@ public final class User extends Observable implements Comparable<User> {
 
     public void setBlocked(boolean blocked) {
         mBlocked = blocked;
+    }
+
+    public boolean isMe() {
+        return !mJID.isEmpty() &&
+                mJID.equals(Config.getInstance().getProperty(Config.ACC_JID));
     }
 
     public void save() {
