@@ -31,7 +31,6 @@ import org.kontalk.client.DownloadClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.MessageContent.Attachment;
 
@@ -70,7 +69,7 @@ public class Downloader implements Runnable {
     private void downloadAsync(final InMessage message) {
         PersonalKey key;
         try {
-            key = Account.getInstance().getPersonalKey();
+            key = AccountLoader.getInstance().getPersonalKey();
         } catch (KonException ex) {
             LOGGER.log(Level.WARNING, "can't get personal key", ex);
             return;

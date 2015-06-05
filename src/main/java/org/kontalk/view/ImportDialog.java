@@ -43,7 +43,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.Account;
+import org.kontalk.system.AccountLoader;
 import org.kontalk.util.Tr;
 
 /**
@@ -285,7 +285,7 @@ final class ImportDialog extends WebDialog {
 
             String errorText = null;
             try {
-                Account.getInstance().importAccount(mZipPath, password);
+                AccountLoader.getInstance().importAccount(mZipPath, password);
             } catch (KonException ex) {
                 errorText = View.getErrorText(ex);
             }

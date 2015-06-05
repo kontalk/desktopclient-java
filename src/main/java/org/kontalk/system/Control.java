@@ -39,7 +39,6 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.misc.ViewEvent;
-import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
@@ -117,7 +116,7 @@ public final class Control extends Observable {
     public void connect() {
         PersonalKey key;
         try {
-            key = Account.getInstance().getPersonalKey();
+            key = AccountLoader.getInstance().getPersonalKey();
         } catch (KonException ex) {
             // something wrong with the account, tell view
             this.handleException(ex);

@@ -45,7 +45,7 @@ import javax.swing.text.NumberFormatter;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
-import org.kontalk.model.Account;
+import org.kontalk.system.AccountLoader;
 import org.kontalk.util.Tr;
 
 /**
@@ -264,7 +264,7 @@ final class ConfigurationDialog extends WebDialog {
         private void updateFingerprint() {
             PersonalKey personalKey = null;
             try {
-                personalKey = Account.getInstance().getPersonalKey();
+                personalKey = AccountLoader.getInstance().getPersonalKey();
             } catch (KonException ex) {
                 // ignore
             }

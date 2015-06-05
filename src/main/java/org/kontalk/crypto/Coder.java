@@ -68,12 +68,12 @@ import org.kontalk.system.Downloader;
 import org.kontalk.misc.KonException;
 import org.kontalk.client.KonMessageListener;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
-import org.kontalk.model.Account;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.User;
+import org.kontalk.system.AccountLoader;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.XMPPUtils;
 
@@ -411,7 +411,7 @@ public final class Coder {
 
         PersonalKey myKey;
         try {
-            myKey = Account.getInstance().getPersonalKey();
+            myKey = AccountLoader.getInstance().getPersonalKey();
         } catch (KonException ex) {
             LOGGER.log(Level.WARNING, "can't get personal key", ex);
             result.errors.add(Error.MY_KEY_UNAVAILABLE);

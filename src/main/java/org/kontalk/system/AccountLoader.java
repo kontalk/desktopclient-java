@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.system;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -35,24 +35,26 @@ import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.util.StringUtils;
-import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.Kontalk;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 
-public final class Account {
-    private final static Logger LOGGER = Logger.getLogger(Account.class.getName());
+public final class AccountLoader {
+    private final static Logger LOGGER = Logger.getLogger(AccountLoader.class.getName());
 
     private static final String PUBLIC_KEY_FILENAME = "kontalk-public.asc";
     private static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
     private static final String BRIDGE_CERT_FILENAME = "kontalk-login.crt";
 
-    private final static Account INSTANCE = new Account();
+    private static AccountLoader INSTANCE = null;
+
+    private final Config mConf;
 
     private PersonalKey mKey = null;
 
-    private Account() {
+    private AccountLoader(Config config) {
+        mConf = config;
     }
 
     public PersonalKey getPersonalKey() throws KonException {
@@ -68,7 +70,7 @@ public final class Account {
         byte[] bridgeCertData = readBytesFromFile(BRIDGE_CERT_FILENAME);
 
         // load key
-        String password = Config.getInstance().getString(Config.ACC_PASS);
+        String password = mConf.getString(Config.ACC_PASS);
         try {
             return PersonalKey.load(disarm(privateKeyData),
                     disarm(publicKeyData),
@@ -87,9 +89,9 @@ public final class Account {
 
         // read key files
         try (ZipFile zipFile = new ZipFile(zipFilePath)) {
-            publicKeyData = Account.readBytesFromZip(zipFile, PUBLIC_KEY_FILENAME);
-            privateKeyData = Account.readBytesFromZip(zipFile, PRIVATE_KEY_FILENAME);
-            bridgeCertData = Account.readBytesFromZip(zipFile, BRIDGE_CERT_FILENAME);
+            publicKeyData = AccountLoader.readBytesFromZip(zipFile, PUBLIC_KEY_FILENAME);
+            privateKeyData = AccountLoader.readBytesFromZip(zipFile, PRIVATE_KEY_FILENAME);
+            bridgeCertData = AccountLoader.readBytesFromZip(zipFile, BRIDGE_CERT_FILENAME);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't open zip archive: ", ex);
             throw new KonException(KonException.Error.IMPORT_ARCHIVE, ex);
@@ -114,7 +116,7 @@ public final class Account {
         // key seems valid. Copy to config dir
         writeBytesToFile(encodedPublicKey, PUBLIC_KEY_FILENAME, true);
         writeBytesToFile(bridgeCertData, BRIDGE_CERT_FILENAME, false);
-        writePrivateKey(encodedPrivateKey, password);
+        this.writePrivateKey(encodedPrivateKey, password);
 
         // success! use the new key
         mKey = key;
@@ -122,26 +124,26 @@ public final class Account {
 
     public void setPassword(String newPassword) throws KonException {
         byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
-        String oldPassword = Config.getInstance().getString(Config.ACC_PASS);
+        String oldPassword = mConf.getString(Config.ACC_PASS);
         writePrivateKey(privateKeyData, oldPassword, newPassword);
-        Config.getInstance().setProperty(Config.ACC_PASS, "");
+        mConf.setProperty(Config.ACC_PASS, "");
     }
 
     public void setNewPassword(String oldPassword, String newPassword) throws KonException {
         byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
         writePrivateKey(privateKeyData, oldPassword, newPassword);
-        Config.getInstance().setProperty(Config.ACC_PASS, "");
+        mConf.setProperty(Config.ACC_PASS, "");
     }
+
+    private void writePrivateKey(byte[] privateKeyData, String oldPassword) throws KonException {
+        String newPassword = StringUtils.randomString(40);
+        writePrivateKey(privateKeyData, oldPassword, newPassword);
+        mConf.setProperty(Config.ACC_PASS, newPassword);
+     }
 
     private static byte[] disarm(byte[] key) throws IOException {
         return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
     }
-
-    private static void writePrivateKey(byte[] privateKeyData, String oldPassword) throws KonException {
-        String newPassword = StringUtils.randomString(40);
-        writePrivateKey(privateKeyData, oldPassword, newPassword);
-        Config.getInstance().setProperty(Config.ACC_PASS, newPassword);
-     }
 
     private static void writePrivateKey(byte[] privateKeyData,
             String oldPassword,
@@ -194,7 +196,9 @@ public final class Account {
         }
     }
 
-    public static Account getInstance() {
+    public synchronized static AccountLoader getInstance() {
+        if (INSTANCE == null)
+            INSTANCE = new AccountLoader(Config.getInstance());
         return INSTANCE;
     }
 }
