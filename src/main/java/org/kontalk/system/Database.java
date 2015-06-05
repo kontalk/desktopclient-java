@@ -55,7 +55,9 @@ public final class Database {
     private final static Logger LOGGER = Logger.getLogger(Database.class.getName());
 
     private static Database INSTANCE = null;
-    private static final String DB_NAME = "kontalk_db.sqlite";
+
+    public static final String DB_NAME = "kontalk_db.sqlite";
+
     private static final int DB_VERSION = 2;
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
@@ -72,11 +74,10 @@ public final class Database {
         }
 
         // create database connection
-        String filePath = path + "/" + DB_NAME;
         SQLiteConfig config = new SQLiteConfig();
         config.enforceForeignKeys(true);
         try {
-          mConn = DriverManager.getConnection("jdbc:sqlite:" + filePath, config.toProperties());
+          mConn = DriverManager.getConnection("jdbc:sqlite:" + path, config.toProperties());
         } catch(SQLException ex) {
           // if the error message is "out of memory",
           // it probably means no database file is found

@@ -129,7 +129,7 @@ public final class Kontalk {
         View view = optView.get();
 
         try {
-            Database.initialize(CONFIG_DIR);
+            Database.initialize(CONFIG_DIR + "/" + Database.DB_NAME);
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
             control.shutDown();
