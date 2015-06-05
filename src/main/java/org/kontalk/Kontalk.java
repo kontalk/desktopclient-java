@@ -36,6 +36,7 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.UserList;
+import org.kontalk.system.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.CryptoUtils;
 import org.kontalk.util.Tr;
@@ -116,6 +117,8 @@ public final class Kontalk {
     }
 
     public void start() {
+        Config.initialize(CONFIG_DIR + "/" + Config.CONF_NAME);
+
         Control control = new Control();
 
         Optional<View> optView = View.create(control);
