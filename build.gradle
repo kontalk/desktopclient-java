@@ -48,19 +48,23 @@ repositories {
     mavenCentral()
 }
 
-jar {
-    manifest {
-        attributes "Main-Class": mainClass
-    }
+task copyDeps(type: Copy) {
+    from(configurations.runtime)
+    into project.file('dist/lib')
+}
 
-    doFirst {
-        from {
-            configurations.compile.collect {
-                it.isDirectory() ? it : zipTree(it)
-            }
-        }
+jar {
+    baseName = 'KontalkDesktopApp'
+    destinationDir project.file('dist')
+    
+    manifest {
+        attributes(
+            "Main-Class": mainClass,
+            "Class-Path": configurations.compile.collect { 'lib/'+it.getName() }.join(' ')
+        )
     }
-    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
+    
+    dependsOn ':copyDeps'
 }
 
 task execute(type:JavaExec) {
