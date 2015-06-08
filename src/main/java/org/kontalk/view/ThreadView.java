@@ -201,6 +201,11 @@ final class ThreadView extends ScrollPane implements Observer {
         return optBG.get();
     }
 
+    private void hideChatStateNotification() {
+        if (mPopup != null)
+                mPopup.hidePopup();
+    }
+
     @Override
     public void update(Observable o, final Object arg) {
         if (SwingUtilities.isEventDispatchThread()) {
@@ -304,6 +309,7 @@ final class ThreadView extends ScrollPane implements Observer {
             }
 
             if (arg instanceof KonMessage) {
+                ThreadView.this.hideChatStateNotification();
                 this.insertMessage((KonMessage) arg);
                 return;
             }
@@ -365,8 +371,7 @@ final class ThreadView extends ScrollPane implements Observer {
             if (activity == null)
                 return;
 
-            if (mPopup != null)
-                mPopup.hidePopup();
+            ThreadView.this.hideChatStateNotification();
             mPopup = new WebNotificationPopup(PopupStyle.dark);
             WebLabel textLabel = new WebLabel(state.getUser().getName()+" "+activity);
             textLabel.setForeground(Color.WHITE);
