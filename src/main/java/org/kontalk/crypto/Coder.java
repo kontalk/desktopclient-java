@@ -39,6 +39,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.http.util.EncodingUtils;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
@@ -312,7 +313,9 @@ public final class Coder {
             // parse encrypted CPIM content
             String myUID = keys.myKey.getUserId();
             String senderUID = keys.otherKey.userID;
-            String encrText = decResult.decryptedStream.get().toString();
+            String encrText = EncodingUtils.getString(
+                    decResult.decryptedStream.get().toByteArray(),
+                    CPIMMessage.CHARSET);
             parsingResult = parseCPIM(encrText, myUID, senderUID);
             allErrors.addAll(parsingResult.errors);
         }
