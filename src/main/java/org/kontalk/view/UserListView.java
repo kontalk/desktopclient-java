@@ -51,6 +51,7 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
+import static org.kontalk.view.TableView.TOOLTIP_DATE_FORMAT;
 import org.kontalk.view.UserListView.UserItem;
 
 /**
@@ -147,33 +148,28 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
         @Override
         public String getTooltipText() {
-            String no = Tr.tr("No");
-            String dunno = Tr.tr("?");
-
-            String isOnline;
-            if (mValue.getOnline() == User.Online.YES)
-                isOnline = Tr.tr("Yes");
-            else if (mValue.getOnline() == User.Online.NO)
-                isOnline = no;
-            else
-                isOnline = dunno;
-
-            String status = mValue.getStatus().isEmpty() ? dunno : mValue.getStatus();
-
-            String lastSeen = !mValue.getLastSeen().isPresent() ? dunno :
-                    TOOLTIP_DATE_FORMAT.format(mValue.getLastSeen().get());
-
-            String isBlocked = mValue.isBlocked() ? Tr.tr("YES") : no;
-
-            String html = "<html><body>" +
+            String html = "<html><body>";
                     //"<h3>Header</h3>" +
-                    Tr.tr("Available")+": " + isOnline + "<br>" +
-                    Tr.tr("Status")+": " + status + "<br>" +
-                    Tr.tr("Blocked")+": " + isBlocked + "<br>" +
-                    Tr.tr("Last seen")+": " + lastSeen + "<br>" +
-                    "";
 
-            return html;
+            if (mValue.getOnline() == User.Online.YES)
+                html += Tr.tr("Online")+"<br>";
+
+            if (!mValue.getStatus().isEmpty()) {
+                html += Tr.tr("Status")+": " + mValue.getStatus() + "<br>";
+            }
+
+            if (mValue.getOnline() != User.Online.YES) {
+                String lastSeen = !mValue.getLastSeen().isPresent() ?
+                        Tr.tr("?") :
+                        TOOLTIP_DATE_FORMAT.format(mValue.getLastSeen().get());
+                html += Tr.tr("Last seen")+": " + lastSeen + "<br>";
+            }
+
+            if (mValue.isBlocked()) {
+                html += Tr.tr("Contact is blocked!") + "<br>";
+            }
+
+            return html+"</body></html>" ;
         }
 
         @Override
