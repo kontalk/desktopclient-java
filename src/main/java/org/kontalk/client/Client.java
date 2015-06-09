@@ -279,8 +279,13 @@ public final class Client implements PacketListener, Runnable {
 
     public void sendInitialPresence() {
         Presence presence = new Presence(Presence.Type.available);
-        // TODO presence, priority ...
-        //presence.setStatus();
+        List<?> stats = Config.getInstance().getList(Config.NET_STATUS_LIST);
+        if (!stats.isEmpty()) {
+            String stat = (String) stats.get(0);
+            if (!stat.isEmpty())
+                presence.setStatus(stat);
+        }
+        // Note: not setting priority, according to anti-dicrimination rules;)
         this.sendPacket(presence);
     }
 

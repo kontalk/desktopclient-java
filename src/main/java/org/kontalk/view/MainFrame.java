@@ -368,6 +368,7 @@ final class MainFrame extends WebFrame {
                     StatusDialog.this.dispose();
                 }
             });
+            this.getRootPane().setDefaultButton(saveButton);
 
             GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
             buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
