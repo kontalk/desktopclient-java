@@ -188,6 +188,10 @@ public final class Control extends Observable {
                 mClient.sendChatState(oneUser.getJID(), thread.getXMPPID(), state);
     }
 
+    public void sendStatusText() {
+        mClient.sendInitialPresence();
+    }
+
     /* events from network client */
 
     public void setStatus(Status status) {

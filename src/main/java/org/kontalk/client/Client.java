@@ -285,7 +285,7 @@ public final class Client implements PacketListener, Runnable {
             if (!stat.isEmpty())
                 presence.setStatus(stat);
         }
-        // Note: not setting priority, according to anti-dicrimination rules;)
+        // note: not setting priority, according to anti-dicrimination rules;)
         this.sendPacket(presence);
     }
 

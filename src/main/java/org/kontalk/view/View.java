@@ -469,6 +469,10 @@ public final class View implements Observer {
         mControl.handleOwnChatStateEvent(thread, state);
     }
 
+    void callSendStatusText() {
+        mControl.sendStatusText();
+    }
+
     /* view internal */
 
     void selectThreadByUser(User user) {

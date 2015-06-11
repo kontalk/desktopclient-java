@@ -391,6 +391,7 @@ final class MainFrame extends WebFrame {
                 stats = stats.subList(0, 20);
 
             mConf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
+            mView.callSendStatusText();
         }
     }
 
