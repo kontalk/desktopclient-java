@@ -21,6 +21,7 @@ import java.io.StringReader;
 
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.PacketParserUtils;
+import org.jxmpp.util.XmppStringUtils;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -78,5 +79,9 @@ public final class XMPPUtils {
         }
 
         return msg;
+    }
+
+    public static boolean isHash(String jid) {
+        return XmppStringUtils.parseLocalpart(jid).matches("[0-9a-f]{40}");
     }
 }

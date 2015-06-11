@@ -48,6 +48,7 @@ import org.kontalk.model.OutMessage;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.util.XMPPUtils;
 
 /**
  * Application control logic.
@@ -372,7 +373,7 @@ public final class Control extends Observable {
 
             String name = rosterName == null ? "" : rosterName;
             if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
-                    name.length() == 40) {
+                    XMPPUtils.isHash(jid)) {
                 // this must be the hash string, don't use it as name
                 name = "";
             }

@@ -657,11 +657,20 @@ public final class View implements Observer {
 
     static String shortenJID(String jid, int maxLength) {
         if (jid.length() > maxLength) {
-            String local = StringUtils.abbreviate(XmppStringUtils.parseLocalpart(jid), (int)(maxLength * 0.4));
-            String domain = StringUtils.abbreviate(XmppStringUtils.parseDomain(jid), (int)(maxLength * 0.6));
+            String local = XmppStringUtils.parseLocalpart(jid);
+            local = StringUtils.abbreviate(local, (int)(maxLength * 0.4));
+            String domain = XmppStringUtils.parseDomain(jid);
+            domain = StringUtils.abbreviate(domain, (int)(maxLength * 0.6));
             jid = XmppStringUtils.completeJidFrom(local, domain);
         }
         return jid;
+    }
+
+    static String shortenUserName(String jid, int maxLength) {
+        String local = XmppStringUtils.parseLocalpart(jid);
+        local = StringUtils.abbreviate(local, maxLength);
+        String domain = XmppStringUtils.parseDomain(jid);
+        return XmppStringUtils.completeJidFrom(local, domain);
     }
 
     public static Optional<View> create(final Control control) {

@@ -51,6 +51,7 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
+import org.kontalk.util.XMPPUtils;
 import static org.kontalk.view.TableView.TOOLTIP_DATE_FORMAT;
 import org.kontalk.view.UserListView.UserItem;
 
@@ -189,7 +190,10 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
         @Override
         protected void updateOnEDT(Object arg) {
             // may have changed (of user): JID, name, online
-            mJIDLabel.setText(mValue.getJID());
+            String jid = mValue.getJID();
+            if (XMPPUtils.isHash(jid));
+                jid = View.shortenUserName(jid, 9);
+            mJIDLabel.setText(jid);
             String name = !mValue.getName().isEmpty() ?
                     mValue.getName() :
                     Tr.tr("<unknown>");
