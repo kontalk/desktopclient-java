@@ -47,6 +47,7 @@ import java.util.Observer;
 import java.util.Set;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
+import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
@@ -156,7 +157,8 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
                 html += Tr.tr("Online")+"<br>";
 
             if (!mValue.getStatus().isEmpty()) {
-                html += Tr.tr("Status")+": " + mValue.getStatus() + "<br>";
+                String status = StringEscapeUtils.escapeHtml(mValue.getStatus());
+                html += Tr.tr("Status")+": " + status + "<br>";
             }
 
             if (mValue.getOnline() != User.Online.YES) {
