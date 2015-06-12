@@ -139,7 +139,17 @@ public final class AccountLoader {
         String newPassword = StringUtils.randomString(40);
         writePrivateKey(privateKeyData, oldPassword, newPassword);
         mConf.setProperty(Config.ACC_PASS, newPassword);
-     }
+    }
+
+    boolean isPresent() {
+        return fileExists(PUBLIC_KEY_FILENAME) &&
+                fileExists(PRIVATE_KEY_FILENAME) &&
+                fileExists(BRIDGE_CERT_FILENAME);
+    }
+
+    private static boolean fileExists(String filename) {
+        return new File(Kontalk.getConfigDir(), filename).isFile();
+    }
 
     private static byte[] disarm(byte[] key) throws IOException {
         return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));

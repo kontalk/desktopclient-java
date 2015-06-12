@@ -81,10 +81,8 @@ public final class Control extends Observable {
     public void launch() {
         new Thread(mClient).start();
 
-        // use password option to determine if account was imported
-        Config config = Config.getInstance();
-        boolean connect = config.getBoolean(Config.MAIN_CONNECT_STARTUP);
-        if (config.getString(Config.ACC_PASS).isEmpty()) {
+        boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
+        if (!AccountLoader.getInstance().isPresent()) {
             this.setChanged();
             this.notifyObservers(new ViewEvent.MissingAccount(connect));
             return;
