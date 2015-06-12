@@ -28,8 +28,6 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.laf.viewport.WebViewport;
-import com.alee.managers.notification.WebNotificationPopup;
-import com.alee.managers.popup.PopupStyle;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -118,7 +116,6 @@ final class ThreadView extends ScrollPane implements Observer {
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
-    private WebNotificationPopup mPopup = null;
 
     ThreadView(View view) {
         super(null);
@@ -199,11 +196,6 @@ final class ThreadView extends ScrollPane implements Observer {
         if (!optBG.isPresent())
             return mDefaultBG;
         return optBG.get();
-    }
-
-    private void hideChatStateNotification() {
-        if (mPopup != null)
-                mPopup.hidePopup();
     }
 
     @Override
@@ -295,8 +287,10 @@ final class ThreadView extends ScrollPane implements Observer {
         protected void updateOnEDT(Object arg) {
             if (arg instanceof Set ||
                     arg instanceof String ||
-                    arg instanceof Boolean) {
-                // users, subject or read status changed, nothing to do here
+                    arg instanceof Boolean ||
+                    arg instanceof KonChatState) {
+                // users, subject, read status or chat state changed, nothing
+                // to do here
                 return;
             }
 
@@ -309,13 +303,7 @@ final class ThreadView extends ScrollPane implements Observer {
             }
 
             if (arg instanceof KonMessage) {
-                ThreadView.this.hideChatStateNotification();
                 this.insertMessage((KonMessage) arg);
-                return;
-            }
-
-            if (arg instanceof KonChatState) {
-                this.showChatNotification((KonChatState) arg);
                 return;
             }
 
@@ -356,31 +344,6 @@ final class ThreadView extends ScrollPane implements Observer {
             MessageItem messageView = this.getDisplayedItemAt(row);
             WebPopupMenu popupMenu = messageView.getPopupMenu();
             popupMenu.show(this, e.getX(), e.getY());
-        }
-
-        private void showChatNotification(KonChatState state) {
-            if (ThreadView.this.getCurrentView().orElse(null) != this)
-                return;
-
-            String activity = null;
-            switch(state.getState()) {
-                case composing: activity = Tr.tr("is writing..."); break;
-                //case paused: activity = Tr.tr("has paused"); break;
-                case inactive: activity = Tr.tr("is inactive"); break;
-            }
-            if (activity == null)
-                return;
-
-            ThreadView.this.hideChatStateNotification();
-            mPopup = new WebNotificationPopup(PopupStyle.dark);
-            WebLabel textLabel = new WebLabel(state.getUser().getName()+" "+activity);
-            textLabel.setForeground(Color.WHITE);
-            textLabel.setMargin(5);
-            mPopup.setContent(textLabel);
-            mPopup.setDisplayTime(15 * 1000);
-            mPopup.revalidate();
-            // TODO show notification really inside this message list
-            mPopup.showPopup(ThreadView.this, 10, ThreadView.this.getHeight() - 50);
         }
 
         private void setBackground(KonThread.ViewSettings s) {
