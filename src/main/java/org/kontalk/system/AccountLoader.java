@@ -70,7 +70,7 @@ public final class AccountLoader {
         byte[] bridgeCertData = readBytesFromFile(BRIDGE_CERT_FILENAME);
 
         // load key
-        String password = mConf.getString(Config.ACC_PASS);
+        char[] password = mConf.getString(Config.ACC_PASS).toCharArray();
         try {
             return PersonalKey.load(disarm(privateKeyData),
                     disarm(publicKeyData),
@@ -82,7 +82,7 @@ public final class AccountLoader {
         }
     }
 
-    public void importAccount(String zipFilePath, String password) throws KonException {
+    public void importAccount(String zipFilePath, char[] password) throws KonException {
         byte[] publicKeyData;
         byte[] privateKeyData;
         byte[] bridgeCertData;
@@ -122,21 +122,21 @@ public final class AccountLoader {
         mKey = key;
     }
 
-    public void setPassword(String newPassword) throws KonException {
+    public void setPassword(char[] newPassword) throws KonException {
         byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
-        String oldPassword = mConf.getString(Config.ACC_PASS);
+        char[] oldPassword = mConf.getString(Config.ACC_PASS).toCharArray();
         writePrivateKey(privateKeyData, oldPassword, newPassword);
         mConf.setProperty(Config.ACC_PASS, "");
     }
 
-    public void setNewPassword(String oldPassword, String newPassword) throws KonException {
+    public void setNewPassword(char[] oldPassword, char[] newPassword) throws KonException {
         byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
         writePrivateKey(privateKeyData, oldPassword, newPassword);
         mConf.setProperty(Config.ACC_PASS, "");
     }
 
-    private void writePrivateKey(byte[] privateKeyData, String oldPassword) throws KonException {
-        String newPassword = StringUtils.randomString(40);
+    private void writePrivateKey(byte[] privateKeyData, char[] oldPassword) throws KonException {
+        char[] newPassword = StringUtils.randomString(40).toCharArray();
         writePrivateKey(privateKeyData, oldPassword, newPassword);
         mConf.setProperty(Config.ACC_PASS, newPassword);
     }
@@ -156,8 +156,8 @@ public final class AccountLoader {
     }
 
     private static void writePrivateKey(byte[] privateKeyData,
-            String oldPassword,
-            String newPassword) throws KonException {
+            char[] oldPassword,
+            char[] newPassword) throws KonException {
         try {
             privateKeyData = PGPUtils.copySecretKeyRingWithNewPassword(privateKeyData,
                     oldPassword, newPassword).getEncoded();

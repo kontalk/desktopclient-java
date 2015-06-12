@@ -281,11 +281,10 @@ final class ImportDialog extends WebDialog {
                 LOGGER.warning("no zip file path");
                 return false;
             }
-            String password = new String(mPasswd);
 
             String errorText = null;
             try {
-                AccountLoader.getInstance().importAccount(mZipPath, password);
+                AccountLoader.getInstance().importAccount(mZipPath, mPasswd);
             } catch (KonException ex) {
                 errorText = View.getErrorText(ex);
             }

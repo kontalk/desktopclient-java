@@ -131,7 +131,7 @@ public final class PGPUtils {
     }
 
     public static PGPSecretKeyRing copySecretKeyRingWithNewPassword(byte[] privateKeyData,
-            String oldPassphrase, String newPassphrase) throws PGPException, IOException {
+            char[] oldPassphrase, char[] newPassphrase) throws PGPException, IOException {
 
         // load the secret key ring
         KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
@@ -140,11 +140,11 @@ public final class PGPUtils {
         PGPDigestCalculatorProvider sha1CalcProv = new JcaPGPDigestCalculatorProviderBuilder().build();
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(sha1CalcProv)
             .setProvider(PGPUtils.PROVIDER)
-            .build(oldPassphrase.toCharArray());
+            .build(oldPassphrase);
 
         PGPDigestCalculator sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build().get(HashAlgorithmTags.SHA1);
         PBESecretKeyEncryptor encryptor = new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.AES_256, sha1Calc)
-            .setProvider(PROVIDER).build(newPassphrase.toCharArray());
+            .setProvider(PROVIDER).build(newPassphrase);
 
         return PGPSecretKeyRing.copyWithNewPassword(secRing, decryptor, encryptor);
     }

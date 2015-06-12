@@ -89,7 +89,7 @@ public final class PersonalKey {
     @SuppressWarnings("unchecked")
     public static PersonalKey load(byte[] privateKeyData,
             byte[] publicKeyData,
-            String passphrase,
+            char[] passphrase,
             byte[] bridgeCertData)
             throws PGPException, IOException, CertificateException, NoSuchProviderException {
 
@@ -100,7 +100,7 @@ public final class PersonalKey {
         PGPDigestCalculatorProvider sha1Calc = new JcaPGPDigestCalculatorProviderBuilder().build();
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(sha1Calc)
             .setProvider(PGPUtils.PROVIDER)
-            .build(passphrase.toCharArray());
+            .build(passphrase);
 
         PGPKeyPair signKp, encryptKp;
 
