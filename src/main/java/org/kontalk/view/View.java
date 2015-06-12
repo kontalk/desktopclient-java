@@ -98,7 +98,11 @@ public final class View implements Observer {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
     final static Color BLUE = new Color(130, 170, 240);
+    //final static Color BLUE = new Color(0, 181, 233);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
+    //final static Color LIGHT_BLUE = new Color(32, 210, 237);
+    final static Color GREEN = new Color(83, 196, 46);
+
 
     private final Control mControl;
     private final UserListView mUserListView;

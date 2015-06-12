@@ -60,6 +60,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
+import org.kontalk.model.KonThread.KonChatState;
 import org.kontalk.model.KonThread.ViewSettings;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
@@ -178,8 +179,9 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
     protected final class ThreadItem extends TableView<ThreadItem, KonThread>.TableItem {
 
-        WebLabel mSubjectLabel;
-        WebLabel mUserLabel;
+        private final WebLabel mSubjectLabel;
+        private final WebLabel mUserLabel;
+        private final WebLabel mChatStateLabel;
         private Color mBackground;
 
         ThreadItem(KonThread thread) {
@@ -190,14 +192,20 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
             mSubjectLabel = new WebLabel("foo");
             mSubjectLabel.setFontSize(14);
-            this.add(mSubjectLabel, BorderLayout.CENTER);
+            this.add(mSubjectLabel, BorderLayout.NORTH);
 
             mUserLabel = new WebLabel();
             mUserLabel.setForeground(Color.GRAY);
             mUserLabel.setFontSize(11);
-            this.add(mUserLabel, BorderLayout.SOUTH);
+            this.add(mUserLabel, BorderLayout.CENTER);
+            mChatStateLabel = new WebLabel();
+            mChatStateLabel.setForeground(View.GREEN);
+            mChatStateLabel.setFontSize(13);
+            mChatStateLabel.setBoldFont();
+            //mChatStateLabel.setMargin(0, 5, 0, 5);
+            this.add(mChatStateLabel, BorderLayout.SOUTH);
 
-            this.update();
+            this.updateView(null);
 
             this.setBackground(mBackground);
         }
@@ -224,22 +232,51 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
         @Override
         protected void updateOnEDT(Object arg) {
-            this.update();
+            this.updateView(arg);
             // needed for background repaint
             ThreadListView.this.repaint();
         }
 
-        private void update() {
-            mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
+        private void updateView(Object arg) {
+            if (arg == null || arg instanceof Boolean)
+                mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
 
-            String subject = mValue.getSubject();
-            if (subject.isEmpty()) subject = Tr.tr("<unnamed>");
-            mSubjectLabel.setText(subject);
 
-            List<String> nameList = new ArrayList<>(mValue.getUser().size());
-            for (User user : mValue.getUser())
-                nameList.add(user.getName().isEmpty() ? Tr.tr("<unknown>") : user.getName());
-            mUserLabel.setText(StringUtils.join(nameList, ", "));
+            if (arg == null || arg instanceof String) {
+                String subject = mValue.getSubject();
+                if (subject.isEmpty()) subject = Tr.tr("<unnamed>");
+                mSubjectLabel.setText(subject);
+            }
+
+            if (arg == null || arg instanceof Set) {
+                List<String> nameList = new ArrayList<>(mValue.getUser().size());
+                for (User user : mValue.getUser()) {
+                    nameList.add(user.getName().isEmpty() ?
+                            Tr.tr("<unknown>") :
+                            user.getName());
+                }
+                mUserLabel.setText(StringUtils.join(nameList, ", "));
+            }
+
+            if (arg instanceof KonThread.KonChatState) {
+                KonChatState state = (KonChatState) arg;
+                String stateText = null;
+                switch(state.getState()) {
+                    case composing: stateText = Tr.tr("is writing..."); break;
+                    //case paused: activity = Tr.tr("has paused"); break;
+                    //case inactive: stateText = Tr.tr("is inactive"); break;
+                }
+                if (stateText == null) {
+                    // 'inactive' is default
+                    mChatStateLabel.setText("");
+                    return;
+                }
+
+                if (mValue.getUser().size() > 1)
+                    stateText = state.getUser().getName()+" " + stateText;
+
+                mChatStateLabel.setText(stateText + " ");
+            }
         }
 
         @Override
