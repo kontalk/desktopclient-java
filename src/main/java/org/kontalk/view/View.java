@@ -67,6 +67,7 @@ import javax.swing.ToolTipManager;
 import javax.swing.event.DocumentEvent;
 
 import com.alee.utils.swing.DocumentChangeListener;
+import java.awt.EventQueue;
 import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException;
@@ -130,6 +131,13 @@ public final class View implements Observer {
         ThreadList.getInstance().addObserver(mThreadView);
         // text field
         mSendTextArea = new WebTextArea();
+        EventQueue.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                mSendTextArea.requestFocusInWindow();
+            }
+        });
+
         mSendTextArea.setMargin(5);
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
