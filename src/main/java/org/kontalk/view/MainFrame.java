@@ -86,7 +86,7 @@ final class MainFrame extends WebFrame {
     MainFrame(final View view,
             TableView<?, ?> userList,
             TableView<?, ?> threadList,
-            Component threadView,
+            ThreadView threadView,
             Component sendTextField,
             Component sendButton,
             Component statusBar) {
@@ -203,6 +203,9 @@ final class MainFrame extends WebFrame {
         this.setLayout(new BorderLayout(5, 5));
 
         // ...left...
+        WebPanel sidePanel = new WebPanel(false);
+        WebPanel searchPanel = createSearchPanel(new TableView[]{threadList, userList}, threadView);
+        sidePanel.add(searchPanel, BorderLayout.NORTH);
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
         WebButton newThreadButton = new WebButton(Tr.tr("New"));
         newThreadButton.addActionListener(new ActionListener() {
@@ -213,10 +216,10 @@ final class MainFrame extends WebFrame {
         });
         String threadOverlayText =
                 Tr.tr("No threads to display. You can create new threads from your contacts");
-        WebPanel threadListPanel = createTablePane(threadList,
+        WebScrollPane threadPane = createTablePane(threadList,
                 newThreadButton,
                 threadOverlayText);
-        mTabbedPane.addTab("", threadListPanel);
+        mTabbedPane.addTab("", threadPane);
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Threads")));
 
@@ -229,14 +232,15 @@ final class MainFrame extends WebFrame {
             }
         });
         String userOverlayText = Tr.tr("No contacts to display. You have no friends ;(");
-        WebPanel userListPanel = createTablePane(userList,
+        WebScrollPane userPane = createTablePane(userList,
                 newUserButton,
                 userOverlayText);
-        mTabbedPane.addTab("", userListPanel);
+        mTabbedPane.addTab("", userPane);
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         mTabbedPane.setPreferredSize(new Dimension(250, -1));
-        this.add(mTabbedPane, BorderLayout.WEST);
+        sidePanel.add(mTabbedPane, BorderLayout.CENTER);
+        this.add(sidePanel, BorderLayout.WEST);
 
         // ...right...
         WebPanel bottomPanel = new WebPanel();
@@ -463,13 +467,7 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    private static WebPanel createTablePane(final TableView<?, ?> table,
-            Component newButton,
-            String overlayText) {
-        Icon clearIcon = View.getIcon("ic_ui_clear.png");
-        WebPanel listPanel = new WebPanel();
-
-        // search panel
+    private static WebPanel createSearchPanel(final TableView[] tables, final ThreadView threadView) {
         WebPanel searchPanel = new WebPanel();
         final WebTextField searchField = new WebTextField();
         searchField.setInputPrompt(Tr.tr("Search..."));
@@ -487,9 +485,13 @@ final class MainFrame extends WebFrame {
                 this.filterList();
             }
             private void filterList() {
-                table.filterItems(searchField.getText());
+                String searchText = searchField.getText();
+                for (TableView table : tables)
+                    table.filterItems(searchText);
+                threadView.filterCurrentList(searchText);
             }
         });
+        Icon clearIcon = View.getIcon("ic_ui_clear.png");
         WebButton clearSearchButton = new WebButton(clearIcon);
         clearSearchButton.setUndecorated(true);
         clearSearchButton.addActionListener(new ActionListener() {
@@ -502,7 +504,12 @@ final class MainFrame extends WebFrame {
         searchPanel.add(searchField, BorderLayout.CENTER);
         // TODO add new button
         //searchPanel.add(newButton, BorderLayout.EAST);
-        listPanel.add(searchPanel, BorderLayout.NORTH);
+        return searchPanel;
+    }
+
+    private static WebScrollPane createTablePane(final TableView<?, ?> table,
+            Component newButton,
+            String overlayText) {
 
         WebScrollPane scrollPane = new ScrollPane(table);
         // overlay for empty list
@@ -537,7 +544,6 @@ final class MainFrame extends WebFrame {
 //        });
         //listOverlayPanel.addOverlay(new GroupPanel(false, overlayArea));
         //listPanel.add(listOverlayPanel, BorderLayout.CENTER);
-        listPanel.add(scrollPane, BorderLayout.CENTER);
-        return listPanel;
+        return scrollPane;
     }
 }

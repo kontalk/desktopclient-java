@@ -150,7 +150,7 @@ final class ThreadView extends ScrollPane implements Observer {
         this.loadDefaultBG();
     }
 
-    private Optional<MessageList> getCurrentView() {
+    private Optional<MessageList> getCurrentList() {
         Component view = this.getViewport().getView();
         if (view == null)
             return Optional.empty();
@@ -158,10 +158,17 @@ final class ThreadView extends ScrollPane implements Observer {
     }
 
     Optional<KonThread> getCurrentThread() {
-        Optional<MessageList> optview = this.getCurrentView();
+        Optional<MessageList> optview = this.getCurrentList();
         return optview.isPresent() ?
                 Optional.of(optview.get().getThread()) :
                 Optional.<KonThread>empty();
+    }
+
+    void filterCurrentList(String searchText) {
+        Optional<MessageList> optList = this.getCurrentList();
+        if (!optList.isPresent())
+            return;
+        optList.get().filterItems(searchText);
     }
 
     void showThread(KonThread thread) {
@@ -189,7 +196,7 @@ final class ThreadView extends ScrollPane implements Observer {
     }
 
     private Background getCurrentBackground() {
-        Optional<MessageList> optView = this.getCurrentView();
+        Optional<MessageList> optView = this.getCurrentList();
         if (!optView.isPresent())
             return mDefaultBG;
         Optional<Background> optBG = optView.get().getBG();
