@@ -78,7 +78,7 @@ public final class AccountLoader {
                     bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't load personal key", ex);
-            throw new KonException(KonException.Error.RELOAD_KEY, ex);
+            throw new KonException(KonException.Error.LOAD_KEY, ex);
         }
         return mKey;
     }

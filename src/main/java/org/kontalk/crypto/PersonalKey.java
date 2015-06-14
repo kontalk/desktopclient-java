@@ -37,6 +37,7 @@ import org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider;
 import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
+import org.kontalk.misc.KonException;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -91,8 +92,7 @@ public final class PersonalKey {
             byte[] publicKeyData,
             char[] passphrase,
             byte[] bridgeCertData)
-            throws PGPException, IOException, CertificateException, NoSuchProviderException {
-
+            throws KonException, IOException, PGPException, CertificateException, NoSuchProviderException {
         KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
         PGPSecretKeyRing secRing = new PGPSecretKeyRing(privateKeyData, fpr);
         PGPPublicKeyRing pubRing = new PGPPublicKeyRing(publicKeyData, fpr);
@@ -129,7 +129,11 @@ public final class PersonalKey {
             PGPSecretKey key = skeys.next();
             if (key.isMasterKey()) {
                 // master (signing) key
-                signPriv = key.extractPrivateKey(decryptor);
+                try {
+                    signPriv = key.extractPrivateKey(decryptor);
+                } catch (PGPException ex) {
+                    throw new KonException(KonException.Error.LOAD_KEY_DECRYPT, ex);
+                }
             }
             else {
                 // sub (encryption) key

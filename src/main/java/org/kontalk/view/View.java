@@ -631,12 +631,12 @@ public final class View implements Observer {
                 errorText = Tr.tr("Can't write key files to configuration directory.");
                 break;
             case READ_FILE:
-            case RELOAD_KEY:
+            case LOAD_KEY:
                 switch (ex.getError()) {
                     case READ_FILE:
                         errorText = Tr.tr("Can't read key files from configuration directory.");
                         break;
-                    case RELOAD_KEY:
+                    case LOAD_KEY:
                         errorText = Tr.tr("Can't load key files from configuration directory.");
                         break;
                 }
