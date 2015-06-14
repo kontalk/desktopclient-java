@@ -66,7 +66,6 @@ import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.jivesoftware.smack.packet.Message;
 import org.kontalk.system.Downloader;
-import org.kontalk.misc.KonException;
 import org.kontalk.client.KonMessageListener;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.InMessage;
@@ -412,15 +411,13 @@ public final class Coder {
     private static KeysResult getKeys(User user) {
         KeysResult result = new KeysResult();
 
-        PersonalKey myKey;
-        try {
-            myKey = AccountLoader.getInstance().getPersonalKey();
-        } catch (KonException ex) {
-            LOGGER.log(Level.WARNING, "can't get personal key", ex);
+        Optional<PersonalKey> optMyKey = AccountLoader.getInstance().getPersonalKey();
+        if (!optMyKey.isPresent()) {
+            LOGGER.log(Level.WARNING, "can't get personal key");
             result.errors.add(Error.MY_KEY_UNAVAILABLE);
             return result;
         }
-        result.myKey = myKey;
+        result.myKey = optMyKey.get();
 
         if (!user.hasKey()) {
             LOGGER.warning("key not found for user, id: "+user.getID());

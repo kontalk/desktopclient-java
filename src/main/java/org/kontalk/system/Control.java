@@ -113,15 +113,41 @@ public final class Control extends Observable {
     }
 
     public void connect() {
-        PersonalKey key;
+        this.connect(new char[0]);
+    }
+
+    public void connect(char[] password) {
+        Optional<PersonalKey> optKey = this.loadKey(password);
+        if (!optKey.isPresent())
+            return;
+
+        mClient.connect(optKey.get());
+    }
+
+    private Optional<PersonalKey> loadKey(char[] password) {
+        AccountLoader account = AccountLoader.getInstance();
+        Optional<PersonalKey> optKey = account.getPersonalKey();
+        if (optKey.isPresent())
+            return optKey;
+
+        if (password.length == 0) {
+            if (account.isPasswordProtected()) {
+                this.setChanged();
+                this.notifyObservers(new ViewEvent.PasswordSet());
+                return Optional.empty();
+            }
+
+            password = Config.getInstance().getString(Config.ACC_PASS).toCharArray();
+        }
+
         try {
-            key = AccountLoader.getInstance().getPersonalKey();
+            optKey = Optional.of(account.load(password));
         } catch (KonException ex) {
             // something wrong with the account, tell view
             this.handleException(ex);
-            return;
+            return Optional.empty();
         }
-        mClient.connect(key);
+        return optKey;
     }
 
     public void disconnect() {

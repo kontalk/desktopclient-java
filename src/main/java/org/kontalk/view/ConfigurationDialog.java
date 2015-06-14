@@ -40,10 +40,10 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Optional;
 import javax.swing.JFrame;
 import javax.swing.text.NumberFormatter;
 import org.kontalk.system.Config;
-import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.system.AccountLoader;
 import org.kontalk.util.Tr;
@@ -262,16 +262,10 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void updateFingerprint() {
-            PersonalKey personalKey = null;
-            try {
-                personalKey = AccountLoader.getInstance().getPersonalKey();
-            } catch (KonException ex) {
-                // ignore
-            }
-            String fingerprint = "- "+Tr.tr("no key loaded")+" -";
-            if (personalKey != null)
-                fingerprint = personalKey.getFingerprint();
-            mFingerprintField.setText(fingerprint);
+            Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
+            mFingerprintField.setText(optKey.isPresent() ?
+                    optKey.get().getFingerprint() :
+                    "- " + Tr.tr("no key loaded") + " -");
         }
 
         private void saveConfiguration() {

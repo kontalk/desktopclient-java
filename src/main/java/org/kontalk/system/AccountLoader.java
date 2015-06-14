@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -57,20 +58,17 @@ public final class AccountLoader {
         mConf = config;
     }
 
-    public PersonalKey getPersonalKey() throws KonException {
-        if (mKey == null)
-            mKey = this.load();
-        return mKey;
+    public Optional<PersonalKey> getPersonalKey() {
+        return Optional.ofNullable(mKey);
     }
 
-    private PersonalKey load() throws KonException {
+    PersonalKey load(char[] password) throws KonException {
         // read key files
         byte[] publicKeyData = readArmoredFile(PUBLIC_KEY_FILENAME);
         byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
         byte[] bridgeCertData = readFile(BRIDGE_CERT_FILENAME);
 
         // load key
-        char[] password = mConf.getString(Config.ACC_PASS).toCharArray();
         try {
             mKey = PersonalKey.load(privateKeyData,
                     publicKeyData,
@@ -109,8 +107,9 @@ public final class AccountLoader {
                     encodedPublicKey,
                     password,
                     bridgeCertData);
-        } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
-            LOGGER.log(Level.WARNING, "can't load personal key", ex);
+        } catch (PGPException | IOException | CertificateException |
+                NoSuchProviderException | KonException ex) {
+            LOGGER.log(Level.WARNING, "can't import personal key", ex);
             throw new KonException(KonException.Error.IMPORT_KEY, ex);
         }
 

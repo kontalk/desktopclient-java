@@ -30,6 +30,10 @@ public abstract class ViewEvent {
     public static class StatusChanged extends ViewEvent {
     }
 
+    /** Key is password protected (ask for password). */
+    public static class PasswordSet extends ViewEvent {
+    }
+
     /** The personal account is missing (show import wizard). */
     public static class MissingAccount extends ViewEvent {
         public final boolean connect;
