@@ -65,21 +65,22 @@ public final class AccountLoader {
 
     private PersonalKey load() throws KonException {
         // read key files
-        byte[] publicKeyData = readBytesFromFile(PUBLIC_KEY_FILENAME);
-        byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
-        byte[] bridgeCertData = readBytesFromFile(BRIDGE_CERT_FILENAME);
+        byte[] publicKeyData = readArmoredFile(PUBLIC_KEY_FILENAME);
+        byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
+        byte[] bridgeCertData = readFile(BRIDGE_CERT_FILENAME);
 
         // load key
         char[] password = mConf.getString(Config.ACC_PASS).toCharArray();
         try {
-            return PersonalKey.load(disarm(privateKeyData),
-                    disarm(publicKeyData),
+            mKey = PersonalKey.load(privateKeyData,
+                    publicKeyData,
                     password,
                     bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't load personal key", ex);
             throw new KonException(KonException.Error.RELOAD_KEY, ex);
         }
+        return mKey;
     }
 
     public void importAccount(String zipFilePath, char[] password) throws KonException {
@@ -123,14 +124,14 @@ public final class AccountLoader {
     }
 
     public void setPassword(char[] newPassword) throws KonException {
-        byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
+        byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
         char[] oldPassword = mConf.getString(Config.ACC_PASS).toCharArray();
         writePrivateKey(privateKeyData, oldPassword, newPassword);
         mConf.setProperty(Config.ACC_PASS, "");
     }
 
     public void setNewPassword(char[] oldPassword, char[] newPassword) throws KonException {
-        byte[] privateKeyData = readBytesFromFile(PRIVATE_KEY_FILENAME);
+        byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
         writePrivateKey(privateKeyData, oldPassword, newPassword);
         mConf.setProperty(Config.ACC_PASS, "");
     }
@@ -138,7 +139,7 @@ public final class AccountLoader {
     private void writePrivateKey(byte[] privateKeyData, char[] oldPassword) throws KonException {
         char[] newPassword = StringUtils.randomString(40).toCharArray();
         writePrivateKey(privateKeyData, oldPassword, newPassword);
-        mConf.setProperty(Config.ACC_PASS, newPassword);
+        mConf.setProperty(Config.ACC_PASS, new String(newPassword));
     }
 
     boolean isPresent() {
@@ -147,12 +148,13 @@ public final class AccountLoader {
                 fileExists(BRIDGE_CERT_FILENAME);
     }
 
-    private static boolean fileExists(String filename) {
-        return new File(Kontalk.getConfigDir(), filename).isFile();
+    boolean isPasswordProtected() {
+        // use configuration option to determine this
+        return mConf.getString(Config.ACC_PASS).isEmpty();
     }
 
-    private static byte[] disarm(byte[] key) throws IOException {
-        return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
+    private static boolean fileExists(String filename) {
+        return new File(Kontalk.getConfigDir(), filename).isFile();
     }
 
     private static void writePrivateKey(byte[] privateKeyData,
@@ -180,7 +182,20 @@ public final class AccountLoader {
         return bytes;
     }
 
-    private static byte[] readBytesFromFile(String filename) throws KonException {
+    private static byte[] readArmoredFile(String filename) throws KonException {
+        try {
+            return disarm(readFile(filename));
+        } catch (IOException ex) {
+             LOGGER.warning("can't read armored key file: "+ex.getLocalizedMessage());
+            throw new KonException(KonException.Error.READ_FILE, ex);
+        }
+    }
+
+    private static byte[] disarm(byte[] key) throws IOException {
+        return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
+    }
+
+    private static byte[] readFile(String filename) throws KonException {
         String configDir = Kontalk.getConfigDir();
         byte[] bytes = null;
         try {
