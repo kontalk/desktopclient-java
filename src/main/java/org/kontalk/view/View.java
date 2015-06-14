@@ -24,10 +24,13 @@ import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
+import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.hotkey.Hotkey;
@@ -67,6 +70,7 @@ import javax.swing.ToolTipManager;
 import javax.swing.event.DocumentEvent;
 
 import com.alee.utils.swing.DocumentChangeListener;
+import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.EventQueue;
 import org.apache.commons.lang.StringUtils;
@@ -335,6 +339,8 @@ public final class View implements Observer {
     private void updateOnEDT(Object arg) {
        if (arg instanceof ViewEvent.StatusChanged) {
            this.statusChanged();
+       } else if (arg instanceof ViewEvent.PasswordSet) {
+           this.showPasswordDialog(false);
        } else if (arg instanceof ViewEvent.MissingAccount) {
            ViewEvent.MissingAccount missAccount = (ViewEvent.MissingAccount) arg;
            this.showImportWizard(missAccount.connect);
@@ -387,12 +393,46 @@ public final class View implements Observer {
         mMainFrame.statusChanged(status);
     }
 
+    void showPasswordDialog(boolean wasWrong) {
+        WebPanel passPanel = new WebPanel();
+        WebLabel passLabel = new WebLabel(Tr.tr("Please enter your key password:"));
+        passPanel.add(passLabel, BorderLayout.NORTH);
+        final WebPasswordField passField = new WebPasswordField();
+        passPanel.add(passField, BorderLayout.CENTER);
+        if (wasWrong) {
+            WebLabel wrongLabel = new WebLabel(Tr.tr("Wrong password"));
+            wrongLabel.setForeground(Color.RED);
+            passPanel.add(wrongLabel, BorderLayout.SOUTH);
+        }
+        WebOptionPane passPane = new WebOptionPane(passPanel,
+                WebOptionPane.QUESTION_MESSAGE,
+                WebOptionPane.OK_CANCEL_OPTION);
+        JDialog dialog = passPane.createDialog(mMainFrame, Tr.tr("Enter password"));
+        dialog.setModal(true);
+        dialog.addWindowFocusListener(new WindowAdapter() {
+            @Override
+            public void windowGainedFocus(WindowEvent e) {
+                passField.requestFocusInWindow();
+            }
+        });
+        // blocking
+        dialog.setVisible(true);
+
+        Object value = passPane.getValue();
+        if (value != null && value.equals(WebOptionPane.OK_OPTION))
+            mControl.connect(passField.getPassword());
+    }
+
     void showImportWizard(boolean connect) {
-        JDialog importFrame = new ImportDialog(this, connect);
+        WebDialog importFrame = new ImportDialog(this, connect);
         importFrame.setVisible(true);
     }
 
     private void handleException(KonException ex) {
+        if (ex.getError() == KonException.Error.LOAD_KEY_DECRYPT) {
+            this.showPasswordDialog(true);
+            return;
+        }
         String errorText = getErrorText(ex);
         WebOptionPane.showMessageDialog(mMainFrame,
                 errorText,
