@@ -67,6 +67,7 @@ import javax.swing.ToolTipManager;
 import javax.swing.event.DocumentEvent;
 
 import com.alee.utils.swing.DocumentChangeListener;
+import java.awt.Component;
 import java.awt.EventQueue;
 import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.openpgp.PGPException;
@@ -155,6 +156,10 @@ public final class View implements Observer {
         mSendButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                Component focusOwner = mMainFrame.getFocusOwner();
+                if (focusOwner != mSendTextArea)
+                    return;
+
                 View.this.callSendText();
             }
         });
