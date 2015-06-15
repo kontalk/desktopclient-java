@@ -660,9 +660,6 @@ public final class View implements Observer {
                     // bridge
                     errorText += eol + Tr.tr("Are all key files valid?");
                 }
-                if (ex.getExceptionClass().equals(PGPException.class)) {
-                    errorText += eol + Tr.tr("Is the passphrase correct?");
-                }
                 break;
             case CHANGE_PASSWORD:
                 errorText = Tr.tr("Can't change password. Internal error(!?)");
@@ -681,6 +678,9 @@ public final class View implements Observer {
                         break;
                 }
                 errorText += " "+Tr.tr("Please reimport your key.");
+                break;
+            case LOAD_KEY_DECRYPT:
+                errorText = Tr.tr("Can't decrypt key. Is the passphrase correct?");
                 break;
             case CLIENT_CONNECTION:
                 errorText = Tr.tr("Can't create connection");

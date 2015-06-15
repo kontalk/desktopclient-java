@@ -108,7 +108,7 @@ public final class AccountLoader {
                     password,
                     bridgeCertData);
         } catch (PGPException | IOException | CertificateException |
-                NoSuchProviderException | KonException ex) {
+                NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't import personal key", ex);
             throw new KonException(KonException.Error.IMPORT_KEY, ex);
         }
