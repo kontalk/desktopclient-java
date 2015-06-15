@@ -384,7 +384,7 @@ final class ImportDialog extends WebDialog {
                         !Arrays.equals(newPass, mConfirmPassField.getPassword()))
                     return;
                 try {
-                    AccountLoader.getInstance().setPassword(newPass);
+                    AccountLoader.getInstance().setPassword(new char[0], newPass);
                 } catch (KonException ex) {
                     LOGGER.log(Level.WARNING, "can't set password", ex);
                     return;

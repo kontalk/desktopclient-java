@@ -116,49 +116,31 @@ public final class AccountLoader {
         // key seems valid. Copy to config dir
         writeBytesToFile(encodedPublicKey, PUBLIC_KEY_FILENAME, true);
         writeBytesToFile(bridgeCertData, BRIDGE_CERT_FILENAME, false);
-        this.writePrivateKey(encodedPrivateKey, password);
+        this.writePrivateKey(encodedPrivateKey, password, new char[0]);
 
         // success! use the new key
         mKey = key;
     }
 
-    public void setPassword(char[] newPassword) throws KonException {
+    public void setPassword(char[] oldPassword, char[] newPassword) throws KonException {
         byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
-        char[] oldPassword = mConf.getString(Config.ACC_PASS).toCharArray();
-        writePrivateKey(privateKeyData, oldPassword, newPassword);
-        mConf.setProperty(Config.ACC_PASS, "");
+        this.writePrivateKey(privateKeyData, oldPassword, newPassword);
     }
 
-    public void setNewPassword(char[] oldPassword, char[] newPassword) throws KonException {
-        byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
-        writePrivateKey(privateKeyData, oldPassword, newPassword);
-        mConf.setProperty(Config.ACC_PASS, "");
-    }
-
-    private void writePrivateKey(byte[] privateKeyData, char[] oldPassword) throws KonException {
-        char[] newPassword = StringUtils.randomString(40).toCharArray();
-        writePrivateKey(privateKeyData, oldPassword, newPassword);
-        mConf.setProperty(Config.ACC_PASS, new String(newPassword));
-    }
-
-    boolean isPresent() {
-        return fileExists(PUBLIC_KEY_FILENAME) &&
-                fileExists(PRIVATE_KEY_FILENAME) &&
-                fileExists(BRIDGE_CERT_FILENAME);
-    }
-
-    boolean isPasswordProtected() {
-        // use configuration option to determine this
-        return mConf.getString(Config.ACC_PASS).isEmpty();
-    }
-
-    private static boolean fileExists(String filename) {
-        return new File(Kontalk.getConfigDir(), filename).isFile();
-    }
-
-    private static void writePrivateKey(byte[] privateKeyData,
+    private void writePrivateKey(byte[] privateKeyData,
             char[] oldPassword,
-            char[] newPassword) throws KonException {
+            char[] newPassword)
+            throws KonException {
+        // old password
+        if (oldPassword.length < 1)
+            oldPassword = mConf.getString(Config.ACC_PASS).toCharArray();
+
+        // new password
+        boolean unset = newPassword.length == 0;
+        if (unset)
+            newPassword = StringUtils.randomString(40).toCharArray();
+
+        // write new
         try {
             privateKeyData = PGPUtils.copySecretKeyRingWithNewPassword(privateKeyData,
                     oldPassword, newPassword).getEncoded();
@@ -167,6 +149,25 @@ public final class AccountLoader {
             throw new KonException(KonException.Error.CHANGE_PASSWORD, ex);
         }
         writeBytesToFile(privateKeyData, PRIVATE_KEY_FILENAME, true);
+
+        // new saved password
+        String savedPass = unset ? new String(newPassword) : "";
+        mConf.setProperty(Config.ACC_PASS, savedPass);
+    }
+
+    boolean isPresent() {
+        return fileExists(PUBLIC_KEY_FILENAME) &&
+                fileExists(PRIVATE_KEY_FILENAME) &&
+                fileExists(BRIDGE_CERT_FILENAME);
+    }
+
+    public boolean isPasswordProtected() {
+        // use configuration option to determine this
+        return mConf.getString(Config.ACC_PASS).isEmpty();
+    }
+
+    private static boolean fileExists(String filename) {
+        return new File(Kontalk.getConfigDir(), filename).isFile();
     }
 
     private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
