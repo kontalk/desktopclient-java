@@ -33,3 +33,6 @@ dist/
 store/
 release/
 
+/.classpath
+/.project
+/.settings
