@@ -19,9 +19,10 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.PacketListener;
+
+import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.kontalk.model.KonMessage.Status;
@@ -31,7 +32,7 @@ import org.kontalk.system.Control;
  * Listener for acknowledged packets (Stream Management, XEP-0198).
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class AcknowledgedListener implements PacketListener {
+public final class AcknowledgedListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(AcknowledgedListener.class.getName());
 
     private final Control mControl;
@@ -41,7 +42,7 @@ public final class AcknowledgedListener implements PacketListener {
     }
 
     @Override
-    public void processPacket(Packet p) {
+    public void processPacket(Stanza p) {
         // note: the packet is not the acknowledgement itself but the packet that
         // is acknowledged
         if (!(p instanceof Message)) {
@@ -64,7 +65,7 @@ public final class AcknowledgedListener implements PacketListener {
             return;
         }
 
-        String xmppID = p.getPacketID();
+        String xmppID = p.getStanzaId();
         if (xmppID == null || xmppID.isEmpty()) {
             LOGGER.warning("acknowledged message has invalid XMPP ID: "+xmppID);
             return;

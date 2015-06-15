@@ -2,20 +2,25 @@ apply plugin: 'application'
 apply plugin: 'java'
 apply plugin: 'eclipse'
 
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
+sourceCompatibility = '1.7'
+targetCompatibility = '1.7'
 
 mainClassName = 'org.kontalk.Kontalk'
 
 buildDir = 'build_gradle'
 
-ext.bcVersion = '1.50'
+evaluationDependsOn ":client-common-java"
+ext {
+	bcVersion = '1.50'
+	smackVersion = project(':client-common-java').smackVersion
+}
 
 dependencies {
-	compile project(':client-common-java')
+    compile project(':client-common-java')
 
-	compile fileTree(dir: 'lib', include: ['*.jar'])
+    compile fileTree(dir: 'lib', include: ['*.jar'])
 
+    compile "org.igniterealtime.smack:smack-java7:$smackVersion"
     compile group: 'org.bouncycastle', name: 'bcpg-jdk15on', version: "$bcVersion"
     compile group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: "$bcVersion"
     compile group: 'com.googlecode.json-simple', name: 'json-simple', version: "1.1.1"
@@ -32,4 +37,23 @@ dependencies {
 
 repositories {
     mavenCentral()
+}
+
+task copyDeps(type: Copy) {
+    from(configurations.runtime)
+    into project.file('dist/lib')
+}
+
+jar {
+    baseName = 'KontalkDesktopApp'
+    destinationDir project.file('dist')
+    
+    manifest {
+        attributes(
+            "Main-Class": mainClassName,
+            "Class-Path": configurations.compile.collect { 'lib/'+it.getName() }.join(' ')
+        )
+    }
+    
+    dependsOn ':copyDeps'
 }

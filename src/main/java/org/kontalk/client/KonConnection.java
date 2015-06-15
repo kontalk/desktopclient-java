@@ -29,15 +29,17 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import javax.net.ssl.SSLContext;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
+
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.SASLAuthentication;
-import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
+import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration.Builder;
 import org.kontalk.util.TrustUtils;
 
 
@@ -75,7 +77,7 @@ public final class KonConnection extends XMPPTCPConnection {
             PrivateKey privateKey,
             X509Certificate bridgeCert,
             boolean validateCertificate) {
-        XMPPTCPConnectionConfiguration.XMPPTCPConnectionConfigurationBuilder builder =
+        Builder builder =
             XMPPTCPConnectionConfiguration.builder();
 
         builder
@@ -94,17 +96,10 @@ public final class KonConnection extends XMPPTCPConnection {
                         LOGGER.info("got callback!?: " + cb);
                 }
             })
-            // we need the roster
-            .setRosterLoadedAtLogin(true)
             // enable compression
             .setCompressionEnabled(true)
             // enable encryption
-            .setSecurityMode(SecurityMode.required)
-            // we will send a custom presence
-            // -> no, send initial default presence
-            //.setSendPresence(false)
-            // disable session initiation
-            .setLegacySessionDisabled(true);
+            .setSecurityMode(SecurityMode.required);
 
         // setup SSL
         if (!validateCertificate)
@@ -131,11 +126,7 @@ public final class KonConnection extends XMPPTCPConnection {
     @Override
     public void disconnect() {
         LOGGER.info("disconnecting");
-        try {
-            super.disconnect();
-        } catch (SmackException.NotConnectedException ex) {
-            LOGGER.info("can't disconnect, not connected");
-        }
+        super.disconnect();
     }
 
     public String getDestination() {

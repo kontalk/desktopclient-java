@@ -25,23 +25,23 @@ import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.bouncycastle.openpgp.PGPException;
-import org.jivesoftware.smack.PacketListener;
-import org.jivesoftware.smack.Roster;
-import org.jivesoftware.smack.RosterListener;
+import org.jivesoftware.smack.StanzaListener;
+import org.jivesoftware.smack.roster.Roster;
+import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.NotFilter;
 import org.jivesoftware.smack.filter.OrFilter;
-import org.jivesoftware.smack.filter.PacketFilter;
-import org.jivesoftware.smack.filter.PacketIDFilter;
-import org.jivesoftware.smack.filter.PacketTypeFilter;
+import org.jivesoftware.smack.filter.StanzaFilter;
+import org.jivesoftware.smack.filter.StanzaIdFilter;
+import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
-import org.jivesoftware.smack.packet.RosterPacket;
-import org.jivesoftware.smack.tcp.sm.StreamManagementException;
+import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
@@ -63,7 +63,7 @@ import org.kontalk.system.Control;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public final class Client implements PacketListener, Runnable {
+public final class Client implements StanzaListener, Runnable {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     private final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
@@ -111,26 +111,26 @@ public final class Client implements PacketListener, Runnable {
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
         // packet listeners
-        RosterListener rl = new KonRosterListener(mConn.getRoster(), this, mControl);
-        mConn.getRoster().addRosterListener(rl);
+        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), this, mControl);
+        Roster.getInstanceFor(mConn).addRosterListener(rl);
 
-        PacketFilter messageFilter = new PacketTypeFilter(Message.class);
-        mConn.addPacketListener(new KonMessageListener(this, mControl), messageFilter);
+        StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
+        mConn.addAsyncStanzaListener(new KonMessageListener(this, mControl), messageFilter);
 
-        PacketFilter vCardFilter = new PacketTypeFilter(VCard4.class);
-        mConn.addPacketListener(new VCardListener(mControl), vCardFilter);
+        StanzaFilter vCardFilter = new StanzaTypeFilter(VCard4.class);
+        mConn.addAsyncStanzaListener(new VCardListener(mControl), vCardFilter);
 
-        PacketFilter blockingCommandFilter = new PacketTypeFilter(BlockingCommand.class);
-        mConn.addPacketListener(new BlockListListener(mControl), blockingCommandFilter);
+        StanzaFilter blockingCommandFilter = new StanzaTypeFilter(BlockingCommand.class);
+        mConn.addAsyncStanzaListener(new BlockListListener(mControl), blockingCommandFilter);
 
-        PacketFilter publicKeyFilter = new PacketTypeFilter(PublicKeyPublish.class);
-        mConn.addPacketListener(new PublicKeyListener(mControl), publicKeyFilter);
+        StanzaFilter publicKeyFilter = new StanzaTypeFilter(PublicKeyPublish.class);
+        mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
-        PacketFilter presenceFilter = new PacketTypeFilter(Presence.class);
-        mConn.addPacketListener(new PresenceListener(this, mConn.getRoster(), mControl), presenceFilter);
+        StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
+        mConn.addAsyncStanzaListener(new PresenceListener(this, Roster.getInstanceFor(mConn), mControl), presenceFilter);
 
          // fallback listener
-        mConn.addPacketListener(this,
+        mConn.addAsyncStanzaListener(this,
                 new NotFilter(
                         new OrFilter(
                                 messageFilter,
@@ -140,7 +140,7 @@ public final class Client implements PacketListener, Runnable {
                                 vCardFilter,
                                 presenceFilter,
                                 // handled by roster listener
-                                new PacketTypeFilter(RosterPacket.class)
+                                new StanzaTypeFilter(RosterPacket.class)
                         )
                 )
         );
@@ -175,11 +175,8 @@ public final class Client implements PacketListener, Runnable {
             }
         }
 
-        try {
-            mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
-        } catch (StreamManagementException.StreamManagementNotEnabledException ex) {
-            LOGGER.log(Level.WARNING, "stream management not enabled", ex);
-        }
+        mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
+
 
         this.sendInitialPresence();
 
@@ -271,8 +268,8 @@ public final class Client implements PacketListener, Runnable {
         BlockingCommand blockingCommand = new BlockingCommand(command, jid);
 
         // add response listener
-        PacketListener blockResponseListener = new BlockResponseListener(mControl, mConn, blocking, jid);
-        mConn.addPacketListener(blockResponseListener, new PacketIDFilter(blockingCommand));
+        StanzaListener blockResponseListener = new BlockResponseListener(mControl, mConn, blocking, jid);
+        mConn.addAsyncStanzaListener(blockResponseListener, new StanzaIdFilter(blockingCommand));
 
         this.sendPacket(blockingCommand);
     }
@@ -307,9 +304,9 @@ public final class Client implements PacketListener, Runnable {
         this.sendPacket(message);
     }
 
-    synchronized void sendPacket(Packet p) {
+    synchronized void sendPacket(Stanza p) {
         try {
-            mConn.sendPacket(p);
+            mConn.sendStanza(p);
         } catch (SmackException.NotConnectedException ex) {
             LOGGER.info("can't send packet, not connected.");
         }
@@ -317,12 +314,12 @@ public final class Client implements PacketListener, Runnable {
     }
 
     @Override
-    public void processPacket(Packet packet) {
+    public void processPacket(Stanza packet) {
         LOGGER.info("got packet (unhandled): "+packet.toXML());
     }
 
     public void addToRoster(User user) {
-        Roster roster = mConn.getRoster();
+        Roster roster = Roster.getInstanceFor(mConn);
         String rosterName = user.getName();
         if (rosterName.isEmpty())
             rosterName = XmppStringUtils.parseLocalpart(rosterName);
