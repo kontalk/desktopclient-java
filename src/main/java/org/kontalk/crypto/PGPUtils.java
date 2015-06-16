@@ -44,6 +44,7 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBu
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyConverter;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
+import org.kontalk.misc.KonException;
 import org.kontalk.util.EncodingUtils;
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
@@ -131,7 +132,7 @@ public final class PGPUtils {
     }
 
     public static PGPSecretKeyRing copySecretKeyRingWithNewPassword(byte[] privateKeyData,
-            char[] oldPassphrase, char[] newPassphrase) throws PGPException, IOException {
+            char[] oldPassphrase, char[] newPassphrase) throws PGPException, IOException, KonException {
 
         // load the secret key ring
         KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
@@ -146,6 +147,11 @@ public final class PGPUtils {
         PBESecretKeyEncryptor encryptor = new JcePBESecretKeyEncryptorBuilder(PGPEncryptedData.AES_256, sha1Calc)
             .setProvider(PROVIDER).build(newPassphrase);
 
-        return PGPSecretKeyRing.copyWithNewPassword(secRing, decryptor, encryptor);
+        try {
+            return PGPSecretKeyRing.copyWithNewPassword(secRing, decryptor, encryptor);
+        } catch (PGPException ex) {
+            // treat this special, cause most like the decryption password was wrong
+            throw new KonException(KonException.Error.CHANGE_PASS_COPY, ex);
+        }
     }
 }

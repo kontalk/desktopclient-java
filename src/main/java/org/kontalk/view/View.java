@@ -74,7 +74,6 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.EventQueue;
 import org.apache.commons.lang.StringUtils;
-import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
@@ -661,7 +660,7 @@ public final class View implements Observer {
                     errorText += eol + Tr.tr("Are all key files valid?");
                 }
                 break;
-            case CHANGE_PASSWORD:
+            case CHANGE_PASS:
                 errorText = Tr.tr("Can't change password. Internal error(!?)");
                 break;
             case WRITE_FILE:

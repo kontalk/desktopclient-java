@@ -146,7 +146,7 @@ public final class AccountLoader {
                     oldPassword, newPassword).getEncoded();
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't change password", ex);
-            throw new KonException(KonException.Error.CHANGE_PASSWORD, ex);
+            throw new KonException(KonException.Error.CHANGE_PASS, ex);
         }
         writeBytesToFile(privateKeyData, PRIVATE_KEY_FILENAME, true);
 
