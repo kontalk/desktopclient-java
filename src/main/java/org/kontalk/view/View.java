@@ -96,7 +96,6 @@ import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
-import org.kontalk.system.AccountLoader;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 
@@ -784,8 +783,8 @@ public final class View implements Observer {
         private final WebPasswordField mNewPassField;
         private final WebPasswordField mConfirmPassField;
 
-        PassPanel() {
-            mPassSet = AccountLoader.getInstance().isPasswordProtected();
+        PassPanel(boolean passSet) {
+            mPassSet = passSet;
 
             GroupPanel groupPanel = new GroupPanel(10, false);
             groupPanel.setMargin(5);
@@ -818,8 +817,10 @@ public final class View implements Observer {
                 groupPanel.add(new WebSeparator());
             }
 
-            mSetPass = new WebCheckBox(Tr.tr("Set new key password"));
-            groupPanel.add(mSetPass);
+            mSetPass = new WebCheckBox(Tr.tr("Set key password"));
+            String setPassText = Tr.tr("If not set, key is saved unprotected!");
+            TooltipManager.addTooltip(mSetPass, setPassText);
+            groupPanel.add(new GroupPanel(mSetPass, new WebSeparator()));
             mSetPass.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {

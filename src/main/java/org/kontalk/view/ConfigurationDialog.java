@@ -255,6 +255,7 @@ final class ConfigurationDialog extends WebDialog {
                 public void actionPerformed(ActionEvent e) {
                     mView.showImportWizard(false);
                     AccountPanel.this.updateFingerprint();
+                    passButton.setText(getPassTitle());
                 }
             });
             groupPanel.add(importButton);
@@ -331,12 +332,12 @@ final class ConfigurationDialog extends WebDialog {
 
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
 
-        final PassPanel passPanel = new View.PassPanel() {
+        boolean passSet = AccountLoader.getInstance().isPasswordProtected();
+        final PassPanel passPanel = new View.PassPanel(passSet) {
            @Override
            void onValidInput() {
                saveButton.setEnabled(true);
            }
-
            @Override
            void onInvalidInput() {
                saveButton.setEnabled(false);

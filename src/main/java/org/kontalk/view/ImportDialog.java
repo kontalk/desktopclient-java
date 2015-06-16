@@ -36,9 +36,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.io.File;
-import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.event.DocumentEvent;
@@ -83,12 +83,6 @@ final class ImportDialog extends WebDialog {
         this.setResizable(false);
         this.setModal(true);
 
-        // panels
-        mPanels = new EnumMap<>(ImportPage.class);
-        mPanels.put(ImportPage.INTRO, new IntroPanel());
-        mPanels.put(ImportPage.SETTINGS, new SettingsPanel());
-        mPanels.put(ImportPage.RESULT, new ResultPanel());
-
         // buttons
         mBackButton = new WebButton(Tr.tr("Back"));
         mBackButton.addActionListener(new ActionListener() {
@@ -123,6 +117,12 @@ final class ImportDialog extends WebDialog {
         GroupPanel buttonPanel = new GroupPanel(2, mBackButton, mNextButton, mCancelButton, mFinishButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
+
+        // panels
+        mPanels = new EnumMap<>(ImportPage.class);
+        mPanels.put(ImportPage.INTRO, new IntroPanel());
+        mPanels.put(ImportPage.SETTINGS, new SettingsPanel());
+        mPanels.put(ImportPage.RESULT, new ResultPanel());
 
         this.setPage(ImportPage.INTRO);
     }
@@ -266,9 +266,7 @@ final class ImportDialog extends WebDialog {
 
         private final WebLabel mResultLabel;
         private final WebLabel mErrorLabel;
-        private final WebCheckBox mSetPass;
-        private final WebPasswordField mNewPassField;
-        private final WebPasswordField mConfirmPassField;
+        private final View.PassPanel mPassPanel;
 
         ResultPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -282,67 +280,19 @@ final class ImportDialog extends WebDialog {
             mErrorLabel = new WebLabel();
             groupPanel.add(mErrorLabel);
 
-            mSetPass = new WebCheckBox(Tr.tr("Protect your key"));
-            groupPanel.add(mSetPass);
-            mSetPass.addItemListener(new ItemListener() {
+            mPassPanel = new View.PassPanel(false) {
                 @Override
-                public void itemStateChanged(ItemEvent e) {
-                    boolean selected = e.getStateChange() == ItemEvent.SELECTED;
-                    mNewPassField.setEnabled(selected);
-                    mConfirmPassField.setEnabled(selected);
-                    ResultPanel.this.checkDoneButton();
-                }
-            });
-            mNewPassField = new WebPasswordField();
-            mNewPassField.setInputPrompt(Tr.tr("Enter new password"));
-            mNewPassField.setEnabled(false);
-            mNewPassField.setHideInputPromptOnFocus(false);
-            mNewPassField.getDocument().addDocumentListener(new DocumentListener() {
-                @Override
-                public void insertUpdate(DocumentEvent e) {
-                    ResultPanel.this.checkDoneButton();
+                void onValidInput() {
+                    mFinishButton.setEnabled(true);
                 }
                 @Override
-                public void removeUpdate(DocumentEvent e) {
-                    ResultPanel.this.checkDoneButton();
+                void onInvalidInput() {
+                    mFinishButton.setEnabled(false);
                 }
-                @Override
-                public void changedUpdate(DocumentEvent e) {
-                    ResultPanel.this.checkDoneButton();
-                }
-            });
-            groupPanel.add(mNewPassField);
-            mConfirmPassField = new WebPasswordField();
-            mConfirmPassField.setInputPrompt(Tr.tr("Confirm password"));
-            mConfirmPassField.setEnabled(false);
-            mConfirmPassField.setHideInputPromptOnFocus(false);
-            mConfirmPassField.getDocument().addDocumentListener(new DocumentListener() {
-                @Override
-                public void insertUpdate(DocumentEvent e) {
-                    ResultPanel.this.checkDoneButton();
-                }
-                @Override
-                public void removeUpdate(DocumentEvent e) {
-                    ResultPanel.this.checkDoneButton();
-                }
-                @Override
-                public void changedUpdate(DocumentEvent e) {
-                    ResultPanel.this.checkDoneButton();
-                }
-            });
-            groupPanel.add(mConfirmPassField);
+            };
+            groupPanel.add(mPassPanel);
 
             this.add(groupPanel);
-        }
-
-        private void checkDoneButton() {
-            if (!mSetPass.isSelected()) {
-                mFinishButton.setEnabled(true);
-                return;
-            }
-            char[] newPass = mNewPassField.getPassword();
-            mFinishButton.setEnabled(newPass.length > 0 &&
-                    Arrays.equals(newPass, mConfirmPassField.getPassword()));
         }
 
         private boolean importAccount() {
@@ -357,6 +307,8 @@ final class ImportDialog extends WebDialog {
             } catch (KonException ex) {
                 errorText = View.getErrorText(ex);
             }
+
+            mPassPanel.setVisible(errorText == null);
 
             String result = errorText == null ? Tr.tr("Success!") : Tr.tr("Error");
             mResultLabel.setText(Tr.tr("Import process finished with:")+" "+result);
@@ -378,13 +330,10 @@ final class ImportDialog extends WebDialog {
 
         @Override
         protected void onNext() {
-            if (mSetPass.isSelected()) {
-                char[] newPass = mNewPassField.getPassword();
-                if (newPass.length < 1 ||
-                        !Arrays.equals(newPass, mConfirmPassField.getPassword()))
-                    return;
+            Optional<char[]> optNewPass = mPassPanel.getNewPassword();
+            if (optNewPass.isPresent() && optNewPass.get().length > 0) {
                 try {
-                    AccountLoader.getInstance().setPassword(new char[0], newPass);
+                    AccountLoader.getInstance().setPassword(new char[0], optNewPass.get());
                 } catch (KonException ex) {
                     LOGGER.log(Level.WARNING, "can't set password", ex);
                     return;
