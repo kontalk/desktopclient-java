@@ -41,18 +41,23 @@ import java.awt.event.ItemListener;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JFrame;
 import javax.swing.text.NumberFormatter;
 import org.kontalk.system.Config;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.misc.KonException;
 import org.kontalk.system.AccountLoader;
 import org.kontalk.util.Tr;
+import org.kontalk.view.View.PassPanel;
 
 /**
  * Dialog for showing and changing all application options.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
 final class ConfigurationDialog extends WebDialog {
+    private final static Logger LOGGER = Logger.getLogger(ConfigurationDialog.class.getName());
 
     private static enum ConfPage {MAIN, ACCOUNT};
 
@@ -98,7 +103,7 @@ final class ConfigurationDialog extends WebDialog {
             }
         });
 
-        GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
+        GroupPanel buttonPanel = new GroupPanel(2, saveButton, cancelButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
     }
@@ -233,6 +238,17 @@ final class ConfigurationDialog extends WebDialog {
             WebLabel fpLabel = new WebLabel(Tr.tr("Key fingerprint:")+" ");
             groupPanel.add(new GroupPanel(fpLabel, mFingerprintField));
 
+            final WebButton passButton = new WebButton(getPassTitle());
+            passButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    WebDialog passDialog = createPassDialog(ConfigurationDialog.this);
+                    passDialog.setVisible(true);
+                    passButton.setText(getPassTitle());
+                }
+            });
+            groupPanel.add(passButton);
+
             WebButton importButton = new WebButton(Tr.tr("Import new Account"));
             importButton.addActionListener(new ActionListener() {
                 @Override
@@ -274,7 +290,6 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(Config.SERV_PORT, port);
             mConf.setProperty(Config.SERV_CERT_VALIDATION, !mDisableCertBox.isSelected());
         }
-
     }
 
     private class PrivacyPanel extends WebPanel {
@@ -301,5 +316,69 @@ final class ConfigurationDialog extends WebDialog {
         private void saveConfiguration() {
             mConf.setProperty(Config.NET_SEND_CHAT_STATE, mChatStateBox.isSelected());
         }
+    }
+
+    private static String getPassTitle() {
+        return AccountLoader.getInstance().isPasswordProtected() ?
+                Tr.tr("Change key password") :
+                Tr.tr("Set key password");
+    }
+
+    private static WebDialog createPassDialog(WebDialog parent) {
+        final WebDialog passDialog = new WebDialog(parent, getPassTitle(), true);
+        passDialog.setLayout(new BorderLayout(5, 5));
+        passDialog.setResizable(false);
+
+        final WebButton saveButton = new WebButton(Tr.tr("Save"));
+
+        final PassPanel passPanel = new View.PassPanel() {
+           @Override
+           void onValidInput() {
+               saveButton.setEnabled(true);
+           }
+
+           @Override
+           void onInvalidInput() {
+               saveButton.setEnabled(false);
+           }
+        };
+        passDialog.add(passPanel, BorderLayout.CENTER);
+
+        saveButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                char[] oldPassword = passPanel.getOldPassword();
+                Optional<char[]> optNewPass = passPanel.getNewPassword();
+                if (!optNewPass.isPresent()) {
+                    LOGGER.warning("can't get new password");
+                    return;
+                }
+                char[] newPassword = optNewPass.get();
+                try {
+                    AccountLoader.getInstance().setPassword(oldPassword, newPassword);
+                } catch(KonException ex) {
+                    LOGGER.log(Level.WARNING, "can't set new password", ex);
+                    if (ex.getError() == KonException.Error.CHANGE_PASS_COPY)
+                        passPanel.showWrongPassword();
+                    return;
+                }
+                passDialog.dispose();
+            }
+        });
+
+        WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
+        cancelButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                passDialog.dispose();
+            }
+        });
+
+        GroupPanel buttonPanel = new GroupPanel(2, saveButton, cancelButton);
+        buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
+        passDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        passDialog.pack();
+        return passDialog;
     }
 }

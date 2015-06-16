@@ -20,16 +20,19 @@ package org.kontalk.view;
 
 import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.filefilter.ImageFilesFilter;
+import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
@@ -73,6 +76,8 @@ import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.EventQueue;
+import java.util.Arrays;
+import javax.swing.event.DocumentListener;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.SmackException.ConnectionException;
@@ -91,6 +96,7 @@ import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
+import org.kontalk.system.AccountLoader;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 
@@ -767,5 +773,120 @@ public final class View implements Observer {
                 errorText,
                 Tr.tr("Unsupported Java Version"),
                 WebOptionPane.ERROR_MESSAGE);
+    }
+
+    static abstract class PassPanel extends WebPanel {
+
+        private final boolean mPassSet;
+        private final WebCheckBox mSetPass;
+        private final WebPasswordField mOldPassField;
+        private final WebLabel mWrongPassLabel;
+        private final WebPasswordField mNewPassField;
+        private final WebPasswordField mConfirmPassField;
+
+        PassPanel() {
+            mPassSet = AccountLoader.getInstance().isPasswordProtected();
+
+            GroupPanel groupPanel = new GroupPanel(10, false);
+            groupPanel.setMargin(5);
+
+            DocumentListener docListener = new DocumentListener() {
+                @Override
+                public void insertUpdate(DocumentEvent e) {
+                    PassPanel.this.checkDoneButton();
+                }
+                @Override
+                public void removeUpdate(DocumentEvent e) {
+                    PassPanel.this.checkDoneButton();
+                }
+                @Override
+                public void changedUpdate(DocumentEvent e) {
+                    PassPanel.this.checkDoneButton();
+                }
+            };
+
+            mOldPassField = new WebPasswordField(30);
+            mWrongPassLabel = new WebLabel(Tr.tr("Wrong password"));
+            if (mPassSet) {
+                groupPanel.add(new WebLabel(Tr.tr("Current password:")));
+                mOldPassField.getDocument().addDocumentListener(docListener);
+                groupPanel.add(mOldPassField);
+                mWrongPassLabel.setBoldFont();
+                mWrongPassLabel.setForeground(Color.RED);
+                mWrongPassLabel.setVisible(false);
+                groupPanel.add(mWrongPassLabel);
+                groupPanel.add(new WebSeparator());
+            }
+
+            mSetPass = new WebCheckBox(Tr.tr("Set new key password"));
+            groupPanel.add(mSetPass);
+            mSetPass.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    boolean selected = e.getStateChange() == ItemEvent.SELECTED;
+                    mNewPassField.setEnabled(selected);
+                    mConfirmPassField.setEnabled(selected);
+                    PassPanel.this.checkDoneButton();
+                }
+            });
+            mNewPassField = new WebPasswordField(30);
+            mNewPassField.setInputPrompt(Tr.tr("Enter new password"));
+            mNewPassField.setEnabled(false);
+            mNewPassField.setHideInputPromptOnFocus(false);
+            mNewPassField.getDocument().addDocumentListener(docListener);
+            groupPanel.add(mNewPassField);
+            mConfirmPassField = new WebPasswordField(30);
+            mConfirmPassField.setInputPrompt(Tr.tr("Confirm password"));
+            mConfirmPassField.setEnabled(false);
+            mConfirmPassField.setHideInputPromptOnFocus(false);
+            mConfirmPassField.getDocument().addDocumentListener(docListener);
+            groupPanel.add(mConfirmPassField);
+
+            this.checkDoneButton();
+
+            this.add(groupPanel);
+        }
+
+        private void checkDoneButton() {
+            if (mPassSet && mOldPassField.getPassword().length < 1) {
+                this.onInvalidInput();
+                return;
+            }
+            if (!mSetPass.isSelected()) {
+                this.onValidInput();
+                return;
+            }
+            char[] newPass = mNewPassField.getPassword();
+            if (newPass.length > 0 &&
+                    Arrays.equals(newPass, mConfirmPassField.getPassword())) {
+                this.onValidInput();
+            } else {
+                this.onInvalidInput();
+            }
+        }
+
+        char[] getOldPassword() {
+            return mOldPassField.getPassword();
+        }
+
+        Optional<char[]> getNewPassword() {
+            if (!mSetPass.isSelected())
+                return Optional.of(new char[0]);
+
+            char[] newPass = mNewPassField.getPassword();
+            // better check again
+            if (!Arrays.equals(newPass, mConfirmPassField.getPassword()))
+                Optional.empty();
+
+            return Optional.of(newPass);
+        }
+
+        void showWrongPassword() {
+            mWrongPassLabel.setVisible(true);
+        }
+
+        abstract void onValidInput();
+
+        abstract void onInvalidInput();
     }
 }
