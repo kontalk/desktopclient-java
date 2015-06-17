@@ -91,6 +91,7 @@ def _find_files(dir_, regex='*.*'):
         for filename in fnmatch.filter(filenames, regex):
             yield os.path.join(root, filename)
 
+
 re = re.compile('Tr\.tr\("(.+?)"\)')
 def _get_tr_strings(file_):
     return re.findall(_read_file(file_))
@@ -156,13 +157,14 @@ def main(argv=sys.argv):
     upd_dict = collections.OrderedDict()
     for prop_key, str_ in strings_dict.items():
         if str_ in tr_string_list:
+            if str_ in upd_dict.values():
+                logging.warning('duplicate string in property file: "' + str_ + '"')
             upd_dict[prop_key] = str_
         else:
             logging.info('removing unused string: "' + str_ + '"')
 
     # add all new strings
-    old_strings = strings_dict.values()
-    for str_ in (s for s in tr_string_list if s not in old_strings):
+    for str_ in (s for s in tr_string_list if s not in upd_dict.values()):
         logging.info('adding new string: "' + str_ + '"')
         upd_dict['s_' + _rand_str(4)] = str_
 
