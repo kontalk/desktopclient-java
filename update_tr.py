@@ -23,7 +23,7 @@ Created on Fri Mar 13 14:20:20 2015
 
 Find all translation strings in Java code and update the strings property file.
 
-Usage: $python update_tr.py src/org/kontalk/res/i18n/strings.properties src/org/kontalk/view
+Usage: $python update_tr.py src/main/resources/res/i18n/strings.properties src/main/java/org/kontalk/view
 
 @author: Alexander Bikadorov
 """
@@ -37,6 +37,7 @@ import fnmatch
 import re
 import string
 import random
+
 
 def _read_file(file_):
     """Read content of file
@@ -55,6 +56,7 @@ def _read_file(file_):
         cont_str = file_.read()
     return cont_str
 
+
 def _read_file_lines(file_):
     """Read lines of file
        file_: either path to file or a file (like) object.
@@ -65,6 +67,7 @@ def _read_file_lines(file_):
         return None
     return [url_str.rstrip() for url_str in cont_str.splitlines()]
 
+
 def _read_properties(prop_file):
     """Read Java property file. Comments/empty lines are ignored!
        Return an ordered dictionary with key/values or 'None' if file does not exist.
@@ -72,8 +75,10 @@ def _read_properties(prop_file):
     lines = _read_file_lines(prop_file)
     if lines is None:
         return None
-    splits = (tuple(l.split('=', 1)) for l in lines if len(l) > 3 and not l.strip().startswith('#'))
+    splits = (tuple(l.split('=', 1))
+              for l in lines if len(l) > 3 and not l.strip().startswith('#'))
     return collections.OrderedDict((k.strip(), v.strip()) for k, v in (t for t in splits if len(t) == 2))
+
 
 def _find_files(dir_, regex='*.*'):
     """Walk recursively through all dirs in 'dir_'.
@@ -81,7 +86,7 @@ def _find_files(dir_, regex='*.*'):
     """
     abs_path = os.path.abspath(dir_)
     if not os.path.isdir(abs_path):
-        logging.warning('does not exist/is not a directory: '+abs_path)
+        logging.warning('does not exist/is not a directory: ' + abs_path)
     for root, dirnames, filenames in os.walk(abs_path):
         for filename in fnmatch.filter(filenames, regex):
             yield os.path.join(root, filename)
@@ -90,29 +95,37 @@ re = re.compile('Tr\.tr\("(.+?)"\)')
 def _get_tr_strings(file_):
     return re.findall(_read_file(file_))
 
+
 def _rand_str(n, chars=string.ascii_uppercase + string.digits):
     """Get a string of 'n' random characters choosen out of 'chars'"""
     return ''.join(random.choice(chars) for _ in range(n))
+
 
 def _write_file_OVERWRITE(file_path_str, str_):
     """Write string to file."""
     dir_name, fname = os.path.split(file_path_str)
     if not os.path.isfile(file_path_str):
-        logging.warning('file '+file_path_str+' does not exist, not overwriting')
+        logging.warning(
+            'file ' + file_path_str + ' does not exist, not overwriting')
         return False
     file_ = open(file_path_str, 'w')
     file_.write(str_)
     file_.close()
-    logging.info("wrote "+str(len(str_))+" bytes to file: "+file_path_str)
+    logging.info(
+        "wrote " + str(len(str_)) + " bytes to file: " + file_path_str)
     return True
+
 
 def _arguments():
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--init", action="store_true", default=False,
                         help='initialize (ignore if properties file does not exist)')
-    parser.add_argument("strings_file", type=str, help="string properties file to update")
-    parser.add_argument("source_dir", type=str, help="base directory to seach in for Java source files")
+    parser.add_argument(
+        "strings_file", type=str, help="string properties file to update")
+    parser.add_argument(
+        "source_dir", type=str, help="base directory to seach in for Java source files")
     return parser.parse_args()
+
 
 def main(argv=sys.argv):
     logging.getLogger().setLevel(logging.INFO)
@@ -132,7 +145,7 @@ def main(argv=sys.argv):
         strings = _get_tr_strings(j_file)
         tr_string_list += strings
         #print('file: '+j_file)
-        #print('>>>>'+'\n>>>>'.join(strings))
+        # print('>>>>'+'\n>>>>'.join(strings))
 
     if not tr_string_list:
         logging.warning('no source strings found, abort')
@@ -143,18 +156,18 @@ def main(argv=sys.argv):
     upd_dict = collections.OrderedDict()
     for prop_key, str_ in strings_dict.items():
         if str_ in tr_string_list:
-            upd_dict[prop_key] =  str_
+            upd_dict[prop_key] = str_
         else:
-            logging.info('removing unused string: "'+str_+'"')
+            logging.info('removing unused string: "' + str_ + '"')
 
     # add all new strings
     old_strings = strings_dict.values()
     for str_ in (s for s in tr_string_list if s not in old_strings):
-        logging.info('adding new string: "'+str_+'"')
-        upd_dict['s_'+_rand_str(4)] = str_
+        logging.info('adding new string: "' + str_ + '"')
+        upd_dict['s_' + _rand_str(4)] = str_
 
-
-    write_str = '\n'+'\n'.join(v+" = "+k for v, k in upd_dict.items())+'\n'
+    write_str = '\n' + \
+        '\n'.join(v + " = " + k for v, k in upd_dict.items()) + '\n'
     if strings_dict == upd_dict:
         logging.info('no changes detected')
     else:
@@ -162,9 +175,7 @@ def main(argv=sys.argv):
             logging.warning('could not write output, abort')
             return 3
 
-
     logging.info("Update successful")
 
 if __name__ == "__main__":
     sys.exit(main())
-
