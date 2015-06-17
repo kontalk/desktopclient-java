@@ -41,14 +41,14 @@ import random
 def _read_file(file_):
     """Read content of file
        file_: either path to file or a file (like) object.
-       Return list of lines read.
+       Return content of file as string or 'None' if file does not exist.
     """
     if type(file_) is str:
         try:
             file_ = open(file_, 'r')
         except IOError:
             logging.warning('file does not exist (can not read): ' + file_)
-            return ""
+            return None
         cont_str = file_.read()
         file_.close()
     else:
@@ -58,15 +58,20 @@ def _read_file(file_):
 def _read_file_lines(file_):
     """Read lines of file
        file_: either path to file or a file (like) object.
-       Return list of lines read.
+       Return list of lines read or 'None' if file does not exist.
     """
-    return [url_str.rstrip() for url_str in _read_file(file_).splitlines()]
+    cont_str = _read_file(file_)
+    if cont_str is None:
+        return None
+    return [url_str.rstrip() for url_str in cont_str.splitlines()]
 
 def _read_properties(prop_file):
     """Read Java property file. Comments/empty lines are ignored!
-       Return an ordered dictionary with key/values.
+       Return an ordered dictionary with key/values or 'None' if file does not exist.
     """
     lines = _read_file_lines(prop_file)
+    if lines is None:
+        return None
     splits = (tuple(l.split('=', 1)) for l in lines if len(l) > 3 and not l.strip().startswith('#'))
     return collections.OrderedDict((k.strip(), v.strip()) for k, v in (t for t in splits if len(t) == 2))
 
@@ -92,13 +97,19 @@ def _rand_str(n, chars=string.ascii_uppercase + string.digits):
 def _write_file_OVERWRITE(file_path_str, str_):
     """Write string to file."""
     dir_name, fname = os.path.split(file_path_str)
+    if not os.path.isfile(file_path_str):
+        logging.warning('file '+file_path_str+' does not exist, not overwriting')
+        return False
     file_ = open(file_path_str, 'w')
     file_.write(str_)
     file_.close()
     logging.info("wrote "+str(len(str_))+" bytes to file: "+file_path_str)
+    return True
 
 def _arguments():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--init", action="store_true", default=False,
+                        help='initialize (ignore if properties file does not exist)')
     parser.add_argument("strings_file", type=str, help="string properties file to update")
     parser.add_argument("source_dir", type=str, help="base directory to seach in for Java source files")
     return parser.parse_args()
@@ -109,6 +120,11 @@ def main(argv=sys.argv):
     # read strings file
     args = _arguments()
     strings_dict = _read_properties(args.strings_file)
+    if strings_dict is None:
+        if not args.init:
+            logging.warning('no property file, abort')
+            return 1
+        strings_dict = {}
 
     # find all translation strings in Java code
     tr_string_list = []
@@ -117,6 +133,10 @@ def main(argv=sys.argv):
         tr_string_list += strings
         #print('file: '+j_file)
         #print('>>>>'+'\n>>>>'.join(strings))
+
+    if not tr_string_list:
+        logging.warning('no source strings found, abort')
+        return 2
 
     # first, take care of strings that did not change to preserve order
     # and ignore unused strings
@@ -138,10 +158,12 @@ def main(argv=sys.argv):
     if strings_dict == upd_dict:
         logging.info('no changes detected')
     else:
-        _write_file_OVERWRITE(args.strings_file, write_str)
+        if not _write_file_OVERWRITE(args.strings_file, write_str):
+            logging.warning('could not write output, abort')
+            return 3
 
 
-    logging.info("DONE!")
+    logging.info("Update successful")
 
 if __name__ == "__main__":
     sys.exit(main())
