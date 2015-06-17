@@ -263,8 +263,8 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
                 String stateText = null;
                 switch(state.getState()) {
                     case composing: stateText = Tr.tr("is writing..."); break;
-                    //case paused: activity = Tr.tr("has paused"); break;
-                    //case inactive: stateText = Tr.tr("is inactive"); break;
+                    //case paused: activity = T/r.tr("stopped typing"); break;
+                    //case inactive: stateText = T/r.tr("is inactive"); break;
                 }
                 if (stateText == null) {
                     // 'inactive' is default
@@ -273,7 +273,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
                 }
 
                 if (mValue.getUser().size() > 1)
-                    stateText = state.getUser().getName()+" " + stateText;
+                    stateText = state.getUser().getName() + " " + stateText;
 
                 mChatStateLabel.setText(stateText + " ");
             }
