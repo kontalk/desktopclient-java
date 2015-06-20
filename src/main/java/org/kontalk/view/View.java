@@ -163,7 +163,7 @@ public final class View implements Observer {
             @Override
             public void actionPerformed(ActionEvent e) {
                 Component focusOwner = mMainFrame.getFocusOwner();
-                if (focusOwner != mSendTextArea)
+                if (focusOwner != mSendTextArea && focusOwner != mSendButton)
                     return;
 
                 View.this.callSendText();
