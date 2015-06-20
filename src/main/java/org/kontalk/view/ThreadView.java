@@ -103,6 +103,7 @@ final class ThreadView extends ScrollPane implements Observer {
     private final static Icon SENT_ICON = View.getIcon("ic_msg_sent.png");
     private final static Icon DELIVERED_ICON = View.getIcon("ic_msg_delivered.png");
     private final static Icon ERROR_ICON = View.getIcon("ic_msg_error.png");
+    private final static Icon WARNING_ICON = View.getIcon("ic_msg_warning.png");
     private final static Icon CRYPT_ICON = View.getIcon("ic_msg_crypt.png");
     private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
 
@@ -555,6 +556,9 @@ final class ThreadView extends ScrollPane implements Observer {
                     firstDate = mValue.getServerDate().orElse(null);
                     secStat = Tr.tr("Received:")+" ";
                     secDate = mValue.getDate();
+                    if (!mValue.getCoderStatus().getErrors().isEmpty()) {
+                        mStatusIconLabel.setIcon(WARNING_ICON);
+                    }
                 }
 
                 // tooltip

@@ -321,6 +321,7 @@ public final class Control extends Observable {
      */
     public void decryptAndDownload(InMessage message) {
         Coder.processInMessage(message);
+
         if (!message.getCoderStatus().getErrors().isEmpty()) {
             this.handleSecurityErrors(message);
         }
