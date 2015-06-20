@@ -108,11 +108,8 @@ public final class View implements Observer {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
     final static Color BLUE = new Color(130, 170, 240);
-    //final static Color BLUE = new Color(0, 181, 233);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
-    //final static Color LIGHT_BLUE = new Color(32, 210, 237);
     final static Color GREEN = new Color(83, 196, 46);
-
 
     private final Control mControl;
     private final UserListView mUserListView;
@@ -140,6 +137,16 @@ public final class View implements Observer {
         ThreadList.getInstance().addObserver(mThreadView);
         // text field
         mSendTextArea = new WebTextArea();
+        mSendTextArea.setMargin(5);
+        mSendTextArea.setLineWrap(true);
+        mSendTextArea.setWrapStyleWord(true);
+        mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
+            @Override
+            public void documentChanged(DocumentEvent e) {
+                mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
+                View.this.handleKeyTypeEvent();
+            }
+        });
         EventQueue.invokeLater(new Runnable() {
             @Override
             public void run() {
@@ -147,20 +154,11 @@ public final class View implements Observer {
             }
         });
 
-        mSendTextArea.setMargin(5);
-        mSendTextArea.setLineWrap(true);
-        mSendTextArea.setWrapStyleWord(true);
-        mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
-            @Override
-            public void documentChanged(DocumentEvent e) {
-                View.this.handleKeyTypeEvent();
-            }
-        });
-
         // send button
         mSendButton = new WebButton(Tr.tr("Send"));
         // for showing the hotkey tooltip
         TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
+        mSendButton.setEnabled(false);
         mSendButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
