@@ -589,7 +589,14 @@ final class ThreadView extends ScrollPane implements Observer {
                 if (!problems.isEmpty())
                     html += Tr.tr("Problems")+": " + problems;
 
-                TooltipManager.setTooltip(mStatusPanel, html);
+                // TODO temporary catching for tracing bug
+                try {
+                    TooltipManager.setTooltip(mStatusPanel, html);
+                } catch (NullPointerException ex) {
+                    LOGGER.log(Level.WARNING, "cant set tooltip", ex);
+                    LOGGER.warning("statusPanel="+mStatusPanel+",html="+html);
+                    LOGGER.warning("edt: "+SwingUtilities.isEventDispatchThread());
+                }
             }
 
             // attachment / image, note: loading many images is very slow
