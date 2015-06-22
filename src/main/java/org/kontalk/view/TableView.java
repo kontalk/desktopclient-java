@@ -37,6 +37,8 @@ import java.util.Observer;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.swing.JTable;
 import javax.swing.RowFilter;
 import javax.swing.RowFilter.Entry;
@@ -56,6 +58,7 @@ import org.ocpsoft.prettytime.PrettyTime;
  * @param <V> the value of one view item
  */
 abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable & Comparable<V>> extends WebTable implements Observer {
+    private final static Logger LOGGER = Logger.getLogger(TableView.class.getName());
 
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
@@ -229,7 +232,13 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         if (mTip != null)
             mTip.closeTooltip();
 
-        mTip = TooltipManager.showOneTimeTooltip(this, pos, text, TooltipWay.right);
+        // TODO temporary catching for tracing bug
+        try {
+            mTip = TooltipManager.showOneTimeTooltip(this, pos, text, TooltipWay.right);
+        } catch (ArrayIndexOutOfBoundsException ex) {
+            LOGGER.log(Level.WARNING, "can't show tooltip", ex);
+            LOGGER.warning("this="+this+",pos="+pos+",text="+text);
+        }
     }
 
     // JTabel uses this to determine the renderer
