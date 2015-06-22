@@ -7,7 +7,7 @@ This desktop client uses your existing Android Kontalk account (for the new Tiga
 The Android client version 3.0 is required to export your account-key which
 is needed by the desktop client.
 
-Some questions are answered [here](https://github.com/kontalk/desktopclient-java/wiki) 
+FAQ: Some questions are answered [here](https://github.com/kontalk/desktopclient-java/wiki) 
 
 You can get the Android-App v3.0Beta4 (or newer) from
 - [F-Droid](https://f-droid.org/repository/browse/?fdid=org.kontalk)
