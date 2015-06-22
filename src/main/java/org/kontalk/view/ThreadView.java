@@ -691,29 +691,33 @@ final class ThreadView extends ScrollPane implements Observer {
     private final class Background implements ImageObserver {
         private final Component mParent;
         // background image from resource or user selected
-        private Image mOrigin;
+        private final Image mOrigin;
+        // background color, can be set by user
+        private final Color mBottomColor;
         // cached background with size of viewport
         private BufferedImage mCached = null;
-        private Color mBottomColor = null;
+
+        private Background(Component parent, Image origin, Color color) {
+            mParent = parent;
+            mOrigin = origin;
+            mBottomColor = color;
+        }
 
         /** Default, no thread specific settings. */
         Background(Component parent) {
-            mParent = parent;
-            mOrigin = View.getImage("thread_bg.png");
-            mBottomColor = new Color(255, 255, 255, 255);
+            //mOrigin = View.getImage("thread_bg.png");
+            this(parent, null, new Color(255, 255, 255, 255));
         }
 
         /** Image set by user (global or only for thread). */
         Background(Component parent, String imagePath) {
-            mParent = parent;
-            // loading async!
-            mOrigin = Toolkit.getDefaultToolkit().createImage(imagePath);
+            // image loaded async!
+            this(parent, Toolkit.getDefaultToolkit().createImage(imagePath), null);
         }
 
         /** Thread specific color. */
         Background(Component parent, Color bottomColor) {
-            this(parent);
-            mBottomColor = bottomColor;
+            this(parent, null, bottomColor);
         }
 
         /**
@@ -734,14 +738,24 @@ final class ThreadView extends ScrollPane implements Observer {
             return Optional.ofNullable(mCached);
         }
 
-        // step 1: ensure original image is loaded
+        // step 1: ensure original image is loaded (if present)
         private boolean loadOrigin() {
+            if (mOrigin == null)
+                return true;
             return mOrigin.getWidth(this) != -1;
         }
 
-        // step 2: scale image
+        // step 2: scale image (if present)
         private boolean scaleOrigin() {
-            Image scaledImage = ImageLoader.scale(mOrigin, mParent.getWidth(), mParent.getHeight(), true);
+            if (mOrigin == null) {
+                // goto 3
+                this.updateCachedBG(null);
+                return true;
+            }
+            Image scaledImage = ImageLoader.scale(mOrigin,
+                    mParent.getWidth(),
+                    mParent.getHeight(),
+                    true);
             if (scaledImage.getWidth(this) != -1) {
                 // goto 3
                 this.updateCachedBG(scaledImage);
@@ -750,7 +764,7 @@ final class ThreadView extends ScrollPane implements Observer {
             return false;
         }
 
-        // step 3: paint cache from scaled image
+        // step 3: paint cache from scaled image (if present)
         private void updateCachedBG(Image scaledImage) {
             int width = mParent.getWidth();
             int height = mParent.getHeight();
@@ -764,6 +778,8 @@ final class ThreadView extends ScrollPane implements Observer {
                 cachedG.setPaint(p2);
                 cachedG.fillRect(0, 0, width, ThreadView.this.getHeight());
             }
+            if (scaledImage == null)
+                return;
             // tiling
             int iw = scaledImage.getWidth(null);
             int ih = scaledImage.getHeight(null);
