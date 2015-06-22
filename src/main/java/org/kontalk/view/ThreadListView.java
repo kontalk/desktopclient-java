@@ -238,7 +238,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
         }
 
         private void updateView(Object arg) {
-            if (arg == null || arg instanceof Boolean)
+            if (arg == null || arg instanceof Boolean || arg instanceof KonMessage)
                 mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
 
 
