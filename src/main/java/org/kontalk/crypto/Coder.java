@@ -142,8 +142,8 @@ public final class Coder {
 
     private static class DecryptionResult {
         EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
-        Optional<? extends ByteArrayOutputStream> decryptedStream = Optional.empty();
         Signing signing = Signing.UNKNOWN;
+        boolean decrypted = false;
     }
 
     private static class ParsingResult {
@@ -300,7 +300,9 @@ public final class Coder {
         }
         byte[] encryptedData = Base64.getDecoder().decode(encryptedContent);
         InputStream encryptedStream = new ByteArrayInputStream(encryptedData);
+        ByteArrayOutputStream outStream = new ByteArrayOutputStream();
         DecryptionResult decResult = decryptAndVerify(encryptedStream,
+                outStream,
                 keys.myKey,
                 keys.otherKey.encryptKey);
         EnumSet<Coder.Error> allErrors = decResult.errors;
@@ -308,12 +310,12 @@ public final class Coder {
 
         // parse
         ParsingResult parsingResult = null;
-        if (decResult.decryptedStream.isPresent()) {
+        if (decResult.decrypted) {
             // parse encrypted CPIM content
             String myUID = keys.myKey.getUserId();
             String senderUID = keys.otherKey.userID;
             String encrText = EncodingUtils.getString(
-                    decResult.decryptedStream.get().toByteArray(),
+                    outStream.toByteArray(),
                     CPIMMessage.CHARSET);
             parsingResult = parseCPIM(encrText, myUID, senderUID);
             allErrors.addAll(parsingResult.errors);
@@ -377,18 +379,7 @@ public final class Coder {
             return;
         }
 
-        // decrypt
-        DecryptionResult decResult = decryptAndVerify(encryptedStream, keys.myKey, keys.otherKey.encryptKey);
-        message.setAttachmentErrors(keys.errors);
-        message.setAttachmentSigning(decResult.signing);
-
-        // check for errors
-        if (!decResult.decryptedStream.isPresent()) {
-            LOGGER.info("attachment decryption failed");
-            return;
-        }
-
-        // save encrypted data
+        // open out stream
         String base = FilenameUtils.getBaseName(inFile.getName());
         String ext = FilenameUtils.getExtension(inFile.getName());
         File outFile = new File(baseDir, base + "_dec." + ext);
@@ -396,10 +387,25 @@ public final class Coder {
             LOGGER.warning("encrypted file already exists: "+outFile.getAbsolutePath());
             return;
         }
-        try (FileOutputStream out = new FileOutputStream(outFile)){
-            out.write(decResult.decryptedStream.get().toByteArray());
+        FileOutputStream outStream;
+        try {
+            outStream = new FileOutputStream(outFile);
         } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't write encrypted file", ex);
+            LOGGER.log(Level.WARNING, "can't open output file", ex);
+            return;
+        }
+
+        // decrypt
+        DecryptionResult decResult = decryptAndVerify(encryptedStream,
+                outStream,
+                keys.myKey,
+                keys.otherKey.encryptKey);
+        message.setAttachmentErrors(keys.errors);
+        message.setAttachmentSigning(decResult.signing);
+
+        // check for errors
+        if (!decResult.decrypted) {
+            LOGGER.info("attachment decryption failed");
             return;
         }
 
@@ -436,7 +442,12 @@ public final class Coder {
         return result;
     }
 
+    /**
+     * Decrypt, verify and write input stream to output stream.
+     * Output stream is closed.
+     */
     private static DecryptionResult decryptAndVerify(InputStream encryptedStream,
+            OutputStream outStream,
             PersonalKey myKey,
             PGPPublicKey senderKey) {
         // note: the signature is inside the encrypted data
@@ -444,8 +455,6 @@ public final class Coder {
         DecryptionResult result = new DecryptionResult();
 
         PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedStream);
-
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         try { // catch all IO and PGP exceptions
 
@@ -530,7 +539,7 @@ public final class Coder {
             InputStream unc = ld.getInputStream();
             int ch;
             while ((ch = unc.read()) >= 0) {
-                outputStream.write(ch);
+                outStream.write(ch);
                 if (ops != null)
                     try {
                         ops.update((byte) ch);
@@ -538,8 +547,8 @@ public final class Coder {
                         LOGGER.log(Level.WARNING, "can't read signature", ex);
                 }
             }
-
-            result.decryptedStream = Optional.of(outputStream);
+            outStream.close();
+            result.decrypted = true;
 
             if (ops != null) {
                 result = verifySignature(result, pgpFact, ops);
