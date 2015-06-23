@@ -216,7 +216,7 @@ public final class Coder {
             int algo = keys.myKey.getPublicEncryptionKey().getAlgorithm();
             PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
                     new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA1));
-            sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getPrivateEncryptionKey());
+            sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getPrivateSigningKey());
 
             PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
             spGen.setSignerUserID(false, keys.myKey.getUserId());
@@ -304,7 +304,7 @@ public final class Coder {
         DecryptionResult decResult = decryptAndVerify(encryptedStream,
                 outStream,
                 keys.myKey,
-                keys.otherKey.encryptKey);
+                keys.otherKey.signKey);
         EnumSet<Coder.Error> allErrors = decResult.errors;
         message.setSigning(decResult.signing);
 
@@ -399,7 +399,7 @@ public final class Coder {
         DecryptionResult decResult = decryptAndVerify(encryptedStream,
                 outStream,
                 keys.myKey,
-                keys.otherKey.encryptKey);
+                keys.otherKey.signKey);
         message.setAttachmentErrors(keys.errors);
         message.setAttachmentSigning(decResult.signing);
 
@@ -449,7 +449,7 @@ public final class Coder {
     private static DecryptionResult decryptAndVerify(InputStream encryptedStream,
             OutputStream outStream,
             PersonalKey myKey,
-            PGPPublicKey senderKey) {
+            PGPPublicKey senderSigningKey) {
         // note: the signature is inside the encrypted data
 
         DecryptionResult result = new DecryptionResult();
@@ -521,7 +521,7 @@ public final class Coder {
                     result.errors.add(Error.INVALID_SIGNATURE_DATA);
                 } else {
                     ops = signatureList.get(0);
-                    ops.init(new BcPGPContentVerifierBuilderProvider(), senderKey);
+                    ops.init(new BcPGPContentVerifierBuilderProvider(), senderSigningKey);
                 }
                 object = pgpFact.nextObject(); // nullable
             } else {

@@ -61,6 +61,10 @@ public final class PersonalKey {
         return mEncryptKey.getPrivateKey();
     }
 
+    PGPPrivateKey getPrivateSigningKey() {
+        return mSignKey.getPrivateKey();
+    }
+
     PGPPublicKey getPublicEncryptionKey() {
         return mEncryptKey.getPublicKey();
     }

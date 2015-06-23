@@ -61,16 +61,20 @@ public final class PGPUtils {
     }
 
     /**
-     * A users public key for encryption and signing together with UID and
+     * A users public keys for encryption and signing together with UID and
      * fingerprint (from signing key).
      */
     public static final class PGPCoderKey {
         final PGPPublicKey encryptKey;
+        final PGPPublicKey signKey;
         public final String userID;
         public final String fingerprint;
 
-        public PGPCoderKey(PGPPublicKey encryptKey, String userID, String fingerprint) {
+        public PGPCoderKey(PGPPublicKey encryptKey,
+                PGPPublicKey signKey,
+                String userID, String fingerprint) {
             this.encryptKey = encryptKey;
+            this.signKey = signKey;
             this.userID = userID;
             this.fingerprint = fingerprint;
         }
@@ -98,6 +102,7 @@ public final class PGPUtils {
             return Optional.empty();
         }
         PGPPublicKey encryptKey = null;
+        PGPPublicKey signKey = null;
         String uid = null;
         String fp = null;
         PGPPublicKeyRing keyRing = (PGPPublicKeyRing) keyRingIter.next();
@@ -105,6 +110,7 @@ public final class PGPUtils {
         while (keyIter.hasNext()) {
             PGPPublicKey key = (PGPPublicKey) keyIter.next();
             if (key.isMasterKey()) {
+                signKey = key;
                 fp = EncodingUtils.bytesToHex(key.getFingerprint());
                 Iterator<?> uidIt = key.getUserIDs();
                 if (uidIt.hasNext())
@@ -114,11 +120,11 @@ public final class PGPUtils {
                 encryptKey = key;
             }
         }
-        if (encryptKey == null || uid == null || fp == null) {
+        if (encryptKey == null || signKey == null || uid == null || fp == null) {
             LOGGER.warning("can't find public keys in key ring");
             return Optional.empty();
         }
-        return Optional.of(new PGPCoderKey(encryptKey, uid, fp));
+        return Optional.of(new PGPCoderKey(encryptKey, signKey, uid, fp));
     }
 
     private static void ensureKeyConverter() {
