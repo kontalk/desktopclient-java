@@ -215,7 +215,7 @@ public final class Coder {
             // setup signature generator
             int algo = keys.myKey.getPublicEncryptionKey().getAlgorithm();
             PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
-                    new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA1));
+                    new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA256));
             sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getPrivateSigningKey());
 
             PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
