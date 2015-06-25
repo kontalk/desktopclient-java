@@ -44,7 +44,6 @@ import org.kontalk.crypto.PersonalKey;
 public final class AccountLoader {
     private final static Logger LOGGER = Logger.getLogger(AccountLoader.class.getName());
 
-    private static final String PUBLIC_KEY_FILENAME = "kontalk-public.asc";
     private static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
     private static final String BRIDGE_CERT_FILENAME = "kontalk-login.crt";
 
@@ -64,14 +63,12 @@ public final class AccountLoader {
 
     PersonalKey load(char[] password) throws KonException {
         // read key files
-        byte[] publicKeyData = readArmoredFile(PUBLIC_KEY_FILENAME);
         byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
         byte[] bridgeCertData = readFile(BRIDGE_CERT_FILENAME);
 
         // load key
         try {
             mKey = PersonalKey.load(privateKeyData,
-                    publicKeyData,
                     password,
                     bridgeCertData);
         } catch (PGPException | IOException | CertificateException | NoSuchProviderException ex) {
@@ -88,7 +85,6 @@ public final class AccountLoader {
 
         // read key files
         try (ZipFile zipFile = new ZipFile(zipFilePath)) {
-            publicKeyData = AccountLoader.readBytesFromZip(zipFile, PUBLIC_KEY_FILENAME);
             privateKeyData = AccountLoader.readBytesFromZip(zipFile, PRIVATE_KEY_FILENAME);
             bridgeCertData = AccountLoader.readBytesFromZip(zipFile, BRIDGE_CERT_FILENAME);
         } catch (IOException ex) {
@@ -98,13 +94,10 @@ public final class AccountLoader {
 
         // try to load key
         PersonalKey key;
-        byte[] encodedPublicKey;
         byte[] encodedPrivateKey;
         try {
-            encodedPublicKey = disarm(publicKeyData);
             encodedPrivateKey = disarm(privateKeyData);
             key = PersonalKey.load(encodedPrivateKey,
-                    encodedPublicKey,
                     password,
                     bridgeCertData);
         } catch (PGPException | IOException | CertificateException |
@@ -114,7 +107,6 @@ public final class AccountLoader {
         }
 
         // key seems valid. Copy to config dir
-        writeBytesToFile(encodedPublicKey, PUBLIC_KEY_FILENAME, true);
         writeBytesToFile(bridgeCertData, BRIDGE_CERT_FILENAME, false);
         this.writePrivateKey(encodedPrivateKey, password, new char[0]);
 
@@ -156,8 +148,7 @@ public final class AccountLoader {
     }
 
     boolean isPresent() {
-        return fileExists(PUBLIC_KEY_FILENAME) &&
-                fileExists(PRIVATE_KEY_FILENAME) &&
+        return fileExists(PRIVATE_KEY_FILENAME) &&
                 fileExists(BRIDGE_CERT_FILENAME);
     }
 

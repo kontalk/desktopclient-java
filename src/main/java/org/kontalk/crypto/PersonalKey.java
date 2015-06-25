@@ -94,13 +94,10 @@ public final class PersonalKey {
     /** Creates a {@link PersonalKey} from private and public key byte buffers. */
     @SuppressWarnings("unchecked")
     public static PersonalKey load(byte[] privateKeyData,
-            byte[] publicKeyData,
             char[] passphrase,
             byte[] bridgeCertData)
             throws KonException, IOException, PGPException, CertificateException, NoSuchProviderException {
         PGPSecretKeyRing secRing = new PGPSecretKeyRing(privateKeyData, PGPUtils.FP_CALC);
-        // TODO only private key data needed
-        //PGPPublicKeyRing pubRing = new PGPPublicKeyRing(publicKeyData, fpr);
 
         PGPSecretKey authKey = null;
         PGPSecretKey signKey = null;
