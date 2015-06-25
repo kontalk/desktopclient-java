@@ -54,6 +54,9 @@ public final class PGPUtils {
     /** Security provider: Bouncy Castle. */
     public static final String PROVIDER = "BC";
 
+    /** The fingerprint calculator to use whenever it is needed. */
+    static final KeyFingerPrintCalculator FP_CALC = new BcKeyFingerprintCalculator();
+
     /** Singleton for converting a PGP key to a JCA key. */
     private static JcaPGPKeyConverter sKeyConverter;
 
@@ -91,7 +94,7 @@ public final class PGPUtils {
     public static Optional<PGPCoderKey> readPublicKey(byte[] publicKeyring) {
         PGPPublicKeyRingCollection pgpPub;
         try {
-            pgpPub = new PGPPublicKeyRingCollection(publicKeyring);
+            pgpPub = new PGPPublicKeyRingCollection(publicKeyring, FP_CALC);
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't read public key ring", ex);
             return Optional.empty();

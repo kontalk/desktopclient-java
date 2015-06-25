@@ -29,7 +29,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
-import java.security.SignatureException;
 import java.text.ParseException;
 import java.util.Base64;
 import java.util.Date;
@@ -240,29 +239,16 @@ public final class Coder {
             int len;
             while ((len = in.read(buf)) > 0) {
                 literalOut.write(buf, 0, len);
-                try {
-                    sigGen.update(buf, 0, len);
-                } catch (SignatureException ex) {
-                        LOGGER.log(Level.WARNING, "can't read data for signature", ex);
-                        message.setSecurityErrors(EnumSet.of(Error.INVALID_SIGNATURE_DATA));
-                        return Optional.empty();
-                }
+                sigGen.update(buf, 0, len);
             }
 
             in.close();
             literalGen.close();
 
             // generate the signature, compress, encrypt and write to the "out" stream
-            try {
-                sigGen.generate().encode(compressedOut);
-            } catch (SignatureException ex) {
-                LOGGER.log(Level.WARNING, "can't create signature", ex);
-                message.setSecurityErrors(EnumSet.of(Error.INVALID_SIGNATURE_DATA));
-                return Optional.empty();
-            }
+            sigGen.generate().encode(compressedOut);
             compGen.close();
             encGen.close();
-
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't encrypt message", ex);
             message.setSecurityErrors(EnumSet.of(Error.UNKNOWN_ERROR));
@@ -454,7 +440,7 @@ public final class Coder {
 
         DecryptionResult result = new DecryptionResult();
 
-        PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedStream);
+        PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedStream, PGPUtils.FP_CALC);
 
         try { // catch all IO and PGP exceptions
 
@@ -492,7 +478,7 @@ public final class Coder {
 
             InputStream clear = pbe.getDataStream(new BcPublicKeyDataDecryptorFactory(sKey));
 
-            PGPObjectFactory plainFactory = new PGPObjectFactory(clear);
+            PGPObjectFactory plainFactory = new PGPObjectFactory(clear, PGPUtils.FP_CALC);
 
             Object object = plainFactory.nextObject(); // nullable
 
@@ -503,7 +489,7 @@ public final class Coder {
             }
 
             PGPCompressedData cData = (PGPCompressedData) object;
-            PGPObjectFactory pgpFact = new PGPObjectFactory(cData.getDataStream());
+            PGPObjectFactory pgpFact = new PGPObjectFactory(cData.getDataStream(), PGPUtils.FP_CALC);
 
             object = pgpFact.nextObject(); // nullable
 
@@ -541,11 +527,7 @@ public final class Coder {
             while ((ch = unc.read()) >= 0) {
                 outStream.write(ch);
                 if (ops != null)
-                    try {
-                        ops.update((byte) ch);
-                    } catch (SignatureException ex) {
-                        LOGGER.log(Level.WARNING, "can't read signature", ex);
-                }
+                    ops.update((byte) ch);
             }
             outStream.close();
             result.decrypted = true;
@@ -591,13 +573,7 @@ public final class Coder {
         }
 
         PGPSignature signature = signatureList.get(0);
-        boolean verified = false;
-        try {
-            verified = ops.verify(signature);
-        } catch (SignatureException ex) {
-            LOGGER.log(Level.WARNING, "can't verify signature", ex);
-        }
-        if (verified) {
+        if (ops.verify(signature)) {
             // signature verification successful!
             result.signing = Signing.VERIFIED;
         } else {

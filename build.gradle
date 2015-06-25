@@ -17,7 +17,7 @@ sourceSets {
     }
 }
 
-ext.bcVersion = '1.50'
+ext.bcVersion = '1.52'
 ext.smackVersion = '4.1.0-alpha6'
 
 dependencies {
