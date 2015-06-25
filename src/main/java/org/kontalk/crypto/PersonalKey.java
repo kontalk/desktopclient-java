@@ -139,7 +139,7 @@ public final class PersonalKey {
         PGPKeyPair encryptKeyPair = PGPUtils.decrypt(encrKey, decryptor);
 
         // X.509 bridge certificate
-        X509Certificate bridgeCert = X509Bridge.load(bridgeCertData);
+        X509Certificate bridgeCert = PGPUtils.loadX509Cert(bridgeCertData);
 
         return new PersonalKey(signKeyPair, encryptKeyPair, bridgeCert);
     }

@@ -18,9 +18,15 @@
 
 package org.kontalk.crypto;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.Security;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -132,6 +138,13 @@ public final class PGPUtils {
             return Optional.empty();
         }
         return Optional.of(new PGPCoderKey(encryptKey, signKey, uid, fp));
+    }
+
+    public static X509Certificate loadX509Cert(byte[] certData)
+            throws CertificateException, NoSuchProviderException {
+        CertificateFactory certFactory = CertificateFactory.getInstance("X.509", PROVIDER);
+        InputStream in = new ByteArrayInputStream(certData);
+        return (X509Certificate) certFactory.generateCertificate(in);
     }
 
     /** Convert a PGP to a JCA key. */
