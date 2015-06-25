@@ -45,16 +45,22 @@ import org.kontalk.util.EncodingUtils;
 public final class PersonalKey {
     private final static Logger LOGGER = Logger.getLogger(PersonalKey.class.getName());
 
-    /** Decrypted master (signing) key. */
+    /** (Server) Authentication key. */
+    private final PGPKeyPair mAuthKey;
+    /** Signing key. */
     private final PGPKeyPair mSignKey;
-    /** Decrypted sub (encryption) key. */
+    /** En-/decryption key. */
     private final PGPKeyPair mEncryptKey;
     /** X.509 bridge certificate. */
     private final X509Certificate mBridgeCert;
 
-    private PersonalKey(PGPKeyPair signKp, PGPKeyPair encryptKp, X509Certificate bridgeCert) {
-        mSignKey = signKp;
-        mEncryptKey = encryptKp;
+    private PersonalKey(PGPKeyPair authKP,
+            PGPKeyPair signKP,
+            PGPKeyPair encryptKP,
+            X509Certificate bridgeCert) {
+        mAuthKey = authKP;
+        mSignKey = signKP;
+        mEncryptKey = encryptKP;
         mBridgeCert = bridgeCert;
     }
 
@@ -75,12 +81,12 @@ public final class PersonalKey {
     }
 
     public PrivateKey getBridgePrivateKey() throws PGPException {
-    	return PGPUtils.convertPrivateKey(mSignKey.getPrivateKey());
+    	return PGPUtils.convertPrivateKey(mAuthKey.getPrivateKey());
     }
 
     /** Returns the first user ID on the key that matches the given network. */
     public String getUserId() {
-        PGPPublicKey key = mSignKey.getPublicKey();
+        PGPPublicKey key = mAuthKey.getPublicKey();
         Iterator<?> uidIt = key.getUserIDs();
         if (!uidIt.hasNext())
             throw new IllegalStateException("no UID in personal key");
@@ -88,7 +94,7 @@ public final class PersonalKey {
     }
 
     public String getFingerprint() {
-    	return EncodingUtils.bytesToHex(mSignKey.getPublicKey().getFingerprint());
+    	return EncodingUtils.bytesToHex(mAuthKey.getPublicKey().getFingerprint());
     }
 
     /** Creates a {@link PersonalKey} from private and public key byte buffers. */
@@ -135,12 +141,13 @@ public final class PersonalKey {
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(calcProv)
             .setProvider(PGPUtils.PROVIDER)
             .build(passphrase);
+        PGPKeyPair authKeyPair = PGPUtils.decrypt(authKey, decryptor);
         PGPKeyPair signKeyPair = PGPUtils.decrypt(signKey, decryptor);
         PGPKeyPair encryptKeyPair = PGPUtils.decrypt(encrKey, decryptor);
 
         // X.509 bridge certificate
         X509Certificate bridgeCert = PGPUtils.loadX509Cert(bridgeCertData);
 
-        return new PersonalKey(signKeyPair, encryptKeyPair, bridgeCert);
+        return new PersonalKey(authKeyPair, signKeyPair, encryptKeyPair, bridgeCert);
     }
 }
