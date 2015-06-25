@@ -24,17 +24,16 @@ import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Iterator;
+import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPKeyFlags;
 import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
-import org.bouncycastle.openpgp.PGPPublicKeyRing;
 import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
-import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
 import org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider;
-import org.bouncycastle.openpgp.operator.bc.BcKeyFingerprintCalculator;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.kontalk.misc.KonException;
@@ -44,6 +43,8 @@ import org.kontalk.util.EncodingUtils;
  * Personal asymmetric encryption key.
  */
 public final class PersonalKey {
+    private final static Logger LOGGER = Logger.getLogger(PersonalKey.class.getName());
+
     /** Decrypted master (signing) key. */
     private final PGPKeyPair mSignKey;
     /** Decrypted sub (encryption) key. */
@@ -97,66 +98,52 @@ public final class PersonalKey {
             char[] passphrase,
             byte[] bridgeCertData)
             throws KonException, IOException, PGPException, CertificateException, NoSuchProviderException {
-        KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
-        PGPSecretKeyRing secRing = new PGPSecretKeyRing(privateKeyData, fpr);
-        PGPPublicKeyRing pubRing = new PGPPublicKeyRing(publicKeyData, fpr);
+        PGPSecretKeyRing secRing = new PGPSecretKeyRing(privateKeyData, PGPUtils.FP_CALC);
+        // TODO only private key data needed
+        //PGPPublicKeyRing pubRing = new PGPPublicKeyRing(publicKeyData, fpr);
 
-        PGPDigestCalculatorProvider calcProv = new JcaPGPDigestCalculatorProviderBuilder().build();
-        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(calcProv)
-            .setProvider(PGPUtils.PROVIDER)
-            .build(passphrase);
+        PGPSecretKey authKey = null;
+        PGPSecretKey signKey = null;
+        PGPSecretKey encrKey = null;
 
-        PGPKeyPair signKp, encryptKp;
-
-        PGPPublicKey  signPub = null;
-        PGPPrivateKey signPriv = null;
-        PGPPublicKey   encPub = null;
-        PGPPrivateKey  encPriv = null;
-
-        // public keys
-        Iterator<PGPPublicKey> pkeys = pubRing.getPublicKeys();
-        while (pkeys.hasNext()) {
-            PGPPublicKey key = pkeys.next();
-            if (key.isMasterKey()) {
-                // master (signing) key
-                signPub = key;
-            }
-            else {
-                // sub (encryption) key
-                encPub = key;
-            }
-        }
-
-        // secret keys
+        // assign from key ring
         Iterator<PGPSecretKey> skeys = secRing.getSecretKeys();
         while (skeys.hasNext()) {
             PGPSecretKey key = skeys.next();
             if (key.isMasterKey()) {
-                // master (signing) key
-                try {
-                    signPriv = key.extractPrivateKey(decryptor);
-                } catch (PGPException ex) {
-                    throw new KonException(KonException.Error.LOAD_KEY_DECRYPT, ex);
-                }
+                // master key: authentication / legacy: signing
+                authKey = key;
             }
             else {
-                // sub (encryption) key
-                encPriv = key.extractPrivateKey(decryptor);
+                // sub keys: encryption and signing / legacy: only encryption
+                int keyFlags = PGPUtils.getKeyFlags(key.getPublicKey());
+                if ((keyFlags & PGPKeyFlags.CAN_SIGN) == PGPKeyFlags.CAN_SIGN)
+                    signKey = key;
+                else
+                    encrKey = key;
             }
         }
+        // legacy: auth key is actually signing key
+        if (signKey == null && authKey != null && authKey.isSigningKey()) {
+            LOGGER.info("loading legacy key");
+            signKey = authKey;
+        }
+
+        if (authKey == null || signKey == null || encrKey == null)
+            throw new KonException(KonException.Error.LOAD_KEY,
+                    new PGPException("could not found all keys in key data"));
+
+        // decrypt private
+        PGPDigestCalculatorProvider calcProv = new JcaPGPDigestCalculatorProviderBuilder().build();
+        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(calcProv)
+            .setProvider(PGPUtils.PROVIDER)
+            .build(passphrase);
+        PGPKeyPair signKeyPair = PGPUtils.decrypt(signKey, decryptor);
+        PGPKeyPair encryptKeyPair = PGPUtils.decrypt(encrKey, decryptor);
 
         // X.509 bridge certificate
         X509Certificate bridgeCert = X509Bridge.load(bridgeCertData);
 
-        if (encPriv == null ||
-                encPub == null ||
-                signPriv == null ||
-                signPub == null ||
-                bridgeCert == null)
-            throw new PGPException("invalid key data");
-
-        signKp = new PGPKeyPair(signPub, signPriv);
-        encryptKp = new PGPKeyPair(encPub, encPriv);
-        return new PersonalKey(signKp, encryptKp, bridgeCert);
+        return new PersonalKey(signKeyPair, encryptKeyPair, bridgeCert);
     }
 }

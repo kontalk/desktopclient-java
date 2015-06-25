@@ -29,11 +29,15 @@ import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
 import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
+import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
+import org.bouncycastle.openpgp.PGPSignature;
+import org.bouncycastle.openpgp.PGPSignatureSubpacketVector;
 import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
 import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
@@ -130,22 +134,38 @@ public final class PGPUtils {
         return Optional.of(new PGPCoderKey(encryptKey, signKey, uid, fp));
     }
 
-    private static void ensureKeyConverter() {
+    /** Convert a PGP to a JCA key. */
+    static PrivateKey convertPrivateKey(PGPPrivateKey key) throws PGPException {
     	if (sKeyConverter == null)
     		sKeyConverter = new JcaPGPKeyConverter().setProvider(PGPUtils.PROVIDER);
+    	return sKeyConverter.getPrivateKey(key);
     }
 
-    static PrivateKey convertPrivateKey(PGPPrivateKey key) throws PGPException {
-    	ensureKeyConverter();
-    	return sKeyConverter.getPrivateKey(key);
+    static int getKeyFlags(PGPPublicKey key) {
+        Iterator<PGPSignature> sigs = key.getSignatures();
+        while (sigs.hasNext()) {
+            PGPSignature sig = sigs.next();
+            PGPSignatureSubpacketVector subpackets = sig.getHashedSubPackets();
+            if (subpackets == null)
+                return 0;
+            return subpackets.getKeyFlags();
+        }
+        return 0;
+    }
+
+    static PGPKeyPair decrypt(PGPSecretKey secretKey, PBESecretKeyDecryptor dec) throws KonException {
+        try {
+            return new PGPKeyPair(secretKey.getPublicKey(), secretKey.extractPrivateKey(dec));
+        } catch (PGPException ex) {
+            throw new KonException(KonException.Error.LOAD_KEY_DECRYPT, ex);
+        }
     }
 
     public static PGPSecretKeyRing copySecretKeyRingWithNewPassword(byte[] privateKeyData,
             char[] oldPassphrase, char[] newPassphrase) throws PGPException, IOException, KonException {
 
         // load the secret key ring
-        KeyFingerPrintCalculator fpr = new BcKeyFingerprintCalculator();
-        PGPSecretKeyRing secRing = new PGPSecretKeyRing(privateKeyData, fpr);
+        PGPSecretKeyRing secRing = new PGPSecretKeyRing(privateKeyData, FP_CALC);
 
         PGPDigestCalculatorProvider calcProv = new JcaPGPDigestCalculatorProviderBuilder().build();
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(calcProv)
