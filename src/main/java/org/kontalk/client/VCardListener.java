@@ -7,9 +7,9 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.PacketListener;
+import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.packet.IQ;
-import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.kontalk.system.Control;
 
@@ -18,7 +18,7 @@ import org.kontalk.system.Control;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class VCardListener implements PacketListener {
+final class VCardListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(VCardListener.class.getName());
 
     private final Control mControl;
@@ -30,7 +30,7 @@ final class VCardListener implements PacketListener {
     }
 
     @Override
-    public void processPacket(Packet packet) {
+    public void processPacket(Stanza packet) {
         VCard4 p = (VCard4) packet;
         LOGGER.info("got vcard: "+p.toXML());
 

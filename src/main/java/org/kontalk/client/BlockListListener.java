@@ -19,8 +19,8 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.PacketListener;
-import org.jivesoftware.smack.packet.Packet;
+import org.jivesoftware.smack.StanzaListener;
+import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.kontalk.system.Control;
 
@@ -28,7 +28,7 @@ import org.kontalk.system.Control;
  *
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-final class BlockListListener implements PacketListener {
+final class BlockListListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(BlockListListener.class.getName());
 
     private final Control mControl;
@@ -42,7 +42,7 @@ final class BlockListListener implements PacketListener {
     }
 
     @Override
-    public void processPacket(Packet packet) {
+    public void processPacket(Stanza packet) {
         BlockingCommand p = (BlockingCommand) packet;
         LOGGER.info("got blocklist response: "+p.toXML());
 

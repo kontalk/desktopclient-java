@@ -30,19 +30,29 @@ applications on your computer!**
 
 - Java 8 / JDK 8
 
-#### For building
+## For building
 
 - [Gradle](http://gradle.org) (wrapper included in project)
 
+## Run the desktop client from source
+
+Use `gradle run` to run the desktop client from source.
+
 ## Included dependencies
 
-- as GIT submodule:
-  Kontalk-common-java classes (https://github.com/kontalk/client-common-java)
+### as GIT submodule:
 
-- JARS included in project:
-  - Smack and Smackx (https://igniterealtime.org/projects/smack/index.jsp)
-  - WebLaF (http://weblookandfeel.com)
-  - Bouncy Castle (provider and PGP) (https://www.bouncycastle.org/java.html)
-  - Apache Commons (configuration, lang and logging) (http://commons.apache.org) 
-  - SQLite JDBC (https://bitbucket.org/xerial/sqlite-jdbc)
-  - and more...
+-  Kontalk-common-java classes (https://github.com/kontalk/client-common-java)
+
+### as Maven dependencies:
+
+- Smack (https://igniterealtime.org/projects/smack/index.jsp)
+- WebLaF (http://weblookandfeel.com)
+- Bouncy Castle (provider and PGP) (https://www.bouncycastle.org/java.html)
+- Apache Commons (configuration, lang and logging) (http://commons.apache.org) 
+- SQLite JDBC (https://bitbucket.org/xerial/sqlite-jdbc)
+- and more...
+
+### as Jar files
+ 
+- easyogg

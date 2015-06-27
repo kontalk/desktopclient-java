@@ -19,10 +19,10 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.PacketListener;
-import org.jivesoftware.smack.Roster;
-import org.jivesoftware.smack.packet.Packet;
-import org.jivesoftware.smack.packet.PacketExtension;
+import org.jivesoftware.smack.StanzaListener;
+import org.jivesoftware.smack.roster.Roster;
+import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jxmpp.util.XmppStringUtils;
@@ -33,7 +33,7 @@ import org.kontalk.system.Control;
  * for the public key fingerprint of a user.
  * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
  */
-public class PresenceListener implements PacketListener {
+public class PresenceListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(PresenceListener.class.getName());
 
     private final Client mClient;
@@ -52,7 +52,7 @@ public class PresenceListener implements PacketListener {
     }
 
     @Override
-    public void processPacket(Packet packet) {
+    public void processPacket(Stanza packet) {
         LOGGER.info("got presence packet: "+packet.toXML());
 
         Presence presence = (Presence) packet;
@@ -66,7 +66,7 @@ public class PresenceListener implements PacketListener {
                 bestPresence.getType(),
                 bestPresence.getStatus());
 
-        PacketExtension publicKeyExt = presence.getExtension(
+        ExtensionElement publicKeyExt = presence.getExtension(
                 PublicKeyPresence.ELEMENT_NAME,
                 PublicKeyPresence.NAMESPACE);
 
