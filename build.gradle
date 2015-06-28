@@ -9,18 +9,14 @@ mainClassName = 'org.kontalk.Kontalk'
 
 buildDir = 'build_gradle'
 
-sourceSets {
-    main {
-        java {
-            srcDir 'client-common-java/src/main/java'
-        }
-    }
-}
+evaluationDependsOn ":client-common-java"
 
 ext.bcVersion = '1.52'
-ext.smackVersion = '4.1.0-alpha6'
+ext.smackVersion = project(':client-common-java').smackVersion
 
 dependencies {
+    compile project(':client-common-java')
+
     compile fileTree(dir: 'lib', include: ['*.jar'])
 
     compile group: 'org.bouncycastle', name: 'bcpg-jdk15on', version: "$bcVersion"
@@ -32,15 +28,8 @@ dependencies {
     //compile group: 'commons-lang', name: 'commons-lang', version: "2.6"
     compile group: 'commons-io', name: 'commons-io', version: "2.4"
     compile group: 'org.jcraft', name: 'jorbis', version: "0.0.17"
-    //compile group: 'org.jxmpp', name: 'jxmpp-core', version: "0.4.0"
-    //compile group: 'org.jxmpp', name: 'jxmpp-util-cache', version: "0.4.0"
     compile group: 'org.ocpsoft.prettytime', name: 'prettytime', version: "3.2.7.Final"
-    compile group: 'org.igniterealtime.smack', name: 'smack-core', version: "$smackVersion"
-    compile group: 'org.igniterealtime.smack', name: 'smack-extensions', version: "$smackVersion"
-    // TODO bug in alpha6 prevents connecting
-    //compile group: 'org.igniterealtime.smack', name: 'smack-java7', version: "$smackVersion"
-    compile group: 'org.igniterealtime.smack', name: 'smack-sasl-provided', version: "$smackVersion"
-    compile group: 'org.igniterealtime.smack', name: 'smack-tcp', version: "$smackVersion"
+    compile group: 'org.igniterealtime.smack', name: 'smack-java7', version: "$smackVersion"
     compile group: 'org.xerial', name: 'sqlite-jdbc', version: "3.8.6"
     compile group: 'de.sciss', name: 'weblaf', version: "1.27"
 }

@@ -294,7 +294,7 @@ public final class Control extends Observable {
         }
         User user = optUser.get();
         KonThread thread = getThread(xmppThreadID, user);
-        if (xmppID.isEmpty()) {
+        if (StringUtils.isNullOrEmpty(xmppID)) {
             xmppID = "_kon_" + StringUtils.randomString(8);
         }
         InMessage.Builder builder = new InMessage.Builder(thread, user);

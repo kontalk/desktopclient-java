@@ -1,1 +1,3 @@
 rootProject.name = 'kontalk_java'
+
+include 'client-common-java'
