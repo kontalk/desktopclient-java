@@ -87,7 +87,7 @@ public final class KonConnection extends XMPPTCPConnection {
             .setResource(resource)
             // the dummy value is not actually used
             // server does authentification based purely on the pgp key
-            .setUsernameAndPassword(null, "dummy")
+            .setUsernameAndPassword("dummy", "dummy")
             .setCallbackHandler(new CallbackHandler() {
                 @Override
                 public void handle(Callback[] callbacks)
