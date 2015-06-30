@@ -38,6 +38,7 @@ import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyData;
+import com.alee.managers.notification.NotificationIcon;
 import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.TooltipWay;
@@ -436,12 +437,11 @@ public final class View implements Observer {
             return;
         }
         String errorText = getErrorText(ex);
-        WebOptionPane.showMessageDialog(mMainFrame,
-                errorText,
-                Tr.tr("Error"),
-                WebOptionPane.ERROR_MESSAGE);
+        Icon icon = NotificationIcon.error.getIcon();
+        NotificationManager.showNotification(mThreadView, errorText, icon);
     }
 
+    // TODO more information for message exs
     private void handleSecurityErrors(KonMessage message) {
         String errorText = "<html>";
 
@@ -468,7 +468,8 @@ public final class View implements Observer {
 
         errorText += "</html>";
 
-        NotificationManager.showNotification(mThreadView, errorText);
+        // TODO too intrusive for user, but use the explanation above for message view
+        //NotificationManager.showNotification(mThreadView, errorText);
     }
 
     private void removeTray() {
@@ -644,7 +645,7 @@ public final class View implements Observer {
     }
 
     static String getErrorText(KonException ex) {
-        String eol = System.getProperty("line.separator");
+        String eol = " " + System.getProperty("line.separator");
         String errorText = Tr.tr("Unknown error!?");
         switch(ex.getError()) {
             case IMPORT_ARCHIVE:
