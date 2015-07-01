@@ -9,6 +9,12 @@ mainClassName = 'org.kontalk.Kontalk'
 
 buildDir = 'build_gradle'
 
+gradle.projectsEvaluated {
+    tasks.withType(JavaCompile) {
+        options.compilerArgs << "-Xlint:unchecked" << "-Xlint:deprecation"
+    }
+}
+
 evaluationDependsOn ":client-common-java"
 
 ext.bcVersion = '1.52'
