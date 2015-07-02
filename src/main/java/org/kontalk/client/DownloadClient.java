@@ -48,7 +48,7 @@ import org.kontalk.util.TrustUtils;
 
 /**
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class DownloadClient {
     private final static Logger LOGGER = Logger.getLogger(DownloadClient.class.getName());
@@ -87,7 +87,6 @@ public class DownloadClient {
      * determining the file name from the Content-Disposition header.
      * @param url URL of file
      * @param base base directory in which the download is saved
-     * @param listener listener for download progress
      * @return the absolute file path of the downloaded file, or an empty string
      * if the file could not be downloaded
      */

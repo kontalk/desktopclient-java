@@ -27,7 +27,7 @@ import org.kontalk.model.MessageContent.Attachment;
 
 /**
  * Model for a XMPP message that was sent to us.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class InMessage extends KonMessage {
     private final static Logger LOGGER = Logger.getLogger(InMessage.class.getName());

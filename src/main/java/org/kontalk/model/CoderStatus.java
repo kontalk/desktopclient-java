@@ -24,7 +24,7 @@ import org.kontalk.crypto.Coder;
 /**
  * The encoding/decoding status of a an item (text, attachment, ...) in a
  * message.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class CoderStatus {
 

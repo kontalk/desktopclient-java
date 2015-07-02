@@ -54,7 +54,7 @@ import org.kontalk.view.View.PassPanel;
 
 /**
  * Dialog for showing and changing all application options.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ConfigurationDialog extends WebDialog {
     private final static Logger LOGGER = Logger.getLogger(ConfigurationDialog.class.getName());

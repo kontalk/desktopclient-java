@@ -37,7 +37,7 @@ import org.kontalk.util.EncodingUtils;
 
 /**
  * Base class for incoming and outgoing XMMP messages.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class KonMessage extends Observable implements Comparable<KonMessage> {
     private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());

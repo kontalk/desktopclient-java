@@ -103,7 +103,7 @@ import org.kontalk.util.Tr;
 /**
  * Initialize and control the user interface.
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class View implements Observer {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());

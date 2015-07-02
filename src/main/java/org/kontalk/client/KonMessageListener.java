@@ -42,7 +42,7 @@ import org.kontalk.system.Control;
 
 /**
  * Listen and handle all incoming XMPP message packets.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final public class KonMessageListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());

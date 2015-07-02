@@ -24,7 +24,7 @@ import javax.swing.ScrollPaneConstants;
 
 /**
  * A generic vertical scroll pane.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 class ScrollPane extends WebScrollPane {
 

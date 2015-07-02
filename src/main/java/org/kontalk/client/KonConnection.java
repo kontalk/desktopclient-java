@@ -45,7 +45,7 @@ import org.kontalk.util.TrustUtils;
 
 /**
  * XMPP Connection to a Kontalk Server.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class KonConnection extends XMPPTCPConnection {
     private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());

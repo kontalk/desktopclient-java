@@ -33,7 +33,7 @@ import org.kontalk.system.Database;
 
 /**
  * The global list of all contacts known.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class UserList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(UserList.class.getName());

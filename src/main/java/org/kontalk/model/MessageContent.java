@@ -31,7 +31,7 @@ import org.kontalk.util.EncodingUtils;
 /**
  * All possible content a message can contain.
  * Recursive: A message can contain a decrypted message.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class MessageContent {
     private final static Logger LOGGER = Logger.getLogger(MessageContent.class.getName());

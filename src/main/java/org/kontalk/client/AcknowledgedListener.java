@@ -30,7 +30,7 @@ import org.kontalk.system.Control;
 
 /**
  * Listener for acknowledged packets (Stream Management, XEP-0198).
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class AcknowledgedListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(AcknowledgedListener.class.getName());

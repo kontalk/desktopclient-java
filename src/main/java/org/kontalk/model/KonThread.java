@@ -44,7 +44,7 @@ import org.kontalk.system.Database;
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
  * Changes of user in this thread are forwarded.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class KonThread extends Observable implements Comparable<KonThread>, Observer {
     private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());

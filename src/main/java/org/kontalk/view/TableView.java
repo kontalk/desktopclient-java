@@ -53,7 +53,7 @@ import org.ocpsoft.prettytime.PrettyTime;
  * A generic list view for subclassing.
  * Implemented as table with one column.
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */

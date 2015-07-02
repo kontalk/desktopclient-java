@@ -50,7 +50,7 @@ import org.kontalk.util.Tr;
 
 /**
  * Wizard-like dialog for importing new key files.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ImportDialog extends WebDialog {
     private final static Logger LOGGER = Logger.getLogger(ImportDialog.class.getName());

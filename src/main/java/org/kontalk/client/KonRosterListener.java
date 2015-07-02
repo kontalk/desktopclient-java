@@ -30,7 +30,7 @@ import org.kontalk.system.Control;
 
 /**
  * Listener for events in the roster (a server-side contact list in XMPP).
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class KonRosterListener implements RosterListener {
     private final static Logger LOGGER = Logger.getLogger(KonRosterListener.class.getName());

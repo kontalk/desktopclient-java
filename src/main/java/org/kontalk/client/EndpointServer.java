@@ -18,8 +18,6 @@
 
 package org.kontalk.client;
 
-
-
 /**
  * Defines a server address and features.
  * @author Daniele Ricci

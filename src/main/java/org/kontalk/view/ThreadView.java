@@ -94,7 +94,7 @@ import org.kontalk.util.Tr;
 
 /**
  * Pane that shows the currently selected thread.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ThreadView extends ScrollPane implements Observer {
     private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());

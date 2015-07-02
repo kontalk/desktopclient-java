@@ -29,7 +29,7 @@ import org.kontalk.system.Control;
 
 /**
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class KonConnectionListener implements ConnectionListener {
     private final static Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());

@@ -58,7 +58,7 @@ import org.kontalk.view.UserListView.UserItem;
 
 /**
  * Display all user (aka contacts) in a brief list.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class UserListView extends TableView<UserItem, User> implements Observer {
 

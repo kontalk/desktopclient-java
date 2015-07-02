@@ -36,7 +36,7 @@ import org.kontalk.system.Database;
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class User extends Observable implements Comparable<User> {
     private final static Logger LOGGER = Logger.getLogger(User.class.getName());

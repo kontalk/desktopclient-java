@@ -27,7 +27,7 @@ import org.kontalk.crypto.Coder;
 
 /**
  * Model for a XMPP message that we are sending.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class OutMessage extends KonMessage {
     private final static Logger LOGGER = Logger.getLogger(OutMessage.class.getName());

@@ -46,7 +46,7 @@ import org.kontalk.crypto.PGPUtils;
 
 /**
  * Utilities for SASL certificate validation.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class TrustUtils {
     private final static Logger LOGGER = Logger.getLogger(TrustUtils.class.getName());

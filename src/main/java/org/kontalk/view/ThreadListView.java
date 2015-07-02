@@ -70,7 +70,7 @@ import org.kontalk.view.ThreadListView.ThreadItem;
 
 /**
  * Show a brief list of all threads.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ThreadListView extends TableView<ThreadItem, KonThread> {
 

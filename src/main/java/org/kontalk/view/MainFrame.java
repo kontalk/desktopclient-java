@@ -71,7 +71,7 @@ import org.kontalk.util.Tr;
 
 /**
  * The application window.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class MainFrame extends WebFrame {
 

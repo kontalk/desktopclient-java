@@ -31,7 +31,7 @@ import org.kontalk.system.Control;
 /**
  * Listen for presence packets. They also may include a custom Kontalk extension
  * for the public key fingerprint of a user.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class PresenceListener implements StanzaListener {
     private final static Logger LOGGER = Logger.getLogger(PresenceListener.class.getName());

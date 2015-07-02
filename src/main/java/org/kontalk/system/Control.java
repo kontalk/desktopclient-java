@@ -52,7 +52,7 @@ import org.kontalk.util.XMPPUtils;
 
 /**
  * Application control logic.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Control extends Observable {
     private final static Logger LOGGER = Logger.getLogger(Control.class.getName());

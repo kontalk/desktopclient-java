@@ -61,7 +61,7 @@ import org.kontalk.system.Control;
  * Note: By default incoming presence subscription requests are automatically
  * granted by Smack (but Kontalk uses a custom subscription request!?)
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Client implements StanzaListener, Runnable {
     private final static Logger LOGGER = Logger.getLogger(Client.class.getName());

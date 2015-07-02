@@ -32,7 +32,7 @@ import javax.swing.SwingUtilities;
 
 /**
  * Static utility functions for loading images in Swing.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 class ImageLoader {
     private final static Logger LOGGER = Logger.getLogger(ImageLoader.class.getName());

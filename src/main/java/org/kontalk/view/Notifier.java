@@ -44,7 +44,7 @@ import static org.kontalk.view.View.getIcon;
 
 /**
  * Inform user about events.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class Notifier implements Observer {
 

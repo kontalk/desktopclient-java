@@ -49,7 +49,7 @@ import org.sqlite.SQLiteConfig;
  * writing is synchronized. Hopefully we don't see this no more:
  * "SQLException: ResultSet already requested" or "ResultSet closed"
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Database {
     private final static Logger LOGGER = Logger.getLogger(Database.class.getName());

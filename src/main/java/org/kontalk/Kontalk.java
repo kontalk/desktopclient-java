@@ -43,7 +43,7 @@ import org.kontalk.util.Tr;
 import org.kontalk.view.View;
 
 /**
- * @author Alexander Bikadorov
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Kontalk {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());

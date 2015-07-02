@@ -33,7 +33,7 @@ import org.kontalk.Kontalk;
  * Translation for strings used in view.
  * Use the Python script for updating the string properties file!
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Tr {
     private final static Logger LOGGER = Logger.getLogger(Tr.class.getName());

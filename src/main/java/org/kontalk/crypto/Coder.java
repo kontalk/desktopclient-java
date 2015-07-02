@@ -79,7 +79,7 @@ import org.kontalk.util.XMPPUtils;
 /**
  * Static methods for decryption and encryption of a message.
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Coder {
     private final static Logger LOGGER = Logger.getLogger(Coder.class.getName());

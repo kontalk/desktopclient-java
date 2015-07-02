@@ -22,7 +22,7 @@ import org.kontalk.model.KonMessage;
 
 /**
  * Events passed from controller to view.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public abstract class ViewEvent {
 

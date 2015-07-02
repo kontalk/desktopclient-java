@@ -33,7 +33,7 @@ import org.kontalk.system.Database;
 
 /**
  * The global list of all threads.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class ThreadList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(ThreadList.class.getName());

@@ -30,7 +30,7 @@ import org.apache.commons.configuration.PropertiesConfiguration;
  *
  * Global configuration options.
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Config extends PropertiesConfiguration {
     private final static Logger LOGGER = Logger.getLogger(Config.class.getName());

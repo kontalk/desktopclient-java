@@ -35,7 +35,7 @@ import org.kontalk.model.MessageContent.Attachment;
 
 /**
  * Downloader for attachments.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Downloader implements Runnable {
     private final static Logger LOGGER = Logger.getLogger(Downloader.class.getName());

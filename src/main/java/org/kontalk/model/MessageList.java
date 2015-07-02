@@ -37,7 +37,7 @@ import org.kontalk.util.EncodingUtils;
 
 /**
  * Central list of all messages.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class MessageList extends Observable {
     private final static Logger LOGGER = Logger.getLogger(MessageList.class.getName());

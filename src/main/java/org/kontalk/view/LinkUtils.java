@@ -42,7 +42,7 @@ import javax.swing.text.StyledDocument;
  * Cause Android has Linkify and I have to write this myself .(
  * Some parts taken from: https://community.oracle.com/thread/2089990
  *
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class LinkUtils {
     private final static Logger LOGGER = Logger.getLogger(LinkUtils.class.getName());

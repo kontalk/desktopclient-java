@@ -20,7 +20,7 @@ package org.kontalk.misc;
 
 /**
  * Application internal exceptions.
- * @author Alexander Bikadorov <abiku@cs.tu-berlin.de>
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class KonException extends Exception {
 
