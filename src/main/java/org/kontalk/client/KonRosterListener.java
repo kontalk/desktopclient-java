@@ -86,26 +86,8 @@ final class KonRosterListener implements RosterListener {
         LOGGER.info("ignoring entry deletion in roster");
     }
 
-    /**
-     * TODO obsolete?
-     * Note: custom Kontalk presence packets with public key ID are handled by
-     * the presence listener
-     */
     @Override
     public void presenceChanged(Presence presence) {
-        LOGGER.info("got presence change: "+presence.toXML());
-
-        if (presence.getFrom() == null || mRoster == null)
-            // dunno why this happens
-            return;
-
-        String jid = presence.getFrom();
-        Presence bestPresence = mRoster.getPresence(jid);
-
-        // NOTE: a delay extension is sometimes included, don't know why
-        // ignoring mode, always null anyway
-        mControl.setPresence(bestPresence.getFrom(),
-                bestPresence.getType(),
-                bestPresence.getStatus());
+        // handled by PresenceListener
     }
 }
