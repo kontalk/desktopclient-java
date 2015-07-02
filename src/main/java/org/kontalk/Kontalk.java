@@ -48,7 +48,7 @@ import org.kontalk.view.View;
 public final class Kontalk {
     private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
-    public final static String VERSION = "3.0beta2";
+    public final static String VERSION = "3.0beta3";
     public final static String RES_PATH = "res/";
     private final static String CONFIG_DIR;
 
