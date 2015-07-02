@@ -17,6 +17,7 @@
 !define JARNAME "KontalkDesktopApp.jar"
 !define WEBSITE "kontalk.org"
 !define ICON "kontalk.ico"
+!define INP_DIR "..\dist" 
 
 ;Java
 !define JRE_VERSION "1.8"
@@ -156,8 +157,8 @@ Section foo SID
 SetOutPath $INSTDIR
 
 ; files
-File ${JARNAME}
-File /r lib 
+File ${INP_DIR}\${JARNAME}
+File /r ${INP_DIR}\lib 
 File ${ICON}
 
 ; shortcuts for all user
