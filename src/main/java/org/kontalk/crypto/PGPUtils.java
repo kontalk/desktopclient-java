@@ -155,6 +155,7 @@ public final class PGPUtils {
     }
 
     static int getKeyFlags(PGPPublicKey key) {
+        @SuppressWarnings("unchecked")
         Iterator<PGPSignature> sigs = key.getSignatures();
         while (sigs.hasNext()) {
             PGPSignature sig = sigs.next();
