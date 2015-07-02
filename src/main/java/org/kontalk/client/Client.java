@@ -215,7 +215,7 @@ public final class Client implements StanzaListener, Runnable {
         }
 
         Message smackMessage = new Message(message.getJID(), Message.Type.chat);
-        smackMessage.setPacketID(message.getXMPPID());
+        smackMessage.setStanzaId(message.getXMPPID());
         smackMessage.addExtension(new DeliveryReceiptRequest());
         Config conf = Config.getInstance();
         if (conf.getBoolean(Config.NET_SEND_CHAT_STATE))

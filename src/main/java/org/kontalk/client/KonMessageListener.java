@@ -69,7 +69,7 @@ final public class KonMessageListener implements StanzaListener {
             this.processChatMessage(m);
         } else if (m.getType() == Message.Type.error) {
             LOGGER.warning("got error message: "+m.toXML());
-            String xmppID = m.getPacketID();
+            String xmppID = m.getStanzaId();
             if (xmppID == null || xmppID.isEmpty()) {
                 LOGGER.warning("error message has invalid XMPP ID: "+xmppID);
                 return;
