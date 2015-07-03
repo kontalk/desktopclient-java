@@ -30,7 +30,7 @@ Var InstallJRE
 ; The name of the installer
 Name "${APPNAME} ${VERSION}"
 ; The file to write
-OutFile "KontalkInstaller.exe"
+OutFile "KontalkInstaller-${VERSION}.exe"
 ; The default installation directory
 InstallDir $PROGRAMFILES\Kontalk
 

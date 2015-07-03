@@ -5,11 +5,14 @@
 /kontalk.db
 /kontalk.properties
 *.pgp
+/win_installer/*.exe
+
 # Gradle
 /.gradle/
-/build_gradle/
+
 # Gradle Netbeans plugin
 /.nb-gradle/
+
 # IntelliJ Idea
 /.idea/workspace.xml
 /.idea/tasks.xml
@@ -17,9 +20,6 @@
 /.idea/libraries/
 /.idea/inspectionProfiles/
 /*.iml
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
 
 # Package Files #
 #*.jar
