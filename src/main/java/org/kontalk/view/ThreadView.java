@@ -153,7 +153,7 @@ final class ThreadView extends ScrollPane implements Observer {
 
     private Optional<MessageList> getCurrentList() {
         Component view = this.getViewport().getView();
-        if (view == null)
+        if (view == null || !(view instanceof MessageList))
             return Optional.empty();
         return Optional.of((MessageList) view);
     }
@@ -178,18 +178,26 @@ final class ThreadView extends ScrollPane implements Observer {
      */
     void showThread(KonThread thread) {
         if (thread == null) {
-            this.getViewport().setView(null);
-        } else {
-            if (!mThreadCache.containsKey(thread.getID())) {
-                MessageList newMessageList = new MessageList(thread);
-                thread.addObserver(newMessageList);
-                mThreadCache.put(thread.getID(), newMessageList);
-            }
-            MessageList table = mThreadCache.get(thread.getID());
-            this.getViewport().setView(table);
-
-            thread.setRead();
+            this.setView(null);
+            return;
         }
+        if (!mThreadCache.containsKey(thread.getID())) {
+            MessageList newMessageList = new MessageList(thread);
+            thread.addObserver(newMessageList);
+            mThreadCache.put(thread.getID(), newMessageList);
+        }
+        MessageList table = mThreadCache.get(thread.getID());
+        this.getViewport().setView(table);
+
+        thread.setRead();
+    }
+
+    void showUser(User user) {
+        this.setView(new UserDetails(mView, user));
+    }
+
+    private void setView(Component comp) {
+        this.getViewport().setView(comp);
         mView.checkSendButtonStatus();
     }
 

@@ -534,7 +534,7 @@ public final class View implements Observer {
 
     /* view internal */
 
-    void selectThreadByUser(User user) {
+    void showThread(User user) {
         if (user == null)
             return;
 
@@ -547,8 +547,8 @@ public final class View implements Observer {
         mMainFrame.selectTab(MainFrame.Tab.THREADS);
     }
 
-    void showThread(boolean show) {
-        mThreadView.showThread(show ?mThreadListView.getSelectedValue() : null);
+    void showUserDetails(User user) {
+        mThreadView.showUser(user);
     }
 
     void selectedThreadChanged(KonThread thread) {
