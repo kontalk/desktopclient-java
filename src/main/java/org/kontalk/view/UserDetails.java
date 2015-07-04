@@ -29,7 +29,6 @@ import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
@@ -41,6 +40,7 @@ import org.kontalk.model.User;
 import org.kontalk.util.Tr;
 
 /**
+ * Show and edit contact details.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -59,10 +59,11 @@ final class UserDetails extends WebPanel implements Observer {
         mView = view;
         mUser = user;
 
-        //this.setTitle(Tr.tr("Edit Contact"));
-
         GroupPanel groupPanel = new GroupPanel(10, false);
         groupPanel.setMargin(5);
+
+        groupPanel.add(new WebLabel(Tr.tr("Contact details")).setBoldFont());
+        groupPanel.add(new WebSeparator(true, true));
 
         // editable fields
         WebPanel namePanel = new WebPanel();
@@ -130,31 +131,6 @@ final class UserDetails extends WebPanel implements Observer {
         groupPanel.add(new WebSeparator(true, true));
 
         this.add(groupPanel, BorderLayout.CENTER);
-
-        // buttons
-        WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
-        cancelButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                UserDetails.this.close();
-            }
-        });
-        final WebButton saveButton = new WebButton("Save");
-        saveButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (!UserDetails.this.isConfirmed())
-                    return;
-                UserDetails.this.save();
-                UserDetails.this.close();
-            }
-        });
-        // TODO
-        //this.getRootPane().setDefaultButton(saveButton);
-
-        GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
-        buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
-        this.add(buttonPanel, BorderLayout.SOUTH);
     }
 
     @Override
@@ -192,22 +168,6 @@ final class UserDetails extends WebPanel implements Observer {
         mKeyLabel.setText(hasKey);
     }
 
-    private boolean isConfirmed() {
-        if (!mJID.equals(mUser.getJID())) {
-            String warningText =
-                    Tr.tr("Changing the JID is only useful in very rare cases. Are you sure?");
-            int selectedOption = WebOptionPane.showConfirmDialog(this,
-                    warningText,
-                    Tr.tr("Please Confirm"),
-                    WebOptionPane.OK_CANCEL_OPTION,
-                    WebOptionPane.WARNING_MESSAGE);
-            if (selectedOption != WebOptionPane.OK_OPTION) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private void save() {
         String newName = mNameField.getText();
         if (!newName.equals(mUser.getName())) {
@@ -215,11 +175,21 @@ final class UserDetails extends WebPanel implements Observer {
         }
         mUser.setEncrypted(mEncryptionBox.isSelected());
         if (!mJID.isEmpty() && !mJID.equals(mUser.getJID())) {
-            mUser.setJID(mJID);
+            String warningText =
+                    Tr.tr("Changing the JID is only useful in very rare cases. Are you sure?");
+            int selectedOption = WebOptionPane.showConfirmDialog(this,
+                    warningText,
+                    Tr.tr("Please Confirm"),
+                    WebOptionPane.OK_CANCEL_OPTION,
+                    WebOptionPane.WARNING_MESSAGE);
+            if (selectedOption == WebOptionPane.OK_OPTION)
+                mUser.setJID(mJID);
         }
     }
 
-    private void close() {
+    void onClose() {
+        this.save();
+
         this.mUser.deleteObserver(this);
     }
 }

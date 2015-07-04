@@ -197,6 +197,10 @@ final class ThreadView extends ScrollPane implements Observer {
     }
 
     private void setView(Component comp) {
+        Component view = this.getViewport().getView();
+        if (view instanceof UserDetails) {
+            ((UserDetails) view).onClose();
+        }
         this.getViewport().setView(comp);
         mView.checkSendButtonStatus();
     }

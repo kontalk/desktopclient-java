@@ -482,6 +482,8 @@ public final class View implements Observer {
     /* view to control */
 
     void callShutDown() {
+        // trigger save if user details are shown
+        mThreadView.showThread(null);
         mControl.shutDown();
     }
 
