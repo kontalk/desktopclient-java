@@ -172,16 +172,25 @@ final class ThreadView extends ScrollPane implements Observer {
         optList.get().filterItems(searchText);
     }
 
+    /**
+     * Show messages in thread.
+     * @param thread thread to show, can be null.
+     */
     void showThread(KonThread thread) {
-        if (!mThreadCache.containsKey(thread.getID())) {
-            MessageList newMessageList = new MessageList(thread);
-            thread.addObserver(newMessageList);
-            mThreadCache.put(thread.getID(), newMessageList);
-        }
-        MessageList table = mThreadCache.get(thread.getID());
-        this.getViewport().setView(table);
+        if (thread == null) {
+            this.getViewport().setView(null);
+        } else {
+            if (!mThreadCache.containsKey(thread.getID())) {
+                MessageList newMessageList = new MessageList(thread);
+                thread.addObserver(newMessageList);
+                mThreadCache.put(thread.getID(), newMessageList);
+            }
+            MessageList table = mThreadCache.get(thread.getID());
+            this.getViewport().setView(table);
 
-        thread.setRead();
+            thread.setRead();
+        }
+        mView.checkSendButtonStatus();
     }
 
     void setColor(Color color) {
@@ -507,6 +516,7 @@ final class ThreadView extends ScrollPane implements Observer {
                     this.updateAttachment();
 
                 // changes are not instantly painted
+                // TODO height problem for new messages again
                 MessageList.this.repaint();
             }
 

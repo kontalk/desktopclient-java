@@ -60,6 +60,8 @@ import java.util.List;
 import javax.swing.Icon;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
@@ -239,6 +241,13 @@ final class MainFrame extends WebFrame {
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         mTabbedPane.setPreferredSize(new Dimension(250, -1));
+        mTabbedPane.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                mView.showThread(mTabbedPane.getSelectedIndex() != Tab.USER.ordinal());
+            }
+        });
+
         sidePanel.add(mTabbedPane, BorderLayout.CENTER);
         this.add(sidePanel, BorderLayout.WEST);
 

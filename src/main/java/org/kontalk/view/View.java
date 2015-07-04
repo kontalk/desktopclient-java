@@ -144,7 +144,6 @@ public final class View implements Observer {
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
             public void documentChanged(DocumentEvent e) {
-                mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
                 View.this.handleKeyTypeEvent();
             }
         });
@@ -504,12 +503,12 @@ public final class View implements Observer {
     }
 
     private void callSendText() {
-       KonThread thread = mThreadListView.getSelectedValue();
-       if (thread == null) {
-           // nothing selected
+       Optional<KonThread> optThread = mThreadView.getCurrentThread();
+       if (!optThread.isPresent())
+           // now current thread
            return;
-       }
-       mControl.sendText(thread, mSendTextArea.getText());
+
+       mControl.sendText(optThread.get(), mSendTextArea.getText());
        mSendTextArea.setText("");
     }
 
@@ -548,6 +547,10 @@ public final class View implements Observer {
         mMainFrame.selectTab(MainFrame.Tab.THREADS);
     }
 
+    void showThread(boolean show) {
+        mThreadView.showThread(show ?mThreadListView.getSelectedValue() : null);
+    }
+
     void selectedThreadChanged(KonThread thread) {
         if (thread == null)
             return;
@@ -556,6 +559,8 @@ public final class View implements Observer {
     }
 
     private void handleKeyTypeEvent() {
+        this.checkSendButtonStatus();
+
         Optional<KonThread> optThread = mThreadView.getCurrentThread();
         if (!optThread.isPresent())
             return;
@@ -573,6 +578,11 @@ public final class View implements Observer {
 
     void reloadThreadBG() {
         mThreadView.loadDefaultBG();
+    }
+
+    void checkSendButtonStatus() {
+        mSendButton.setEnabled(mThreadView.getCurrentThread().isPresent() &&
+                !mSendTextArea.getText().trim().isEmpty());
     }
 
     static Icon getIcon(String fileName) {
