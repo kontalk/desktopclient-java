@@ -214,8 +214,8 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
         WebMenuItem mUnblockMenuItem;
 
         UserPopupMenu() {
-            WebMenuItem newMenuItem = new WebMenuItem(Tr.tr("New Thread"));
-            newMenuItem.setToolTipText(Tr.tr("Creates a new thread for this contact"));
+            WebMenuItem newMenuItem = new WebMenuItem(Tr.tr("New Chat"));
+            newMenuItem.setToolTipText(Tr.tr("Creates a new chat for this contact"));
             newMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {

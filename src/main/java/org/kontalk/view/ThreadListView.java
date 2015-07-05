@@ -88,8 +88,8 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
         // right click popup menu
         mPopupMenu = new WebPopupMenu();
-        WebMenuItem editMenuItem = new WebMenuItem(Tr.tr("Edit Thread"));
-        editMenuItem.setToolTipText(Tr.tr("Edit this thread"));
+        WebMenuItem editMenuItem = new WebMenuItem(Tr.tr("Edit Chat"));
+        editMenuItem.setToolTipText(Tr.tr("Edit this chat"));
         editMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -100,8 +100,8 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
         });
         mPopupMenu.add(editMenuItem);
 
-        WebMenuItem deleteMenuItem = new WebMenuItem(Tr.tr("Delete Thread"));
-        deleteMenuItem.setToolTipText(Tr.tr("Delete this thread"));
+        WebMenuItem deleteMenuItem = new WebMenuItem(Tr.tr("Delete Chat"));
+        deleteMenuItem.setToolTipText(Tr.tr("Delete this chat"));
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
@@ -305,7 +305,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
             mThreadItem = threadItem;
 
-            this.setTitle(Tr.tr("Edit Thread"));
+            this.setTitle(Tr.tr("Edit Chat"));
             this.setResizable(false);
             this.setModal(true);
 
