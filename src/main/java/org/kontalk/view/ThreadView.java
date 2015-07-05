@@ -172,28 +172,24 @@ final class ThreadView extends ScrollPane implements Observer {
         optList.get().filterItems(searchText);
     }
 
-    /**
-     * Show messages in thread.
-     * @param thread thread to show, can be null.
-     */
     void showThread(KonThread thread) {
-        if (thread == null) {
-            this.setView(null);
-            return;
-        }
         if (!mThreadCache.containsKey(thread.getID())) {
             MessageList newMessageList = new MessageList(thread);
             thread.addObserver(newMessageList);
             mThreadCache.put(thread.getID(), newMessageList);
         }
         MessageList table = mThreadCache.get(thread.getID());
-        this.getViewport().setView(table);
+        this.setView(table);
 
         thread.setRead();
     }
 
     void showUser(User user) {
         this.setView(new UserDetails(mView, user));
+    }
+
+    void showNothing() {
+        this.setView(null);
     }
 
     private void setView(Component comp) {

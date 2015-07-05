@@ -483,7 +483,7 @@ public final class View implements Observer {
 
     void callShutDown() {
         // trigger save if user details are shown
-        mThreadView.showThread(null);
+        mThreadView.showNothing();
         mControl.shutDown();
     }
 
@@ -554,10 +554,24 @@ public final class View implements Observer {
     }
 
     void selectedThreadChanged(KonThread thread) {
-        if (thread == null)
-            return;
-
         mThreadView.showThread(thread);
+    }
+
+    void tabPaneChanged(MainFrame.Tab tab) {
+        if (tab == MainFrame.Tab.THREADS) {
+            Optional<KonThread> optThread = mThreadListView.getSelectedValue();
+            if (optThread.isPresent()) {
+                mThreadView.showThread(optThread.get());
+                return;
+            }
+        } else {
+            Optional<User> optUser = mUserListView.getSelectedValue();
+            if (optUser.isPresent()) {
+                mThreadView.showUser(optUser.get());
+                return;
+            }
+        }
+        mThreadView.showNothing();
     }
 
     private void handleKeyTypeEvent() {

@@ -30,6 +30,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Observer;
+import java.util.Optional;
 import java.util.Set;
 import javax.swing.ListSelectionModel;
 import org.apache.commons.lang.StringEscapeUtils;
@@ -68,7 +69,11 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
         this.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                User selectedUser = UserListView.this.getSelectedValue();
+                Optional<User> optUser = UserListView.this.getSelectedValue();
+                if (!optUser.isPresent())
+                    return;
+
+                User selectedUser = optUser.get();
                 if (e.getClickCount() == 2) {
                     mView.showThread(selectedUser);
                 } else {

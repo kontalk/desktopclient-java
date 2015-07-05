@@ -125,7 +125,9 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                mView.selectedThreadChanged(ThreadListView.this.getSelectedValue());
+                Optional<KonThread> optThread = ThreadListView.this.getSelectedValue();
+                if (optThread.isPresent())
+                    mView.selectedThreadChanged(optThread.get());
             }
         });
 
