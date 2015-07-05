@@ -26,16 +26,20 @@ import com.alee.laf.label.WebLabel;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.util.Observable;
 import java.util.Observer;
+import javax.swing.Box;
 import javax.swing.SwingUtilities;
+import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.User;
 import org.kontalk.util.Tr;
 
@@ -51,7 +55,7 @@ final class UserDetails extends WebPanel implements Observer {
     private final WebTextField mNameField;
     private final WebLabel mKeyLabel;
     private final WebLabel mFPLabel;
-    private final WebTextField mFPField;
+    private final WebTextArea mFPArea;
     private final WebCheckBox mEncryptionBox;
     private String mJID;
 
@@ -73,35 +77,6 @@ final class UserDetails extends WebPanel implements Observer {
         mNameField.setHideInputPromptOnFocus(false);
         namePanel.add(mNameField, BorderLayout.CENTER);
         groupPanel.add(namePanel);
-        groupPanel.add(new WebSeparator(true, true));
-
-        mKeyLabel = new WebLabel();
-        WebButton updButton = new WebButton(View.getIcon("ic_ui_refresh.png"));
-        String updText = Tr.tr("Update key");
-        TooltipManager.addTooltip(updButton, updText);
-        updButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                mView.callRequestKey(UserDetails.this.mUser);
-            }
-        });
-        groupPanel.add(new GroupPanel(6, mKeyLabel, updButton));
-
-        mFPLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
-        mFPField = View.createTextField("");
-        String fpText = Tr.tr("The unique ID of this contact's key");
-        TooltipManager.addTooltip(mFPField, fpText);
-        groupPanel.add(new GroupPanel(mFPLabel, mFPField));
-
-        this.updateOnEDT();
-
-        mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));
-        mEncryptionBox.setAnimated(false);
-        mEncryptionBox.setSelected(mUser.getEncrypted());
-        String encText = Tr.tr("Encrypt and sign all messages send to this contact");
-        TooltipManager.addTooltip(mEncryptionBox, encText);
-        groupPanel.add(new GroupPanel(mEncryptionBox, new WebSeparator()));
-        groupPanel.add(new WebSeparator(true, true));
 
         final int l = 50;
         mJID = mUser.getJID();
@@ -126,9 +101,42 @@ final class UserDetails extends WebPanel implements Observer {
         String jidText = Tr.tr("The unique address of this contact");
         TooltipManager.addTooltip(jidField, jidText);
         groupPanel.add(new GroupPanel(GroupingType.fillLast,
-                new WebLabel("JID: "),
+                10,
+                new WebLabel("JID:"),
                 jidField));
+
         groupPanel.add(new WebSeparator(true, true));
+
+        mKeyLabel = new WebLabel();
+        WebButton updButton = new WebButton(View.getIcon("ic_ui_refresh.png"));
+        String updText = Tr.tr("Update key");
+        TooltipManager.addTooltip(updButton, updText);
+        updButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mView.callRequestKey(UserDetails.this.mUser);
+            }
+        });
+        groupPanel.add(new GroupPanel(6, mKeyLabel, updButton));
+
+        mFPLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
+        mFPArea = new WebTextArea("");
+        mFPArea.setEditable(false);
+        mFPArea.setOpaque(false);
+        mFPArea.setBoldFont();
+        String fpText = Tr.tr("The unique ID of this contact's key");
+        TooltipManager.addTooltip(mFPArea, fpText);
+        mFPLabel.setAlignmentY(Component.TOP_ALIGNMENT);
+        GroupPanel fpLabelPanel = new GroupPanel(false, mFPLabel, Box.createGlue());
+        groupPanel.add(new GroupPanel(10, fpLabelPanel, mFPArea));
+        this.updateOnEDT();
+
+        mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));
+        mEncryptionBox.setAnimated(false);
+        mEncryptionBox.setSelected(mUser.getEncrypted());
+        String encText = Tr.tr("Encrypt and sign all messages send to this contact");
+        TooltipManager.addTooltip(mEncryptionBox, encText);
+        groupPanel.add(new GroupPanel(mEncryptionBox, Box.createGlue()));
 
         this.add(groupPanel, BorderLayout.CENTER);
     }
@@ -155,15 +163,15 @@ final class UserDetails extends WebPanel implements Observer {
         if (mUser.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";
             TooltipManager.removeTooltips(mKeyLabel);
-            mFPField.setText(mUser.getFingerprint());
+            mFPArea.setText(formatFingerprint(mUser.getFingerprint()));
             mFPLabel.setVisible(true);
-            mFPField.setVisible(true);
+            mFPArea.setVisible(true);
         } else {
             hasKey += "<font color='red'>"+Tr.tr("Not Available")+"</font></html>";
             String keyText = Tr.tr("The key for this user could not yet be received");
             TooltipManager.addTooltip(mKeyLabel, keyText);
             mFPLabel.setVisible(false);
-            mFPField.setVisible(false);
+            mFPArea.setVisible(false);
         }
         mKeyLabel.setText(hasKey);
     }
@@ -191,5 +199,14 @@ final class UserDetails extends WebPanel implements Observer {
         this.save();
 
         this.mUser.deleteObserver(this);
+    }
+
+    private static String formatFingerprint(String fp) {
+        int m = fp.length() / 2;
+        return group(fp.substring(0, m)) + "\n" + group(fp.substring(m));
+    }
+
+    private static String group(String s) {
+        return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
     }
 }
