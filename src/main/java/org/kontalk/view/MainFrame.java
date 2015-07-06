@@ -216,11 +216,11 @@ final class MainFrame extends WebFrame {
                 // TODO new thread button
             }
         });
-        String threadOverlayText =
-                Tr.tr("No chats to display. You can create new chat from your contacts");
+        //String threadOverlayText =
+        //        Tr.t/r("No chats to display. You can create new chat from your contacts");
         WebScrollPane threadPane = createTablePane(threadList,
                 newThreadButton,
-                threadOverlayText);
+                "threadOverlayText");
         mTabbedPane.addTab("", threadPane);
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Threads")));
@@ -233,10 +233,10 @@ final class MainFrame extends WebFrame {
                 addUserDialog.setVisible(true);
             }
         });
-        String userOverlayText = Tr.tr("No contacts to display. You have no friends ;(");
+        //String userOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
         WebScrollPane userPane = createTablePane(userList,
                 newUserButton,
-                userOverlayText);
+                "userOverlayText");
         mTabbedPane.addTab("", userPane);
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
