@@ -105,7 +105,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                String warningText =Tr.tr("Permanently delete all messages in this thread?");
+                String warningText =Tr.tr("Permanently delete all messages in this chat?");
                 int selectedOption = WebOptionPane.showConfirmDialog(ThreadListView.this,
                         warningText,
                         Tr.tr("Please Confirm"),
