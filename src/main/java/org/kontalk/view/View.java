@@ -144,7 +144,7 @@ public final class View implements Observer {
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
             public void documentChanged(DocumentEvent e) {
-                View.this.handleKeyTypeEvent();
+                View.this.handleKeyTypeEvent(e.getDocument().getLength() == 0);
             }
         });
         EventQueue.invokeLater(new Runnable() {
@@ -524,10 +524,6 @@ public final class View implements Observer {
         mControl.sendKeyRequest(user);
     }
 
-    void callHandleOwnChatStateEvent(KonThread thread, ChatState state) {
-        mControl.handleOwnChatStateEvent(thread, state);
-    }
-
     void callSendStatusText() {
         mControl.sendStatusText();
     }
@@ -558,14 +554,16 @@ public final class View implements Observer {
         mThreadView.showThread(thread);
     }
 
-    private void handleKeyTypeEvent() {
+    private void handleKeyTypeEvent(boolean empty) {
         this.checkSendButtonStatus();
 
         Optional<KonThread> optThread = mThreadView.getCurrentThread();
         if (!optThread.isPresent())
             return;
 
-        mControl.handleOwnChatStateEvent(optThread.get(), ChatState.composing);
+        // workaround: clearing the text area is not a key event
+        if (!empty)
+            mControl.handleOwnChatStateEvent(optThread.get(), ChatState.composing);
     }
 
     Optional<KonThread> getCurrentShownThread() {

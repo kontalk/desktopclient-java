@@ -71,11 +71,13 @@ public final class Control extends Observable {
     }
 
     private final Client mClient;
+    private final ChatStateManager mChatStateManager;
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
     public Control() {
         mClient = new Client(this);
+        mChatStateManager = new ChatStateManager(mClient);
     }
 
     public void launch() {
@@ -95,13 +97,13 @@ public final class Control extends Observable {
     /* commands from view */
 
     public void shutDown() {
+        this.disconnect();
         LOGGER.info("Shutting down...");
         mCurrentStatus = Status.SHUTTING_DOWN;
         this.setChanged();
         this.notifyObservers(new ViewEvent.StatusChanged());
         UserList.getInstance().save();
         ThreadList.getInstance().save();
-        mClient.disconnect();
         try {
             Database.getInstance().close();
         } catch (RuntimeException ex) {
@@ -151,6 +153,7 @@ public final class Control extends Observable {
     }
 
     public void disconnect() {
+        mChatStateManager.imGone();
         mCurrentStatus = Status.DISCONNECTING;
         this.setChanged();
         this.notifyObservers(new ViewEvent.StatusChanged());
@@ -166,7 +169,7 @@ public final class Control extends Observable {
                     oneUser,
                     text,
                     oneUser.getEncrypted());
-            mClient.sendMessage(newMessage);
+            this.sendMessage(newMessage);
         }
     }
 
@@ -196,21 +199,7 @@ public final class Control extends Observable {
     }
 
     public void handleOwnChatStateEvent(KonThread thread, ChatState state) {
-        if (state == thread.getMyChatState())
-            // ignore state weare already in
-            return;
-
-        // currently send states in XEP-0085: active, inactive, composing
-        thread.setMyChatState(state);
-
-        Set<User> user = thread.getUser();
-        if (user.size() > 1)
-            // don't send for groups
-            return;
-
-        for (User oneUser : user)
-            if (!oneUser.isMe())
-                mClient.sendChatState(oneUser.getJID(), thread.getXMPPID(), state);
+        mChatStateManager.handleOwnChatStateEvent(thread, state);
     }
 
     public void sendStatusText() {
@@ -227,7 +216,7 @@ public final class Control extends Observable {
         if (status == Status.CONNECTED) {
             // send all pending messages
             for (OutMessage m : MessageList.getInstance().getPending()) {
-                mClient.sendMessage(m);
+                this.sendMessage(m);
             }
             // send public key requests for Kontalk users with missing key
             for (User user : UserList.getInstance().getAll()) {
@@ -515,6 +504,11 @@ public final class Control extends Observable {
         this.sendKeyRequest(optNewUser.get());
 
         return optNewUser;
+    }
+
+    private void sendMessage(OutMessage message) {
+        mClient.sendMessage(message);
+        mChatStateManager.handleOwnChatStateEvent(message.getThread(), ChatState.active);
     }
 
     private static KonThread getThread(String xmppThreadID, User user) {

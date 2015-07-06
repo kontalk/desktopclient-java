@@ -88,8 +88,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     private boolean mRead;
     private ViewSettings mViewSettings;
 
-    private ChatState mMyChatState;
-
     // used when creating a new thread
     KonThread(Set<User> user) {
         assert user != null;
@@ -224,14 +222,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         }
         state.setState(chatState);
         this.changed(state);
-    }
-
-    public ChatState getMyChatState() {
-        return mMyChatState;
-    }
-
-    public void setMyChatState(ChatState state) {
-        mMyChatState = state;
     }
 
     /**
