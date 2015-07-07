@@ -48,6 +48,7 @@ import java.util.Set;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import org.apache.commons.lang.StringEscapeUtils;
+import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
@@ -210,13 +211,14 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
     private class UserPopupMenu extends WebPopupMenu {
 
         UserItem mItem;
+        WebMenuItem mNewMenuItem;
         WebMenuItem mBlockMenuItem;
         WebMenuItem mUnblockMenuItem;
 
         UserPopupMenu() {
-            WebMenuItem newMenuItem = new WebMenuItem(Tr.tr("New Chat"));
-            newMenuItem.setToolTipText(Tr.tr("Creates a new chat for this contact"));
-            newMenuItem.addActionListener(new ActionListener() {
+            mNewMenuItem = new WebMenuItem(Tr.tr("New Chat"));
+            mNewMenuItem.setToolTipText(Tr.tr("Creates a new chat for this contact"));
+            mNewMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
                     Set<User> user = new HashSet<>();
@@ -224,7 +226,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
                     UserListView.this.mView.callCreateNewThread(user);
                 }
             });
-            this.add(newMenuItem);
+            this.add(mNewMenuItem);
 
             WebMenuItem editMenuItem = new WebMenuItem(Tr.tr("Edit Contact"));
             editMenuItem.setToolTipText(Tr.tr("Edit this contact"));
@@ -273,6 +275,9 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
         void show(UserItem item, Component invoker, int x, int y) {
             mItem = item;
+
+            // dont allow creation of more then one thread for a user
+            mNewMenuItem.setVisible(!ThreadList.getInstance().contains(item.mValue));
 
             if (mItem.mValue.isBlocked()) {
                 mBlockMenuItem.setVisible(false);

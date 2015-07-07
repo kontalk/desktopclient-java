@@ -104,6 +104,10 @@ public final class ThreadList extends Observable {
         }
     }
 
+    /**
+     * Get a thread with only the user as additional member.
+     * Creates a new thread if necessary.
+     */
     public KonThread get(User user) {
         synchronized (this) {
             for (KonThread thread : mMap.values()) {
@@ -146,6 +150,17 @@ public final class ThreadList extends Observable {
 
     public boolean contains(int id) {
         return mMap.containsKey(id);
+    }
+
+    public boolean contains(User user) {
+        synchronized (this) {
+            for (KonThread thread : mMap.values()) {
+                Set<User> threadUser = thread.getUser();
+                if (threadUser.size() == 1 && threadUser.contains(user))
+                    return true;
+            }
+        }
+        return false;
     }
 
     public synchronized void delete(int id) {
