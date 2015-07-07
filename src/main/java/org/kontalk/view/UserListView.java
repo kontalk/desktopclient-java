@@ -164,7 +164,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
             if (mValue.getOnline() != User.Online.YES) {
                 String lastSeen = !mValue.getLastSeen().isPresent() ?
-                        Tr.tr("?") :
+                        Tr.tr("never") :
                         TOOLTIP_DATE_FORMAT.format(mValue.getLastSeen().get());
                 html += Tr.tr("Last seen")+": " + lastSeen + "<br>";
             }
@@ -276,7 +276,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
         void show(UserItem item, Component invoker, int x, int y) {
             mItem = item;
 
-            // dont allow creation of more then one thread for a user
+            // dont allow creation of more than one thread for a user
             mNewMenuItem.setVisible(!ThreadList.getInstance().contains(item.mValue));
 
             if (mItem.mValue.isBlocked()) {
