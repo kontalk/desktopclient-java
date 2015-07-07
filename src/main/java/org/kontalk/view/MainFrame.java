@@ -217,7 +217,7 @@ final class MainFrame extends WebFrame {
             }
         });
         //String threadOverlayText =
-        //        Tr.t/r("No chats to display. You can create new chat from your contacts");
+        //        Tr.t/r("No chats to display. You can create a new chat from your contacts");
         WebScrollPane threadPane = createTablePane(threadList,
                 newThreadButton,
                 "threadOverlayText");
