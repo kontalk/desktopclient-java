@@ -25,6 +25,8 @@ import com.alee.laf.list.UnselectableListModel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
+import com.alee.laf.scroll.WebScrollPane;
+import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.laf.viewport.WebViewport;
@@ -65,6 +67,7 @@ import java.util.logging.Logger;
 import java.util.logging.Level;
 import javax.swing.AbstractCellEditor;
 import javax.swing.Icon;
+import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JTable;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
@@ -96,7 +99,7 @@ import org.kontalk.util.Tr;
  * Pane that shows the currently selected thread.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ThreadView extends ScrollPane implements Observer {
+final class ThreadView extends WebPanel implements Observer {
     private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
 
     private final static Icon PENDING_ICON = View.getIcon("ic_msg_pending.png");;
@@ -113,16 +116,18 @@ final class ThreadView extends ScrollPane implements Observer {
 
     private final View mView;
 
+    private final WebScrollPane mScrollPane;
     private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
 
-    ThreadView(View view) {
-        super(null);
+    ThreadView(View view, Component sendTextField, Component sendButton) {
         mView = view;
 
-        this.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+        mScrollPane = new ScrollPane(this);
+
+        mScrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
                 // this is not perfect at all: after adding all items, they still
@@ -136,7 +141,7 @@ final class ThreadView extends ScrollPane implements Observer {
             }
         });
 
-        this.setViewport(new WebViewport() {
+        mScrollPane.setViewport(new WebViewport() {
             @Override
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
@@ -148,11 +153,22 @@ final class ThreadView extends ScrollPane implements Observer {
             }
         });
 
+        WebPanel bottomPanel = new WebPanel();
+        WebScrollPane textFieldScrollPane = new ScrollPane(sendTextField);
+        bottomPanel.add(textFieldScrollPane, BorderLayout.CENTER);
+        bottomPanel.add(sendButton, BorderLayout.EAST);
+        bottomPanel.setMinimumSize(new Dimension(0, 32));
+        WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT,
+                mScrollPane,
+                bottomPanel);
+        splitPane.setResizeWeight(1.0);
+        this.add(splitPane, BorderLayout.CENTER);
+
         this.loadDefaultBG();
     }
 
     private Optional<MessageList> getCurrentList() {
-        Component view = this.getViewport().getView();
+        Component view = mScrollPane.getViewport().getView();
         if (view == null || !(view instanceof MessageList))
             return Optional.empty();
         return Optional.of((MessageList) view);
@@ -193,24 +209,24 @@ final class ThreadView extends ScrollPane implements Observer {
     }
 
     private void setView(Component comp) {
-        Component view = this.getViewport().getView();
+        Component view = mScrollPane.getViewport().getView();
         if (view instanceof UserDetails) {
             ((UserDetails) view).onClose();
         }
-        this.getViewport().setView(comp);
+        mScrollPane.getViewport().setView(comp);
         mView.checkSendButtonStatus();
     }
 
     void setColor(Color color) {
-        this.getViewport().setBackground(color);
+        mScrollPane.getViewport().setBackground(color);
     }
 
     void loadDefaultBG() {
         String imagePath = Config.getInstance().getString(Config.VIEW_THREAD_BG);
         mDefaultBG = !imagePath.isEmpty() ?
-                new Background(this.getViewport(), imagePath) :
-                new Background(this.getViewport());
-        this.getViewport().repaint();
+                new Background(mScrollPane.getViewport(), imagePath) :
+                new Background(mScrollPane.getViewport());
+        mScrollPane.getViewport().repaint();
     }
 
     private Background getCurrentBackground() {
@@ -248,7 +264,7 @@ final class ThreadView extends ScrollPane implements Observer {
                 thread.deleteObserver(viewList);
                 mThreadCache.remove(thread.getID());
                 if(this.getCurrentThread().orElse(null) == thread) {
-                    this.setViewportView(null);
+                    mScrollPane.setViewportView(null);
                 }
             }
         }
@@ -322,7 +338,7 @@ final class ThreadView extends ScrollPane implements Observer {
             if (arg instanceof KonThread.ViewSettings) {
                 this.setBackground((KonThread.ViewSettings) arg);
                 if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
-                    ThreadView.this.getViewport().repaint();
+                    ThreadView.this.mScrollPane.getViewport().repaint();
                 }
                 return;
             }
@@ -372,7 +388,7 @@ final class ThreadView extends ScrollPane implements Observer {
         }
 
         private void setBackground(KonThread.ViewSettings s) {
-            JViewport p = ThreadView.this.getViewport();
+            JViewport p = ThreadView.this.mScrollPane.getViewport();
             // simply overwrite
             if (s.getBGColor().isPresent()) {
                 Color c = s.getBGColor().get();

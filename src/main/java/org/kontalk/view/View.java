@@ -134,9 +134,7 @@ public final class View implements Observer {
         mThreadListView = new ThreadListView(this, ThreadList.getInstance());
         ThreadList.getInstance().addObserver(mThreadListView);
 
-        mThreadView = new ThreadView(this);
-        ThreadList.getInstance().addObserver(mThreadView);
-        // text field
+        // text area
         mSendTextArea = new WebTextArea();
         mSendTextArea.setMargin(5);
         mSendTextArea.setLineWrap(true);
@@ -170,6 +168,10 @@ public final class View implements Observer {
             }
         });
 
+        // thread view
+        mThreadView = new ThreadView(this, mSendTextArea, mSendButton);
+        ThreadList.getInstance().addObserver(mThreadView);
+
         // status bar
         WebStatusBar statusBar = new WebStatusBar();
         mStatusBarLabel = new WebStatusLabel(" ");
@@ -177,7 +179,7 @@ public final class View implements Observer {
 
         // main frame
         mMainFrame = new MainFrame(this, mUserListView, mThreadListView,
-                mThreadView, mSendTextArea, mSendButton, statusBar);
+                mThreadView, statusBar);
         mMainFrame.setVisible(true);
 
         // tray

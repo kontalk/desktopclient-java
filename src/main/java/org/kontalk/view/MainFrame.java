@@ -36,7 +36,6 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
@@ -58,7 +57,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import javax.swing.Icon;
-import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -89,8 +87,6 @@ final class MainFrame extends WebFrame {
             TableView<?, ?> userList,
             TableView<?, ?> threadList,
             ThreadView threadView,
-            Component sendTextField,
-            Component sendButton,
             Component statusBar) {
         mView = view;
 
@@ -252,14 +248,7 @@ final class MainFrame extends WebFrame {
         this.add(sidePanel, BorderLayout.WEST);
 
         // ...right...
-        WebPanel bottomPanel = new WebPanel();
-        WebScrollPane textFieldScrollPane = new ScrollPane(sendTextField);
-        bottomPanel.add(textFieldScrollPane, BorderLayout.CENTER);
-        bottomPanel.add(sendButton, BorderLayout.EAST);
-        bottomPanel.setMinimumSize(new Dimension(0, 32));
-        WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT, threadView, bottomPanel);
-        splitPane.setResizeWeight(1.0);
-        this.add(splitPane, BorderLayout.CENTER);
+        this.add(threadView, BorderLayout.CENTER);
 
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);
