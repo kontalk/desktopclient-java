@@ -105,13 +105,9 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                String warningText =Tr.tr("Permanently delete all messages in this chat?");
-                int selectedOption = WebOptionPane.showConfirmDialog(ThreadListView.this,
-                        warningText,
-                        Tr.tr("Please Confirm"),
-                        WebOptionPane.OK_CANCEL_OPTION,
-                        WebOptionPane.WARNING_MESSAGE);
-                if (selectedOption == WebOptionPane.OK_OPTION) {
+                ThreadItem t = ThreadListView.this.getSelectedItem();
+                if (t.mValue.getMessages().size() == 0 ||
+                        ThreadListView.this.confirmDeletion()) {
                     ThreadItem threadItem = ThreadListView.this.getSelectedItem();
                     mThreadList.delete(threadItem.mValue.getID());
                 }
@@ -175,6 +171,15 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
     private void showPopupMenu(MouseEvent e) {
            mPopupMenu.show(this, e.getX(), e.getY());
+    }
+
+    private boolean confirmDeletion() {
+        int selectedOption = WebOptionPane.showConfirmDialog(ThreadListView.this,
+                Tr.tr("Permanently delete all messages in this chat?"),
+                Tr.tr("Please Confirm"),
+                WebOptionPane.OK_CANCEL_OPTION,
+                WebOptionPane.WARNING_MESSAGE);
+        return selectedOption == WebOptionPane.OK_OPTION;
     }
 
     protected final class ThreadItem extends TableView<ThreadItem, KonThread>.TableItem {
