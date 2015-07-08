@@ -18,35 +18,21 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
-import com.alee.laf.button.WebButton;
-import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.optionpane.WebOptionPane;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.rootpane.WebDialog;
-import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.text.WebTextField;
-import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
-import java.util.Observable;
 import java.util.Observer;
+import java.util.Optional;
 import java.util.Set;
 import javax.swing.ListSelectionModel;
-import javax.swing.SwingUtilities;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
@@ -84,8 +70,15 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
         this.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                Optional<User> optUser = UserListView.this.getSelectedValue();
+                if (!optUser.isPresent())
+                    return;
+
+                User selectedUser = optUser.get();
                 if (e.getClickCount() == 2) {
-                    mView.selectThreadByUser(UserListView.this.getSelectedValue());
+                    mView.showThread(selectedUser);
+                } else {
+                    mView.showUserDetails(selectedUser);
                 }
             }
             @Override
@@ -228,18 +221,6 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
             });
             this.add(mNewMenuItem);
 
-            WebMenuItem editMenuItem = new WebMenuItem(Tr.tr("Edit Contact"));
-            editMenuItem.setToolTipText(Tr.tr("Edit this contact"));
-            editMenuItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent event) {
-                    EditUserDialog editUserDialog = new EditUserDialog(mItem);
-                    mItem.mValue.addObserver(editUserDialog);
-                    editUserDialog.setVisible(true);
-                }
-            });
-            this.add(editMenuItem);
-
             mBlockMenuItem = new WebMenuItem(Tr.tr("Block Contact"));
             mBlockMenuItem.setToolTipText(Tr.tr("Block all messages from this contact"));
             mBlockMenuItem.addActionListener(new ActionListener() {
@@ -292,188 +273,6 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
             mUnblockMenuItem.setEnabled(status == Control.Status.CONNECTED);
 
             this.show(invoker, x, y);
-        }
-    }
-
-    private class EditUserDialog extends WebDialog implements Observer {
-
-        private final UserItem mItem;
-        private final WebTextField mNameField;
-        private final WebLabel mKeyLabel;
-        private final WebLabel mFPLabel;
-        private final WebTextField mFPField;
-        private final WebCheckBox mEncryptionBox;
-        private String mJID;
-
-        EditUserDialog(UserItem item) {
-            mItem = item;
-
-            this.setTitle(Tr.tr("Edit Contact"));
-            this.setResizable(false);
-            this.setModal(true);
-
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
-
-            // editable fields
-            WebPanel namePanel = new WebPanel();
-            namePanel.setLayout(new BorderLayout(10, 5));
-            namePanel.add(new WebLabel(Tr.tr("Display Name:")), BorderLayout.WEST);
-            mNameField = new WebTextField();
-            mNameField.setHideInputPromptOnFocus(false);
-            namePanel.add(mNameField, BorderLayout.CENTER);
-            groupPanel.add(namePanel);
-            groupPanel.add(new WebSeparator(true, true));
-
-            mKeyLabel = new WebLabel();
-            WebButton updButton = new WebButton(View.getIcon("ic_ui_refresh.png"));
-            String updText = Tr.tr("Update key");
-            TooltipManager.addTooltip(updButton, updText);
-            updButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    UserListView.this.mView.callRequestKey(EditUserDialog.this.mItem.mValue);
-                }
-            });
-            groupPanel.add(new GroupPanel(6, mKeyLabel, updButton));
-
-            mFPLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
-            mFPField = View.createTextField("");
-            String fpText = Tr.tr("The unique ID of this contact's key");
-            TooltipManager.addTooltip(mFPField, fpText);
-            groupPanel.add(new GroupPanel(mFPLabel, mFPField));
-
-            this.updateOnEDT();
-
-            mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));
-            mEncryptionBox.setAnimated(false);
-            mEncryptionBox.setSelected(mItem.mValue.getEncrypted());
-            String encText = Tr.tr("Encrypt and sign all messages send to this contact");
-            TooltipManager.addTooltip(mEncryptionBox, encText);
-            groupPanel.add(new GroupPanel(mEncryptionBox, new WebSeparator()));
-            groupPanel.add(new WebSeparator(true, true));
-
-            final int l = 50;
-            mJID = mItem.mValue.getJID();
-            final WebTextField jidField = new WebTextField(View.shortenJID(mJID, l));
-            jidField.setDrawBorder(false);
-            jidField.setMinimumHeight(20);
-            jidField.setInputPrompt(mJID);
-            jidField.setHideInputPromptOnFocus(false);
-            jidField.addFocusListener(new FocusListener() {
-                @Override
-                public void focusGained(FocusEvent e) {
-                    jidField.setText(mJID);
-                    jidField.setDrawBorder(true);
-                }
-                @Override
-                public void focusLost(FocusEvent e) {
-                    mJID = jidField.getText();
-                    jidField.setText(View.shortenJID(mJID, l));
-                    jidField.setDrawBorder(false);
-                }
-            });
-            String jidText = Tr.tr("The unique address of this contact");
-            TooltipManager.addTooltip(jidField, jidText);
-            groupPanel.add(new GroupPanel(GroupingType.fillLast,
-                    new WebLabel("JID: "),
-                    jidField));
-            groupPanel.add(new WebSeparator(true, true));
-
-            this.add(groupPanel, BorderLayout.CENTER);
-
-            // buttons
-            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    EditUserDialog.this.close();
-                }
-            });
-            final WebButton saveButton = new WebButton("Save");
-            saveButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    if (!EditUserDialog.this.isConfirmed())
-                        return;
-                    EditUserDialog.this.save();
-                    EditUserDialog.this.close();
-                }
-            });
-            this.getRootPane().setDefaultButton(saveButton);
-
-            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
-            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
-            this.add(buttonPanel, BorderLayout.SOUTH);
-
-            this.pack();
-        }
-
-        @Override
-        public void update(Observable o, final Object arg) {
-            if (SwingUtilities.isEventDispatchThread()) {
-                this.updateOnEDT();
-                return;
-            }
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    EditUserDialog.this.updateOnEDT();
-                }
-            });
-        }
-
-        private void updateOnEDT() {
-            // may have changed: user name and/or key
-            mNameField.setText(mItem.mValue.getName());
-            mNameField.setInputPrompt(mItem.mValue.getName());
-            String hasKey = "<html>"+Tr.tr("Encryption Key")+": ";
-            if (mItem.mValue.hasKey()) {
-                hasKey += Tr.tr("Available")+"</html>";
-                TooltipManager.removeTooltips(mKeyLabel);
-                mFPField.setText(mItem.mValue.getFingerprint());
-                mFPLabel.setVisible(true);
-                mFPField.setVisible(true);
-            } else {
-                hasKey += "<font color='red'>"+Tr.tr("Not Available")+"</font></html>";
-                String keyText = Tr.tr("The key for this user could not yet be received");
-                TooltipManager.addTooltip(mKeyLabel, keyText);
-                mFPLabel.setVisible(false);
-                mFPField.setVisible(false);
-            }
-            mKeyLabel.setText(hasKey);
-        }
-
-        private boolean isConfirmed() {
-            if (!mJID.equals(mItem.mValue.getJID())) {
-                String warningText =
-                        Tr.tr("Changing the JID is only useful in very rare cases. Are you sure?");
-                int selectedOption = WebOptionPane.showConfirmDialog(this,
-                        warningText,
-                        Tr.tr("Please Confirm"),
-                        WebOptionPane.OK_CANCEL_OPTION,
-                        WebOptionPane.WARNING_MESSAGE);
-                if (selectedOption != WebOptionPane.OK_OPTION) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private void save() {
-            String newName = mNameField.getText();
-            if (!newName.equals(mItem.mValue.getName())) {
-                mItem.mValue.setName(mNameField.getText());
-            }
-            mItem.mValue.setEncrypted(mEncryptionBox.isSelected());
-            if (!mJID.isEmpty() && !mJID.equals(mItem.mValue.getJID())) {
-                mItem.mValue.setJID(mJID);
-            }
-        }
-
-        private void close() {
-            this.dispose();
-            this.mItem.mValue.deleteObserver(this);
         }
     }
 }

@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
@@ -179,11 +180,10 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         return (I) mModel.getValueAt(mRowSorter.convertRowIndexToModel(this.getSelectedRow()), 0);
     }
 
-    // nullable
-    protected V getSelectedValue() {
+    protected Optional<V> getSelectedValue() {
         if (this.getSelectedRow() == -1)
-            return null;
-        return this.getSelectedItem().mValue;
+            return Optional.empty();
+        return Optional.of(this.getSelectedItem().mValue);
     }
 
     /** Resets filtering and selects the item containing the value specified. */
@@ -197,7 +197,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
             }
         }
 
-        if (this.getSelectedValue() != value)
+        if (this.getSelectedValue().orElse(null) != value)
             // fallback
             this.setSelectedItem(0);
     }

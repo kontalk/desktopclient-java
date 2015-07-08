@@ -94,8 +94,8 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
             @Override
             public void actionPerformed(ActionEvent event) {
                 ThreadItem t = ThreadListView.this.getSelectedItem();
-                JDialog editUserDialog = new EditThreadDialog(t);
-                editUserDialog.setVisible(true);
+                JDialog editDialog = new EditThreadDialog(t);
+                editDialog.setVisible(true);
             }
         });
         mPopupMenu.add(editMenuItem);
@@ -121,7 +121,9 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                mView.selectedThreadChanged(ThreadListView.this.getSelectedValue());
+                Optional<KonThread> optThread = ThreadListView.this.getSelectedValue();
+                if (optThread.isPresent())
+                    mView.showThread(optThread.get());
             }
         });
 
