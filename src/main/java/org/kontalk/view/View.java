@@ -115,6 +115,7 @@ public final class View implements Observer {
     private final Control mControl;
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
+    private final Content mContent;
     private final ThreadView mThreadView;
     private final WebTextArea mSendTextArea;
     private final WebButton mSendButton;
@@ -172,6 +173,14 @@ public final class View implements Observer {
         mThreadView = new ThreadView(this, mSendTextArea, mSendButton);
         ThreadList.getInstance().addObserver(mThreadView);
 
+        // content area
+        mContent = new Content(this, mThreadView);
+
+        // search panel
+        WebPanel searchPanel = createSearchPanel(
+                new TableView[]{mUserListView, mThreadListView},
+                mThreadView);
+
         // status bar
         WebStatusBar statusBar = new WebStatusBar();
         mStatusBarLabel = new WebStatusLabel(" ");
@@ -179,7 +188,7 @@ public final class View implements Observer {
 
         // main frame
         mMainFrame = new MainFrame(this, mUserListView, mThreadListView,
-                mThreadView, statusBar);
+                mContent, searchPanel, statusBar);
         mMainFrame.setVisible(true);
 
         // tray
@@ -439,7 +448,7 @@ public final class View implements Observer {
         }
         String errorText = getErrorText(ex);
         Icon icon = NotificationIcon.error.getIcon();
-        NotificationManager.showNotification(mThreadView, errorText, icon);
+        NotificationManager.showNotification(mContent, errorText, icon);
     }
 
     // TODO more information for message exs
@@ -485,7 +494,7 @@ public final class View implements Observer {
 
     void callShutDown() {
         // trigger save if user details are shown
-        mThreadView.showNothing();
+        mContent.showNothing();
         mControl.shutDown();
     }
 
@@ -499,7 +508,7 @@ public final class View implements Observer {
 
     void callCreateNewThread(Set<User> user) {
         KonThread thread = mControl.createNewThread(user);
-        this.showThread(thread);
+        this.selectThread(thread);
     }
 
     void callCreateNewUser(String jid, String name, boolean encrypted) {
@@ -507,7 +516,7 @@ public final class View implements Observer {
     }
 
     private void callSendText() {
-       Optional<KonThread> optThread = mThreadView.getCurrentThread();
+       Optional<KonThread> optThread = mContent.getCurrentThread();
        if (!optThread.isPresent())
            // now current thread
            return;
@@ -539,47 +548,44 @@ public final class View implements Observer {
     /* view internal */
 
     void showThread(User user) {
-        if (user == null)
-            return;
-
         KonThread thread = ThreadList.getInstance().get(user);
-        this.showThread(thread);
+        this.selectThread(thread);
     }
 
-    private void showThread(KonThread thread) {
+    private void selectThread(KonThread thread) {
         mThreadListView.setSelectedItem(thread);
         mMainFrame.selectTab(MainFrame.Tab.THREADS);
     }
 
     void showUserDetails(User user) {
-        mThreadView.showUser(user);
+        mContent.showUser(user);
     }
 
-    void selectedThreadChanged(KonThread thread) {
-        mThreadView.showThread(thread);
+    void showThread(KonThread thread) {
+        mContent.showThread(thread);
     }
 
     void tabPaneChanged(MainFrame.Tab tab) {
         if (tab == MainFrame.Tab.THREADS) {
             Optional<KonThread> optThread = mThreadListView.getSelectedValue();
             if (optThread.isPresent()) {
-                mThreadView.showThread(optThread.get());
+                mContent.showThread(optThread.get());
                 return;
             }
         } else {
             Optional<User> optUser = mUserListView.getSelectedValue();
             if (optUser.isPresent()) {
-                mThreadView.showUser(optUser.get());
+                mContent.showUser(optUser.get());
                 return;
             }
         }
-        mThreadView.showNothing();
+        mContent.showNothing();
     }
 
     private void handleKeyTypeEvent() {
         this.checkSendButtonStatus();
 
-        Optional<KonThread> optThread = mThreadView.getCurrentThread();
+        Optional<KonThread> optThread = mContent.getCurrentThread();
         if (!optThread.isPresent())
             return;
 
@@ -587,7 +593,7 @@ public final class View implements Observer {
     }
 
     Optional<KonThread> getCurrentShownThread() {
-        return mThreadView.getCurrentThread();
+        return mContent.getCurrentThread();
     }
 
     boolean mainFrameIsFocused() {
@@ -599,7 +605,7 @@ public final class View implements Observer {
     }
 
     void checkSendButtonStatus() {
-        mSendButton.setEnabled(mThreadView.getCurrentThread().isPresent() &&
+        mSendButton.setEnabled(mContent.getCurrentThread().isPresent() &&
                 !mSendTextArea.getText().trim().isEmpty());
     }
 
@@ -670,6 +676,47 @@ public final class View implements Observer {
             }
         });
         return item;
+    }
+
+    private static WebPanel createSearchPanel(final TableView[] tables,
+            final ThreadView threadView) {
+        WebPanel searchPanel = new WebPanel();
+        final WebTextField searchField = new WebTextField();
+        searchField.setInputPrompt(Tr.tr("Search..."));
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                this.filterList();
+            }
+            private void filterList() {
+                String searchText = searchField.getText();
+                for (TableView table : tables)
+                    table.filterItems(searchText);
+                threadView.filterCurrentList(searchText);
+            }
+        });
+        Icon clearIcon = View.getIcon("ic_ui_clear.png");
+        WebButton clearSearchButton = new WebButton(clearIcon);
+        clearSearchButton.setUndecorated(true);
+        clearSearchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                searchField.clear();
+            }
+        });
+        searchField.setTrailingComponent(clearSearchButton);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        // TODO add new button
+        //searchPanel.add(newButton, BorderLayout.EAST);
+        return searchPanel;
     }
 
     static String getErrorText(KonException ex) {

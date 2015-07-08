@@ -60,8 +60,6 @@ import javax.swing.Icon;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.system.Config;
@@ -86,7 +84,8 @@ final class MainFrame extends WebFrame {
     MainFrame(final View view,
             TableView<?, ?> userList,
             TableView<?, ?> threadList,
-            ThreadView threadView,
+            Component content,
+            Component searchPanel,
             Component statusBar) {
         mView = view;
 
@@ -202,7 +201,6 @@ final class MainFrame extends WebFrame {
 
         // ...left...
         WebPanel sidePanel = new WebPanel(false);
-        WebPanel searchPanel = createSearchPanel(new TableView[]{threadList, userList}, threadView);
         sidePanel.add(searchPanel, BorderLayout.NORTH);
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
         WebButton newThreadButton = new WebButton(Tr.tr("New"));
@@ -248,7 +246,7 @@ final class MainFrame extends WebFrame {
         this.add(sidePanel, BorderLayout.WEST);
 
         // ...right...
-        this.add(threadView, BorderLayout.CENTER);
+        this.add(content, BorderLayout.CENTER);
 
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);
@@ -463,46 +461,6 @@ final class MainFrame extends WebFrame {
                     mNameField.getText(),
                     mEncryptionBox.isSelected());
         }
-    }
-
-    private static WebPanel createSearchPanel(final TableView[] tables, final ThreadView threadView) {
-        WebPanel searchPanel = new WebPanel();
-        final WebTextField searchField = new WebTextField();
-        searchField.setInputPrompt(Tr.tr("Search..."));
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            private void filterList() {
-                String searchText = searchField.getText();
-                for (TableView table : tables)
-                    table.filterItems(searchText);
-                threadView.filterCurrentList(searchText);
-            }
-        });
-        Icon clearIcon = View.getIcon("ic_ui_clear.png");
-        WebButton clearSearchButton = new WebButton(clearIcon);
-        clearSearchButton.setUndecorated(true);
-        clearSearchButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                searchField.clear();
-            }
-        });
-        searchField.setTrailingComponent(clearSearchButton);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        // TODO add new button
-        //searchPanel.add(newButton, BorderLayout.EAST);
-        return searchPanel;
     }
 
     private static WebScrollPane createTablePane(final TableView<?, ?> table,

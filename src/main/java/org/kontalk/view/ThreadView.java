@@ -194,27 +194,10 @@ final class ThreadView extends WebPanel implements Observer {
             thread.addObserver(newMessageList);
             mThreadCache.put(thread.getID(), newMessageList);
         }
-        MessageList table = mThreadCache.get(thread.getID());
-        this.setView(table);
+        MessageList list = mThreadCache.get(thread.getID());
+        mScrollPane.getViewport().setView(list);
 
         thread.setRead();
-    }
-
-    void showUser(User user) {
-        this.setView(new UserDetails(mView, user));
-    }
-
-    void showNothing() {
-        this.setView(null);
-    }
-
-    private void setView(Component comp) {
-        Component view = mScrollPane.getViewport().getView();
-        if (view instanceof UserDetails) {
-            ((UserDetails) view).onClose();
-        }
-        mScrollPane.getViewport().setView(comp);
-        mView.checkSendButtonStatus();
     }
 
     void setColor(Color color) {
