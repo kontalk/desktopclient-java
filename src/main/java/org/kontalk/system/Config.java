@@ -25,6 +25,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.kontalk.util.Tr;
 
 /**
  *
@@ -61,6 +62,8 @@ public final class Config extends PropertiesConfiguration {
     //public final static String DEFAULT_SERV_NET = "kontalk.net";
     public final static String DEFAULT_SERV_HOST = "beta.kontalk.net";
     public final static int DEFAULT_SERV_PORT = 5999;
+    private final static String DEFAULT_XMPP_STATUS =
+            Tr.tr("Hey, I'm using Kontalk on my PC!");
 
     private Config(String filePath) {
         super();
@@ -89,7 +92,7 @@ public final class Config extends PropertiesConfiguration {
         map.put(VIEW_SELECTED_THREAD, -1);
         map.put(VIEW_THREAD_BG, "");
         map.put(NET_SEND_CHAT_STATE, true);
-        map.put(NET_STATUS_LIST, new String[]{""});
+        map.put(NET_STATUS_LIST, new String[]{DEFAULT_XMPP_STATUS});
         map.put(MAIN_CONNECT_STARTUP, true);
         map.put(MAIN_TRAY, true);
         map.put(MAIN_TRAY_CLOSE, false);
