@@ -217,7 +217,7 @@ final class MainFrame extends WebFrame {
                 "threadOverlayText");
         mTabbedPane.addTab("", threadPane);
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
-                new WebVerticalLabel(Tr.tr("Threads")));
+                new WebVerticalLabel(Tr.tr("Chats")));
 
         WebButton newUserButton = new WebButton(Tr.tr("Add"));
         newUserButton.addActionListener(new ActionListener() {
