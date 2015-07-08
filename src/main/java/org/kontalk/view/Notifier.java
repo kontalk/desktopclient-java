@@ -40,7 +40,6 @@ import javax.swing.SwingUtilities;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.util.MediaUtils;
-import static org.kontalk.view.View.getIcon;
 
 /**
  * Inform user about events.
@@ -48,7 +47,7 @@ import static org.kontalk.view.View.getIcon;
  */
 final class Notifier implements Observer {
 
-    private final static Icon NOTIFICATION_ICON = getIcon("ic_msg_pending.png");
+    private final static Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
 
     private final View mView;
 
@@ -87,7 +86,7 @@ final class Notifier implements Observer {
         dialog.setBackground(StyleConstants.transparent);
 
         WebNotificationPopup popup = new WebNotificationPopup(PopupStyle.dark);
-        popup.setIcon(getIcon("kontalk_small.png"));
+        popup.setIcon(Utils.getIcon("kontalk_small.png"));
         popup.setMargin(10);
         popup.setDisplayTime(6000);
         popup.addNotificationListener(new NotificationListener() {

@@ -188,7 +188,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
             // may have changed (of user): JID, name, online
             String jid = mValue.getJID();
             if (XMPPUtils.isHash(jid));
-                jid = View.shortenUserName(jid, 9);
+                jid = Utils.shortenUserName(jid, 9);
             mJIDLabel.setText(jid);
             String name = !mValue.getName().isEmpty() ?
                     mValue.getName() :

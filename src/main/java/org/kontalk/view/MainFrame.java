@@ -94,7 +94,7 @@ final class MainFrame extends WebFrame {
         this.setSize(mConf.getInt(Config.VIEW_FRAME_WIDTH),
                 mConf.getInt(Config.VIEW_FRAME_HEIGHT));
 
-        this.setIconImage(View.getImage("kontalk.png"));
+        this.setIconImage(Utils.getImage("kontalk.png"));
 
         // closing behaviour
         this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -303,7 +303,7 @@ final class MainFrame extends WebFrame {
         aboutPanel.add(linkLabel);
         WebLabel soundLabel = new WebLabel(Tr.tr("Notification sound by")+" FxProSound");
         aboutPanel.add(soundLabel);
-        Icon icon = View.getIcon("kontalk.png");
+        Icon icon = Utils.getIcon("kontalk.png");
         WebOptionPane.showMessageDialog(this,
                 aboutPanel,
                 Tr.tr("About"),

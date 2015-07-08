@@ -365,7 +365,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
                     mImgChooser.getChooseButton().setEnabled(e.getStateChange() == ItemEvent.SELECTED);
                 }
             });
-            mImgChooser = View.createImageChooser(!imgPath.isEmpty(), imgPath);
+            mImgChooser = Utils.createImageChooser(!imgPath.isEmpty(), imgPath);
             groupPanel.add(new GroupPanel(GroupingType.fillLast,
                     mImgButton,
                     mImgChooser));
@@ -473,7 +473,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
             @Override
             public String toString() {
-                String jid = "<" + View.shortenJID(user.getJID(), 40) + ">";
+                String jid = "<" + Utils.shortenJID(user.getJID(), 40) + ">";
                 String name = StringUtils.abbreviate(user.getName(), 24);
                 return name.isEmpty() ? jid : name +" " + jid;
             }

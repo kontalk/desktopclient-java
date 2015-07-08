@@ -102,13 +102,13 @@ import org.kontalk.util.Tr;
 final class ThreadView extends WebPanel implements Observer {
     private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
 
-    private final static Icon PENDING_ICON = View.getIcon("ic_msg_pending.png");;
-    private final static Icon SENT_ICON = View.getIcon("ic_msg_sent.png");
-    private final static Icon DELIVERED_ICON = View.getIcon("ic_msg_delivered.png");
-    private final static Icon ERROR_ICON = View.getIcon("ic_msg_error.png");
-    private final static Icon WARNING_ICON = View.getIcon("ic_msg_warning.png");
-    private final static Icon CRYPT_ICON = View.getIcon("ic_msg_crypt.png");
-    private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
+    private final static Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
+    private final static Icon SENT_ICON = Utils.getIcon("ic_msg_sent.png");
+    private final static Icon DELIVERED_ICON = Utils.getIcon("ic_msg_delivered.png");
+    private final static Icon ERROR_ICON = Utils.getIcon("ic_msg_error.png");
+    private final static Icon WARNING_ICON = Utils.getIcon("ic_msg_warning.png");
+    private final static Icon CRYPT_ICON = Utils.getIcon("ic_msg_crypt.png");
+    private final static Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
 
     private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
     private final static SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
@@ -684,7 +684,7 @@ final class ThreadView extends WebPanel implements Observer {
                     });
                     popupMenu.add(decryptMenuItem);
                 }
-                WebMenuItem cItem = View.createCopyMenuItem(
+                WebMenuItem cItem = Utils.createCopyMenuItem(
                         this.toPrettyString(),
                         Tr.tr("Copy message content"));
                 popupMenu.add(cItem);

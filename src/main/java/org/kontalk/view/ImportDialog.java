@@ -266,7 +266,7 @@ final class ImportDialog extends WebDialog {
 
         private final WebLabel mResultLabel;
         private final WebLabel mErrorLabel;
-        private final View.PassPanel mPassPanel;
+        private final Utils.PassPanel mPassPanel;
 
         ResultPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -280,7 +280,7 @@ final class ImportDialog extends WebDialog {
             mErrorLabel = new WebLabel();
             groupPanel.add(mErrorLabel);
 
-            mPassPanel = new View.PassPanel(false) {
+            mPassPanel = new Utils.PassPanel(false) {
                 @Override
                 void onValidInput() {
                     mFinishButton.setEnabled(true);
@@ -305,7 +305,7 @@ final class ImportDialog extends WebDialog {
             try {
                 AccountLoader.getInstance().importAccount(mZipPath, mPasswd);
             } catch (KonException ex) {
-                errorText = View.getErrorText(ex);
+                errorText = Utils.getErrorText(ex);
             }
 
             mPassPanel.setVisible(errorText == null);

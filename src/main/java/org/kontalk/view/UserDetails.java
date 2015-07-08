@@ -80,7 +80,7 @@ final class UserDetails extends WebPanel implements Observer {
 
         final int l = 50;
         mJID = mUser.getJID();
-        final WebTextField jidField = new WebTextField(View.shortenJID(mJID, l));
+        final WebTextField jidField = new WebTextField(Utils.shortenJID(mJID, l));
         jidField.setDrawBorder(false);
         jidField.setMinimumHeight(20);
         jidField.setInputPrompt(mJID);
@@ -94,7 +94,7 @@ final class UserDetails extends WebPanel implements Observer {
             @Override
             public void focusLost(FocusEvent e) {
                 mJID = jidField.getText();
-                jidField.setText(View.shortenJID(mJID, l));
+                jidField.setText(Utils.shortenJID(mJID, l));
                 jidField.setDrawBorder(false);
             }
         });
@@ -108,7 +108,7 @@ final class UserDetails extends WebPanel implements Observer {
         groupPanel.add(new WebSeparator(true, true));
 
         mKeyLabel = new WebLabel();
-        WebButton updButton = new WebButton(View.getIcon("ic_ui_refresh.png"));
+        WebButton updButton = new WebButton(Utils.getIcon("ic_ui_refresh.png"));
         String updText = Tr.tr("Update key");
         TooltipManager.addTooltip(updButton, updText);
         updButton.addActionListener(new ActionListener() {

@@ -50,7 +50,6 @@ import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.system.AccountLoader;
 import org.kontalk.util.Tr;
-import org.kontalk.view.View.PassPanel;
 
 /**
  * Dialog for showing and changing all application options.
@@ -164,7 +163,7 @@ final class ConfigurationDialog extends WebDialog {
                 }
             });
 
-            mBGChooser = View.createImageChooser(mBGBox.isSelected(), bgPath);
+            mBGChooser = Utils.createImageChooser(mBGBox.isSelected(), bgPath);
 
             groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
 
@@ -233,7 +232,7 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
             groupPanel.add(new WebSeparator(true, true));
-            mFingerprintField = View.createTextField("");
+            mFingerprintField = Utils.createTextField("");
             this.updateFingerprint();
             WebLabel fpLabel = new WebLabel(Tr.tr("Key fingerprint:")+" ");
             groupPanel.add(new GroupPanel(fpLabel, mFingerprintField));
@@ -333,7 +332,7 @@ final class ConfigurationDialog extends WebDialog {
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
 
         boolean passSet = AccountLoader.getInstance().isPasswordProtected();
-        final PassPanel passPanel = new View.PassPanel(passSet) {
+        final Utils.PassPanel passPanel = new Utils.PassPanel(passSet) {
            @Override
            void onValidInput() {
                saveButton.setEnabled(true);
