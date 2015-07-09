@@ -555,7 +555,7 @@ public final class View implements Observer {
     }
 
     private void handleKeyTypeEvent(boolean empty) {
-        this.checkSendButtonStatus();
+        mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
 
         Optional<KonThread> optThread = mContent.getCurrentThread();
         if (!optThread.isPresent())
@@ -576,11 +576,6 @@ public final class View implements Observer {
 
     void reloadThreadBG() {
         mThreadView.loadDefaultBG();
-    }
-
-    void checkSendButtonStatus() {
-        mSendButton.setEnabled(mContent.getCurrentThread().isPresent() &&
-                !mSendTextArea.getText().trim().isEmpty());
     }
 
     public static Optional<View> create(final Control control) {
