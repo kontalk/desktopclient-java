@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.Kontalk;
-import org.newdawn.easyogg.OggClip;
 
 /**
  *
