@@ -6,6 +6,11 @@ sourceCompatibility = '1.7'
 targetCompatibility = '1.7'
 
 mainClassName = 'org.kontalk.Kontalk'
+ext.clientCommonDir = 'client-common-java'
+
+if (!file('./'+clientCommonDir+'/build.gradle').exists()) {
+    throw new GradleException('Submodule not found. Run "git submodule update --init".')
+}
 
 gradle.projectsEvaluated {
     tasks.withType(JavaCompile) {
@@ -13,13 +18,13 @@ gradle.projectsEvaluated {
     }
 }
 
-evaluationDependsOn ":client-common-java"
+evaluationDependsOn ':'+clientCommonDir
 
 ext.bcVersion = '1.52'
-ext.smackVersion = project(':client-common-java').smackVersion
+ext.smackVersion = project(':'+clientCommonDir).smackVersion
 
 dependencies {
-    compile project(':client-common-java')
+    compile project(':'+clientCommonDir)
 
     compile fileTree(dir: 'lib', include: ['*.jar'])
 
