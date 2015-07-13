@@ -36,7 +36,7 @@ applications on your computer!**
 
 ## Run the desktop client from source
 
-Use `gradle run` to run the desktop client from source.
+See [here](https://github.com/kontalk/desktopclient-java/wiki#how-can-i-compile-the-code).
 
 ## Included dependencies
 
