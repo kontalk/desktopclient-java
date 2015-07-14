@@ -26,7 +26,6 @@ import java.security.cert.X509Certificate;
 import java.util.Iterator;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
-import org.bouncycastle.openpgp.PGPKeyFlags;
 import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
@@ -70,6 +69,10 @@ public final class PersonalKey {
 
     PGPPrivateKey getPrivateSigningKey() {
         return mSignKey.getPrivateKey();
+    }
+
+    int getSigningAlgorithm() {
+        return mSignKey.getPublicKey().getAlgorithm();
     }
 
     PGPPublicKey getPublicEncryptionKey() {
@@ -116,14 +119,11 @@ public final class PersonalKey {
             if (key.isMasterKey()) {
                 // master key: authentication / legacy: signing
                 authKey = key;
-            }
-            else {
+            } else if (PGPUtils.isSigningKey(key.getPublicKey())) {
                 // sub keys: encryption and signing / legacy: only encryption
-                int keyFlags = PGPUtils.getKeyFlags(key.getPublicKey());
-                if ((keyFlags & PGPKeyFlags.CAN_SIGN) == PGPKeyFlags.CAN_SIGN)
-                    signKey = key;
-                else
-                    encrKey = key;
+                signKey = key;
+            } else if (key.getPublicKey().isEncryptionKey()) {
+                encrKey = key;
             }
         }
         // legacy: auth key is actually signing key

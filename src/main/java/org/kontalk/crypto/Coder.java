@@ -212,7 +212,7 @@ public final class Coder {
             OutputStream compressedOut = compGen.open(encryptedOut, new byte[BUFFER_SIZE]);
 
             // setup signature generator
-            int algo = keys.myKey.getPublicEncryptionKey().getAlgorithm();
+            int algo = keys.myKey.getSigningAlgorithm();
             PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
                     new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA256));
             sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getPrivateSigningKey());
@@ -507,7 +507,13 @@ public final class Coder {
                     result.errors.add(Error.INVALID_SIGNATURE_DATA);
                 } else {
                     ops = signatureList.get(0);
-                    ops.init(new BcPGPContentVerifierBuilderProvider(), senderSigningKey);
+                    try {
+                        ops.init(new BcPGPContentVerifierBuilderProvider(), senderSigningKey);
+                    } catch (ClassCastException e) {
+                        LOGGER.warning("legacy signature not supported");
+                        result.errors.add(Error.INVALID_SIGNATURE_DATA);
+                        ops = null;
+                    }
                 }
                 object = pgpFact.nextObject(); // nullable
             } else {
