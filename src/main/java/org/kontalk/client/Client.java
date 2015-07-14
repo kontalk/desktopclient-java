@@ -177,7 +177,6 @@ public final class Client implements StanzaListener, Runnable {
 
         mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
 
-
         this.sendInitialPresence();
 
         this.sendBlocklistRequest();

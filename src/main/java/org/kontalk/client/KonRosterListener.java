@@ -67,7 +67,18 @@ final class KonRosterListener implements RosterListener {
 
     @Override
     public void entriesUpdated(Collection<String> addresses) {
-        LOGGER.info("ignoring entry update in roster");
+        for (String jid: addresses) {
+            RosterEntry entry = mRoster.getEntry(jid);
+            if (entry == null) {
+                LOGGER.warning("jid not in roster: "+jid);
+                return;
+            }
+
+            LOGGER.info("roster update: "+entry.toString());
+            mControl.setSubscriptionStatus(entry.getUser(),
+                    entry.getType(),
+                    entry.getStatus());
+        }
     }
 
     @Override

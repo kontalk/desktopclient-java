@@ -198,6 +198,11 @@ public final class Control extends Observable {
     }
 
     public void sendKeyRequest(User user) {
+        if (user.getSubScriptionStatus() == User.SubscriptionStatus.UNSUBSCRIBED ||
+                user.getSubScriptionStatus() != User.SubscriptionStatus.PENDING) {
+            LOGGER.info("no presence subscription, not sending key request, user: "+user);
+            return;
+        }
         mClient.sendPublicKeyRequest(user.getJID());
     }
 
@@ -229,7 +234,6 @@ public final class Control extends Observable {
                     this.sendKeyRequest(user);
                 }
             }
-
         }
     }
 
@@ -385,20 +389,11 @@ public final class Control extends Observable {
     public void addUserFromRoster(String jid,
             String rosterName,
             ItemType type,
-            ItemStatus status) {
+            ItemStatus itemStatus) {
             if (UserList.getInstance().contains(jid))
                 return;
 
             LOGGER.info("adding user from roster, jid: "+jid);
-
-            if (type != RosterPacket.ItemType.to &&
-                    type != RosterPacket.ItemType.both) {
-                // we are not subscribed to presence changes for this user...
-                if (status != RosterPacket.ItemStatus.SUBSCRIPTION_PENDING) {
-                    // ... and there is no request pending. Request it
-                    mClient.sendPresenceSubscriptionRequest(jid);
-                }
-            }
 
             String name = rosterName == null ? "" : rosterName;
             if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
@@ -407,7 +402,24 @@ public final class Control extends Observable {
                 name = "";
             }
 
-            this.addUser(jid, name);
+            Optional<User> optUser = this.addUser(jid, name);
+
+            if (optUser.isPresent()) {
+                User.SubscriptionStatus status = rosterToModelSubscription(itemStatus, type);
+                optUser.get().setSubScriptionStatus(status);
+
+                if (status == User.SubscriptionStatus.UNSUBSCRIBED)
+                    mClient.sendPresenceSubscriptionRequest(jid);
+            }
+    }
+
+    public void setSubscriptionStatus(String jid, ItemType type, ItemStatus itemStatus) {
+        Optional<User> optUser = UserList.getInstance().get(jid);
+        if (!optUser.isPresent()) {
+            LOGGER.warning("(subscription) can't find user with jid: "+jid);
+            return;
+        }
+        optUser.get().setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
@@ -530,5 +542,18 @@ public final class Control extends Observable {
         ThreadList threadList = ThreadList.getInstance();
         Optional<KonThread> optThread = threadList.get(xmppThreadID);
         return optThread.orElse(threadList.get(user));
+    }
+
+    private static User.SubscriptionStatus rosterToModelSubscription(
+            RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
+        if (type == RosterPacket.ItemType.both ||
+                type == RosterPacket.ItemType.to ||
+                type == RosterPacket.ItemType.remove)
+            return User.SubscriptionStatus.SUBSCRIBED;
+
+        if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
+            return User.SubscriptionStatus.PENDING;
+
+        return User.SubscriptionStatus.UNSUBSCRIBED;
     }
 }

@@ -47,6 +47,13 @@ public final class User extends Observable implements Comparable<User> {
      */
     public static enum Online {UNKNOWN, YES, NO};
 
+    /**
+     * XMPP subscription status in roster.
+     */
+    public static enum SubscriptionStatus {
+        UNKNOWN, PENDING, SUBSCRIBED, UNSUBSCRIBED
+    }
+
     public final static String TABLE = "user";
     public final static String COL_JID = "jid";
     public final static String COL_NAME = "name";
@@ -77,6 +84,7 @@ public final class User extends Observable implements Comparable<User> {
     private String mKey = "";
     private String mFingerprint = "";
     private boolean mBlocked = false;
+    private SubscriptionStatus mSubStatus = SubscriptionStatus.UNKNOWN;
     //private ItemType mType;
 
     // used for incoming messages of unknown user
@@ -223,6 +231,13 @@ public final class User extends Observable implements Comparable<User> {
         mBlocked = blocked;
     }
 
+    public SubscriptionStatus getSubScriptionStatus() {
+        return mSubStatus;
+    }
+
+    public void setSubScriptionStatus(SubscriptionStatus status) {
+        mSubStatus = status;
+    }
     public boolean isMe() {
         return !mJID.isEmpty() &&
                 mJID.equals(Config.getInstance().getProperty(Config.ACC_JID));
@@ -248,7 +263,8 @@ public final class User extends Observable implements Comparable<User> {
 
     @Override
     public String toString() {
-        return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint;
+        return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
+                +",subsc="+mSubStatus;
     }
 
     @Override
