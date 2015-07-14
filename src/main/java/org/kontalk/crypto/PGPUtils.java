@@ -35,6 +35,7 @@ import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPException;
+import org.bouncycastle.openpgp.PGPKeyFlags;
 import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
@@ -116,6 +117,8 @@ public final class PGPUtils {
         }
         PGPPublicKey encryptKey = null;
         PGPPublicKey signKey = null;
+        // for legacy keyring
+        PGPPublicKey authKey = null;
         String uid = null;
         String fp = null;
         PGPPublicKeyRing keyRing = (PGPPublicKeyRing) keyRingIter.next();
@@ -123,18 +126,26 @@ public final class PGPUtils {
         while (keyIter.hasNext()) {
             PGPPublicKey key = (PGPPublicKey) keyIter.next();
             if (key.isMasterKey()) {
-                signKey = key;
+                authKey = key;
                 fp = EncodingUtils.bytesToHex(key.getFingerprint());
                 Iterator<?> uidIt = key.getUserIDs();
                 if (uidIt.hasNext())
                     uid = (String) uidIt.next();
-            }
-            if (!key.isMasterKey() && key.isEncryptionKey()) {
+            } else if (isSigningKey(key)) {
+                signKey = key;
+            } else if (key.isEncryptionKey()) {
                 encryptKey = key;
             }
         }
+
+        // legacy: auth key is actually signing key
+        if (signKey == null && authKey != null) {
+            LOGGER.info("loading legacy public key, uid: "+uid);
+            signKey = authKey;
+        }
+
         if (encryptKey == null || signKey == null || uid == null || fp == null) {
-            LOGGER.warning("can't find public keys in key ring");
+            LOGGER.warning("can't find public keys in key ring, uid: "+uid);
             return Optional.empty();
         }
         return Optional.of(new PGPCoderKey(encryptKey, signKey, uid, fp));
@@ -154,7 +165,7 @@ public final class PGPUtils {
     	return sKeyConverter.getPrivateKey(key);
     }
 
-    static int getKeyFlags(PGPPublicKey key) {
+    private static int getKeyFlags(PGPPublicKey key) {
         @SuppressWarnings("unchecked")
         Iterator<PGPSignature> sigs = key.getSignatures();
         while (sigs.hasNext()) {
@@ -165,6 +176,11 @@ public final class PGPUtils {
             return subpackets.getKeyFlags();
         }
         return 0;
+    }
+
+    static boolean isSigningKey(PGPPublicKey key) {
+        int keyFlags = PGPUtils.getKeyFlags(key);
+        return (keyFlags & PGPKeyFlags.CAN_SIGN) == PGPKeyFlags.CAN_SIGN;
     }
 
     static PGPKeyPair decrypt(PGPSecretKey secretKey, PBESecretKeyDecryptor dec) throws KonException {

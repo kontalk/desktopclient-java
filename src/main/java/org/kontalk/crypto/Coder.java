@@ -507,7 +507,13 @@ public final class Coder {
                     result.errors.add(Error.INVALID_SIGNATURE_DATA);
                 } else {
                     ops = signatureList.get(0);
-                    ops.init(new BcPGPContentVerifierBuilderProvider(), senderSigningKey);
+                    try {
+                        ops.init(new BcPGPContentVerifierBuilderProvider(), senderSigningKey);
+                    } catch (ClassCastException e) {
+                        LOGGER.warning("legacy signature not supported");
+                        result.errors.add(Error.INVALID_SIGNATURE_DATA);
+                        ops = null;
+                    }
                 }
                 object = pgpFact.nextObject(); // nullable
             } else {
