@@ -24,7 +24,6 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smack.roster.RosterListener;
-import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jivesoftware.smack.packet.Presence;
 import org.kontalk.system.Control;
 
@@ -36,12 +35,10 @@ final class KonRosterListener implements RosterListener {
     private final static Logger LOGGER = Logger.getLogger(KonRosterListener.class.getName());
 
     private final Roster mRoster;
-    private final Client mClient;
     private final Control mControl;
 
-    KonRosterListener(Roster roster, Client client, Control control) {
+    KonRosterListener(Roster roster, Control control) {
         mRoster = roster;
-        mClient = client;
         mControl = control;
     }
 
@@ -61,18 +58,10 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.info("roster entry: "+entry.toString());
-
-            if (entry.getType() != RosterPacket.ItemType.to &&
-                    entry.getType() != RosterPacket.ItemType.both) {
-                // we are not subscribed to presence changes for this user...
-                if (entry.getStatus() != RosterPacket.ItemStatus.SUBSCRIPTION_PENDING) {
-                    // ... and there is no request pending. Request it
-                    // TODO always?
-                    mClient.sendPresenceSubscriptionRequest(jid);
-                }
-            }
-
-            mControl.addUserFromRoster(entry.getUser(), entry.getName());
+            mControl.addUserFromRoster(entry.getUser(),
+                    entry.getName(),
+                    entry.getType(),
+                    entry.getStatus());
         }
     }
 

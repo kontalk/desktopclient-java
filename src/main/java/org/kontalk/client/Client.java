@@ -111,7 +111,7 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
         // packet listeners
-        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), this, mControl);
+        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), mControl);
         Roster.getInstanceFor(mConn).addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);

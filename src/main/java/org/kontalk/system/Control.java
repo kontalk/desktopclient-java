@@ -29,6 +29,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
+import org.jivesoftware.smack.roster.packet.RosterPacket;
+import org.jivesoftware.smack.roster.packet.RosterPacket.ItemStatus;
+import org.jivesoftware.smack.roster.packet.RosterPacket.ItemType;
 import org.jivesoftware.smack.util.StringUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jxmpp.util.XmppStringUtils;
@@ -379,11 +382,23 @@ public final class Control extends Observable {
         thread.setChatState(user, chatState);
     }
 
-    public void addUserFromRoster(String jid, String rosterName) {
+    public void addUserFromRoster(String jid,
+            String rosterName,
+            ItemType type,
+            ItemStatus status) {
             if (UserList.getInstance().contains(jid))
                 return;
 
             LOGGER.info("adding user from roster, jid: "+jid);
+
+            if (type != RosterPacket.ItemType.to &&
+                    type != RosterPacket.ItemType.both) {
+                // we are not subscribed to presence changes for this user...
+                if (status != RosterPacket.ItemStatus.SUBSCRIPTION_PENDING) {
+                    // ... and there is no request pending. Request it
+                    mClient.sendPresenceSubscriptionRequest(jid);
+                }
+            }
 
             String name = rosterName == null ? "" : rosterName;
             if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
