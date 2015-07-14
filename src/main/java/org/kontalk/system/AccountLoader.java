@@ -79,7 +79,6 @@ public final class AccountLoader {
     }
 
     public void importAccount(String zipFilePath, char[] password) throws KonException {
-        byte[] publicKeyData;
         byte[] privateKeyData;
         byte[] bridgeCertData;
 

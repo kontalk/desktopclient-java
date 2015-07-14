@@ -212,7 +212,7 @@ public final class Coder {
             OutputStream compressedOut = compGen.open(encryptedOut, new byte[BUFFER_SIZE]);
 
             // setup signature generator
-            int algo = keys.myKey.getPublicEncryptionKey().getAlgorithm();
+            int algo = keys.myKey.getSigningAlgorithm();
             PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
                     new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA256));
             sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getPrivateSigningKey());

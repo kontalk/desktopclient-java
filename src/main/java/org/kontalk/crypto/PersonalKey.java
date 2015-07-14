@@ -72,6 +72,10 @@ public final class PersonalKey {
         return mSignKey.getPrivateKey();
     }
 
+    int getSigningAlgorithm() {
+        return mSignKey.getPublicKey().getAlgorithm();
+    }
+
     PGPPublicKey getPublicEncryptionKey() {
         return mEncryptKey.getPublicKey();
     }
