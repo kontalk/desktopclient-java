@@ -21,7 +21,6 @@ package org.kontalk.view;
 import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.filefilter.ImageFilesFilter;
 import com.alee.extended.panel.GroupPanel;
-import com.alee.laf.button.WebButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
@@ -31,7 +30,6 @@ import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
-import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Image;
 import java.awt.Toolkit;
@@ -129,47 +127,6 @@ public class Utils {
             }
         });
         return item;
-    }
-
-    static WebPanel createSearchPanel(final TableView[] tables,
-            final ThreadView threadView) {
-        WebPanel searchPanel = new WebPanel();
-        final WebTextField searchField = new WebTextField();
-        searchField.setInputPrompt(Tr.tr("Search..."));
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
-            @Override
-            public void insertUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            private void filterList() {
-                String searchText = searchField.getText();
-                for (TableView table : tables)
-                    table.filterItems(searchText);
-                threadView.filterCurrentList(searchText);
-            }
-        });
-        Icon clearIcon = Utils.getIcon("ic_ui_clear.png");
-        WebButton clearSearchButton = new WebButton(clearIcon);
-        clearSearchButton.setUndecorated(true);
-        clearSearchButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                searchField.clear();
-            }
-        });
-        searchField.setTrailingComponent(clearSearchButton);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        // TODO add new button
-        //searchPanel.add(newButton, BorderLayout.EAST);
-        return searchPanel;
     }
 
     static String getErrorText(KonException ex) {

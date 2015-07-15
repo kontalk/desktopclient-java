@@ -181,7 +181,7 @@ final class ThreadView extends WebPanel implements Observer {
                 Optional.<KonThread>empty();
     }
 
-    void filterCurrentList(String searchText) {
+    void filterCurrentThread(String searchText) {
         Optional<MessageList> optList = this.getCurrentList();
         if (!optList.isPresent())
             return;

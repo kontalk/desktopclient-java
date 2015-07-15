@@ -89,6 +89,7 @@ public final class View implements Observer {
     final static Color GREEN = new Color(83, 196, 46);
 
     private final Control mControl;
+    private final SearchPanel mSearchPanel;
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
     private final Content mContent;
@@ -153,7 +154,7 @@ public final class View implements Observer {
         mContent = new Content(this, mThreadView);
 
         // search panel
-        WebPanel searchPanel = Utils.createSearchPanel(
+        mSearchPanel = new SearchPanel(
                 new TableView[]{mUserListView, mThreadListView},
                 mThreadView);
 
@@ -164,7 +165,7 @@ public final class View implements Observer {
 
         // main frame
         mMainFrame = new MainFrame(this, mUserListView, mThreadListView,
-                mContent, searchPanel, statusBar);
+                mContent, mSearchPanel, statusBar);
         mMainFrame.setVisible(true);
 
         // tray
@@ -525,8 +526,8 @@ public final class View implements Observer {
     }
 
     private void selectThread(KonThread thread) {
-        mThreadListView.setSelectedItem(thread);
         mMainFrame.selectTab(MainFrame.Tab.THREADS);
+        mThreadListView.setSelectedItem(thread);
     }
 
     void showUserDetails(User user) {
@@ -534,7 +535,13 @@ public final class View implements Observer {
     }
 
     void showThread(KonThread thread) {
+        if (mMainFrame.getCurrentTab() != MainFrame.Tab.THREADS)
+            return;
         mContent.showThread(thread);
+    }
+
+    void clearSearch() {
+        mSearchPanel.clear();
     }
 
     void tabPaneChanged(MainFrame.Tab tab) {

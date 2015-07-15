@@ -252,6 +252,10 @@ final class MainFrame extends WebFrame {
         this.add(statusBar, BorderLayout.SOUTH);
     }
 
+    public Tab getCurrentTab() {
+        return Tab.values()[mTabbedPane.getSelectedIndex()];
+    }
+
     void selectTab(Tab tab) {
         mTabbedPane.setSelectedIndex(tab.ordinal());
     }

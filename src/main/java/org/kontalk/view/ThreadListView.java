@@ -116,13 +116,23 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+
+            KonThread lastThread = null;
+
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
                 Optional<KonThread> optThread = ThreadListView.this.getSelectedValue();
-                if (optThread.isPresent())
-                    mView.showThread(optThread.get());
+                if (!optThread.isPresent())
+                    return;
+                // if event is caused by filtering, dont do anything
+                if (lastThread == optThread.get())
+                    return;
+
+                mView.clearSearch();
+                mView.showThread(optThread.get());
+                lastThread = optThread.get();
             }
         });
 
