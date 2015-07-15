@@ -534,8 +534,9 @@ final class ThreadView extends WebPanel implements Observer {
             }
 
             private void updateStatus() {
+                boolean isOut = mValue.getDir() == KonMessage.Direction.OUT;
                 // status icon
-                if (mValue.getDir() == KonMessage.Direction.OUT) {
+                if (isOut) {
                     switch (mValue.getReceiptStatus()) {
                         case PENDING :
                             mStatusIconLabel.setIcon(PENDING_ICON);
@@ -561,7 +562,7 @@ final class ThreadView extends WebPanel implements Observer {
                 // tooltip
                 String html = "<html><body>" + /*"<h3>Header</h3>"+*/ "<br>";
 
-                if (mValue.getDir() == KonMessage.Direction.OUT) {
+                if (isOut) {
                     Date createDate = mValue.getDate();
                     String create = Utils.MID_DATE_FORMAT.format(createDate);
                     Optional<Date> serverDate = mValue.getServerDate();
@@ -600,19 +601,34 @@ final class ThreadView extends WebPanel implements Observer {
                     html += Tr.tr("Received:")+ " " + rec + "<br>";
                 }
 
-                String encryption = Tr.tr("unknown");
-                switch (mValue.getCoderStatus().getEncryption()) {
-                    case NOT: encryption = Tr.tr("not encrypted"); break;
-                    case ENCRYPTED: encryption = Tr.tr("encrypted"); break;
-                    case DECRYPTED: encryption = Tr.tr("decrypted"); break;
+                Coder.Encryption enc = mValue.getCoderStatus().getEncryption();
+                Coder.Signing sign = mValue.getCoderStatus().getSigning();
+                String sec = null;
+                // usual states
+                if (enc == Coder.Encryption.NOT && sign == Coder.Signing.NOT)
+                    sec = Tr.tr("not encrypted");
+                else if (enc == Coder.Encryption.DECRYPTED &&
+                        ((isOut && sign == Coder.Signing.SIGNED) ||
+                        (!isOut && sign == Coder.Signing.VERIFIED))) {
+                            sec = Tr.tr("safe");
                 }
-                String verification = Tr.tr("unknown");
-                switch (mValue.getCoderStatus().getSigning()) {
-                    case NOT: verification = Tr.tr("not signed"); break;
-                    case SIGNED: verification = Tr.tr("signed"); break;
-                    case VERIFIED: verification = Tr.tr("verified"); break;
+                if (sec == null) {
+                    // unusual states
+                    String encryption = Tr.tr("unknown");
+                    switch (enc) {
+                        case NOT: encryption = Tr.tr("not encrypted"); break;
+                        case ENCRYPTED: encryption = Tr.tr("encrypted"); break;
+                        case DECRYPTED: encryption = Tr.tr("decrypted"); break;
+                    }
+                    String verification = Tr.tr("unknown");
+                    switch (sign) {
+                        case NOT: verification = Tr.tr("not signed"); break;
+                        case SIGNED: verification = Tr.tr("signed"); break;
+                        case VERIFIED: verification = Tr.tr("verified"); break;
+                    }
+                    sec = encryption + " / " + verification;
                 }
-                html += Tr.tr("Security")+": " + encryption + " / " + verification + "<br>";
+                html += Tr.tr("Security")+": " + sec + "<br>";
 
                 String problems = "";
                 for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
