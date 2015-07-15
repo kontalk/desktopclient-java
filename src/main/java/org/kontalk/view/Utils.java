@@ -28,6 +28,7 @@ import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebPasswordField;
+import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.Color;
@@ -67,7 +68,7 @@ import org.kontalk.util.Tr;
  * Various utilities used in view.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class Utils {
+final class Utils {
     private final static Logger LOGGER = Logger.getLogger(Utils.class.getName());
 
     final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
@@ -132,6 +133,14 @@ public class Utils {
             }
         });
         return item;
+    }
+
+    static WebTextArea createFingerprintArea() {
+        WebTextArea area = new WebTextArea();
+        area.setEditable(false);
+        area.setOpaque(false);
+        area.setFontSizeAndStyle(13, true, false);
+        return area;
     }
 
     static String getErrorText(KonException ex) {
@@ -232,6 +241,15 @@ public class Utils {
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
         }
         return Toolkit.getDefaultToolkit().createImage(imageUrl);
+    }
+
+    static String formatFingerprint(String fp) {
+        int m = fp.length() / 2;
+        return group(fp.substring(0, m)) + "\n" + group(fp.substring(m));
+    }
+
+    private static String group(String s) {
+        return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
     }
 
     static abstract class PassPanel extends WebPanel {

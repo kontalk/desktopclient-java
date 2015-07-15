@@ -39,7 +39,6 @@ import java.util.Observable;
 import java.util.Observer;
 import javax.swing.Box;
 import javax.swing.SwingUtilities;
-import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.User;
 import org.kontalk.util.Tr;
 
@@ -120,10 +119,7 @@ final class UserDetails extends WebPanel implements Observer {
         groupPanel.add(new GroupPanel(6, mKeyLabel, updButton));
 
         mFPLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
-        mFPArea = new WebTextArea("");
-        mFPArea.setEditable(false);
-        mFPArea.setOpaque(false);
-        mFPArea.setBoldFont();
+        mFPArea = Utils.createFingerprintArea();
         String fpText = Tr.tr("The unique ID of this contact's key");
         TooltipManager.addTooltip(mFPArea, fpText);
         mFPLabel.setAlignmentY(Component.TOP_ALIGNMENT);
@@ -163,7 +159,7 @@ final class UserDetails extends WebPanel implements Observer {
         if (mUser.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";
             TooltipManager.removeTooltips(mKeyLabel);
-            mFPArea.setText(formatFingerprint(mUser.getFingerprint()));
+            mFPArea.setText(Utils.formatFingerprint(mUser.getFingerprint()));
             mFPLabel.setVisible(true);
             mFPArea.setVisible(true);
         } else {
@@ -199,14 +195,5 @@ final class UserDetails extends WebPanel implements Observer {
         this.save();
 
         this.mUser.deleteObserver(this);
-    }
-
-    private static String formatFingerprint(String fp) {
-        int m = fp.length() / 2;
-        return group(fp.substring(0, m)) + "\n" + group(fp.substring(m));
-    }
-
-    private static String group(String s) {
-        return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
     }
 }
