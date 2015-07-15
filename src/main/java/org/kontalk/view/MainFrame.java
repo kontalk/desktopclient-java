@@ -82,8 +82,8 @@ final class MainFrame extends WebFrame {
     private final WebTabbedPane mTabbedPane;
 
     MainFrame(final View view,
-            TableView<?, ?> userList,
-            TableView<?, ?> threadList,
+            Table<?, ?> userList,
+            Table<?, ?> threadList,
             Component content,
             Component searchPanel,
             Component statusBar) {
@@ -467,7 +467,7 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    private static WebScrollPane createTablePane(final TableView<?, ?> table,
+    private static WebScrollPane createTablePane(final Table<?, ?> table,
             Component newButton,
             String overlayText) {
 

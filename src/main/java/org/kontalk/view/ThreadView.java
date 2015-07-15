@@ -251,7 +251,7 @@ final class ThreadView extends WebPanel implements Observer {
     /**
      * View all messages of one thread in a left/right MIM style list.
      */
-    private final class MessageList extends TableView<MessageList.MessageItem, KonMessage> {
+    private final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         private final KonThread mThread;
         private Optional<Background> mBackground = Optional.empty();
@@ -261,7 +261,7 @@ final class ThreadView extends WebPanel implements Observer {
             mThread = thread;
 
             // use custom editor (for mouse events)
-            this.setDefaultEditor(TableView.TableItem.class, new TableEditor());
+            this.setDefaultEditor(Table.TableItem.class, new TableEditor());
 
             //this.setEditable(false);
             //this.setAutoscrolls(true);
@@ -383,7 +383,7 @@ final class ThreadView extends WebPanel implements Observer {
          * The content is added to a panel inside this panel. For performance
          * reasons the content is created when the item is rendered in the table
          */
-        final class MessageItem extends TableView<MessageItem, KonMessage>.TableItem {
+        final class MessageItem extends Table<MessageItem, KonMessage>.TableItem {
 
             private WebLabel mFromLabel = null;
             private WebPanel mContentPanel;
@@ -834,14 +834,14 @@ final class ThreadView extends WebPanel implements Observer {
     // needed for correct mouse behaviour for components in items
     // (and breaks selection behaviour somehow)
     private class TableEditor extends AbstractCellEditor implements TableCellEditor {
-        private TableView<?, ?>.TableItem mValue;
+        private Table<?, ?>.TableItem mValue;
         @Override
         public Component getTableCellEditorComponent(JTable table,
                 Object value,
                 boolean isSelected,
                 int row,
                 int column) {
-            mValue = (TableView.TableItem) value;
+            mValue = (Table.TableItem) value;
             return mValue;
         }
         @Override

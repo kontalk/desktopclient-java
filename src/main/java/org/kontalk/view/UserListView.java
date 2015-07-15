@@ -39,14 +39,14 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
-import static org.kontalk.view.TableView.TOOLTIP_DATE_FORMAT;
+import static org.kontalk.view.Table.TOOLTIP_DATE_FORMAT;
 import org.kontalk.view.UserListView.UserItem;
 
 /**
  * Display all user (aka contacts) in a brief list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class UserListView extends TableView<UserItem, User> implements Observer {
+final class UserListView extends Table<UserItem, User> implements Observer {
 
     private final UserList mUserList;
     private final UserPopupMenu mPopupMenu;
@@ -113,7 +113,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
     }
 
     /** One item in the contact list representing a user. */
-    final class UserItem extends TableView<UserItem, User>.TableItem {
+    final class UserItem extends Table<UserItem, User>.TableItem {
 
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;

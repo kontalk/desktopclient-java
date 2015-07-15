@@ -155,7 +155,7 @@ public final class View implements Observer {
 
         // search panel
         mSearchPanel = new SearchPanel(
-                new TableView[]{mUserListView, mThreadListView},
+                new Table[]{mUserListView, mThreadListView},
                 mThreadView);
 
         // status bar

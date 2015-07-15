@@ -72,7 +72,7 @@ import org.kontalk.view.ThreadListView.ThreadItem;
  * Show a brief list of all threads.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ThreadListView extends TableView<ThreadItem, KonThread> {
+final class ThreadListView extends Table<ThreadItem, KonThread> {
 
     private final static Color DEFAULT_BG = Color.WHITE;
 
@@ -193,7 +193,7 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
         return selectedOption == WebOptionPane.OK_OPTION;
     }
 
-    protected final class ThreadItem extends TableView<ThreadItem, KonThread>.TableItem {
+    protected final class ThreadItem extends Table<ThreadItem, KonThread>.TableItem {
 
         private final WebLabel mSubjectLabel;
         private final WebLabel mUserLabel;

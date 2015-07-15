@@ -58,8 +58,8 @@ import org.ocpsoft.prettytime.PrettyTime;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable & Comparable<V>> extends WebTable implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(TableView.class.getName());
+abstract class Table<I extends Table<I, V>.TableItem, V extends Observable & Comparable<V>> extends WebTable implements Observer {
+    private final static Logger LOGGER = Logger.getLogger(Table.class.getName());
 
     protected final View mView;
 
@@ -77,14 +77,14 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    TableView(View view) {
+    Table(View view) {
         mView = view;
         // model
         mModel = new DefaultTableModel(0, 1) {
             // row sorter needs this
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                return TableView.this.getColumnClass(columnIndex);
+                return Table.this.getColumnClass(columnIndex);
             }
         };
         this.setModel(mModel);
@@ -123,9 +123,9 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
                 }
                 @Override
                 public void mouseMoved(MouseEvent e) {
-                    int row = TableView.this.rowAtPoint(e.getPoint());
+                    int row = Table.this.rowAtPoint(e.getPoint());
                     if (row >= 0) {
-                        TableView.this.editCellAt(row, 0);
+                        Table.this.editCellAt(row, 0);
                     }
                 }
         });
@@ -259,7 +259,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                TableView.this.updateOnEDT(arg);
+                Table.this.updateOnEDT(arg);
             }
         });
     }
@@ -309,7 +309,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         // directly to the item, but the behaviour is buggy so we keep this
         @Override
         public String getToolTipText(MouseEvent event) {
-            TableView.this.showTooltip(this);
+            Table.this.showTooltip(this);
             return null;
         }
 
