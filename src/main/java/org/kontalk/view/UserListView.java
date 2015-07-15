@@ -184,7 +184,6 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
                     mValue.getOnline() == User.Online.YES ? Tr.tr("Online") :
                     // TODO set timer to update
                     lastSeen(mValue, true);
-            // TODO changes not instantly visible
             mStatusLabel.setText(status);
             String name = !mValue.getName().isEmpty() ?
                     mValue.getName() :
@@ -194,6 +193,8 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
                     View.LIGHT_BLUE :
                     Color.WHITE;
             this.setBackground(mBackround);
+
+            UserListView.this.repaint();
         }
     }
 
