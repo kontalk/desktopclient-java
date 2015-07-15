@@ -29,9 +29,11 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebFormattedTextField;
+import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -43,6 +45,7 @@ import java.text.NumberFormat;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.Box;
 import javax.swing.JFrame;
 import javax.swing.text.NumberFormatter;
 import org.kontalk.system.Config;
@@ -197,7 +200,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebTextField mServerField;
         private final WebFormattedTextField mPortField;
         private final WebCheckBox mDisableCertBox;
-        private final WebTextField mFingerprintField;
+        private final WebTextArea mFingerprintArea;
 
         AccountPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
@@ -233,10 +236,12 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
             groupPanel.add(new WebSeparator(true, true));
-            mFingerprintField = Utils.createTextField("");
-            this.updateFingerprint();
             WebLabel fpLabel = new WebLabel(Tr.tr("Key fingerprint:")+" ");
-            groupPanel.add(new GroupPanel(fpLabel, mFingerprintField));
+            fpLabel.setAlignmentY(Component.TOP_ALIGNMENT);
+            GroupPanel fpLabelPanel = new GroupPanel(false, fpLabel, Box.createGlue());
+            mFingerprintArea = Utils.createFingerprintArea();
+            this.updateFingerprint();
+            groupPanel.add(new GroupPanel(10, fpLabelPanel, mFingerprintArea));
 
             final WebButton passButton = new WebButton(getPassTitle());
             passButton.addActionListener(new ActionListener() {
@@ -280,8 +285,8 @@ final class ConfigurationDialog extends WebDialog {
 
         private void updateFingerprint() {
             Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
-            mFingerprintField.setText(optKey.isPresent() ?
-                    optKey.get().getFingerprint() :
+            mFingerprintArea.setText(optKey.isPresent() ?
+                    Utils.formatFingerprint(optKey.get().getFingerprint()) :
                     "- " + Tr.tr("no key loaded") + " -");
         }
 
