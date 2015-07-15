@@ -53,7 +53,7 @@ final class SearchPanel extends WebPanel {
                 this.filterList();
             }
             private void filterList() {
-                String searchText = mSearchField.getText();
+                String searchText = mSearchField.getText().toLowerCase();
                 for (Table table : tables)
                     table.filterItems(searchText);
                 threadView.filterCurrentThread(searchText);
