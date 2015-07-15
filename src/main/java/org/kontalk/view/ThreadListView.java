@@ -76,12 +76,11 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
     private final static Color DEFAULT_BG = Color.WHITE;
 
-    private final View mView;
     private final ThreadList mThreadList;
     private final WebPopupMenu mPopupMenu;
 
     ThreadListView(final View view, ThreadList threadList) {
-        mView = view;
+        super(view);
         mThreadList = threadList;
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);

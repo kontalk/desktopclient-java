@@ -61,6 +61,8 @@ import org.ocpsoft.prettytime.PrettyTime;
 abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable & Comparable<V>> extends WebTable implements Observer {
     private final static Logger LOGGER = Logger.getLogger(TableView.class.getName());
 
+    protected final View mView;
+
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
     /** Map synced with model for faster access. */
@@ -75,7 +77,8 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    TableView() {
+    TableView(View view) {
+        mView = view;
         // model
         mModel = new DefaultTableModel(0, 1) {
             // row sorter needs this

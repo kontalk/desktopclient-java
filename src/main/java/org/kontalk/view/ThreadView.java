@@ -262,7 +262,7 @@ final class ThreadView extends WebPanel implements Observer {
         private Optional<Background> mBackground = Optional.empty();
 
         private MessageList(KonThread thread) {
-            super();
+            super(ThreadView.this.mView);
             mThread = thread;
 
             // use custom editor (for mouse events)

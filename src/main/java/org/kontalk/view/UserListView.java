@@ -49,14 +49,11 @@ import org.kontalk.view.UserListView.UserItem;
  */
 final class UserListView extends TableView<UserItem, User> implements Observer {
 
-    private final View mView;
     private final UserList mUserList;
     private final UserPopupMenu mPopupMenu;
 
     UserListView(final View view, UserList userList) {
-        super();
-
-        mView = view;
+        super(view);
 
         mUserList = userList;
 
