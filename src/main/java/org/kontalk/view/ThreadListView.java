@@ -288,6 +288,11 @@ final class ThreadListView extends TableView<ThreadItem, KonThread> {
 
         @Override
         protected boolean contains(String search) {
+            // always show entry for current thread
+            Optional<KonThread> optThread = mView.getCurrentShownThread();
+            if (optThread.isPresent() && optThread.get() == mValue)
+                return true;
+
             for (User user: mValue.getUser()) {
                 if (user.getName().toLowerCase().contains(search) ||
                         user.getJID().toLowerCase().contains(search))
