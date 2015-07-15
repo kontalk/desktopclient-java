@@ -216,6 +216,14 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable & Com
         mRowSorter.sort();
     }
 
+    @SuppressWarnings("unchecked")
+    protected void updateAllItems() {
+        for (int i = 0; i < mModel.getRowCount(); i++) {
+            I item = (I) mModel.getValueAt(i, 0);
+            item.update(null, null);
+        }
+    }
+
     private void showTooltip(TableItem item) {
         String text = item.getTooltipText();
         if (text.isEmpty())
