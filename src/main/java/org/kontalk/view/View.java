@@ -354,6 +354,7 @@ public final class View implements Observer {
             case CONNECTED:
                 mThreadView.setColor(Color.white);
                 mStatusBarLabel.setText(Tr.tr("Connected"));
+                NotificationManager.hideAllNotifications();
                 break;
             case DISCONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Disconnecting..."));
