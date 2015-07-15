@@ -62,8 +62,8 @@ final class UserDetails extends WebPanel implements Observer {
         mView = view;
         mUser = user;
 
-        GroupPanel groupPanel = new GroupPanel(10, false);
-        groupPanel.setMargin(5);
+        GroupPanel groupPanel = new GroupPanel(15, false);
+        groupPanel.setMargin(15);
 
         groupPanel.add(new WebLabel(Tr.tr("Contact details")).setBoldFont());
         groupPanel.add(new WebSeparator(true, true));

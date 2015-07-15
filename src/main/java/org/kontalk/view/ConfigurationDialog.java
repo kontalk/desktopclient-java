@@ -74,6 +74,7 @@ final class ConfigurationDialog extends WebDialog {
         this.setLayout(new BorderLayout(5, 5));
 
         WebTabbedPane tabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
+        tabbedPane.setFontSize(13);
         final MainPanel mainPanel = new MainPanel();
         final AccountPanel accountPanel = new AccountPanel();
         final PrivacyPanel privacyPanel = new PrivacyPanel();
@@ -118,7 +119,7 @@ final class ConfigurationDialog extends WebDialog {
 
         MainPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            groupPanel.setMargin(15);
 
             groupPanel.add(new WebLabel(Tr.tr("Main Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -200,7 +201,7 @@ final class ConfigurationDialog extends WebDialog {
 
         AccountPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            groupPanel.setMargin(15);
 
             groupPanel.add(new WebLabel(Tr.tr("Account Configuration")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -298,7 +299,7 @@ final class ConfigurationDialog extends WebDialog {
 
         PrivacyPanel() {
             GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            groupPanel.setMargin(15);
 
             groupPanel.add(new WebLabel(Tr.tr("Privacy Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));

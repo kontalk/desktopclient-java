@@ -257,7 +257,6 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             if (arg == null || arg instanceof Boolean || arg instanceof KonMessage)
                 mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
 
-
             if (arg == null || arg instanceof String) {
                 String subject = mValue.getSubject();
                 if (subject.isEmpty()) subject = Tr.tr("<unnamed>");
