@@ -229,6 +229,7 @@ public final class User extends Observable implements Comparable<User> {
 
     public void setBlocked(boolean blocked) {
         mBlocked = blocked;
+        this.changed(null);
     }
 
     public SubscriptionStatus getSubScriptionStatus() {

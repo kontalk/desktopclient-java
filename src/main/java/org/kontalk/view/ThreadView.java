@@ -54,7 +54,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -109,10 +108,6 @@ final class ThreadView extends WebPanel implements Observer {
     private final static Icon WARNING_ICON = Utils.getIcon("ic_msg_warning.png");
     private final static Icon CRYPT_ICON = Utils.getIcon("ic_msg_crypt.png");
     private final static Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
-
-    private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
-    private final static SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
-    private final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
 
     private final View mView;
 
@@ -469,7 +464,7 @@ final class ThreadView extends WebPanel implements Observer {
                 }
                 mStatusPanel.add(encryptIconLabel);
                 // date label
-                WebLabel dateLabel = new WebLabel(SHORT_DATE_FORMAT.format(mValue.getDate()));
+                WebLabel dateLabel = new WebLabel(Utils.SHORT_DATE_FORMAT.format(mValue.getDate()));
                 dateLabel.setForeground(Color.GRAY);
                 dateLabel.setFontSize(11);
                 mStatusPanel.add(dateLabel);
@@ -599,9 +594,9 @@ final class ThreadView extends WebPanel implements Observer {
                 String html = "<html><body>" + //"<h3>Header</h3>"+
                         "<br>";
                 if (firstDate != null)
-                    html += firstStat + MID_DATE_FORMAT.format(firstDate) + "<br>";
+                    html += firstStat + Utils.MID_DATE_FORMAT.format(firstDate) + "<br>";
                 if (secStat != null && secDate != null)
-                    html += secStat + MID_DATE_FORMAT.format(secDate) + "<br>";
+                    html += secStat + Utils.MID_DATE_FORMAT.format(secDate) + "<br>";
                 html += Tr.tr("Security")+": " + encryption + " / " + verification + "<br>";
                 if (!problems.isEmpty())
                     html += Tr.tr("Problems")+": " + problems;
@@ -692,7 +687,7 @@ final class ThreadView extends WebPanel implements Observer {
             }
 
             private String toPrettyString() {
-                String date = LONG_DATE_FORMAT.format(mValue.getDate());
+                String date = Utils.LONG_DATE_FORMAT.format(mValue.getDate());
                 String from = getFromString(mValue);
                 return date + " - " + from + " : " + mValue.getContent().getText();
             }

@@ -46,6 +46,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.security.cert.CertificateException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -68,6 +69,10 @@ import org.kontalk.util.Tr;
  */
 public class Utils {
     private final static Logger LOGGER = Logger.getLogger(Utils.class.getName());
+
+    final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
+    final static SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
+    final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
 
     private Utils() {
         throw new AssertionError();

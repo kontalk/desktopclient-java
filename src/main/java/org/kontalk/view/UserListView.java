@@ -39,7 +39,6 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
-import org.kontalk.util.XMPPUtils;
 import static org.kontalk.view.TableView.TOOLTIP_DATE_FORMAT;
 import org.kontalk.view.UserListView.UserItem;
 
@@ -117,7 +116,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
     final class UserItem extends TableView<UserItem, User>.TableItem {
 
         private final WebLabel mNameLabel;
-        private final WebLabel mJIDLabel;
+        private final WebLabel mStatusLabel;
         private Color mBackround;
 
         UserItem(User user) {
@@ -131,10 +130,10 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
             mNameLabel.setFontSize(14);
             this.add(mNameLabel, BorderLayout.CENTER);
 
-            mJIDLabel = new WebLabel("foo");
-            mJIDLabel.setForeground(Color.GRAY);
-            mJIDLabel.setFontSize(11);
-            this.add(mJIDLabel, BorderLayout.SOUTH);
+            mStatusLabel = new WebLabel("foo");
+            mStatusLabel.setForeground(Color.GRAY);
+            mStatusLabel.setFontSize(11);
+            this.add(mStatusLabel, BorderLayout.SOUTH);
 
             this.updateOnEDT(null);
         }
@@ -153,10 +152,7 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
             }
 
             if (mValue.getOnline() != User.Online.YES) {
-                String lastSeen = !mValue.getLastSeen().isPresent() ?
-                        Tr.tr("never") :
-                        TOOLTIP_DATE_FORMAT.format(mValue.getLastSeen().get());
-                html += Tr.tr("Last seen")+": " + lastSeen + "<br>";
+                html += lastSeen(mValue, false) + "<br>";
             }
 
             if (mValue.isBlocked()) {
@@ -182,11 +178,14 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
 
         @Override
         protected void updateOnEDT(Object arg) {
-            // may have changed (of user): JID, name, online
-            String jid = mValue.getJID();
-            if (XMPPUtils.isHash(jid));
-                jid = Utils.shortenUserName(jid, 9);
-            mJIDLabel.setText(jid);
+            // may have changed (of user): name, online status, blocking
+            String status = mValue.isMe() ? Tr.tr("I myself") :
+                    mValue.isBlocked() ? Tr.tr("Blocked") :
+                    mValue.getOnline() == User.Online.YES ? Tr.tr("Online") :
+                    // TODO set timer to update
+                    lastSeen(mValue, true);
+            // TODO changes not instantly visible
+            mStatusLabel.setText(status);
             String name = !mValue.getName().isEmpty() ?
                     mValue.getName() :
                     Tr.tr("<unknown>");
@@ -196,6 +195,13 @@ final class UserListView extends TableView<UserItem, User> implements Observer {
                     Color.WHITE;
             this.setBackground(mBackround);
         }
+    }
+
+    private static String lastSeen(User user, boolean pretty) {
+        String lastSeen = !user.getLastSeen().isPresent() ? Tr.tr("never") :
+                pretty ? TOOLTIP_DATE_FORMAT.format(user.getLastSeen().get()) :
+                Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());
+        return Tr.tr("Last seen")+": " + lastSeen;
     }
 
     private class UserPopupMenu extends WebPopupMenu {
