@@ -198,8 +198,8 @@ public final class Control extends Observable {
     }
 
     public void sendKeyRequest(User user) {
-        if (user.getSubScriptionStatus() == User.SubscriptionStatus.UNSUBSCRIBED ||
-                user.getSubScriptionStatus() != User.SubscriptionStatus.PENDING) {
+        if (user.getSubScription() == User.Subscription.UNSUBSCRIBED ||
+                user.getSubScription() != User.Subscription.PENDING) {
             LOGGER.info("no presence subscription, not sending key request, user: "+user);
             return;
         }
@@ -405,10 +405,10 @@ public final class Control extends Observable {
             Optional<User> optUser = this.addUser(jid, name);
 
             if (optUser.isPresent()) {
-                User.SubscriptionStatus status = rosterToModelSubscription(itemStatus, type);
+                User.Subscription status = rosterToModelSubscription(itemStatus, type);
                 optUser.get().setSubScriptionStatus(status);
 
-                if (status == User.SubscriptionStatus.UNSUBSCRIBED)
+                if (status == User.Subscription.UNSUBSCRIBED)
                     mClient.sendPresenceSubscriptionRequest(jid);
             }
     }
@@ -544,16 +544,16 @@ public final class Control extends Observable {
         return optThread.orElse(threadList.get(user));
     }
 
-    private static User.SubscriptionStatus rosterToModelSubscription(
+    private static User.Subscription rosterToModelSubscription(
             RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
         if (type == RosterPacket.ItemType.both ||
                 type == RosterPacket.ItemType.to ||
                 type == RosterPacket.ItemType.remove)
-            return User.SubscriptionStatus.SUBSCRIBED;
+            return User.Subscription.SUBSCRIBED;
 
         if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
-            return User.SubscriptionStatus.PENDING;
+            return User.Subscription.PENDING;
 
-        return User.SubscriptionStatus.UNSUBSCRIBED;
+        return User.Subscription.UNSUBSCRIBED;
     }
 }

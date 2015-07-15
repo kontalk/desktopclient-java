@@ -50,7 +50,7 @@ public final class User extends Observable implements Comparable<User> {
     /**
      * XMPP subscription status in roster.
      */
-    public static enum SubscriptionStatus {
+    public static enum Subscription {
         UNKNOWN, PENDING, SUBSCRIBED, UNSUBSCRIBED
     }
 
@@ -84,7 +84,7 @@ public final class User extends Observable implements Comparable<User> {
     private String mKey = "";
     private String mFingerprint = "";
     private boolean mBlocked = false;
-    private SubscriptionStatus mSubStatus = SubscriptionStatus.UNKNOWN;
+    private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
 
     // used for incoming messages of unknown user
@@ -232,11 +232,11 @@ public final class User extends Observable implements Comparable<User> {
         this.changed(null);
     }
 
-    public SubscriptionStatus getSubScriptionStatus() {
+    public Subscription getSubScription() {
         return mSubStatus;
     }
 
-    public void setSubScriptionStatus(SubscriptionStatus status) {
+    public void setSubScriptionStatus(Subscription status) {
         mSubStatus = status;
     }
     public boolean isMe() {
