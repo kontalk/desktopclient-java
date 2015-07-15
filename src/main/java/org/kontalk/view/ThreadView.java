@@ -533,47 +533,73 @@ final class ThreadView extends WebPanel implements Observer {
                 mTextPane.setVisible(!text.isEmpty());
             }
 
-            // status icon
             private void updateStatus() {
-                String sent = Tr.tr("Sent:")+" ";
-                final String firstStat;
-                final Date firstDate;
-                String secStat = null;
-                final Date secDate;
+                // status icon
                 if (mValue.getDir() == KonMessage.Direction.OUT) {
-                    firstStat = Tr.tr("Created:")+" ";
-                    firstDate = mValue.getDate();
-                    secDate = mValue.getServerDate().orElse(null);
                     switch (mValue.getReceiptStatus()) {
                         case PENDING :
                             mStatusIconLabel.setIcon(PENDING_ICON);
                             break;
                         case SENT :
                             mStatusIconLabel.setIcon(SENT_ICON);
-                            secStat = sent;
                             break;
                         case RECEIVED:
                             mStatusIconLabel.setIcon(DELIVERED_ICON);
-                            secStat = Tr.tr("Delivered:")+" ";
                             break;
                         case ERROR:
                             mStatusIconLabel.setIcon(ERROR_ICON);
-                            secStat = Tr.tr("Error report:")+" ";
                             break;
                         default:
                             LOGGER.warning("unknown message receipt status!?");
                     }
-                } else {
-                    firstStat = sent;
-                    firstDate = mValue.getServerDate().orElse(null);
-                    secStat = Tr.tr("Received:")+" ";
-                    secDate = mValue.getDate();
+                } else { // IN message
                     if (!mValue.getCoderStatus().getErrors().isEmpty()) {
                         mStatusIconLabel.setIcon(WARNING_ICON);
                     }
                 }
 
                 // tooltip
+                String html = "<html><body>" + /*"<h3>Header</h3>"+*/ "<br>";
+
+                if (mValue.getDir() == KonMessage.Direction.OUT) {
+                    Date createDate = mValue.getDate();
+                    String create = Utils.MID_DATE_FORMAT.format(createDate);
+                    Optional<Date> serverDate = mValue.getServerDate();
+                    String status = serverDate.isPresent() ?
+                            Utils.MID_DATE_FORMAT.format(serverDate.get()) :
+                            null;
+                    if (!create.equals(status))
+                        html += Tr.tr("Created:")+ " " + create + "<br>";
+                    if (status != null) {
+                        String secStat = null;
+                        switch (mValue.getReceiptStatus()) {
+                            case SENT :
+                                secStat = Tr.tr("Sent:");
+                                break;
+                            case RECEIVED:
+                                secStat = Tr.tr("Delivered:");
+                                break;
+                            case ERROR:
+                                secStat = Tr.tr("Error report:");
+                                break;
+                            default:
+                                LOGGER.warning("unexpected msg status");
+                        }
+                        if (secStat != null)
+                            html += secStat + " " + status + "<br>";
+                    }
+                } else { // IN message
+                    Date receivedDate = mValue.getDate();
+                    String rec = Utils.MID_DATE_FORMAT.format(receivedDate);
+                    Optional<Date> sentDate = mValue.getServerDate();
+                    if (sentDate.isPresent()) {
+                        String sent = Utils.MID_DATE_FORMAT.format(sentDate.get());
+                        if (!sent.equals(rec))
+                            html += Tr.tr("Sent:")+ " " + sent + "<br>";
+                    }
+                    html += Tr.tr("Received:")+ " " + rec + "<br>";
+                }
+
                 String encryption = Tr.tr("unknown");
                 switch (mValue.getCoderStatus().getEncryption()) {
                     case NOT: encryption = Tr.tr("not encrypted"); break;
@@ -586,18 +612,12 @@ final class ThreadView extends WebPanel implements Observer {
                     case SIGNED: verification = Tr.tr("signed"); break;
                     case VERIFIED: verification = Tr.tr("verified"); break;
                 }
+                html += Tr.tr("Security")+": " + encryption + " / " + verification + "<br>";
+
                 String problems = "";
                 for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
                     problems += error.toString() + " <br> ";
                 }
-
-                String html = "<html><body>" + //"<h3>Header</h3>"+
-                        "<br>";
-                if (firstDate != null)
-                    html += firstStat + Utils.MID_DATE_FORMAT.format(firstDate) + "<br>";
-                if (secStat != null && secDate != null)
-                    html += secStat + Utils.MID_DATE_FORMAT.format(secDate) + "<br>";
-                html += Tr.tr("Security")+": " + encryption + " / " + verification + "<br>";
                 if (!problems.isEmpty())
                     html += Tr.tr("Problems")+": " + problems;
 
