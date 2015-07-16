@@ -208,8 +208,10 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     public void addMessage(KonMessage message) {
         boolean added = this.add(message);
         if (added) {
-            if (message.getDir() == KonMessage.Direction.IN)
+            if (message.getDir() == KonMessage.Direction.IN) {
                 mRead = false;
+                this.changed(mRead);
+            }
             this.changed(message);
         }
     }

@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Observable;
+import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
@@ -35,12 +36,14 @@ import org.kontalk.system.Database;
  * The global list of all threads.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class ThreadList extends Observable {
+public final class ThreadList extends Observable implements Observer {
     private final static Logger LOGGER = Logger.getLogger(ThreadList.class.getName());
 
     private final static ThreadList INSTANCE = new ThreadList();
 
     private final HashMap<Integer, KonThread> mMap = new HashMap<>();
+
+    private boolean mUnread = false;
 
     private ThreadList() {
     }
@@ -84,9 +87,9 @@ public final class ThreadList extends Observable {
                 String subject = Database.getString(threadRS, KonThread.COL_SUBJ);
                 boolean read = threadRS.getBoolean(KonThread.COL_READ);
                 String jsonViewSettings = Database.getString(threadRS, KonThread.COL_VIEW_SET);
-                synchronized (this) {
-                    mMap.put(id, new KonThread(id, xmppThreadID, userSet, subject, read, jsonViewSettings));
-                }
+                this.put(new KonThread(id, xmppThreadID, userSet, subject, read, jsonViewSettings));
+                if (!read)
+                    mUnread = true;
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load threads from db", ex);
@@ -123,11 +126,16 @@ public final class ThreadList extends Observable {
 
     public KonThread createNew(Set<User> user) {
         KonThread newThread = new KonThread(user);
-        synchronized (this) {
-            mMap.put(newThread.getID(), newThread);
-        }
+        this.put(newThread);
         this.changed(newThread);
         return newThread;
+    }
+
+    private void put(KonThread thread) {
+        synchronized (this) {
+            mMap.put(thread.getID(), thread);
+        }
+        thread.addObserver(this);
     }
 
     public synchronized Optional<KonThread> get(int id) {
@@ -170,15 +178,50 @@ public final class ThreadList extends Observable {
             return;
         }
         thread.delete();
+        thread.deleteObservers();
         this.changed(thread);
     }
 
-    private synchronized void changed(KonThread thread) {
+    /**
+     * Return if any thread is unread.
+     */
+    public boolean isUnread() {
+        return mUnread;
+    }
+
+    private synchronized void changed(Object arg) {
         this.setChanged();
-        this.notifyObservers(thread);
+        this.notifyObservers(arg);
     }
 
     public static ThreadList getInstance() {
         return INSTANCE;
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        // only observing threads 'read' status
+        if (!(arg instanceof Boolean))
+            return;
+
+        boolean unread = !((boolean) arg);
+        if (mUnread == unread)
+            return;
+
+        if (unread) {
+            mUnread = true;
+            this.changed(mUnread);
+            return;
+        }
+
+        synchronized (this) {
+            for (KonThread thread : mMap.values()) {
+                if (!thread.isRead()) {
+                    return;
+                }
+            }
+        }
+        mUnread = false;
+        this.changed(mUnread);
     }
 }
