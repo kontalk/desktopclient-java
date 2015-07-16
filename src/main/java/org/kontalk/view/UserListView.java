@@ -192,21 +192,27 @@ final class UserListView extends Table<UserItem, User> implements Observer {
 
         @Override
         protected void updateOnEDT(Object arg) {
-            // may have changed (of user): name, online status, blocking
-            User.Subscription subStatus = mValue.getSubScription();
-            String status = mValue.isMe() ? Tr.tr("I myself") :
-                    mValue.isBlocked() ? Tr.tr("Blocked") :
-                    subStatus == User.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
-                    subStatus == User.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    // TODO set timer to update
-                    lastSeen(mValue, true);
-            mStatusLabel.setText(status);
+            // name
             String name = !mValue.getName().isEmpty() ?
                     mValue.getName() :
                     Tr.tr("<unknown>");
             mNameLabel.setText(name);
-            mBackround = mValue.getOnline() == User.Online.YES ?
-                    View.LIGHT_BLUE :
+
+            // status
+            User.Subscription subStatus = mValue.getSubScription();
+            String status = mValue.isMe() ? Tr.tr("I myself") :
+                    mValue.isBlocked() ? Tr.tr("Blocked") :
+                    mValue.getOnline() == User.Online.YES ? Tr.tr("Online") :
+                    subStatus == User.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
+                    subStatus == User.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
+                    lastSeen(mValue, true);
+            mStatusLabel.setText(status);
+
+            // online status
+            mBackround = mValue.getOnline() == User.Online.YES ? View.LIGHT_BLUE:
+                    subStatus == User.Subscription.UNSUBSCRIBED ||
+                    subStatus == User.Subscription.PENDING ||
+                    mValue.isBlocked() ? View.LIGHT_GREY :
                     Color.WHITE;
             this.setBackground(mBackround);
 

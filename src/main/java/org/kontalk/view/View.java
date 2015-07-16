@@ -86,6 +86,7 @@ public final class View implements Observer {
 
     final static Color BLUE = new Color(130, 170, 240);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
+    final static Color LIGHT_GREY = new Color(240, 240, 240);
     final static Color GREEN = new Color(83, 196, 46);
 
     private final Control mControl;
