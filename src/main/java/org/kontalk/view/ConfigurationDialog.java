@@ -178,7 +178,7 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(Config.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
             mConf.setProperty(Config.MAIN_TRAY, mTrayBox.isSelected());
             mConf.setProperty(Config.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
-            mView.setTray();
+            mView.updateTray();
             mConf.setProperty(Config.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
             String bgPath;

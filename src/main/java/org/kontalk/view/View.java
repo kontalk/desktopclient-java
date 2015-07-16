@@ -23,8 +23,6 @@ import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
@@ -36,11 +34,7 @@ import com.alee.managers.notification.NotificationIcon;
 import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.TooltipWay;
-import java.awt.AWTException;
 import java.awt.Color;
-import java.awt.Image;
-import java.awt.SystemTray;
-import java.awt.TrayIcon;
 import java.awt.event.*;
 import java.util.Observable;
 import java.util.Observer;
@@ -90,6 +84,8 @@ public final class View implements Observer {
     final static Color GREEN = new Color(83, 196, 46);
 
     private final Control mControl;
+    private final TrayManager mTrayManager;
+
     private final SearchPanel mSearchPanel;
     private final UserListView mUserListView;
     private final ThreadListView mThreadListView;
@@ -99,7 +95,6 @@ public final class View implements Observer {
     private final WebButton mSendButton;
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
-    private TrayIcon mTrayIcon;
 
     private View(Control control) {
         mControl = control;
@@ -170,89 +165,17 @@ public final class View implements Observer {
         mMainFrame.setVisible(true);
 
         // tray
-        this.setTray();
+        mTrayManager = new TrayManager(this, mMainFrame);
+        ThreadList.getInstance().addObserver(mTrayManager);
 
         // hotkeys
         this.setHotkeys();
 
         // notifier
-        MessageList.getInstance().addObserver(new Notifier(this));
+        Notifier notifier = new Notifier(this);
+        MessageList.getInstance().addObserver(notifier);
 
         this.statusChanged();
-    }
-
-    final void setTray() {
-        if (!Config.getInstance().getBoolean(Config.MAIN_TRAY)) {
-            this.removeTray();
-            return;
-        }
-
-        if (!SystemTray.isSupported()) {
-            LOGGER.info("tray icon not supported");
-            return;
-        }
-
-        if (mTrayIcon != null)
-            // already set
-            return;
-
-        // load image
-        Image image = Utils.getImage("kontalk.png");
-        //image = image.getScaledInstance(22, 22, Image.SCALE_SMOOTH);
-
-        // popup menu outside of frame, officially not supported
-        final WebPopupMenu popup = new WebPopupMenu("Kontalk");
-        WebMenuItem quitItem = new WebMenuItem(Tr.tr("Quit"));
-        quitItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent event) {
-                View.this.callShutDown();
-            }
-        });
-        popup.add(quitItem);
-
-        // workaround: menu does not disappear when focus is lost
-        final WebDialog hiddenDialog = new WebDialog();
-        hiddenDialog.setUndecorated(true);
-
-        // create an action listener to listen for default action executed on the tray icon
-        MouseListener listener = new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                // menu must be shown on mouse release
-                //check(e);
-            }
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                if (e.getButton() == MouseEvent.BUTTON1)
-                    mMainFrame.toggleState();
-                else
-                    check(e);
-            }
-            private void check(MouseEvent e) {
-//                if (!e.isPopupTrigger())
-//                    return;
-
-                hiddenDialog.setVisible(true);
-
-                // TODO ugly code
-                popup.setLocation(e.getX() - 20, e.getY() - 40);
-                popup.setInvoker(hiddenDialog);
-                popup.setCornerWidth(0);
-                popup.setVisible(true);
-            }
-        };
-
-        mTrayIcon = new TrayIcon(image, "Kontalk" /*, popup*/);
-        mTrayIcon.setImageAutoSize(true);
-        mTrayIcon.addMouseListener(listener);
-
-        SystemTray tray = SystemTray.getSystemTray();
-        try {
-            tray.add(mTrayIcon);
-        } catch (AWTException ex) {
-            LOGGER.log(Level.WARNING, "can't add tray icon", ex);
-        }
     }
 
     void setHotkeys() {
@@ -369,7 +292,7 @@ public final class View implements Observer {
             case SHUTTING_DOWN:
                 mMainFrame.save();
                 mThreadListView.save();
-                this.removeTray();
+                mTrayManager.removeTray();
                 mMainFrame.setVisible(false);
                 mMainFrame.dispose();
                 break;
@@ -459,14 +382,6 @@ public final class View implements Observer {
 
         // TODO too intrusive for user, but use the explanation above for message view
         //NotificationManager.showNotification(mThreadView, errorText);
-    }
-
-    private void removeTray() {
-        if (mTrayIcon != null) {
-            SystemTray tray = SystemTray.getSystemTray();
-            tray.remove(mTrayIcon);
-            mTrayIcon = null;
-        }
     }
 
     /* view to control */
@@ -585,6 +500,10 @@ public final class View implements Observer {
 
     void reloadThreadBG() {
         mThreadView.loadDefaultBG();
+    }
+
+    void updateTray() {
+        mTrayManager.setTray();
     }
 
     public static Optional<View> create(final Control control) {
