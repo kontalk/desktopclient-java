@@ -40,6 +40,7 @@ import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.hotkey.Hotkey;
+import com.alee.utils.WebUtils;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -72,6 +73,9 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class MainFrame extends WebFrame {
+
+    private static final String WIKI_URL =
+            "https://github.com/kontalk/desktopclient-java/wiki";
 
     static enum Tab {THREADS, USER};
 
@@ -184,6 +188,15 @@ final class MainFrame extends WebFrame {
         WebMenu helpMenu = new WebMenu(Tr.tr("Help"));
         helpMenu.setMnemonic(KeyEvent.VK_H);
 
+        WebMenuItem wikiItem = new WebMenuItem(Tr.tr("Online wiki"));
+        wikiItem.setToolTipText(Tr.tr("Visit the wiki"));
+        wikiItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                WebUtils.browseSiteSafely(WIKI_URL);
+            }
+        });
+        helpMenu.add(wikiItem);
         WebMenuItem aboutMenuItem = new WebMenuItem(Tr.tr("About"));
         aboutMenuItem.setToolTipText(Tr.tr("About Kontalk"));
         aboutMenuItem.addActionListener(new ActionListener() {
