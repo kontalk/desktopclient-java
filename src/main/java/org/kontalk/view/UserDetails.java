@@ -30,11 +30,16 @@ import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
+import java.awt.image.BufferedImage;
 import java.util.Observable;
 import java.util.Observer;
 import javax.swing.Box;
@@ -139,7 +144,25 @@ final class UserDetails extends WebPanel implements Observer {
         TooltipManager.addTooltip(mEncryptionBox, encText);
         groupPanel.add(new GroupPanel(mEncryptionBox, Box.createGlue()));
 
-        this.add(groupPanel, BorderLayout.CENTER);
+        this.add(groupPanel, BorderLayout.WEST);
+
+        WebPanel gradientPanel = new WebPanel(false) {
+             @Override
+            public void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                int w = this.getWidth();
+                int h = this.getHeight();
+                BufferedImage mCached = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+                Graphics2D cachedG = mCached.createGraphics();
+                GradientPaint p2 = new GradientPaint(
+                        0, 0, this.getBackground(),
+                        w, 0, Color.LIGHT_GRAY);
+                cachedG.setPaint(p2);
+                cachedG.fillRect(0, 0, w, h);
+                g.drawImage(mCached, 0, 0, this.getWidth(), this.getHeight(), null);
+            }
+        };
+        this.add(gradientPanel, BorderLayout.CENTER);
     }
 
     @Override
