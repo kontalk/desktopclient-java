@@ -390,8 +390,10 @@ public final class Control extends Observable {
             String rosterName,
             ItemType type,
             ItemStatus itemStatus) {
-            if (UserList.getInstance().contains(jid))
+            if (UserList.getInstance().contains(jid)) {
+                this.setSubscriptionStatus(jid, type, itemStatus);
                 return;
+            }
 
             LOGGER.info("adding user from roster, jid: "+jid);
 
