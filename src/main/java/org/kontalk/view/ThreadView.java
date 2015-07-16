@@ -323,12 +323,11 @@ final class ThreadView extends WebPanel implements Observer {
 
             if (arg instanceof KonMessage) {
                 this.insertMessage((KonMessage) arg);
-                return;
+            } else {
+                // check for new messages to add
+                if (this.getModel().getRowCount() < mThread.getMessages().size())
+                    this.insertMessages();
             }
-
-            // check for new messages to add
-            if (this.getModel().getRowCount() < mThread.getMessages().size())
-                this.insertMessages();
 
             if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
                 mThread.setRead();
