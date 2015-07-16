@@ -58,7 +58,7 @@ final class UserDetails extends WebPanel implements Observer {
     private final User mUser;
     private final WebTextField mNameField;
     private final WebLabel mAuthorization;
-    private final WebLabel mKeyLabel;
+    private final WebLabel mKeyStatus;
     private final WebLabel mFPLabel;
     private final WebTextArea mFPArea;
     private final WebCheckBox mEncryptionBox;
@@ -116,8 +116,9 @@ final class UserDetails extends WebPanel implements Observer {
 
         groupPanel.add(new WebSeparator(true, true));
 
-        mKeyLabel = new WebLabel();
-        WebButton updButton = new WebButton(Utils.getIcon("ic_ui_refresh.png"));
+        WebLabel keyLabel = new WebLabel(Tr.tr("Public Key")+":");
+        mKeyStatus = new WebLabel();
+        WebButton updButton = new WebButton(Tr.tr("Update"));
         String updText = Tr.tr("Update key");
         TooltipManager.addTooltip(updButton, updText);
         updButton.addActionListener(new ActionListener() {
@@ -126,7 +127,7 @@ final class UserDetails extends WebPanel implements Observer {
                 mView.callRequestKey(UserDetails.this.mUser);
             }
         });
-        groupPanel.add(new GroupPanel(6, mKeyLabel, updButton));
+        groupPanel.add(new GroupPanel(GroupingType.fillMiddle, 15, keyLabel, mKeyStatus, updButton));
 
         mFPLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
         mFPArea = Utils.createFingerprintArea();
@@ -191,21 +192,21 @@ final class UserDetails extends WebPanel implements Observer {
             case UNSUBSCRIBED: auth = Tr.tr("not authorized"); break;
         }
         mAuthorization.setText(auth);
-        String hasKey = "<html>"+Tr.tr("Encryption Key")+": ";
+        String hasKey = "<html>";
         if (mUser.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";
-            TooltipManager.removeTooltips(mKeyLabel);
+            TooltipManager.removeTooltips(mKeyStatus);
             mFPArea.setText(Utils.formatFingerprint(mUser.getFingerprint()));
             mFPLabel.setVisible(true);
             mFPArea.setVisible(true);
         } else {
             hasKey += "<font color='red'>"+Tr.tr("Not Available")+"</font></html>";
             String keyText = Tr.tr("The key for this user could not yet be received");
-            TooltipManager.addTooltip(mKeyLabel, keyText);
+            TooltipManager.addTooltip(mKeyStatus, keyText);
             mFPLabel.setVisible(false);
             mFPArea.setVisible(false);
         }
-        mKeyLabel.setText(hasKey);
+        mKeyStatus.setText(hasKey);
     }
 
     private void save() {
