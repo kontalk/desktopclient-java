@@ -18,9 +18,11 @@
 
 package org.kontalk.view;
 
+import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.GridBagLayout;
 import java.util.Optional;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.User;
@@ -58,7 +60,12 @@ public class Content extends WebPanel {
     }
 
     void showNothing() {
-        this.show(new WebPanel());
+        WebPanel nothing = new WebPanel();
+        WebPanel topPanel = new WebPanel(new GridBagLayout());
+        topPanel.setMargin(40);
+        topPanel.add(new WebLabel(Utils.getIcon("kontalk-big.png")));
+        nothing.add(topPanel, BorderLayout.NORTH);
+        this.show(nothing);
     }
 
     private void show(Component comp) {
