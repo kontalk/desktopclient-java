@@ -237,7 +237,11 @@ public final class User extends Observable implements Comparable<User> {
     }
 
     public void setSubScriptionStatus(Subscription status) {
+        if (status == mSubStatus)
+            return;
+
         mSubStatus = status;
+        this.changed(mSubStatus);
     }
     public boolean isMe() {
         return !mJID.isEmpty() &&

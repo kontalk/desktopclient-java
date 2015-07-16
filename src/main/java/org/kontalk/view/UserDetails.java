@@ -52,6 +52,7 @@ final class UserDetails extends WebPanel implements Observer {
     private final View mView;
     private final User mUser;
     private final WebTextField mNameField;
+    private final WebLabel mAuthorization;
     private final WebLabel mKeyLabel;
     private final WebLabel mFPLabel;
     private final WebTextArea mFPArea;
@@ -104,6 +105,10 @@ final class UserDetails extends WebPanel implements Observer {
                 new WebLabel("JID:"),
                 jidField));
 
+        WebLabel authLabel = new WebLabel(Tr.tr("Authorization: "));
+        mAuthorization = new WebLabel();
+        groupPanel.add(new GroupPanel(10, authLabel, mAuthorization));
+
         groupPanel.add(new WebSeparator(true, true));
 
         mKeyLabel = new WebLabel();
@@ -155,6 +160,14 @@ final class UserDetails extends WebPanel implements Observer {
         // may have changed: user name and/or key
         mNameField.setText(mUser.getName());
         mNameField.setInputPrompt(mUser.getName());
+        User.Subscription subscription = mUser.getSubScription();
+        String auth = Tr.tr("unknown");
+        switch(subscription) {
+            case PENDING: auth = Tr.tr("awaiting reply"); break;
+            case SUBSCRIBED: auth = Tr.tr("authorized"); break;
+            case UNSUBSCRIBED: auth = Tr.tr("not authorized"); break;
+        }
+        mAuthorization.setText(auth);
         String hasKey = "<html>"+Tr.tr("Encryption Key")+": ";
         if (mUser.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";
