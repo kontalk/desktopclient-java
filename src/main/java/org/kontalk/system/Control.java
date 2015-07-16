@@ -199,7 +199,7 @@ public final class Control extends Observable {
 
     public void sendKeyRequest(User user) {
         if (user.getSubScription() == User.Subscription.UNSUBSCRIBED ||
-                user.getSubScription() != User.Subscription.PENDING) {
+                user.getSubScription() == User.Subscription.PENDING) {
             LOGGER.info("no presence subscription, not sending key request, user: "+user);
             return;
         }
