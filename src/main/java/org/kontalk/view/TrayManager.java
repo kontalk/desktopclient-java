@@ -74,6 +74,9 @@ final class TrayManager implements Observer {
             mTrayIcon = createTrayIcon(mView, mMainFrame);
 
         SystemTray tray = SystemTray.getSystemTray();
+        if (tray.getTrayIcons().length > 0)
+            return;
+
         try {
             tray.add(mTrayIcon);
         } catch (AWTException ex) {
