@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.splitpane.WebSplitPane;
@@ -35,7 +36,9 @@ import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
@@ -45,7 +48,9 @@ import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
+import org.kontalk.model.User;
 import org.kontalk.system.Config;
+import org.kontalk.util.Tr;
 
 /**
  * Pane that shows the currently selected thread.
@@ -55,6 +60,8 @@ final class ThreadView extends WebPanel implements Observer {
 
     private final View mView;
 
+    private final WebLabel mTitleLabel;
+    private final WebLabel mSubLabel;
     private final WebScrollPane mScrollPane;
     private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
     private Background mDefaultBG;
@@ -64,8 +71,19 @@ final class ThreadView extends WebPanel implements Observer {
     ThreadView(View view, Component sendTextField, Component sendButton) {
         mView = view;
 
-        mScrollPane = new ScrollPane(this);
+        WebPanel titlePanel = new WebPanel(false, new BorderLayout(5, 5));
+        titlePanel.setMargin(10);
+        mTitleLabel = new WebLabel();
+        mTitleLabel.setFontSize(16);
+        mTitleLabel.setDrawShade(true);
+        titlePanel.add(mTitleLabel, BorderLayout.CENTER);
+        mSubLabel = new WebLabel();
+        mSubLabel.setFontSize(11);
+        mSubLabel.setForeground(Color.GRAY);
+        titlePanel.add(mSubLabel, BorderLayout.SOUTH);
+        this.add(titlePanel, BorderLayout.NORTH);
 
+        mScrollPane = new ScrollPane(this);
         mScrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
@@ -79,7 +97,6 @@ final class ThreadView extends WebPanel implements Observer {
                     e.getAdjustable().setValue(e.getAdjustable().getMaximum());
             }
         });
-
         mScrollPane.setViewport(new WebViewport() {
             @Override
             public void paintComponent(Graphics g) {
@@ -128,6 +145,15 @@ final class ThreadView extends WebPanel implements Observer {
     }
 
     void showThread(KonThread thread) {
+        List<User> user = new ArrayList<>(thread.getUser());
+        mTitleLabel.setText(user.size() == 1 ? user.get(0).getName() :
+                !thread.getSubject().isEmpty() ? thread.getSubject() :
+                Tr.tr("Group Chat"));
+        mSubLabel.setText(user.size() == 1 &&
+                user.get(0).getLastSeen().isPresent() ?
+                Tr.tr("Last seen:") + " " +
+                        Utils.PRETTY_TIME.format(user.get(0).getLastSeen().get()) :
+                Utils.userNameList(thread.getUser()));
         if (!mThreadCache.containsKey(thread.getID())) {
             MessageList newMessageList = new MessageList(mView, this, thread);
             thread.addObserver(newMessageList);

@@ -48,7 +48,6 @@ import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
-import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * A generic list view for subclassing.
@@ -70,8 +69,6 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable & Com
 
     /** The current search string. */
     private String mSearch = "";
-
-    protected final static PrettyTime TOOLTIP_DATE_FORMAT = new PrettyTime();
 
     private WebCustomTooltip mTip = null;
 

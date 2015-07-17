@@ -48,8 +48,11 @@ import java.io.IOException;
 import java.net.URL;
 import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
 import javax.swing.Icon;
@@ -62,7 +65,9 @@ import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.misc.KonException;
+import org.kontalk.model.User;
 import org.kontalk.util.Tr;
+import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * Various utilities used in view.
@@ -74,6 +79,7 @@ final class Utils {
     final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
     final static SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
     final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
+    final static PrettyTime PRETTY_TIME = new PrettyTime();
 
     private Utils() {
         throw new AssertionError();
@@ -250,6 +256,16 @@ final class Utils {
 
     private static String group(String s) {
         return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
+    }
+
+    static String userNameList(Set<User> users) {
+        List<String> nameList = new ArrayList<>(users.size());
+        for (User user : users) {
+            nameList.add(user.getName().isEmpty() ?
+                    Tr.tr("<unknown>") :
+                    user.getName());
+        }
+        return StringUtils.join(nameList, ", ");
     }
 
     static abstract class PassPanel extends WebPanel {

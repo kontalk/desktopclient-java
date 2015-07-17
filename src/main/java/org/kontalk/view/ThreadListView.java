@@ -104,6 +104,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
+                // TODO call over control
                 ThreadItem t = ThreadListView.this.getSelectedItem();
                 if (t.mValue.getMessages().size() == 0 ||
                         ThreadListView.this.confirmDeletion()) {
@@ -238,7 +239,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         protected String getTooltipText() {
             SortedSet<KonMessage> messageSet = this.mValue.getMessages();
             String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
-                        TOOLTIP_DATE_FORMAT.format(messageSet.last().getDate());
+                        Utils.PRETTY_TIME.format(messageSet.last().getDate());
 
             String html = "<html><body>" +
                     Tr.tr("Last activity")+": " + lastActivity + "<br>" +

@@ -42,7 +42,6 @@ import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
-import static org.kontalk.view.Table.TOOLTIP_DATE_FORMAT;
 import org.kontalk.view.UserListView.UserItem;
 
 /**
@@ -222,7 +221,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
 
     private static String lastSeen(User user, boolean pretty) {
         String lastSeen = !user.getLastSeen().isPresent() ? Tr.tr("never") :
-                pretty ? TOOLTIP_DATE_FORMAT.format(user.getLastSeen().get()) :
+                pretty ? Utils.PRETTY_TIME.format(user.getLastSeen().get()) :
                 Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());
         return Tr.tr("Last seen")+": " + lastSeen;
     }
