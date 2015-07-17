@@ -240,14 +240,14 @@ final class ThreadView extends WebPanel implements Observer {
         // background image from resource or user selected
         private final Image mOrigin;
         // background color, can be set by user
-        private final Color mBottomColor;
+        private final Color mCustomColor;
         // cached background with size of viewport
         private BufferedImage mCached = null;
 
         private Background(Component parent, Image origin, Color color) {
             mParent = parent;
             mOrigin = origin;
-            mBottomColor = color;
+            mCustomColor = color;
         }
 
         /** Default, no thread specific settings. */
@@ -318,10 +318,10 @@ final class ThreadView extends WebPanel implements Observer {
             mCached = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
             Graphics2D cachedG = mCached.createGraphics();
             // gradient background of background
-            if (mBottomColor != null) {
+            if (mCustomColor != null) {
                 GradientPaint p2 = new GradientPaint(
-                        0, 0, new Color(0, 0, 0, 0),
-                        0, height, mBottomColor);
+                        0, 0, mCustomColor,
+                        width, 0, new Color(0, 0, 0, 0));
                 cachedG.setPaint(p2);
                 cachedG.fillRect(0, 0, width, ThreadView.this.getHeight());
             }
