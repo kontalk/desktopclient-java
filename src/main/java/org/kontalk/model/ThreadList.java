@@ -112,13 +112,10 @@ public final class ThreadList extends Observable implements Observer {
      * Creates a new thread if necessary.
      */
     public KonThread get(User user) {
-        synchronized (this) {
-            for (KonThread thread : mMap.values()) {
-                Set<User> threadUser = thread.getUser();
-                if (threadUser.size() == 1 && threadUser.contains(user))
-                    return thread;
-            }
-        }
+        KonThread thread = this.getOrNull(user);
+        if (thread != null)
+            return thread;
+
         Set<User> userSet = new HashSet<>();
         userSet.add(user);
         return this.createNew(userSet);
@@ -161,14 +158,7 @@ public final class ThreadList extends Observable implements Observer {
     }
 
     public boolean contains(User user) {
-        synchronized (this) {
-            for (KonThread thread : mMap.values()) {
-                Set<User> threadUser = thread.getUser();
-                if (threadUser.size() == 1 && threadUser.contains(user))
-                    return true;
-            }
-        }
-        return false;
+        return this.getOrNull(user) != null;
     }
 
     public synchronized void delete(int id) {
@@ -187,6 +177,15 @@ public final class ThreadList extends Observable implements Observer {
      */
     public boolean isUnread() {
         return mUnread;
+    }
+
+    private synchronized KonThread getOrNull(User user) {
+        for (KonThread thread : mMap.values()) {
+            Set<User> threadUser = thread.getUser();
+            if (threadUser.size() == 1 && threadUser.contains(user))
+                return thread;
+        }
+        return null;
     }
 
     private synchronized void changed(Object arg) {
