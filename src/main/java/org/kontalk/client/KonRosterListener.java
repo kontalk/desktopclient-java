@@ -32,7 +32,7 @@ import org.kontalk.system.Control;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class KonRosterListener implements RosterListener {
-    private final static Logger LOGGER = Logger.getLogger(KonRosterListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonRosterListener.class.getName());
 
     private final Roster mRoster;
     private final Control mControl;

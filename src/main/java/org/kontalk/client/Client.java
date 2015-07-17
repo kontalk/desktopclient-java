@@ -64,9 +64,9 @@ import org.kontalk.system.Control;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Client implements StanzaListener, Runnable {
-    private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
-    private final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
+    private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
     private static enum Command {CONNECT, DISCONNECT};
 

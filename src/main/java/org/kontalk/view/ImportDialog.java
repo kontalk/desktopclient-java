@@ -53,7 +53,7 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ImportDialog extends WebDialog {
-    private final static Logger LOGGER = Logger.getLogger(ImportDialog.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ImportDialog.class.getName());
 
     private static enum ImportPage {INTRO, SETTINGS, RESULT};
     private static enum Direction {BACK, FORTH};

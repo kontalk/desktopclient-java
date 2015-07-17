@@ -49,7 +49,7 @@ import org.kontalk.util.Tr;
  */
 final class ThreadDetails extends WebPanel {
 
-    private final static Color DEFAULT_BG = Color.WHITE;
+    private static final Color DEFAULT_BG = Color.WHITE;
 
     private final KonThread mThread;
     private final WebTextField mSubjectField;

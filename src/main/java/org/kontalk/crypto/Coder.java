@@ -82,7 +82,7 @@ import org.kontalk.util.XMPPUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Coder {
-    private final static Logger LOGGER = Logger.getLogger(Coder.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Coder.class.getName());
 
     /**
      * Encryption status of a message.

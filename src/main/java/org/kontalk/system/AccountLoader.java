@@ -42,7 +42,7 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 
 public final class AccountLoader {
-    private final static Logger LOGGER = Logger.getLogger(AccountLoader.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(AccountLoader.class.getName());
 
     private static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
     private static final String BRIDGE_CERT_FILENAME = "kontalk-login.crt";

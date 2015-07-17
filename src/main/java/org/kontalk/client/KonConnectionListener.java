@@ -32,7 +32,7 @@ import org.kontalk.system.Control;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class KonConnectionListener implements ConnectionListener {
-    private final static Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());
 
     private final Control mControl;
 

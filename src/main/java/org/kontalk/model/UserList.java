@@ -36,9 +36,9 @@ import org.kontalk.system.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class UserList extends Observable {
-    private final static Logger LOGGER = Logger.getLogger(UserList.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(UserList.class.getName());
 
-    private final static UserList INSTANCE = new UserList();
+    private static final UserList INSTANCE = new UserList();
 
     /** JID to user. */
     private final HashMap<String, User> mJIDMap = new HashMap<>();

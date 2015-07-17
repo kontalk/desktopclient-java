@@ -45,7 +45,7 @@ import org.kontalk.system.Control;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final public class KonMessageListener implements StanzaListener {
-    private final static Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
 
     // plain text body added by Android client
 

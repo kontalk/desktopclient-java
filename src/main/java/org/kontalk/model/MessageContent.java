@@ -34,7 +34,7 @@ import org.kontalk.util.EncodingUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class MessageContent {
-    private final static Logger LOGGER = Logger.getLogger(MessageContent.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(MessageContent.class.getName());
 
     // plain message text, empty string if not present
     private final String mPlainText;
@@ -45,10 +45,10 @@ public class MessageContent {
     // decrypted message content
     private Optional<MessageContent> mOptDecryptedContent;
 
-    private final static String JSON_PLAIN_TEXT = "plain_text";
-    private final static String JSON_ATTACHMENT = "attachment";
-    private final static String JSON_ENC_CONTENT = "encrypted_content";
-    private final static String JSON_DEC_CONTENT = "decrypted_content";
+    private static final String JSON_PLAIN_TEXT = "plain_text";
+    private static final String JSON_ATTACHMENT = "attachment";
+    private static final String JSON_ENC_CONTENT = "encrypted_content";
+    private static final String JSON_DEC_CONTENT = "decrypted_content";
 
     public MessageContent(String plainText) {
         this(plainText, Optional.<Attachment>empty(), "");
@@ -181,13 +181,13 @@ public class MessageContent {
         // progress downloaded of (encrypted) file in percent
         private int mDownloadProgress = -1;
 
-        private final static String JSON_URL = "url";
-        private final static String JSON_MIME_TYPE = "mime_type";
-        private final static String JSON_LENGTH = "length";
-        private final static String JSON_FILE_NAME = "file_name";
-        private final static String JSON_ENCRYPTION = "encryption";
-        private final static String JSON_SIGNING = "signing";
-        private final static String JSON_CODER_ERRORS = "coder_errors";
+        private static final String JSON_URL = "url";
+        private static final String JSON_MIME_TYPE = "mime_type";
+        private static final String JSON_LENGTH = "length";
+        private static final String JSON_FILE_NAME = "file_name";
+        private static final String JSON_ENCRYPTION = "encryption";
+        private static final String JSON_SIGNING = "signing";
+        private static final String JSON_CODER_ERRORS = "coder_errors";
 
         // used for incoming attachments
         public Attachment(String url,

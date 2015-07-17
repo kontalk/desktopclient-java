@@ -35,7 +35,7 @@ import javax.swing.SwingUtilities;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 class ImageLoader {
-    private final static Logger LOGGER = Logger.getLogger(ImageLoader.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ImageLoader.class.getName());
 
     private ImageLoader() {}
 
@@ -79,7 +79,7 @@ class ImageLoader {
         return image.getScaledInstance((int) (iw * scale), (int) (ih * scale), Image.SCALE_FAST);
     }
 
-    private final static class AsyncLoader implements Runnable, ImageObserver {
+    private static final class AsyncLoader implements Runnable, ImageObserver {
 
         private final WebLinkLabel view;
         private final String path;

@@ -40,9 +40,9 @@ import org.kontalk.util.EncodingUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class MessageList extends Observable {
-    private final static Logger LOGGER = Logger.getLogger(MessageList.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
-    private final static MessageList INSTANCE = new MessageList();
+    private static final MessageList INSTANCE = new MessageList();
 
     // the list is implemented as 'XMPP ID' to "list of messages" map, as equal
     // XMPP IDs are possible but assumed to happen rarely

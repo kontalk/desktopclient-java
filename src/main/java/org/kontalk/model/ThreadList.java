@@ -37,9 +37,9 @@ import org.kontalk.system.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class ThreadList extends Observable implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(ThreadList.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ThreadList.class.getName());
 
-    private final static ThreadList INSTANCE = new ThreadList();
+    private static final ThreadList INSTANCE = new ThreadList();
 
     private final HashMap<Integer, KonThread> mMap = new HashMap<>();
 

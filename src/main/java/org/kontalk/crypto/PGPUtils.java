@@ -60,7 +60,7 @@ import org.kontalk.util.EncodingUtils;
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
 public final class PGPUtils {
-    private final static Logger LOGGER = Logger.getLogger(PGPUtils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(PGPUtils.class.getName());
 
     /** Security provider: Bouncy Castle. */
     public static final String PROVIDER = "BC";

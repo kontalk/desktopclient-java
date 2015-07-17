@@ -39,7 +39,7 @@ import org.kontalk.system.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class User extends Observable implements Comparable<User> {
-    private final static Logger LOGGER = Logger.getLogger(User.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(User.class.getName());
 
     /**
      * Online status of one user.
@@ -54,15 +54,15 @@ public final class User extends Observable implements Comparable<User> {
         UNKNOWN, PENDING, SUBSCRIBED, UNSUBSCRIBED
     }
 
-    public final static String TABLE = "user";
-    public final static String COL_JID = "jid";
-    public final static String COL_NAME = "name";
-    public final static String COL_STAT = "status";
-    public final static String COL_LAST_SEEN = "last_seen";
-    public final static String COL_ENCR = "encrypted";
-    public final static String COL_PUB_KEY = "public_key";
-    public final static String COL_KEY_FP = "key_fingerprint";
-    public final static String CREATE_TABLE = "(" +
+    public static final String TABLE = "user";
+    public static final String COL_JID = "jid";
+    public static final String COL_NAME = "name";
+    public static final String COL_STAT = "status";
+    public static final String COL_LAST_SEEN = "last_seen";
+    public static final String COL_ENCR = "encrypted";
+    public static final String COL_PUB_KEY = "public_key";
+    public static final String COL_KEY_FP = "key_fingerprint";
+    public static final String CREATE_TABLE = "(" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             COL_JID + " TEXT NOT NULL UNIQUE, " +
             COL_NAME + " TEXT, " +

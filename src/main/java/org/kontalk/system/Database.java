@@ -52,7 +52,7 @@ import org.sqlite.SQLiteConfig;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Database {
-    private final static Logger LOGGER = Logger.getLogger(Database.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Database.class.getName());
 
     private static Database INSTANCE = null;
 

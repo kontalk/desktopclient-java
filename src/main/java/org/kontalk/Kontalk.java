@@ -46,11 +46,11 @@ import org.kontalk.view.View;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Kontalk {
-    private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
-    public final static String VERSION = "3.0.1";
-    public final static String RES_PATH = "res/";
-    private final static String CONFIG_DIR;
+    public static final String VERSION = "3.0.1";
+    public static final String RES_PATH = "res/";
+    private static final String CONFIG_DIR;
 
     private static ServerSocket RUN_LOCK;
 

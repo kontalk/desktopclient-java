@@ -28,7 +28,7 @@ import org.kontalk.Kontalk;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class MediaUtils {
-    private final static Logger LOGGER = Logger.getLogger(MediaUtils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(MediaUtils.class.getName());
 
     private static OggClip mAudioClip = null;
 

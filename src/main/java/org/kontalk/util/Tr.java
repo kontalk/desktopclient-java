@@ -36,12 +36,12 @@ import org.kontalk.Kontalk;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Tr {
-    private final static Logger LOGGER = Logger.getLogger(Tr.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Tr.class.getName());
 
-    private final static String DEFAULT_LANG = "en";
-    private final static String I18N_DIR = "i18n/";
-    private final static String STRING_FILE = "strings";
-    private final static String PROP_EXT = ".properties";
+    private static final String DEFAULT_LANG = "en";
+    private static final String I18N_DIR = "i18n/";
+    private static final String STRING_FILE = "strings";
+    private static final String PROP_EXT = ".properties";
 
     /** Map default (English) strings to translated strings. **/
     private static Map<String, String> TR_MAP = null;

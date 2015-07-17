@@ -48,9 +48,9 @@ import org.kontalk.util.TrustUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class KonConnection extends XMPPTCPConnection {
-    private final static Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
-    private final static String RESSOURCE = "Kontalk_Desktop";
+    private static final String RESSOURCE = "Kontalk_Desktop";
 
     public KonConnection(EndpointServer server,
             PrivateKey privateKey,

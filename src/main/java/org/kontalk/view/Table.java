@@ -58,7 +58,7 @@ import javax.swing.table.TableRowSorter;
  * @param <V> the value of one view item
  */
 abstract class Table<I extends Table<I, V>.TableItem, V extends Observable & Comparable<V>> extends WebTable implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(Table.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Table.class.getName());
 
     protected final View mView;
 

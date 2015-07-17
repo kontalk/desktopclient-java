@@ -24,20 +24,18 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.User;
 
 /**
- *
+ * Manager handling own chat status for all threads.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatStateManager {
-    private final static Logger LOGGER = Logger.getLogger(ChatStateManager.class.getName());
 
-    private final static int COMPOSING_TO_PAUSED = 15; // seconds
+    private static final int COMPOSING_TO_PAUSED = 15; // seconds
 
     private final Client mClient;
     private final Map<KonThread, MyChatState> mChatStateCache = new HashMap<>();

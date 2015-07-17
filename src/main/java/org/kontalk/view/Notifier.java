@@ -47,7 +47,7 @@ import org.kontalk.util.MediaUtils;
  */
 final class Notifier implements Observer {
 
-    private final static Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
+    private static final Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
 
     private final View mView;
 

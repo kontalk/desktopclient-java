@@ -44,10 +44,10 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class TrayManager implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(TrayManager.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(TrayManager.class.getName());
 
-    final static Image NORMAL_TRAY = Utils.getImage("kontalk.png");
-    final static Image NOTIFICATION_TRAY = Utils.getImage("kontalk_notification.png");
+    static final Image NORMAL_TRAY = Utils.getImage("kontalk.png");
+    static final Image NOTIFICATION_TRAY = Utils.getImage("kontalk_notification.png");
 
     private final View mView;
     private final MainFrame mMainFrame;

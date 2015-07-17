@@ -40,7 +40,7 @@ import org.kontalk.util.EncodingUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class KonMessage extends Observable implements Comparable<KonMessage> {
-    private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
      * Direction (in-, outgoing) of one message.
@@ -66,7 +66,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         ERROR
     };
 
-    public final static String TABLE = "messages";
+    public static final String TABLE = "messages";
     public static final String COL_THREAD_ID = "thread_id";
     public static final String COL_DIR = "direction";
     public static final String COL_USER_ID = "user_id";
@@ -80,7 +80,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String COL_COD_ERR = "coder_errors";
     public static final String COL_SERV_ERR = "server_error";
     public static final String COL_SERV_DATE = "server_date";
-    public final static String CREATE_TABLE = "( " +
+    public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             COL_THREAD_ID + " INTEGER NOT NULL, " +
             // enum, in- or outgoing
@@ -336,9 +336,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
-    public final static class ServerError {
-        private final static String JSON_COND = "cond";
-        private final static String JSON_TEXT = "text";
+    public static final class ServerError {
+        private static final String JSON_COND = "cond";
+        private static final String JSON_TEXT = "text";
 
         public final String condition;
         public final String text;

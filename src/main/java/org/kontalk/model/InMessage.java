@@ -30,7 +30,7 @@ import org.kontalk.model.MessageContent.Attachment;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class InMessage extends KonMessage {
-    private final static Logger LOGGER = Logger.getLogger(InMessage.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(InMessage.class.getName());
 
     /**
      * Create a new incoming message from builder.

@@ -74,12 +74,12 @@ import org.ocpsoft.prettytime.PrettyTime;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class Utils {
-    private final static Logger LOGGER = Logger.getLogger(Utils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
 
-    final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
-    final static SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
-    final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
-    final static PrettyTime PRETTY_TIME = new PrettyTime();
+    static final SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
+    static final SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
+    static final SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
+    static final PrettyTime PRETTY_TIME = new PrettyTime();
 
     private Utils() {
         throw new AssertionError();

@@ -59,7 +59,7 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ConfigurationDialog extends WebDialog {
-    private final static Logger LOGGER = Logger.getLogger(ConfigurationDialog.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ConfigurationDialog.class.getName());
 
     private static enum ConfPage {MAIN, ACCOUNT};
 

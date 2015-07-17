@@ -75,7 +75,7 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class View implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(View.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(View.class.getName());
 
     static final int GAP_DEFAULT = 10;
     static final int GAP_BIG = 15;
@@ -84,10 +84,10 @@ public final class View implements Observer {
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
 
-    final static Color BLUE = new Color(130, 170, 240);
-    final static Color LIGHT_BLUE = new Color(220, 220, 250);
-    final static Color LIGHT_GREY = new Color(240, 240, 240);
-    final static Color GREEN = new Color(83, 196, 46);
+    static final Color BLUE = new Color(130, 170, 240);
+    static final Color LIGHT_BLUE = new Color(220, 220, 250);
+    static final Color LIGHT_GREY = new Color(240, 240, 240);
+    static final Color GREEN = new Color(83, 196, 46);
 
     private final Control mControl;
     private final TrayManager mTrayManager;

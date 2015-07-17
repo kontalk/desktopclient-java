@@ -47,7 +47,7 @@ import org.kontalk.system.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class KonThread extends Observable implements Comparable<KonThread>, Observer {
-    private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonThread.class.getName());
 
     public static final String TABLE = "threads";
     public static final String COL_SUBJ = "subject";
@@ -378,8 +378,8 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     public static class ViewSettings {
-        private final static String JSON_BG_COLOR = "bg_color";
-        private final static String JSON_IMAGE_PATH = "img";
+        private static final String JSON_BG_COLOR = "bg_color";
+        private static final String JSON_IMAGE_PATH = "img";
 
         // background color, if set
         private final Optional<Color> mOptColor;

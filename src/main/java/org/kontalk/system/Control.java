@@ -58,9 +58,9 @@ import org.kontalk.util.XMPPUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Control extends Observable {
-    private final static Logger LOGGER = Logger.getLogger(Control.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Control.class.getName());
 
-    private final static String LEGACY_CUT_FROM_ID = " (NO COMMENT)";
+    private static final String LEGACY_CUT_FROM_ID = " (NO COMMENT)";
 
     /** The current application state. */
     public enum Status {

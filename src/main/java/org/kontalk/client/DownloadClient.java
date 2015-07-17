@@ -51,7 +51,7 @@ import org.kontalk.util.TrustUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class DownloadClient {
-    private final static Logger LOGGER = Logger.getLogger(DownloadClient.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(DownloadClient.class.getName());
 
     /** Regex used to parse content-disposition headers */
     private static final Pattern CONTENT_DISPOSITION_PATTERN = Pattern

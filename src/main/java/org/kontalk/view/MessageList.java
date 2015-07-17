@@ -79,15 +79,15 @@ import org.kontalk.view.ThreadView.Background;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
-    private final static Logger LOGGER = Logger.getLogger(MessageList.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
-    private final static Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
-    private final static Icon SENT_ICON = Utils.getIcon("ic_msg_sent.png");
-    private final static Icon DELIVERED_ICON = Utils.getIcon("ic_msg_delivered.png");
-    private final static Icon ERROR_ICON = Utils.getIcon("ic_msg_error.png");
-    private final static Icon WARNING_ICON = Utils.getIcon("ic_msg_warning.png");
-    private final static Icon CRYPT_ICON = Utils.getIcon("ic_msg_crypt.png");
-    private final static Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
+    private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
+    private static final Icon SENT_ICON = Utils.getIcon("ic_msg_sent.png");
+    private static final Icon DELIVERED_ICON = Utils.getIcon("ic_msg_delivered.png");
+    private static final Icon ERROR_ICON = Utils.getIcon("ic_msg_error.png");
+    private static final Icon WARNING_ICON = Utils.getIcon("ic_msg_warning.png");
+    private static final Icon CRYPT_ICON = Utils.getIcon("ic_msg_crypt.png");
+    private static final Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
 
     private final ThreadView mThreadView;
     private final KonThread mThread;

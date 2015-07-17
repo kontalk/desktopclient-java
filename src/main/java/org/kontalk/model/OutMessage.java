@@ -30,7 +30,7 @@ import org.kontalk.crypto.Coder;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class OutMessage extends KonMessage {
-    private final static Logger LOGGER = Logger.getLogger(OutMessage.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(OutMessage.class.getName());
 
     OutMessage(KonMessage.Builder builder) {
         super(builder);
