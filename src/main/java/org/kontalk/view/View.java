@@ -77,7 +77,12 @@ import org.kontalk.util.Tr;
 public final class View implements Observer {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
-    static final int DEFAULT_MARGIN = 15;
+    static final int GAP_DEFAULT = 10;
+    static final int GAP_BIG = 15;
+    static final int GAP_SMALL = 5;
+    static final int MARGIN_DEFAULT = 10;
+    static final int MARGIN_BIG = 15;
+    static final int MARGIN_SMALL = 5;
 
     final static Color BLUE = new Color(130, 170, 240);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
@@ -111,7 +116,7 @@ public final class View implements Observer {
 
         // text area
         mSendTextArea = new WebTextArea();
-        mSendTextArea.setMargin(5);
+        mSendTextArea.setMargin(View.MARGIN_SMALL);
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {

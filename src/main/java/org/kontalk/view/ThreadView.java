@@ -79,15 +79,16 @@ final class ThreadView extends WebPanel implements Observer {
     ThreadView(View view, Component sendTextField, Component sendButton) {
         mView = view;
 
-        WebPanel titlePanel = new WebPanel(false, new BorderLayout(5, 5));
-        titlePanel.setMargin(10);
+        WebPanel titlePanel = new WebPanel(false,
+                new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
+        titlePanel.setMargin(View.MARGIN_DEFAULT);
         mTitleLabel = new WebLabel();
         mTitleLabel.setFontSize(16);
         mTitleLabel.setDrawShade(true);
         mSubLabel = new WebLabel();
         mSubLabel.setFontSize(11);
         mSubLabel.setForeground(Color.GRAY);
-        titlePanel.add(new GroupPanel(5, false, mTitleLabel, mSubLabel), BorderLayout.CENTER);
+        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel), BorderLayout.CENTER);
 
         mEditButton = new WebToggleButton(Utils.getIcon("ic_ui_menu.png"));
         //editButton.setToolTipText(Tr.tr("Edit this chat"));

@@ -280,8 +280,8 @@ final class Utils {
         PassPanel(boolean passSet) {
             mPassSet = passSet;
 
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_SMALL);
 
             DocumentListener docListener = new DocumentListener() {
                 @Override

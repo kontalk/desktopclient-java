@@ -136,8 +136,8 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             super(user);
 
             //this.setPaintFocus(true);
-            this.setMargin(5);
-            this.setLayout(new BorderLayout(10, 5));
+            this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
+            this.setMargin(View.MARGIN_SMALL);
 
             mNameLabel = new WebLabel("foo");
             mNameLabel.setFontSize(14);

@@ -157,8 +157,8 @@ final class ImportDialog extends WebDialog {
     private class IntroPanel extends ImportPanel {
 
         IntroPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Get Started")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -187,8 +187,8 @@ final class ImportDialog extends WebDialog {
         private final WebPasswordField mPassField;
 
         SettingsPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Setup")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -269,8 +269,8 @@ final class ImportDialog extends WebDialog {
         private final Utils.PassPanel mPassPanel;
 
         ResultPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Import results")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));

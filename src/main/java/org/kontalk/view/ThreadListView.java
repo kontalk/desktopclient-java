@@ -170,8 +170,8 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         ThreadItem(KonThread thread) {
             super(thread);
 
-            this.setMargin(5);
-            this.setLayout(new BorderLayout(10, 5));
+            this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
+            this.setMargin(View.MARGIN_SMALL);
 
             mSubjectLabel = new WebLabel("foo");
             mSubjectLabel.setFontSize(14);

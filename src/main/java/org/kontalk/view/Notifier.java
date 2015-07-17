@@ -87,7 +87,7 @@ final class Notifier implements Observer {
 
         WebNotificationPopup popup = new WebNotificationPopup(PopupStyle.dark);
         popup.setIcon(Utils.getIcon("kontalk_small.png"));
-        popup.setMargin(10);
+        popup.setMargin(View.MARGIN_DEFAULT);
         popup.setDisplayTime(6000);
         popup.addNotificationListener(new NotificationListener() {
             @Override
@@ -104,7 +104,7 @@ final class Notifier implements Observer {
 
         // content
         WebPanel panel = new WebPanel();
-        panel.setMargin(10);
+        panel.setMargin(View.MARGIN_DEFAULT);
         panel.setOpaque(false);
         WebLabel title = new WebLabel("A new Message!");
         title.setFontSize(14);

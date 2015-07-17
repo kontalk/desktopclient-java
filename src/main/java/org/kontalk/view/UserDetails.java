@@ -68,15 +68,15 @@ final class UserDetails extends WebPanel implements Observer {
         mView = view;
         mUser = user;
 
-        GroupPanel groupPanel = new GroupPanel(15, false);
-        groupPanel.setMargin(15);
+        GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
+        groupPanel.setMargin(View.MARGIN_BIG);
 
         groupPanel.add(new WebLabel(Tr.tr("Contact details")).setBoldFont());
         groupPanel.add(new WebSeparator(true, true));
 
         // editable fields
         WebPanel namePanel = new WebPanel();
-        namePanel.setLayout(new BorderLayout(10, 5));
+        namePanel.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
         namePanel.add(new WebLabel(Tr.tr("Display Name:")), BorderLayout.WEST);
         mNameField = new WebTextField();
         mNameField.setHideInputPromptOnFocus(false);
@@ -106,13 +106,13 @@ final class UserDetails extends WebPanel implements Observer {
         String jidText = Tr.tr("The unique address of this contact");
         TooltipManager.addTooltip(jidField, jidText);
         groupPanel.add(new GroupPanel(GroupingType.fillLast,
-                10,
+                View.GAP_DEFAULT,
                 new WebLabel("JID:"),
                 jidField));
 
         WebLabel authLabel = new WebLabel(Tr.tr("Authorization: "));
         mAuthorization = new WebLabel();
-        groupPanel.add(new GroupPanel(10, authLabel, mAuthorization));
+        groupPanel.add(new GroupPanel(View.GAP_DEFAULT, authLabel, mAuthorization));
 
         groupPanel.add(new WebSeparator(true, true));
 
@@ -127,7 +127,8 @@ final class UserDetails extends WebPanel implements Observer {
                 mView.getControl().sendKeyRequest(UserDetails.this.mUser);
             }
         });
-        groupPanel.add(new GroupPanel(GroupingType.fillMiddle, 15, keyLabel, mKeyStatus, updButton));
+        groupPanel.add(new GroupPanel(GroupingType.fillMiddle,
+                View.GAP_BIG, keyLabel, mKeyStatus, updButton));
 
         mFPLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
         mFPArea = Utils.createFingerprintArea();
@@ -135,7 +136,7 @@ final class UserDetails extends WebPanel implements Observer {
         TooltipManager.addTooltip(mFPArea, fpText);
         mFPLabel.setAlignmentY(Component.TOP_ALIGNMENT);
         GroupPanel fpLabelPanel = new GroupPanel(false, mFPLabel, Box.createGlue());
-        groupPanel.add(new GroupPanel(10, fpLabelPanel, mFPArea));
+        groupPanel.add(new GroupPanel(View.GAP_DEFAULT, fpLabelPanel, mFPArea));
         this.updateOnEDT();
 
         mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));

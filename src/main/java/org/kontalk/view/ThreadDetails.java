@@ -64,8 +64,8 @@ final class ThreadDetails extends WebPanel {
     ThreadDetails(KonThread thread) {
         mThread = thread;
 
-        GroupPanel groupPanel = new GroupPanel(15, false);
-        groupPanel.setMargin(View.DEFAULT_MARGIN);
+        GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
+        groupPanel.setMargin(View.MARGIN_BIG);
 
         groupPanel.add(new WebLabel(Tr.tr("Edit Chat")).setBoldFont());
         groupPanel.add(new WebSeparator(true, true));

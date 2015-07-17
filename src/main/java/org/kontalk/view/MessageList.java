@@ -255,7 +255,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
             mContentPanel = new WebPanel();
             mContentPanel.setOpaque(false);
-            mContentPanel.setMargin(5);
+            mContentPanel.setMargin(View.MARGIN_SMALL);
             // text area
             mTextPane = new WebTextPane();
             mTextPane.setEditable(false);

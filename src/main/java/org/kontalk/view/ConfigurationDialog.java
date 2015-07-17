@@ -74,7 +74,7 @@ final class ConfigurationDialog extends WebDialog {
         this.setSize(550, 500);
         this.setResizable(false);
         this.setModal(true);
-        this.setLayout(new BorderLayout(5, 5));
+        this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
 
         WebTabbedPane tabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
         tabbedPane.setFontSize(13);
@@ -121,8 +121,8 @@ final class ConfigurationDialog extends WebDialog {
         private final WebFileChooserField mBGChooser;
 
         MainPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(15);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Main Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -145,7 +145,7 @@ final class ConfigurationDialog extends WebDialog {
             mCloseTrayBox.setAnimated(false);
             mCloseTrayBox.setSelected(mConf.getBoolean(Config.MAIN_TRAY_CLOSE));
             mCloseTrayBox.setEnabled(mTrayBox.isSelected());
-            groupPanel.add(new GroupPanel(10, mTrayBox, mCloseTrayBox));
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT, mTrayBox, mCloseTrayBox));
 
             mEnterSendsBox = new WebCheckBox(Tr.tr("Enter key sends"));
             mEnterSendsBox.setAnimated(false);
@@ -203,8 +203,8 @@ final class ConfigurationDialog extends WebDialog {
         private final WebTextArea mFingerprintArea;
 
         AccountPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(15);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Account Configuration")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -241,7 +241,7 @@ final class ConfigurationDialog extends WebDialog {
             GroupPanel fpLabelPanel = new GroupPanel(false, fpLabel, Box.createGlue());
             mFingerprintArea = Utils.createFingerprintArea();
             this.updateFingerprint();
-            groupPanel.add(new GroupPanel(10, fpLabelPanel, mFingerprintArea));
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT, fpLabelPanel, mFingerprintArea));
 
             final WebButton passButton = new WebButton(getPassTitle());
             passButton.addActionListener(new ActionListener() {
@@ -303,8 +303,8 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mChatStateBox;
 
         PrivacyPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(15);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Privacy Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -332,7 +332,7 @@ final class ConfigurationDialog extends WebDialog {
 
     private static WebDialog createPassDialog(WebDialog parent) {
         final WebDialog passDialog = new WebDialog(parent, getPassTitle(), true);
-        passDialog.setLayout(new BorderLayout(5, 5));
+        passDialog.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
         passDialog.setResizable(false);
 
         final WebButton saveButton = new WebButton(Tr.tr("Save"));

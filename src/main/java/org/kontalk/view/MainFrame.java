@@ -210,7 +210,7 @@ final class MainFrame extends WebFrame {
         menubar.add(helpMenu);
 
         // Layout...
-        this.setLayout(new BorderLayout(5, 5));
+        this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
 
         // ...left...
         WebPanel sidePanel = new WebPanel(false);
@@ -312,7 +312,7 @@ final class MainFrame extends WebFrame {
     }
 
     private void showAboutDialog() {
-        WebPanel aboutPanel = new WebPanel(new GridLayout(0, 1, 5, 5));
+        WebPanel aboutPanel = new WebPanel(new GridLayout(0, 1, View.GAP_SMALL, View.GAP_SMALL));
         aboutPanel.add(new WebLabel("Kontalk Java Client v" + Kontalk.VERSION));
         WebLinkLabel linkLabel = new WebLinkLabel();
         linkLabel.setLink("http://www.kontalk.org");
@@ -338,8 +338,8 @@ final class MainFrame extends WebFrame {
             this.setResizable(false);
             this.setModal(true);
 
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             String[] strings = mConf.getStringArray(Config.NET_STATUS_LIST);
             List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
@@ -424,12 +424,12 @@ final class MainFrame extends WebFrame {
             this.setResizable(false);
             this.setModal(true);
 
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_SMALL);
 
             // editable fields
             WebPanel namePanel = new WebPanel();
-            namePanel.setLayout(new BorderLayout(10, 5));
+            namePanel.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
             namePanel.add(new WebLabel(Tr.tr("Display Name:")), BorderLayout.WEST);
             mNameField = new WebTextField();
             namePanel.add(mNameField, BorderLayout.CENTER);
@@ -492,7 +492,7 @@ final class MainFrame extends WebFrame {
         overlayArea.setText(overlayText);
         overlayArea.setLineWrap(true);
         overlayArea.setWrapStyleWord(true);
-        overlayArea.setMargin(10);
+        overlayArea.setMargin(View.MARGIN_DEFAULT);
         overlayArea.setFontSize(15);
         overlayArea.setEditable(false);
         BorderPainter<WebTextArea> borderPainter = new BorderPainter<>(Color.LIGHT_GRAY);
