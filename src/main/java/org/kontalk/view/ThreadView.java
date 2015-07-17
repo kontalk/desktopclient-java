@@ -18,11 +18,15 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.panel.GroupPanel;
+import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.viewport.WebViewport;
+import com.alee.managers.popup.PopupAdapter;
+import com.alee.managers.popup.WebPopup;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -32,6 +36,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
 import java.awt.image.BufferedImage;
@@ -65,6 +71,8 @@ final class ThreadView extends WebPanel implements Observer {
     private final WebScrollPane mScrollPane;
     private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
     private Background mDefaultBG;
+    private final WebToggleButton mEditButton;
+    private WebPopup mPopup = new WebPopup();
 
     private boolean mScrollDown = false;
 
@@ -76,11 +84,23 @@ final class ThreadView extends WebPanel implements Observer {
         mTitleLabel = new WebLabel();
         mTitleLabel.setFontSize(16);
         mTitleLabel.setDrawShade(true);
-        titlePanel.add(mTitleLabel, BorderLayout.CENTER);
         mSubLabel = new WebLabel();
         mSubLabel.setFontSize(11);
         mSubLabel.setForeground(Color.GRAY);
-        titlePanel.add(mSubLabel, BorderLayout.SOUTH);
+        titlePanel.add(new GroupPanel(5, false, mTitleLabel, mSubLabel), BorderLayout.CENTER);
+
+        mEditButton = new WebToggleButton(Utils.getIcon("ic_ui_menu.png"));
+        //editButton.setToolTipText(Tr.tr("Edit this chat"));
+        mEditButton.setTopBgColor(titlePanel.getBackground());
+        mEditButton.setBottomBgColor(titlePanel.getBackground());
+        mEditButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (!ThreadView.this.mPopup.isShowing())
+                    ThreadView.this.showPopup();
+            }
+        });
+        titlePanel.add(mEditButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
         mScrollPane = new ScrollPane(this);
@@ -232,6 +252,25 @@ final class ThreadView extends WebPanel implements Observer {
                 }
             }
         }
+    }
+
+    private void showPopup() {
+        Optional<KonThread> optThread = ThreadView.this.getCurrentThread();
+        if (!optThread.isPresent())
+            return;
+
+        mPopup = new WebPopup();
+        // TODO focus lost when choosing background color / picture
+        mPopup.setCloseOnFocusLoss(true);
+        mPopup.addPopupListener(new PopupAdapter() {
+            @Override
+            public void popupWillBeClosed() {
+                mEditButton.doClick();
+            }
+        });
+        mPopup.add(new ThreadDetails(optThread.get()));
+        //mPopup.packPopup();
+        mPopup.showAsPopupMenu(mEditButton);
     }
 
     /** A background image of thread view with efficient async reloading. */

@@ -77,6 +77,8 @@ import org.kontalk.util.Tr;
 public final class View implements Observer {
     private final static Logger LOGGER = Logger.getLogger(View.class.getName());
 
+    static final int DEFAULT_MARGIN = 15;
+
     final static Color BLUE = new Color(130, 170, 240);
     final static Color LIGHT_BLUE = new Color(220, 220, 250);
     final static Color LIGHT_GREY = new Color(240, 240, 240);
