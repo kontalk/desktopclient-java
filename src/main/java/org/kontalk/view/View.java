@@ -60,7 +60,6 @@ import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.ViewEvent;
-import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageList;
@@ -386,27 +385,19 @@ public final class View implements Observer {
 
     /* view to control */
 
+    Control getControl() {
+        return mControl;
+    }
+
     void callShutDown() {
         // trigger save if user details are shown
         mContent.showNothing();
         mControl.shutDown();
     }
 
-    void callConnect() {
-        mControl.connect();
-    }
-
-    void callDisconnect() {
-        mControl.disconnect();
-    }
-
     void callCreateNewThread(Set<User> user) {
         KonThread thread = mControl.createNewThread(user);
         this.selectThread(thread);
-    }
-
-    void callCreateNewUser(String jid, String name, boolean encrypted) {
-        mControl.createNewUser(jid, name, encrypted);
     }
 
     private void callSendText() {
@@ -417,22 +408,6 @@ public final class View implements Observer {
 
        mControl.sendText(optThread.get(), mSendTextArea.getText());
        mSendTextArea.setText("");
-    }
-
-    void callSetUserBlocking(User user, boolean blocking) {
-        mControl.sendUserBlocking(user, blocking);
-    }
-
-    void callDecrypt(InMessage message) {
-        mControl.decryptAndDownload(message);
-    }
-
-    void callRequestKey(User user) {
-        mControl.sendKeyRequest(user);
-    }
-
-    void callSendStatusText() {
-        mControl.sendStatusText();
     }
 
     /* view internal */

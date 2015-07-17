@@ -109,7 +109,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
                 if (t.mValue.getMessages().size() == 0 ||
                         ThreadListView.this.confirmDeletion()) {
                     ThreadItem threadItem = ThreadListView.this.getSelectedItem();
-                    mThreadList.delete(threadItem.mValue.getID());
+                    mView.getControl().deleteThread(threadItem.mValue);
                 }
             }
         });

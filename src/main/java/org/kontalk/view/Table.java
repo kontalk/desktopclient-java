@@ -76,6 +76,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable & Com
     @SuppressWarnings("unchecked")
     Table(View view) {
         mView = view;
+
         // model
         mModel = new DefaultTableModel(0, 1) {
             // row sorter needs this

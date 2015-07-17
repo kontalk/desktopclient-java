@@ -124,7 +124,7 @@ final class UserDetails extends WebPanel implements Observer {
         updButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                mView.callRequestKey(UserDetails.this.mUser);
+                mView.getControl().sendKeyRequest(UserDetails.this.mUser);
             }
         });
         groupPanel.add(new GroupPanel(GroupingType.fillMiddle, 15, keyLabel, mKeyStatus, updButton));

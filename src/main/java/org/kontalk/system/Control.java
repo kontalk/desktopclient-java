@@ -188,6 +188,10 @@ public final class Control extends Observable {
         return ThreadList.getInstance().createNew(user);
     }
 
+    public void deleteThread(KonThread thread) {
+        ThreadList.getInstance().delete(thread.getID());
+    }
+
     public void createNewUser(String jid, String name, boolean encrypted) {
         Optional<User> optNewUser = UserList.getInstance().add(jid, name);
         if (!optNewUser.isPresent()) {

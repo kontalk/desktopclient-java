@@ -540,7 +540,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                             LOGGER.warning("decrypted message not incoming message");
                             return;
                         }
-                        mView.callDecrypt((InMessage) m);
+                        mView.getControl().decryptAndDownload((InMessage) m);
                     }
                 });
                 popupMenu.add(decryptMenuItem);

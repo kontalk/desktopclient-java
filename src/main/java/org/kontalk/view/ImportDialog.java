@@ -341,7 +341,7 @@ final class ImportDialog extends WebDialog {
             }
             ImportDialog.this.dispose();
             if (mConnect)
-                mView.callConnect();
+                mView.getControl().connect();
         }
     }
 

@@ -274,7 +274,7 @@ final class ConfigurationDialog extends WebDialog {
                 public void actionPerformed(ActionEvent e) {
                     AccountPanel.this.saveConfiguration();
                     ConfigurationDialog.this.dispose();
-                    mView.callConnect();
+                    mView.getControl().connect();
                 }
             });
 

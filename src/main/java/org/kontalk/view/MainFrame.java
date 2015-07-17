@@ -126,7 +126,7 @@ final class MainFrame extends WebFrame {
         mConnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.callConnect();
+                mView.getControl().connect();
             }
         });
         konNetMenu.add(mConnectMenuItem);
@@ -137,7 +137,7 @@ final class MainFrame extends WebFrame {
         mDisconnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.callDisconnect();
+                mView.getControl().disconnect();
             }
         });
         konNetMenu.add(mDisconnectMenuItem);
@@ -408,7 +408,7 @@ final class MainFrame extends WebFrame {
                 stats = stats.subList(0, 20);
 
             mConf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
-            mView.callSendStatusText();
+            mView.getControl().sendStatusText();
         }
     }
 
@@ -474,7 +474,7 @@ final class MainFrame extends WebFrame {
         }
 
         private void saveUser() {
-            mView.callCreateNewUser(mJIDField.getText(),
+            mView.getControl().createNewUser(mJIDField.getText(),
                     mNameField.getText(),
                     mEncryptionBox.isSelected());
         }

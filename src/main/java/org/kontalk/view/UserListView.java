@@ -251,7 +251,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             mBlockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mView.callSetUserBlocking(mItem.mValue, true);
+                    mView.getControl().sendUserBlocking(mItem.mValue, true);
                 }
             });
             this.add(mBlockMenuItem);
@@ -261,7 +261,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             mUnblockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    UserListView.this.mView.callSetUserBlocking(mItem.mValue, false);
+                    mView.getControl().sendUserBlocking(mItem.mValue, false);
                 }
             });
             this.add(mUnblockMenuItem);
