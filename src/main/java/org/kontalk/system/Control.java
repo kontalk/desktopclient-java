@@ -27,12 +27,13 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
+import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jivesoftware.smack.roster.packet.RosterPacket.ItemStatus;
 import org.jivesoftware.smack.roster.packet.RosterPacket.ItemType;
-import org.jivesoftware.smack.util.StringUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
@@ -71,6 +72,31 @@ public final class Control extends Observable {
         SHUTTING_DOWN,
         FAILED,
         ERROR
+    }
+
+    /**
+     * Message attributes to identify the thread for a message.
+     */
+    public static class MessageIDs {
+        public final String jid;
+        public final String xmppID;
+        public final String threadID;
+        // unused
+        public final String groupID;
+
+        private MessageIDs(String jid, String xmppID, String threadID) {
+            this.jid = jid;
+            this.xmppID = xmppID;
+            this.threadID = threadID;
+            this.groupID = "";
+        }
+
+        public static MessageIDs from(Message m) {
+            return new MessageIDs(
+                    StringUtils.defaultString(m.getFrom()),
+                    StringUtils.defaultString(m.getStanzaId()),
+                    StringUtils.defaultString(m.getThread()));
+        }
     }
 
     private final Client mClient;
@@ -281,25 +307,20 @@ public final class Control extends Observable {
      * receipts): Create, save and process the message.
      * @return true on success or message is a duplicate, false on unexpected failure
      */
-    public boolean newInMessage(String from,
-            String xmppID,
-            String xmppThreadID,
+    public boolean newInMessage(MessageIDs ids,
             Optional<Date> serverDate,
             MessageContent content) {
-        String jid = XmppStringUtils.parseBareJid(from);
+        String jid = XmppStringUtils.parseBareJid(ids.jid);
         Optional<User> optUser = this.getOrAddUser(jid);
         if (!optUser.isPresent()) {
             LOGGER.warning("can't get user for message");
             return false;
         }
         User user = optUser.get();
-        KonThread thread = getThread(xmppThreadID, user);
-        if (StringUtils.isNullOrEmpty(xmppID)) {
-            xmppID = "_kon_" + StringUtils.randomString(8);
-        }
+        KonThread thread = getThread(ids.threadID, user);
         InMessage.Builder builder = new InMessage.Builder(thread, user);
-        builder.jid(from);
-        builder.xmppID(xmppID);
+        builder.jid(ids.jid);
+        builder.xmppID(ids.xmppID);
         builder.serverDate(serverDate);
         builder.content(content);
         InMessage newMessage = builder.build();

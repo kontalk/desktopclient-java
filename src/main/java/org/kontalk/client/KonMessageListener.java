@@ -39,6 +39,7 @@ import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.system.Control;
+import org.kontalk.system.Control.MessageIDs;
 
 /**
  * Listen and handle all incoming XMPP message packets.
@@ -151,23 +152,16 @@ final public class KonMessageListener implements StanzaListener {
             return;
         }
 
-        String xmppID = m.getStanzaId();
-        if (!StringUtils.isNotEmpty(xmppID)) {
-            LOGGER.warning("message does not have a XMPP ID");
-        }
+        MessageIDs ids = MessageIDs.from(m);
 
         // add message
-        boolean success = mControl.newInMessage(m.getFrom(),
-                xmppID,
-                threadID,
-                serverDate,
-                content);
+        boolean success = mControl.newInMessage(ids, serverDate, content);
 
         // on success, send a 'received' for a request (XEP-0184)
         DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);
-        if (request != null && success && !xmppID.isEmpty()) {
+        if (request != null && success && !ids.xmppID.isEmpty()) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
-            received.addExtension(new DeliveryReceipt(xmppID));
+            received.addExtension(new DeliveryReceipt(ids.xmppID));
             mClient.sendPacket(received);
         }
     }

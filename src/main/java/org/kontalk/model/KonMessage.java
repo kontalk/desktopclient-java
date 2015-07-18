@@ -87,7 +87,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             COL_DIR + " INTEGER NOT NULL, " +
             // from or to user
             COL_USER_ID + " INTEGER NOT NULL, " +
-            // full jid with ressource
+            // full jid with resource
             COL_JID + " TEXT NOT NULL, " +
             // XMPP ID attribute; only recommended (RFC 6120), but we generate
             // a random string if not in message for model consistency
