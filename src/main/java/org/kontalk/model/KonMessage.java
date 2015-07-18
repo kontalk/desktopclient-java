@@ -235,8 +235,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             return false;
 
         KonMessage o = (KonMessage) obj;
-
         // note: use ONLY final fields
+        if (mID == o.mID) {
+            LOGGER.warning("different messages have same ID: "+mID);
+            return true;
+        }
         return mDir == o.mDir &&
                 mJID.equals(o.mJID) &&
                 mXMPPID.equals(o.mXMPPID) &&
@@ -253,16 +256,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return hash;
     }
 
-    /**
-     * Java's "natural ordering", used for sorting the messages in the order
-     * they were created.
-     * Inconsistent with equals!
-     */
     @Override
     public int compareTo(KonMessage o) {
-        int idComp = Integer.compare(this.mID, o.mID);
-        int dateComp = mDate.compareTo(o.getDate());
-        return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
+        if (this.equals(o))
+            return 0;
+
+        return Integer.compare(mID, o.getID());
     }
 
     private void insert() {
