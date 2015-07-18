@@ -119,6 +119,7 @@ public final class View implements Observer {
         mSendTextArea.setMargin(View.MARGIN_SMALL);
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
+        mSendTextArea.setFontSize(13);
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
             public void documentChanged(DocumentEvent e) {
@@ -134,6 +135,8 @@ public final class View implements Observer {
 
         // send button
         mSendButton = new WebButton(Tr.tr("Send"));
+        mSendButton.setMargin(MARGIN_SMALL);
+        mSendButton.setFontStyle(true, false);
         // for showing the hotkey tooltip
         TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
         mSendButton.setEnabled(false);
