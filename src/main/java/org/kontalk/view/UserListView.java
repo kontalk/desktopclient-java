@@ -165,7 +165,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             }
 
             if (mValue.getOnline() != User.Online.YES) {
-                html += lastSeen(mValue, false) + "<br>";
+                html += Utils.lastSeen(mValue, false) + "<br>";
             }
 
             if (mValue.isBlocked()) {
@@ -198,16 +198,10 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             mNameLabel.setText(name);
 
             // status
-            User.Subscription subStatus = mValue.getSubScription();
-            String status = mValue.isMe() ? Tr.tr("I myself") :
-                    mValue.isBlocked() ? Tr.tr("Blocked") :
-                    mValue.getOnline() == User.Online.YES ? Tr.tr("Online") :
-                    subStatus == User.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
-                    subStatus == User.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    lastSeen(mValue, true);
-            mStatusLabel.setText(status);
+            mStatusLabel.setText(Utils.mainStatus(mValue));
 
             // online status
+            User.Subscription subStatus = mValue.getSubScription();
             mBackround = mValue.getOnline() == User.Online.YES ? View.LIGHT_BLUE:
                     subStatus == User.Subscription.UNSUBSCRIBED ||
                     subStatus == User.Subscription.PENDING ||
@@ -217,13 +211,6 @@ final class UserListView extends Table<UserItem, User> implements Observer {
 
             UserListView.this.repaint();
         }
-    }
-
-    private static String lastSeen(User user, boolean pretty) {
-        String lastSeen = !user.getLastSeen().isPresent() ? Tr.tr("never") :
-                pretty ? Utils.PRETTY_TIME.format(user.getLastSeen().get()) :
-                Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());
-        return Tr.tr("Last seen")+": " + lastSeen;
     }
 
     private class UserPopupMenu extends WebPopupMenu {

@@ -170,10 +170,9 @@ final class ThreadView extends WebPanel implements Observer {
         mTitleLabel.setText(user.size() == 1 ? user.get(0).getName() :
                 !thread.getSubject().isEmpty() ? thread.getSubject() :
                 Tr.tr("Group Chat"));
-        mSubLabel.setText(user.size() == 1 &&
-                user.get(0).getLastSeen().isPresent() ?
-                Tr.tr("Last seen:") + " " +
-                        Utils.PRETTY_TIME.format(user.get(0).getLastSeen().get()) :
+        // TODO update
+        mSubLabel.setText(user.size() == 1 ?
+                Utils.mainStatus(user.get(0)) :
                 Utils.userNameList(thread.getUser()));
         if (!mThreadCache.containsKey(thread.getID())) {
             MessageList newMessageList = new MessageList(mView, this, thread);

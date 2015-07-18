@@ -268,6 +268,23 @@ final class Utils {
         return StringUtils.join(nameList, ", ");
     }
 
+    static String mainStatus(User u) {
+        User.Subscription subStatus = u.getSubScription();
+        return u.isMe() ? Tr.tr("Me myself") :
+                    u.isBlocked() ? Tr.tr("Blocked") :
+                    u.getOnline() == User.Online.YES ? Tr.tr("Online") :
+                    subStatus == User.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
+                    subStatus == User.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
+                    lastSeen(u, true);
+    }
+
+    static String lastSeen(User user, boolean pretty) {
+        String lastSeen = !user.getLastSeen().isPresent() ? Tr.tr("never") :
+                pretty ? Utils.PRETTY_TIME.format(user.getLastSeen().get()) :
+                Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());
+        return Tr.tr("Last seen")+": " + lastSeen;
+    }
+
     static abstract class PassPanel extends WebPanel {
 
         private final boolean mPassSet;
