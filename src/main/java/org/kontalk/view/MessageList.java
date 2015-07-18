@@ -566,6 +566,13 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         protected void onRemove() {
             mValue.getUser().deleteObserver(this);
         }
+
+        @Override
+        public int compareTo(TableItem o) {
+            int idComp = Integer.compare(mValue.getID(), o.mValue.getID());
+            int dateComp = mValue.getDate().compareTo(mValue.getDate());
+            return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
+        }
     }
 
     // needed for correct mouse behaviour for components in items

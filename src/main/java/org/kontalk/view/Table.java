@@ -57,7 +57,7 @@ import javax.swing.table.TableRowSorter;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class Table<I extends Table<I, V>.TableItem, V extends Observable & Comparable<V>> extends WebTable implements Observer {
+abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
     private static final Logger LOGGER = Logger.getLogger(Table.class.getName());
 
     protected final View mView;
@@ -222,6 +222,10 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable & Com
         }
     }
 
+    protected void updateSorting(){
+        mModel.fireTableDataChanged();
+    }
+
     private void showTooltip(TableItem item) {
         String text = item.getTooltipText();
         if (text.isEmpty())
@@ -320,11 +324,6 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable & Com
         }
 
         protected void onRemove() {};
-
-        @Override
-        public int compareTo(TableItem o) {
-            return mValue.compareTo(o.mValue);
-        }
     }
 
     private class TableRenderer extends WebTableCellRenderer {

@@ -275,5 +275,10 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             }
             return mValue.getSubject().toLowerCase().contains(search);
         }
+
+        @Override
+        public int compareTo(TableItem o) {
+            return Integer.compare(mValue.getID(), o.mValue.getID());
+        }
     }
 }

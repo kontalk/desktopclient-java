@@ -195,7 +195,10 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             String name = !mValue.getName().isEmpty() ?
                     mValue.getName() :
                     Tr.tr("<unknown>");
-            mNameLabel.setText(name);
+            if (!name.equals(mNameLabel.getText())) {
+                mNameLabel.setText(name);
+                UserListView.this.updateSorting();
+            }
 
             // status
             mStatusLabel.setText(Utils.mainStatus(mValue));
@@ -209,7 +212,13 @@ final class UserListView extends Table<UserItem, User> implements Observer {
                     Color.WHITE;
             this.setBackground(mBackround);
 
+
             UserListView.this.repaint();
+        }
+
+        @Override
+        public int compareTo(TableItem o) {
+            return mValue.getName().compareTo(o.mValue.getName());
         }
     }
 
