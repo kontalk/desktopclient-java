@@ -327,9 +327,6 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             mTextPane.setPreferredSize(new Dimension(width, mTextPane.getMinimumSize().height));
         }
 
-        /**
-         * Update what can change in a message: text, icon and attachment.
-         */
         @Override
         protected void updateOnEDT(Object arg) {
             if (!mCreated)
@@ -414,7 +411,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                             secStat = Tr.tr("Error report:");
                             break;
                         default:
-                            LOGGER.warning("unexpected msg status");
+                            LOGGER.warning("unexpected msg status: "+mValue.getReceiptStatus());
                     }
                     if (secStat != null)
                         html += secStat + " " + status + "<br>";
