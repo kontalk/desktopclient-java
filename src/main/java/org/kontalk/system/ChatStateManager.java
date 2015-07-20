@@ -104,7 +104,7 @@ final class ChatStateManager {
                 return;
 
             for (User oneUser : user)
-                if (!oneUser.isMe())
+                if (!oneUser.isMe() && !oneUser.isBlocked())
                     mClient.sendChatState(oneUser.getJID(),
                             mThread.getXMPPID(),
                             state);
