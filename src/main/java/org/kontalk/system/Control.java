@@ -81,14 +81,12 @@ public final class Control extends Observable {
         public final String jid;
         public final String xmppID;
         public final String threadID;
-        // unused
-        public final String groupID;
+        //public final Optional<GroupID> groupID;
 
         private MessageIDs(String jid, String xmppID, String threadID) {
             this.jid = jid;
             this.xmppID = xmppID;
             this.threadID = threadID;
-            this.groupID = "";
         }
 
         public static MessageIDs from(Message m) {
@@ -289,7 +287,7 @@ public final class Control extends Observable {
      * save and process the message.
      * @return the new created message
      */
-    public OutMessage newOutMessage(KonThread thread, User user, String text, boolean encrypted) {
+    private OutMessage newOutMessage(KonThread thread, User user, String text, boolean encrypted) {
         MessageContent content = new MessageContent(text);
         OutMessage.Builder builder = new OutMessage.Builder(thread, user, encrypted);
         builder.content(content);
@@ -514,7 +512,6 @@ public final class Control extends Observable {
             }
             this.setUserBlocking(jid, true);
         }
-        UserList.getInstance().changed();
     }
 
     public void setUserBlocking(String jid, boolean blocking) {
