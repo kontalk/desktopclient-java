@@ -32,12 +32,15 @@ import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
@@ -400,5 +403,52 @@ final class Utils {
         abstract void onValidInput();
 
         abstract void onInvalidInput();
+    }
+
+    abstract static class EditableTextField extends WebTextField {
+
+        public EditableTextField(int width, final Component focusGainer) {
+            super(width, false);
+
+            this.setMinimumHeight(20);
+            this.setHideInputPromptOnFocus(false);
+            this.addFocusListener(new FocusListener() {
+                @Override
+                public void focusGained(FocusEvent e) {
+                    EditableTextField.this.setEdit();
+                }
+                @Override
+                public void focusLost(FocusEvent e) {
+                    EditableTextField.this.onFocusLost();
+                    EditableTextField.this.setLabel();
+                }
+            });
+            this.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    focusGainer.requestFocus();
+                }
+            });
+
+            this.setLabel();
+        }
+
+        private void setEdit() {
+            String text = this.editText();
+            this.setInputPrompt(text);
+            this.setText(text);
+            this.setDrawBorder(true);
+        }
+
+        private void setLabel() {
+            this.setText(this.labelText());
+            this.setDrawBorder(false);
+        }
+
+        abstract protected String labelText();
+
+        abstract protected String editText();
+
+        abstract protected void onFocusLost();
     }
 }

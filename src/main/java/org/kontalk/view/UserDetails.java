@@ -37,8 +37,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
 import java.awt.image.BufferedImage;
 import java.util.Observable;
 import java.util.Observer;
@@ -62,7 +60,6 @@ final class UserDetails extends WebPanel implements Observer {
     private final WebLabel mFPLabel;
     private final WebTextArea mFPArea;
     private final WebCheckBox mEncryptionBox;
-    private String mJID;
 
     UserDetails(View view, User user) {
         mView = view;
@@ -75,40 +72,45 @@ final class UserDetails extends WebPanel implements Observer {
         groupPanel.add(new WebSeparator(true, true));
 
         // editable fields
-        WebPanel namePanel = new WebPanel();
-        namePanel.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
-        namePanel.add(new WebLabel(Tr.tr("Display Name:")), BorderLayout.WEST);
-        mNameField = new WebTextField();
+        mNameField = new Utils.EditableTextField(20, this) {
+            @Override
+            protected String labelText() {
+                return mUser.getName();
+            }
+            @Override
+            protected String editText() {
+                return mUser.getName();
+            }
+            @Override
+            protected void onFocusLost() {
+                UserDetails.this.saveName(this.getText().trim());
+            }
+        };
+        mNameField.setFontSizeAndStyle(14, true, false);
         mNameField.setHideInputPromptOnFocus(false);
-        namePanel.add(mNameField, BorderLayout.CENTER);
-        groupPanel.add(namePanel);
+        groupPanel.add(new GroupPanel(GroupingType.fillLast, View.GAP_DEFAULT,
+                new WebLabel(Tr.tr("Display Name:")), mNameField));
 
-        final int l = 50;
-        mJID = mUser.getJID();
-        final WebTextField jidField = new WebTextField(Utils.shortenJID(mJID, l));
-        jidField.setDrawBorder(false);
-        jidField.setMinimumHeight(20);
-        jidField.setInputPrompt(mJID);
-        jidField.setHideInputPromptOnFocus(false);
-        jidField.addFocusListener(new FocusListener() {
+        final int length = 30;
+        final WebTextField jidField = new Utils.EditableTextField(length, this) {
             @Override
-            public void focusGained(FocusEvent e) {
-                jidField.setText(mJID);
-                jidField.setDrawBorder(true);
+            protected String labelText() {
+                return Utils.shortenJID(mUser.getJID(), length);
             }
             @Override
-            public void focusLost(FocusEvent e) {
-                mJID = jidField.getText();
-                jidField.setText(Utils.shortenJID(mJID, l));
-                jidField.setDrawBorder(false);
+            protected String editText() {
+                return mUser.getJID();
             }
-        });
+            @Override
+            protected void onFocusLost() {
+                UserDetails.this.saveJID(this.getText().trim());
+            }
+        };
+
         String jidText = Tr.tr("The unique address of this contact");
         TooltipManager.addTooltip(jidField, jidText);
-        groupPanel.add(new GroupPanel(GroupingType.fillLast,
-                View.GAP_DEFAULT,
-                new WebLabel("JID:"),
-                jidField));
+        groupPanel.add(new GroupPanel(GroupingType.fillLast, View.GAP_DEFAULT,
+                new WebLabel("Jabber ID:"), jidField));
 
         WebLabel authLabel = new WebLabel(Tr.tr("Authorization: "));
         mAuthorization = new WebLabel();
@@ -210,28 +212,30 @@ final class UserDetails extends WebPanel implements Observer {
         mKeyStatus.setText(hasKey);
     }
 
-    private void save() {
-        String newName = mNameField.getText();
-        if (!newName.equals(mUser.getName())) {
-            mUser.setName(mNameField.getText());
-        }
+    private void saveName(String name) {
+        if (name.equals(mUser.getName()))
+            return;
+
+        mUser.setName(name);
         mUser.setEncrypted(mEncryptionBox.isSelected());
-        if (!mJID.isEmpty() && !mJID.equals(mUser.getJID())) {
-            String warningText =
-                    Tr.tr("Changing the JID is only useful in very rare cases. Are you sure?");
-            int selectedOption = WebOptionPane.showConfirmDialog(this,
-                    warningText,
-                    Tr.tr("Please Confirm"),
-                    WebOptionPane.OK_CANCEL_OPTION,
-                    WebOptionPane.WARNING_MESSAGE);
-            if (selectedOption == WebOptionPane.OK_OPTION)
-                mUser.setJID(mJID);
-        }
+    }
+
+    private void saveJID(String jid) {
+        if (jid.isEmpty() || jid.equals(mUser.getJID()))
+            return;
+
+        String warningText =
+                Tr.tr("Changing the JID is only useful in very rare cases. Are you sure?");
+        int selectedOption = WebOptionPane.showConfirmDialog(this,
+                warningText,
+                Tr.tr("Please Confirm"),
+                WebOptionPane.OK_CANCEL_OPTION,
+                WebOptionPane.WARNING_MESSAGE);
+        if (selectedOption == WebOptionPane.OK_OPTION)
+            mView.getControl().changeJID(mUser, jid);
     }
 
     void onClose() {
-        this.save();
-
         this.mUser.deleteObserver(this);
     }
 }
