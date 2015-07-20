@@ -216,7 +216,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
 
         @Override
         public int compareTo(TableItem o) {
-            return mValue.getName().compareTo(o.mValue.getName());
+            return mValue.getName().compareToIgnoreCase(o.mValue.getName());
         }
     }
 
