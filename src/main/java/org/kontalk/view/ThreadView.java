@@ -167,7 +167,7 @@ final class ThreadView extends WebPanel implements Observer {
 
     void showThread(KonThread thread) {
         List<User> user = new ArrayList<>(thread.getUser());
-        mTitleLabel.setText(user.size() == 1 ? user.get(0).getName() :
+        mTitleLabel.setText(user.size() == 1 ? Utils.name(user.get(0)) :
                 !thread.getSubject().isEmpty() ? thread.getSubject() :
                 Tr.tr("Group Chat"));
         // TODO update

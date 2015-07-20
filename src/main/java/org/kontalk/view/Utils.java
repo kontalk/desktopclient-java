@@ -271,6 +271,10 @@ final class Utils {
         return StringUtils.join(nameList, ", ");
     }
 
+    static String name(User user) {
+        return !user.getName().isEmpty() ? user.getName() : Tr.tr("<unknown>");
+    }
+
     static String mainStatus(User u) {
         User.Subscription subStatus = u.getSubScription();
         return u.isMe() ? Tr.tr("Me myself") :

@@ -192,9 +192,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
         @Override
         protected void updateOnEDT(Object arg) {
             // name
-            String name = !mValue.getName().isEmpty() ?
-                    mValue.getName() :
-                    Tr.tr("<unknown>");
+            String name = Utils.name(mValue);
             if (!name.equals(mNameLabel.getText())) {
                 mNameLabel.setText(name);
                 UserListView.this.updateSorting();
