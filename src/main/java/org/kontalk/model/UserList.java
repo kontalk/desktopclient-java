@@ -92,11 +92,15 @@ public final class UserList extends Observable {
             return Optional.empty();
         }
         User newUser = new User(jid, name);
-        mJIDMap.put(jid, newUser);
-        mIDMap.put(newUser.getID(), newUser);
+        this.add(newUser);
+        return Optional.of(newUser);
+    }
+
+    public synchronized void add(User user) {
+        mJIDMap.put(user.getJID(), user);
+        mIDMap.put(user.getID(), user);
         this.save();
         this.changed();
-        return Optional.of(newUser);
     }
 
     public synchronized void save() {
@@ -110,6 +114,15 @@ public final class UserList extends Observable {
         if (!optUser.isPresent())
             LOGGER.warning("can't find user with ID: "+id);
         return optUser;
+    }
+
+    public synchronized void remove(String jid) {
+        User user = mJIDMap.remove(jid);
+        if (user == null) {
+            LOGGER.warning("can't find user to remove with JID: "+jid);
+            return;
+        }
+        mIDMap.remove(user.getID());
     }
 
     /**

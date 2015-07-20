@@ -225,6 +225,21 @@ public final class Control extends Observable {
         optNewUser.get().setEncrypted(encrypted);
     }
 
+    public void changeJID(User user, String jid) {
+        jid = XmppStringUtils.parseBareJid(jid);
+        if (user.getJID().equals(jid))
+            return;
+
+        if (UserList.getInstance().contains(jid)) {
+            LOGGER.warning("another user has this JID");
+            return;
+        }
+
+        UserList.getInstance().remove(user.getJID());
+        user.setJID(jid);
+        UserList.getInstance().add(user);
+    }
+
     public void sendKeyRequest(User user) {
         if (user.getSubScription() == User.Subscription.UNSUBSCRIBED ||
                 user.getSubScription() == User.Subscription.PENDING) {
