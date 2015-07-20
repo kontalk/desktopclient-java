@@ -221,6 +221,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         this.save();
     }
 
+    public ServerError getServerError() {
+        return mServerError;
+    }
+
     /**
      * Save (or insert) this message to/into the database.
      */
@@ -236,6 +240,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
         set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
         set.put(COL_COD_ERR, mCoderStatus.getErrors());
+        set.put(COL_SERV_ERR, mServerError.toJSON());
         set.put(COL_SERV_DATE, mServerDate);
         db.execUpdate(TABLE, set, mID);
     }
