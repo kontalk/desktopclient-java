@@ -457,12 +457,16 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             }
             html += Tr.tr("Security")+": " + sec + "<br>";
 
-            String problems = "";
+            String errors = "";
             for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
-                problems += error.toString() + " <br> ";
+                errors += error.toString() + " <br> ";
             }
-            if (!problems.isEmpty())
-                html += Tr.tr("Problems")+": " + problems;
+            if (!errors.isEmpty())
+                html += Tr.tr("Security errors")+": " + errors;
+
+            String serverErrText = mValue.getServerError().text;
+            if (!serverErrText.isEmpty())
+                html += Tr.tr("Server error")+": " + serverErrText + " <br> ";
 
             // TODO temporary catching for tracing bug
             try {
