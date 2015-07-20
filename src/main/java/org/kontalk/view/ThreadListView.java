@@ -218,6 +218,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             this.updateView(arg);
             // needed for background repaint
             ThreadListView.this.repaint();
+            ThreadListView.this.updateSorting();
         }
 
         private void updateView(Object arg) {
@@ -278,7 +279,14 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
         @Override
         public int compareTo(TableItem o) {
-            return Integer.compare(mValue.getID(), o.mValue.getID());
+            SortedSet<KonMessage> messages = this.mValue.getMessages();
+            if (messages.isEmpty())
+                return -1;
+            SortedSet<KonMessage> oMessages = o.mValue.getMessages();
+            if (oMessages.isEmpty())
+                return 1;
+
+            return -messages.last().getDate().compareTo(oMessages.last().getDate());
         }
     }
 }

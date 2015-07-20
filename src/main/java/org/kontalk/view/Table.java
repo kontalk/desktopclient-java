@@ -223,7 +223,13 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
     }
 
     protected void updateSorting(){
+        int viewRow = this.getSelectedRow();
+        int modelRow = viewRow > -1 ?
+                mRowSorter.convertRowIndexToModel(viewRow) :
+                -1;
         mModel.fireTableDataChanged();
+        if (modelRow > -1)
+            this.setSelectedItem(mRowSorter.convertRowIndexToView(modelRow));
     }
 
     private void showTooltip(TableItem item) {
