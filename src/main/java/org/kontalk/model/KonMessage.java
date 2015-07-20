@@ -222,6 +222,77 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     }
 
     /**
+     * Save (or insert) this message to/into the database.
+     */
+    public final void save() {
+        if (mID < 0) {
+            this.insert();
+            return;
+        }
+        Database db = Database.getInstance();
+        Map<String, Object> set = new HashMap<>();
+        set.put(COL_REC_STAT, mReceiptStatus);
+        set.put(COL_CONTENT, mContent.toJSONString());
+        set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
+        set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
+        set.put(COL_COD_ERR, mCoderStatus.getErrors());
+        set.put(COL_SERV_DATE, mServerDate);
+        db.execUpdate(TABLE, set, mID);
+    }
+
+    private void insert() {
+        if (mID >= 0) {
+            LOGGER.warning("message already in db, ID: "+mID);
+            return;
+        }
+        Database db = Database.getInstance();
+
+        List<Object> values = new LinkedList<>();
+        values.add(mThread.getID());
+        values.add(mDir);
+        values.add(mUser.getID());
+        values.add(mJID);
+        values.add(Database.setString(mXMPPID));
+        values.add(mDate);
+        values.add(mReceiptStatus);
+        // i simply don't like to save all possible content explicitly in the
+        // database, so we use JSON here
+        values.add(mContent.toJSONString());
+        values.add(mCoderStatus.getEncryption());
+        values.add(mCoderStatus.getSigning());
+        values.add(mCoderStatus.getErrors());
+        values.add(mServerError.toJSON());
+        values.add(mServerDate);
+
+        int id = db.execInsert(TABLE, values);
+        if (id <= 0) {
+            LOGGER.log(Level.WARNING, "db, could not insert message");
+            mID = -2;
+            return;
+        }
+        mID = id;
+    }
+
+    boolean delete() {
+        Database db = Database.getInstance();
+        return db.execDelete(TABLE, mID);
+    }
+
+    protected synchronized void changed(Object arg) {
+        this.setChanged();
+        this.notifyObservers(arg);
+    }
+
+    @Override
+    public String toString() {
+        return "M:id="+mID+",thread="+mThread+",dir="+mDir+",mUser="+mUser
+                +",jid="+mJID+",xmppid="+mXMPPID
+                +",date="+mDate+",sdate="+mServerDate
+                +",recstat="+mReceiptStatus+",cont="+mContent
+                +",codstat="+mCoderStatus+",serverr="+mServerError;
+    }
+
+    /**
      * Return if two messages are logically equal.
      * Inconsistent with "natural ordering"!
      */
@@ -262,77 +333,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             return 0;
 
         return Integer.compare(mID, o.getID());
-    }
-
-    private void insert() {
-        if (mID >= 0) {
-            LOGGER.warning("message already in db, ID: "+mID);
-            return;
-        }
-        Database db = Database.getInstance();
-
-        List<Object> values = new LinkedList<>();
-        values.add(mThread.getID());
-        values.add(mDir);
-        values.add(mUser.getID());
-        values.add(mJID);
-        values.add(Database.setString(mXMPPID));
-        values.add(mDate);
-        values.add(mReceiptStatus);
-        // i simply don't like to save all possible content explicitly in the
-        // database, so we use JSON here
-        values.add(mContent.toJSONString());
-        values.add(mCoderStatus.getEncryption());
-        values.add(mCoderStatus.getSigning());
-        values.add(mCoderStatus.getErrors());
-        values.add(mServerError.toJSON());
-        values.add(mServerDate);
-
-        int id = db.execInsert(TABLE, values);
-        if (id <= 0) {
-            LOGGER.log(Level.WARNING, "db, could not insert message");
-            mID = -2;
-            return;
-        }
-        mID = id;
-    }
-
-    /**
-     * Save (or insert) this message to/into the database.
-     */
-    public final void save() {
-        if (mID < 0) {
-            this.insert();
-            return;
-        }
-        Database db = Database.getInstance();
-        Map<String, Object> set = new HashMap<>();
-        set.put(COL_REC_STAT, mReceiptStatus);
-        set.put(COL_CONTENT, mContent.toJSONString());
-        set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
-        set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
-        set.put(COL_COD_ERR, mCoderStatus.getErrors());
-        set.put(COL_SERV_DATE, mServerDate);
-        db.execUpdate(TABLE, set, mID);
-    }
-
-    boolean delete() {
-        Database db = Database.getInstance();
-        return db.execDelete(TABLE, mID);
-    }
-
-    protected synchronized void changed(Object arg) {
-        this.setChanged();
-        this.notifyObservers(arg);
-    }
-
-    @Override
-    public String toString() {
-        return "M:id="+mID+",thread="+mThread+",dir="+mDir+",mUser="+mUser
-                +",jid="+mJID+",xmppid="+mXMPPID
-                +",date="+mDate+",sdate="+mServerDate
-                +",recstat="+mReceiptStatus+",cont="+mContent
-                +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
     public static final class ServerError {
