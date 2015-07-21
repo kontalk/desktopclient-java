@@ -268,7 +268,7 @@ final class ThreadView extends WebPanel implements Observer {
                 mEditButton.doClick();
             }
         });
-        mPopup.add(new ThreadDetails(optThread.get()));
+        mPopup.add(new ThreadDetails(mEditButton, optThread.get()));
         //mPopup.packPopup();
         mPopup.showAsPopupMenu(mEditButton);
     }

@@ -18,26 +18,29 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.colorchooser.GradientData;
 import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
-import com.alee.laf.colorchooser.WebColorChooserDialog;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.radiobutton.WebRadioButton;
 import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.slider.WebSlider;
 import com.alee.laf.text.WebTextField;
-import com.alee.utils.swing.DialogOptions;
 import com.alee.utils.swing.UnselectableButtonGroup;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.util.Optional;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.User;
@@ -53,15 +56,14 @@ final class ThreadDetails extends WebPanel {
 
     private final KonThread mThread;
     private final WebTextField mSubjectField;
-    private final WebRadioButton mColorButton;
-    private final WebButton mColorChooserButton;
-    private final WebColorChooserDialog mColorChooser;
-    private final WebRadioButton mImgButton;
+    private final WebRadioButton mColorOpt;
+    private final WebButton mColor;
+    private final WebRadioButton mImgOpt;
     private final WebFileChooserField mImgChooser;
     // TODO group chat
     //WebCheckBoxList mParticipantsList;
 
-    ThreadDetails(KonThread thread) {
+    ThreadDetails(final Component focusGainer, KonThread thread) {
         mThread = thread;
 
         GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
@@ -79,37 +81,49 @@ final class ThreadDetails extends WebPanel {
         groupPanel.add(mSubjectField);
         groupPanel.add(new WebSeparator(true, true));
 
+        final WebSlider colorSlider = new WebSlider(WebSlider.HORIZONTAL);
+
         groupPanel.add(new WebLabel(Tr.tr("Custom Background")));
-        mColorButton = new WebRadioButton(Tr.tr("Color:")+" ");
+        mColorOpt = new WebRadioButton(Tr.tr("Color:")+" ");
         Optional<Color> optBGColor = mThread.getViewSettings().getBGColor();
-        mColorButton.setSelected(optBGColor.isPresent());
-        mColorButton.addItemListener(new ItemListener() {
+        mColorOpt.setSelected(optBGColor.isPresent());
+        mColorOpt.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
-                mColorChooserButton.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                colorSlider.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
             }
         });
-        mColorChooserButton = new WebButton();
-        mColorChooserButton.setEnabled(optBGColor.isPresent());
-        mColorChooserButton.setMinimumHeight(25);
+        mColor = new WebButton();
+        mColor.setMinimumHeight(25);
         Color oldColor = optBGColor.orElse(DEFAULT_BG);
-        mColorChooserButton.setBottomBgColor(oldColor);
-        mColorChooserButton.addActionListener(new ActionListener () {
-            @Override
-            public void actionPerformed(ActionEvent e ) {
-                ThreadDetails.this.editColor();
-            }
-        } );
-        mColorChooser = new WebColorChooserDialog(this);
-        mColorChooser.setColor(oldColor);
+        mColor.setBottomBgColor(oldColor);
         groupPanel.add(new GroupPanel(GroupingType.fillLast,
-                mColorButton,
-                mColorChooserButton));
+                mColorOpt,
+                mColor));
 
-        mImgButton = new WebRadioButton(Tr.tr("Image:")+" ");
+        colorSlider.setMinimum(0);
+        colorSlider.setMaximum(100);
+        colorSlider.setPaintTicks(false);
+        colorSlider.setPaintLabels(false);
+        colorSlider.setEnabled(optBGColor.isPresent());
+        final GradientData gradientData = GradientData.getDefaultValue();
+        // TODO set location for color
+        gradientData.getColor(0);
+        colorSlider.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                float v = colorSlider.getValue() / (float) 100;
+                Color c = gradientData.getColorForLocation(v);
+                mColor.setBottomBgColor(c);
+                mColor.repaint();
+            }
+        });
+        groupPanel.add(colorSlider);
+
+        mImgOpt = new WebRadioButton(Tr.tr("Image:")+" ");
         String imgPath = mThread.getViewSettings().getImagePath();
-        mImgButton.setSelected(!imgPath.isEmpty());
-        mImgButton.addItemListener(new ItemListener() {
+        mImgOpt.setSelected(!imgPath.isEmpty());
+        mImgOpt.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
                 mImgChooser.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
@@ -118,9 +132,9 @@ final class ThreadDetails extends WebPanel {
         });
         mImgChooser = Utils.createImageChooser(!imgPath.isEmpty(), imgPath);
         groupPanel.add(new GroupPanel(GroupingType.fillLast,
-                mImgButton,
+                mImgOpt,
                 mImgChooser));
-        UnselectableButtonGroup.group(mColorButton, mImgButton);
+        UnselectableButtonGroup.group(mColorOpt, mImgOpt);
         groupPanel.add(new WebSeparator());
 
 //        groupPanel.add(new WebLabel(Tr.tr("Participants:")));
@@ -162,8 +176,11 @@ final class ThreadDetails extends WebPanel {
 //                                WebOptionPane.INFORMATION_MESSAGE);
 //                    return;
 //                }
-                ThreadDetails.this.saveThread();
-//                ThreadDetails.this.dispose();
+                ThreadDetails.this.save();
+
+                // close popup
+                System.out.println("close");
+                focusGainer.requestFocus();
             }
         });
         //this.getRootPane().setDefaultButton(saveButton);
@@ -173,14 +190,7 @@ final class ThreadDetails extends WebPanel {
         this.add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    private void editColor() {
-        mColorChooser.setVisible(true);
-        if (mColorChooser.getResult () == DialogOptions.OK_OPTION) {
-            mColorChooserButton.setBottomBgColor(mColorChooser.getColor());
-        }
-    }
-
-    private void saveThread() {
+    private void save() {
         if (!mSubjectField.getText().equals(mThread.getSubject())) {
             mThread.setSubject(mSubjectField.getText());
         }
@@ -192,9 +202,9 @@ final class ThreadDetails extends WebPanel {
 //        mThread.setUser(threadUser);
 
         KonThread.ViewSettings newSettings;
-        if (mColorButton.isSelected())
-            newSettings = new KonThread.ViewSettings(mColorChooser.getColor());
-        else if (mImgButton.isSelected() && !mImgChooser.getSelectedFiles().isEmpty())
+        if (mColorOpt.isSelected())
+            newSettings = new KonThread.ViewSettings(mColor.getBottomBgColor());
+        else if (mImgOpt.isSelected() && !mImgChooser.getSelectedFiles().isEmpty())
             newSettings = new KonThread.ViewSettings(mImgChooser.getSelectedFiles().get(0).getAbsolutePath());
         else
             newSettings = new KonThread.ViewSettings();
