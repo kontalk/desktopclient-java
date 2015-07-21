@@ -18,25 +18,20 @@
 
 package org.kontalk.model;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.system.Database;
-import org.kontalk.crypto.Coder;
-import org.kontalk.util.EncodingUtils;
 
 /**
  * Central list of all messages.
+ *
+ * TODO make this class obsolete
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class MessageList extends Observable {
@@ -49,84 +44,12 @@ public final class MessageList extends Observable {
     // note: map and lists are not thread-safe on modification / iteration!
     private final HashMap<String, List<KonMessage>> mMap = new HashMap<>();
 
-    private MessageList() {
-    }
-
-    public void load() {
-        Database db = Database.getInstance();
-        KonMessage.Direction[] dirValues = KonMessage.Direction.values();
-        KonMessage.Status[] statusValues = KonMessage.Status.values();
-        Coder.Encryption[] encryptionValues = Coder.Encryption.values();
-        Coder.Signing[] signingValues = Coder.Signing.values();
-        try (ResultSet resultSet = db.execSelectAll(KonMessage.TABLE)) {
-            while (resultSet.next()) {
-                int id = resultSet.getInt("_id");
-                int threadID = resultSet.getInt(KonMessage.COL_THREAD_ID);
-                Optional<KonThread> optThread =
-                        ThreadList.getInstance().get(threadID);
-                if (!optThread.isPresent()) {
-                    LOGGER.warning("can't find thread, id:"+threadID);
-                    continue;
-                }
-                int dirIndex = resultSet.getInt(KonMessage.COL_DIR);
-                KonMessage.Direction dir = dirValues[dirIndex];
-                int userID = resultSet.getInt(KonMessage.COL_USER_ID);
-                Optional<User> optUser =
-                        UserList.getInstance().get(userID);
-                if (!optUser.isPresent()) {
-                    LOGGER.warning("can't find user, id:"+userID);
-                    continue;
-                }
-                String jid = resultSet.getString(KonMessage.COL_JID);
-                String xmppID = Database.getString(resultSet, KonMessage.COL_XMPP_ID);
-                Date date = new Date(resultSet.getLong(KonMessage.COL_DATE));
-                int statusIndex = resultSet.getInt(KonMessage.COL_REC_STAT);
-                KonMessage.Status status = statusValues[statusIndex];
-                String jsonContent = resultSet.getString(KonMessage.COL_CONTENT);
-                MessageContent content = MessageContent.fromJSONString(jsonContent);
-
-                int encryptionIndex = resultSet.getInt(KonMessage.COL_ENCR_STAT);
-                Coder.Encryption encryption = encryptionValues[encryptionIndex];
-                int signingIndex = resultSet.getInt(KonMessage.COL_SIGN_STAT);
-                Coder.Signing signing = signingValues[signingIndex];
-                int errorFlags = resultSet.getInt(KonMessage.COL_COD_ERR);
-                EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(Coder.Error.class, errorFlags);
-                CoderStatus coderStatus = new CoderStatus(encryption, signing, coderErrors);
-                String jsonServerError = resultSet.getString(KonMessage.COL_SERV_ERR);
-                KonMessage.ServerError serverError =
-                        KonMessage.ServerError.fromJSON(jsonServerError);
-                long sDate = resultSet.getLong(KonMessage.COL_SERV_DATE);
-                Optional<Date> serverDate = sDate == 0 ?
-                        Optional.<Date>empty() :
-                        Optional.of(new Date(sDate));
-
-                KonMessage.Builder builder = new KonMessage.Builder(id,
-                        optThread.get(),
-                        dir,
-                        optUser.get(),
-                        date);
-                builder.jid(jid);
-                builder.xmppID(xmppID);
-                builder.serverDate(serverDate);
-                builder.receiptStatus(status);
-                builder.content(content);
-                builder.coderStatus(coderStatus);
-                builder.serverError(serverError);
-
-                KonMessage newMessage = builder.build();
-
-                optThread.get().add(newMessage);
-                this.addMessage(newMessage);
-            }
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't load messages from db", ex);
-        }
-    }
+    private MessageList() {}
 
     /**
      * Add message without notifying observers.
      */
-    private synchronized boolean addMessage(KonMessage m) {
+    synchronized boolean addMessage(KonMessage m) {
         // small capacity (dunno if this even matters)
         List<KonMessage> l = mMap.getOrDefault(m.getXMPPID(), new ArrayList<KonMessage>(3));
         mMap.putIfAbsent(m.getXMPPID(), l);
