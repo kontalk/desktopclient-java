@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
@@ -28,16 +29,13 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import org.apache.commons.lang.StringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
@@ -162,8 +160,9 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
     protected final class ThreadItem extends Table<ThreadItem, KonThread>.TableItem {
 
+        private final WebLabel mNameLabel;
         private final WebLabel mSubjectLabel;
-        private final WebLabel mUserLabel;
+        private final WebLabel mStatusLabel;
         private final WebLabel mChatStateLabel;
         private Color mBackground;
 
@@ -173,20 +172,25 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
             this.setMargin(View.MARGIN_SMALL);
 
-            mSubjectLabel = new WebLabel("foo");
-            mSubjectLabel.setFontSize(14);
-            this.add(mSubjectLabel, BorderLayout.NORTH);
+            mNameLabel = new WebLabel();
+            mNameLabel.setFontSize(14);
+            mSubjectLabel = new WebLabel();
+            mSubjectLabel.setForeground(Color.GRAY);
+            mSubjectLabel.setFontSize(13);
+            this.add(new GroupPanel(View.GAP_DEFAULT, mNameLabel, mSubjectLabel),
+                    BorderLayout.NORTH);
 
-            mUserLabel = new WebLabel();
-            mUserLabel.setForeground(Color.GRAY);
-            mUserLabel.setFontSize(11);
-            this.add(mUserLabel, BorderLayout.CENTER);
+            mStatusLabel = new WebLabel();
+            mStatusLabel.setForeground(Color.GRAY);
+            mStatusLabel.setFontSize(11);
+            this.add(mStatusLabel, BorderLayout.CENTER);
+
             mChatStateLabel = new WebLabel();
             mChatStateLabel.setForeground(View.GREEN);
             mChatStateLabel.setFontSize(13);
             mChatStateLabel.setBoldFont();
             //mChatStateLabel.setMargin(0, 5, 0, 5);
-            this.add(mChatStateLabel, BorderLayout.SOUTH);
+            this.add(mChatStateLabel, BorderLayout.EAST);
 
             this.updateView(null);
 
@@ -203,12 +207,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
         @Override
         protected String getTooltipText() {
-            SortedSet<KonMessage> messageSet = this.mValue.getMessages();
-            String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
-                        Utils.PRETTY_TIME.format(messageSet.last().getDate());
-
-            String html = "<html><body>" +
-                    Tr.tr("Last activity")+": " + lastActivity + "<br>" +
+            String html = "<html><body>" + lastActivity(mValue) + "<br>" +
                     "";
             return html;
         }
@@ -218,27 +217,37 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             this.updateView(arg);
             // needed for background repaint
             ThreadListView.this.repaint();
-            ThreadListView.this.updateSorting();
         }
 
         private void updateView(Object arg) {
-            if (arg == null || arg instanceof Boolean || arg instanceof KonMessage)
-                mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
+            if (arg == null || arg instanceof User) {
+                Optional<User> optUser = mValue.getSingleUser();
+                if (optUser.isPresent())
+                    mNameLabel.setText(Utils.name(optUser.get()));
+            }
 
             if (arg == null || arg instanceof String) {
-                String subject = mValue.getSubject();
-                if (subject.isEmpty()) subject = Tr.tr("<unnamed>");
-                mSubjectLabel.setText(subject);
+                mSubjectLabel.setText(mValue.getSubject());
             }
 
             if (arg == null || arg instanceof Set) {
-                List<String> nameList = new ArrayList<>(mValue.getUser().size());
-                for (User user : mValue.getUser()) {
-                    nameList.add(user.getName().isEmpty() ?
-                            Tr.tr("<unknown>") :
-                            user.getName());
-                }
-                mUserLabel.setText(StringUtils.join(nameList, ", "));
+                // TODO group chat
+//                List<String> nameList = new ArrayList<>(mValue.getUser().size());
+//                for (User user : mValue.getUser()) {
+//                    nameList.add(user.getName().isEmpty() ?
+//                            Tr.tr("<unknown>") :
+//                            user.getName());
+//                }
+//                mUserLabel.setText(StringUtils.join(nameList, ", "));
+            }
+
+            if (arg == null || arg instanceof KonMessage) {
+                this.updateBG();
+
+                mStatusLabel.setText(lastActivity(mValue));
+                ThreadListView.this.updateSorting();
+            } else if (arg instanceof Boolean) {
+                this.updateBG();
             }
 
             if (arg instanceof KonThread.KonChatState) {
@@ -260,6 +269,10 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
                 mChatStateLabel.setText(stateText + " ");
             }
+        }
+
+        private void updateBG() {
+            mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
         }
 
         @Override
@@ -288,5 +301,13 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
             return -messages.last().getDate().compareTo(oMessages.last().getDate());
         }
+    }
+
+    private static String lastActivity(KonThread thread) {
+        SortedSet<KonMessage> messageSet = thread.getMessages();
+        String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
+                    Utils.PRETTY_TIME.format(messageSet.last().getDate());
+
+        return Tr.tr("Last activity")+": " + lastActivity;
     }
 }
