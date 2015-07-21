@@ -266,9 +266,11 @@ public final class Control extends Observable {
 
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (OutMessage m : MessageList.getInstance().getPending()) {
-                this.sendMessage(m);
+            for (KonThread thread: ThreadList.getInstance().getAll())
+                for (OutMessage m : thread.getPending()) {
+                    this.sendMessage(m);
             }
+
             // send public key requests for Kontalk users with missing key
             for (User user : UserList.getInstance().getAll()) {
                 // TODO only for domains that are part of the Kontalk network

@@ -82,7 +82,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     private final String mXMPPID;
     /**
      * Messages of thread.
-     * remember that KonMessage's natural ordering is not consistent with equals
      */
     private final SortedSet<KonMessage> mSet =
             Collections.synchronizedSortedSet(new TreeSet<KonMessage>());
@@ -146,6 +145,22 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
     public SortedSet<KonMessage> getMessages() {
         return mSet;
+    }
+
+    /**
+     * Get all outgoing messages with status "PENDING" for this thread.
+     */
+    public synchronized SortedSet<OutMessage> getPending() {
+        SortedSet<OutMessage> s = new TreeSet<>();
+        // TODO performance, probably additional map needed
+        // TODO use lambda in near future
+        for (KonMessage m : mSet) {
+            if (m.getReceiptStatus() == KonMessage.Status.PENDING &&
+                    m instanceof OutMessage) {
+                s.add((OutMessage) m);
+            }
+        }
+        return s;
     }
 
     public int getID() {

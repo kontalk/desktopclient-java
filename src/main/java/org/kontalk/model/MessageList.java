@@ -73,24 +73,6 @@ public final class MessageList extends Observable {
     }
 
     /**
-     * Get all outgoing messages with status "PENDING".
-     */
-    public synchronized SortedSet<OutMessage> getPending() {
-        // TODO performance, probably additional map needed
-        SortedSet<OutMessage> s = new TreeSet<>();
-        for (List<KonMessage> l : mMap.values()) {
-            // TODO use lambda in near future
-            for (KonMessage m : l) {
-                if (m.getReceiptStatus() == KonMessage.Status.PENDING &&
-                        m instanceof OutMessage) {
-                    s.add((OutMessage) m);
-                }
-            }
-        }
-        return s;
-    }
-
-    /**
      * Get the newest (ie last received) outgoing message.
      */
     public synchronized Optional<OutMessage> getLast(String xmppID) {
