@@ -253,7 +253,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         this.changed(mViewSettings);
     }
 
-    public void addMessage(KonMessage message) {
+    public boolean addMessage(KonMessage message) {
         boolean added = this.add(message);
         if (added) {
             if (message.getDir() == KonMessage.Direction.IN) {
@@ -262,6 +262,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             }
             this.changed(message);
         }
+        return added;
     }
 
     public void setChatState(User user, ChatState chatState) {
@@ -326,7 +327,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     private boolean add(KonMessage message) {
         // see KonMessage.equals()
         if (mSet.contains(message)) {
-            LOGGER.warning("message already in thread, ID: " + message.getID());
+            LOGGER.warning("message already in thread: " + message);
             return false;
         }
         boolean added = mSet.add(message);
@@ -455,7 +456,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
                 KonMessage newMessage = builder.build();
 
                 this.add(newMessage);
-                MessageList.getInstance().addMessage(newMessage);
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load messages from db", ex);

@@ -47,7 +47,6 @@ import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageList;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
@@ -312,10 +311,9 @@ public final class Control extends Observable {
         OutMessage.Builder builder = new OutMessage.Builder(thread, user, encrypted);
         builder.content(content);
         OutMessage newMessage = builder.build();
-        thread.addMessage(newMessage);
-        boolean added = MessageList.getInstance().add(newMessage);
+        boolean added = thread.addMessage(newMessage);
         if (!added) {
-            LOGGER.warning("could not add outgoing message to message list");
+            LOGGER.warning("could not add outgoing message to thread");
         }
         return newMessage;
     }
@@ -342,16 +340,14 @@ public final class Control extends Observable {
         builder.serverDate(serverDate);
         builder.content(content);
         InMessage newMessage = builder.build();
-        boolean added = MessageList.getInstance().add(newMessage);
+        boolean added = thread.addMessage(newMessage);
         if (!added) {
-            LOGGER.info("message already in message list, dropping this one");
+            LOGGER.info("message already in thread, dropping this one");
             return true;
         }
         newMessage.save();
 
         this.decryptAndDownload(newMessage);
-
-        thread.addMessage(newMessage);
 
         this.changed(new ViewEvent.NewMessage(newMessage));
 
