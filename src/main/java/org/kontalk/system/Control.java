@@ -112,8 +112,7 @@ public final class Control extends Observable {
 
         boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
         if (!AccountLoader.getInstance().isPresent()) {
-            this.setChanged();
-            this.notifyObservers(new ViewEvent.MissingAccount(connect));
+            this.changed(new ViewEvent.MissingAccount(connect));
             return;
         }
 
@@ -127,8 +126,7 @@ public final class Control extends Observable {
         this.disconnect();
         LOGGER.info("Shutting down...");
         mCurrentStatus = Status.SHUTTING_DOWN;
-        this.setChanged();
-        this.notifyObservers(new ViewEvent.StatusChanged());
+        this.changed(new ViewEvent.StatusChanged());
         UserList.getInstance().save();
         ThreadList.getInstance().save();
         try {
@@ -161,8 +159,7 @@ public final class Control extends Observable {
 
         if (password.length == 0) {
             if (account.isPasswordProtected()) {
-                this.setChanged();
-                this.notifyObservers(new ViewEvent.PasswordSet());
+                this.changed(new ViewEvent.PasswordSet());
                 return Optional.empty();
             }
 
@@ -182,8 +179,7 @@ public final class Control extends Observable {
     public void disconnect() {
         mChatStateManager.imGone();
         mCurrentStatus = Status.DISCONNECTING;
-        this.setChanged();
-        this.notifyObservers(new ViewEvent.StatusChanged());
+        this.changed(new ViewEvent.StatusChanged());
         mClient.disconnect();
     }
 
@@ -261,8 +257,7 @@ public final class Control extends Observable {
 
     public void setStatus(Status status) {
         mCurrentStatus = status;
-        this.setChanged();
-        this.notifyObservers(new ViewEvent.StatusChanged());
+        this.changed(new ViewEvent.StatusChanged());
 
         if (status == Status.CONNECTED) {
             // send all pending messages
@@ -283,8 +278,7 @@ public final class Control extends Observable {
     }
 
     public void handleException(KonException ex) {
-        this.setChanged();
-        this.notifyObservers(new ViewEvent.Exception(ex));
+        this.changed(new ViewEvent.Exception(ex));
     }
 
     public void handleSecurityErrors(KonMessage message) {
@@ -295,8 +289,7 @@ public final class Control extends Observable {
             // maybe there is something wrong with the senders key
             this.sendKeyRequest(message.getUser());
         }
-        this.setChanged();
-        this.notifyObservers(new ViewEvent.SecurityError(message));
+        this.changed(new ViewEvent.SecurityError(message));
     }
 
     /**
@@ -349,6 +342,9 @@ public final class Control extends Observable {
         this.decryptAndDownload(newMessage);
 
         thread.addMessage(newMessage);
+
+        this.changed(new ViewEvent.NewMessage(newMessage));
+
         return newMessage.getID() >= -1;
     }
 
@@ -544,6 +540,11 @@ public final class Control extends Observable {
     }
 
     /* private */
+
+    private void changed(ViewEvent event) {
+        this.setChanged();
+        this.notifyObservers(event);
+    }
 
     // only for new incoming messages
     private Optional<User> getOrAddUser(String jid) {

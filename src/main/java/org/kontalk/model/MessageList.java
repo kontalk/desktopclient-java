@@ -21,7 +21,6 @@ package org.kontalk.model;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Observable;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -34,7 +33,7 @@ import java.util.logging.Logger;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class MessageList extends Observable {
+public final class MessageList {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static final MessageList INSTANCE = new MessageList();
@@ -67,8 +66,6 @@ public final class MessageList extends Observable {
      */
     public boolean add(KonMessage newMessage) {
         boolean success = this.addMessage(newMessage);
-        this.setChanged();
-        this.notifyObservers(newMessage);
         return success;
     }
 

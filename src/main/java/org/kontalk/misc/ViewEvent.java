@@ -18,6 +18,7 @@
 
 package org.kontalk.misc;
 
+import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 
 /**
@@ -57,6 +58,15 @@ public abstract class ViewEvent {
         public final KonMessage message;
 
         public SecurityError(KonMessage message) {
+            this.message = message;
+        }
+    }
+
+    /** We got a new message. */
+    public static class NewMessage extends ViewEvent {
+        public final InMessage message;
+
+        public NewMessage(InMessage message) {
             this.message = message;
         }
     }

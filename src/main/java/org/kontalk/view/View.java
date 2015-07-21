@@ -62,7 +62,6 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
-import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
@@ -91,6 +90,8 @@ public final class View implements Observer {
 
     private final Control mControl;
     private final TrayManager mTrayManager;
+
+    private final Notifier mNotifier;
 
     private final SearchPanel mSearchPanel;
     private final UserListView mUserListView;
@@ -181,8 +182,7 @@ public final class View implements Observer {
         this.setHotkeys();
 
         // notifier
-        Notifier notifier = new Notifier(this);
-        MessageList.getInstance().addObserver(notifier);
+        mNotifier = new Notifier(this);
 
         this.statusChanged();
     }
@@ -273,6 +273,9 @@ public final class View implements Observer {
        } else if (arg instanceof ViewEvent.SecurityError) {
            ViewEvent.SecurityError error = (ViewEvent.SecurityError) arg;
            this.handleSecurityErrors(error.message);
+       } else if (arg instanceof ViewEvent.NewMessage) {
+           ViewEvent.NewMessage newMessage = (ViewEvent.NewMessage) arg;
+           mNotifier.onNewMessage(newMessage.message);
        } else {
            LOGGER.warning("unexpected argument");
        }

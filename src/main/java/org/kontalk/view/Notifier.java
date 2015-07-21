@@ -33,19 +33,15 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
-import java.util.Observable;
-import java.util.Observer;
 import javax.swing.Icon;
-import javax.swing.SwingUtilities;
 import org.kontalk.model.InMessage;
-import org.kontalk.model.KonMessage;
 import org.kontalk.util.MediaUtils;
 
 /**
  * Inform user about events.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class Notifier implements Observer {
+final class Notifier {
 
     private static final Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
 
@@ -55,23 +51,7 @@ final class Notifier implements Observer {
         mView = view;
     }
 
-    @Override
-    public void update(Observable o, final Object arg) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                Notifier.this.updateOnEDT(arg);
-            }
-        });
-    }
-
-    private void updateOnEDT(Object arg) {
-        // handle only incoming messages
-        if (!(arg instanceof InMessage))
-            return;
-
-        KonMessage newMessage = (InMessage) arg;
-
+    public void onNewMessage(InMessage newMessage) {
         if (newMessage.getThread() == mView.getCurrentShownThread().orElse(null) &&
                 mView.mainFrameIsFocused())
             return;
@@ -134,5 +114,4 @@ final class Notifier implements Observer {
         dialog.setVisible(true);
         NotificationManager.showNotification(dialog, popup);
     }
-
 }
