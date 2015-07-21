@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Observable;
 import java.util.Observer;
@@ -83,8 +84,8 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     /**
      * Messages of thread.
      */
-    private final SortedSet<KonMessage> mSet =
-            Collections.synchronizedSortedSet(new TreeSet<KonMessage>());
+    private final NavigableSet<KonMessage> mSet =
+            Collections.synchronizedNavigableSet(new TreeSet<KonMessage>());
     private final HashMap<User, KonChatState> mUserMap = new HashMap<>();
     private String mSubject;
     private boolean mRead;
@@ -143,14 +144,14 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         this.loadMessages();
     }
 
-    public SortedSet<KonMessage> getMessages() {
+    public NavigableSet<KonMessage> getMessages() {
         return mSet;
     }
 
     /**
      * Get all outgoing messages with status "PENDING" for this thread.
      */
-    public synchronized SortedSet<OutMessage> getPending() {
+    public SortedSet<OutMessage> getPending() {
         SortedSet<OutMessage> s = new TreeSet<>();
         // TODO performance, probably additional map needed
         // TODO use lambda in near future
@@ -161,6 +162,25 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             }
         }
         return s;
+    }
+
+    /**
+     * Get the newest (ie last received) outgoing message.
+     */
+    public Optional<OutMessage> getLast(String xmppID) {
+        // TODO performance
+        OutMessage message = null;
+        for (KonMessage m: mSet.descendingSet()) {
+            if (m.getXMPPID().equals(xmppID) && m instanceof OutMessage) {
+                message = (OutMessage) m;
+            }
+        }
+
+        if (message == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(message);
     }
 
     public int getID() {
@@ -230,8 +250,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
         mViewSettings = settings;
         this.save();
-        this.setChanged();
-        this.notifyObservers(mViewSettings);
+        this.changed(mViewSettings);
     }
 
     public void addMessage(KonMessage message) {

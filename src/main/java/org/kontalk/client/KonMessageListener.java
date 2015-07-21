@@ -70,18 +70,14 @@ final public class KonMessageListener implements StanzaListener {
             this.processChatMessage(m);
         } else if (m.getType() == Message.Type.error) {
             LOGGER.warning("got error message: "+m.toXML());
-            String xmppID = m.getStanzaId();
-            if (xmppID == null || xmppID.isEmpty()) {
-                LOGGER.warning("error message has invalid XMPP ID: "+xmppID);
-                return;
-            }
+
             XMPPError error = m.getError();
             if (error == null) {
                 LOGGER.warning("error message does not contain error");
                 return;
             }
             String text = StringUtils.defaultString(error.getDescriptiveText());
-            mControl.setMessageError(xmppID, error.getCondition(), text);
+            mControl.setMessageError(MessageIDs.from(m), error.getCondition(), text);
         } else {
             LOGGER.warning("unknown message type: "+m.getType());
         }
@@ -135,7 +131,8 @@ final public class KonMessageListener implements StanzaListener {
             if (receiptID == null || receiptID.isEmpty()) {
                 LOGGER.warning("message has invalid receipt ID: "+receiptID);
             } else {
-                mControl.setMessageStatus(receiptID, Status.RECEIVED);
+                MessageIDs ids = MessageIDs.from(m, receiptID);
+                mControl.setMessageStatus(ids, Status.RECEIVED);
             }
             // we ignore anything else that might be in this message
             return;

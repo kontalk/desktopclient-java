@@ -21,9 +21,6 @@ package org.kontalk.model;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.logging.Logger;
 
 /**
@@ -67,24 +64,6 @@ public final class MessageList {
     public boolean add(KonMessage newMessage) {
         boolean success = this.addMessage(newMessage);
         return success;
-    }
-
-    /**
-     * Get the newest (ie last received) outgoing message.
-     */
-    public synchronized Optional<OutMessage> getLast(String xmppID) {
-        if (mMap.containsKey(xmppID)) {
-            SortedSet<OutMessage> s = new TreeSet<>();
-            for (KonMessage m : mMap.get(xmppID)) {
-                if (m instanceof OutMessage) {
-                    s.add((OutMessage) m);
-                }
-            }
-            if (!s.isEmpty())
-                return Optional.of(s.last());
-        }
-        LOGGER.warning("can't find any outgoing message with XMPP ID: " + xmppID);
-        return Optional.empty();
     }
 
     public static MessageList getInstance() {

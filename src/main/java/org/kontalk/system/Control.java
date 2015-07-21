@@ -90,10 +90,20 @@ public final class Control extends Observable {
         }
 
         public static MessageIDs from(Message m) {
+            return from(m, "");
+        }
+
+        public static MessageIDs from(Message m, String receiptID) {
             return new MessageIDs(
                     StringUtils.defaultString(m.getFrom()),
-                    StringUtils.defaultString(m.getStanzaId()),
+                    !receiptID.isEmpty() ? receiptID :
+                            StringUtils.defaultString(m.getStanzaId()),
                     StringUtils.defaultString(m.getThread()));
+        }
+
+        @Override
+        public String toString() {
+            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+threadID;
         }
     }
 
@@ -368,8 +378,8 @@ public final class Control extends Observable {
      * @param xmppID XMPP ID of message
      * @param status new receipt status of message
      */
-    public void setMessageStatus(String xmppID, KonMessage.Status status) {
-        Optional<OutMessage> optMessage = MessageList.getInstance().getLast(xmppID);
+    public void setMessageStatus(MessageIDs ids, KonMessage.Status status) {
+        Optional<OutMessage> optMessage = getMessage(ids);
         if (!optMessage.isPresent())
             return;
         OutMessage m = optMessage.get();
@@ -381,12 +391,10 @@ public final class Control extends Observable {
         m.setStatus(status);
     }
 
-    public void setMessageError(String xmppID, Condition condition, String errorText) {
-        Optional<OutMessage> optMessage = MessageList.getInstance().getLast(xmppID);
-        if (!optMessage.isPresent()) {
-            LOGGER.warning("can't find message for error");
+    public void setMessageError(MessageIDs ids, Condition condition, String errorText) {
+        Optional<OutMessage> optMessage = getMessage(ids);
+        if (!optMessage.isPresent())
             return ;
-        }
         optMessage.get().setError(condition.toString(), errorText);
     }
 
@@ -584,6 +592,33 @@ public final class Control extends Observable {
         ThreadList threadList = ThreadList.getInstance();
         Optional<KonThread> optThread = threadList.get(xmppThreadID);
         return optThread.orElse(threadList.get(user));
+    }
+
+    private static Optional<OutMessage> getMessage(MessageIDs ids) {
+        // get thread by thread ID
+        ThreadList tl = ThreadList.getInstance();
+        Optional<KonThread> optThread = tl.get(ids.threadID);
+        if (optThread.isPresent()) {
+            return optThread.get().getLast(ids.xmppID);
+        }
+
+        // get thread by thread by jid
+        Optional<User> optUser = UserList.getInstance().get(ids.jid);
+        if (optUser.isPresent() && tl.contains(optUser.get())) {
+            Optional<OutMessage> optM = tl.get(optUser.get()).getLast(ids.xmppID);
+            if (optM.isPresent())
+                return optM;
+        }
+
+        // fallback: search everywhere
+        for (KonThread thread: tl.getAll()) {
+            Optional<OutMessage> optM = thread.getLast(ids.xmppID);
+            if (optM.isPresent())
+                return optM;
+        }
+
+        LOGGER.warning("can't find message by IDs: "+ids);
+        return Optional.empty();
     }
 
     private static User.Subscription rosterToModelSubscription(
