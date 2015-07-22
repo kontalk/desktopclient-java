@@ -22,8 +22,10 @@ import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.label.WebVerticalLabel;
 import com.alee.extended.painter.BorderPainter;
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.extended.panel.WebOverlay;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
@@ -40,7 +42,11 @@ import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.popup.PopupAdapter;
+import com.alee.managers.popup.WebPopup;
+import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.WebUtils;
+import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -61,12 +67,14 @@ import javax.swing.Icon;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.system.Config;
 import org.kontalk.Kontalk;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
+import org.kontalk.util.XMPPUtils;
 
 /**
  * The application window.
@@ -84,6 +92,7 @@ final class MainFrame extends WebFrame {
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
+    private WebPopup mAddUserPopup = new WebPopup();
 
     MainFrame(final View view,
             Table<?, ?> userList,
@@ -216,35 +225,28 @@ final class MainFrame extends WebFrame {
         WebPanel sidePanel = new WebPanel(false);
         sidePanel.add(searchPanel, BorderLayout.NORTH);
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-        WebButton newThreadButton = new WebButton(Tr.tr("New"));
-        newThreadButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // TODO new thread button
-            }
-        });
         //String threadOverlayText =
         //        Tr.t/r("No chats to display. You can create a new chat from your contacts");
-        WebScrollPane threadPane = createTablePane(threadList,
-                newThreadButton,
-                "threadOverlayText");
+        WebScrollPane threadPane = createTablePane(threadList, "threadOverlayText");
         mTabbedPane.addTab("", threadPane);
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
-        WebButton newUserButton = new WebButton(Tr.tr("Add"));
-        newUserButton.addActionListener(new ActionListener() {
+        //String userOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
+        WebScrollPane userPane = createTablePane(userList, "userOverlayText");
+        final WebToggleButton addUserButton = new WebToggleButton(
+                Utils.getIcon("ic_ui_add.png"));
+        TooltipManager.addTooltip(addUserButton, Tr.tr("Add a new Contact"));
+        addUserButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                WebDialog addUserDialog = new AddUserDialog();
-                addUserDialog.setVisible(true);
+                if (!MainFrame.this.mAddUserPopup.isShowing())
+                    MainFrame.this.showAddUserPopup(addUserButton);
             }
         });
-        //String userOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
-        WebScrollPane userPane = createTablePane(userList,
-                newUserButton,
-                "userOverlayText");
-        mTabbedPane.addTab("", userPane);
+        mTabbedPane.addTab("", new GroupPanel(GroupingType.fillFirst, false,
+                userPane, addUserButton));
+
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         mTabbedPane.setPreferredSize(new Dimension(250, -1));
@@ -326,6 +328,20 @@ final class MainFrame extends WebFrame {
                 Tr.tr("About"),
                 WebOptionPane.INFORMATION_MESSAGE,
                 icon);
+    }
+
+    private void showAddUserPopup(final WebToggleButton invoker) {
+        mAddUserPopup = new WebPopup();
+        mAddUserPopup.setCloseOnFocusLoss(true);
+        mAddUserPopup.addPopupListener(new PopupAdapter() {
+            @Override
+            public void popupWillBeClosed() {
+                invoker.doClick();
+            }
+        });
+        mAddUserPopup.add(new AddUserPanel(this));
+        //mPopup.packPopup();
+        mAddUserPopup.showAsPopupMenu(invoker);
     }
 
     private class StatusDialog extends WebDialog {
@@ -412,28 +428,43 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    private class AddUserDialog extends WebDialog {
+    private class AddUserPanel extends WebPanel {
 
         private final WebTextField mNameField;
         private final WebTextField mJIDField;
         private final WebCheckBox mEncryptionBox;
 
-        AddUserDialog() {
-            this.setTitle(Tr.tr("Add New Contact"));
-            //this.setSize(400, 280);
-            this.setResizable(false);
-            this.setModal(true);
+        AddUserPanel(final Component focusGainer) {
 
-            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
-            groupPanel.setMargin(View.MARGIN_SMALL);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
+
+            groupPanel.add(new WebLabel(Tr.tr("Add Contact")).setBoldFont());
+            groupPanel.add(new WebSeparator(true, true));
+
+            final WebButton mSaveButton = new WebButton(Tr.tr("Create"));
 
             // editable fields
-            WebPanel namePanel = new WebPanel();
-            namePanel.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
-            namePanel.add(new WebLabel(Tr.tr("Display Name:")), BorderLayout.WEST);
-            mNameField = new WebTextField();
-            namePanel.add(mNameField, BorderLayout.CENTER);
-            groupPanel.add(namePanel);
+            mNameField = new WebTextField(20);
+            mNameField.getDocument().addDocumentListener(new DocumentChangeListener() {
+                @Override
+                public void documentChanged(DocumentEvent e) {
+                    mSaveButton.setEnabled(XMPPUtils.isValid(mJIDField.getText()));
+                }
+            });
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    new WebLabel(Tr.tr("Name:")), mNameField));
+
+            mJIDField = new WebTextField();
+            mJIDField.setInputPrompt("username@jabber-server.com");
+            mJIDField.getDocument().addDocumentListener(new DocumentChangeListener() {
+                @Override
+                public void documentChanged(DocumentEvent e) {
+                    mSaveButton.setEnabled(XMPPUtils.isValid(mJIDField.getText()));
+                }
+            });
+            groupPanel.add(new GroupPanel(GroupingType.fillLast, View.GAP_DEFAULT,
+                    new WebLabel("Jabber ID:"), mJIDField));
             groupPanel.add(new WebSeparator(true, true));
 
             mEncryptionBox = new WebCheckBox(Tr.tr("Encryption"));
@@ -442,35 +473,20 @@ final class MainFrame extends WebFrame {
             groupPanel.add(mEncryptionBox);
             groupPanel.add(new WebSeparator(true, true));
 
-            groupPanel.add(new WebLabel("JID:"));
-            mJIDField = new WebTextField(38);
-            groupPanel.add(mJIDField);
-            groupPanel.add(new WebSeparator(true, true));
-
             this.add(groupPanel, BorderLayout.CENTER);
 
-            // buttons
-            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
-            cancelButton.addActionListener(new ActionListener() {
+            mSaveButton.setEnabled(false);
+            mSaveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    AddUserDialog.this.dispose();
-                }
-            });
-            final WebButton saveButton = new WebButton(Tr.tr("Save"));
-            saveButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    AddUserDialog.this.saveUser();
-                    AddUserDialog.this.dispose();
+                    AddUserPanel.this.saveUser();
+                    focusGainer.requestFocus();
                 }
             });
 
-            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
+            GroupPanel buttonPanel = new GroupPanel(mSaveButton);
             buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
             this.add(buttonPanel, BorderLayout.SOUTH);
-
-            this.pack();
         }
 
         private void saveUser() {
@@ -481,7 +497,6 @@ final class MainFrame extends WebFrame {
     }
 
     private static WebScrollPane createTablePane(final Table<?, ?> table,
-            Component newButton,
             String overlayText) {
 
         WebScrollPane scrollPane = new ScrollPane(table);
