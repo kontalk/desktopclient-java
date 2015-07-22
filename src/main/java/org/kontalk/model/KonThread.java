@@ -132,8 +132,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
         mMessages = new ThreadMessages(this);
-
-        mMessages.loadMessages();
     }
 
     public ThreadMessages getMessages() {

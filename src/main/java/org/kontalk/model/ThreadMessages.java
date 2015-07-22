@@ -45,11 +45,21 @@ public final class ThreadMessages {
     private final NavigableSet<KonMessage> mSet =
         Collections.synchronizedNavigableSet(new TreeSet<KonMessage>());
 
+    private boolean mLoaded = false;
+
     public ThreadMessages(KonThread thread) {
         mThread = thread;
     }
 
-    void loadMessages() {
+    private void ensureLoaded() {
+        if (mLoaded)
+            return;
+
+        this.loadMessages();
+        mLoaded = true;
+    }
+
+    private void loadMessages() {
         Database db = Database.getInstance();
         KonMessage.Direction[] dirValues = KonMessage.Direction.values();
         KonMessage.Status[] statusValues = KonMessage.Status.values();
@@ -105,7 +115,7 @@ public final class ThreadMessages {
 
                 KonMessage newMessage = builder.build();
 
-                this.add(newMessage);
+                this.addSilent(newMessage);
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load messages from db", ex);
@@ -116,6 +126,12 @@ public final class ThreadMessages {
      * Add message to thread without notifying other components.
      */
     boolean add(KonMessage message) {
+        this.ensureLoaded();
+
+        return this.addSilent(message);
+    }
+
+    private boolean addSilent(KonMessage message) {
         // see KonMessage.equals()
         if (mSet.contains(message)) {
             LOGGER.warning("message already in thread: " + message);
@@ -126,6 +142,8 @@ public final class ThreadMessages {
     }
 
     public NavigableSet<KonMessage> getAll() {
+        this.ensureLoaded();
+
         return mSet;
     }
 
@@ -133,6 +151,8 @@ public final class ThreadMessages {
      * Get all outgoing messages with status "PENDING" for this thread.
      */
     public SortedSet<OutMessage> getPending() {
+        this.ensureLoaded();
+
         SortedSet<OutMessage> s = new TreeSet<>();
         // TODO performance, probably additional map needed
         // TODO use lambda in near future
@@ -149,6 +169,8 @@ public final class ThreadMessages {
      * Get the newest (ie last received) outgoing message.
      */
     public Optional<OutMessage> getLast(String xmppID) {
+        this.ensureLoaded();
+
         // TODO performance
         OutMessage message = null;
         for (KonMessage m: mSet.descendingSet()) {
@@ -165,6 +187,8 @@ public final class ThreadMessages {
     }
 
     void delete() {
+        this.ensureLoaded();
+
         // TODO very slow
         for (KonMessage message : mSet) {
             boolean deleted = message.delete();
