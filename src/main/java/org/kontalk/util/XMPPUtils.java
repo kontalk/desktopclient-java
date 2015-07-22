@@ -84,4 +84,9 @@ public final class XMPPUtils {
     public static boolean isHash(String jid) {
         return XmppStringUtils.parseLocalpart(jid).matches("[0-9a-f]{40}");
     }
+
+    public static boolean isValid(String jid) {
+        return !XmppStringUtils.parseLocalpart(jid).isEmpty() &&
+                !XmppStringUtils.parseDomain(jid).isEmpty();
+    }
 }

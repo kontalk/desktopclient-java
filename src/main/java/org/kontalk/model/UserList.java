@@ -30,9 +30,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
+import org.kontalk.util.XMPPUtils;
 
 /**
- * The global list of all contacts known.
+ * Global list of all contacts.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class UserList extends Observable {
@@ -45,8 +47,7 @@ public final class UserList extends Observable {
     /** Database ID to user. */
     private final HashMap<Integer, User> mIDMap = new HashMap<>();
 
-    private UserList() {
-    }
+    private UserList() {}
 
     public void load() {
         Database db = Database.getInstance();
@@ -72,7 +73,7 @@ public final class UserList extends Observable {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load users from db", ex);
         }
-        this.changed();
+        this.changed(null);
     }
 
     public synchronized SortedSet<User> getAll() {
@@ -80,27 +81,50 @@ public final class UserList extends Observable {
     }
 
     /**
-     * Add a new user to the list.
+     * Create and add a new user.
      * @param jid JID of new user
      * @param name nickname of new user, use an empty string if not known
      * @return the newly created user, if one was created
      */
-    public synchronized Optional<User> add(String jid, String name) {
-        jid = XmppStringUtils.parseBareJid(jid);
-        if (mJIDMap.containsKey(jid)) {
-            LOGGER.warning("user already exists, jid: "+jid);
+    public synchronized Optional<User> createUser(String jid, String name) {
+        if (!this.isValid(jid))
             return Optional.empty();
-        }
+
         User newUser = new User(jid, name);
-        this.add(newUser);
+        if (newUser.getID() < 1)
+            return Optional.empty();
+
+        mJIDMap.put(newUser.getJID(), newUser);
+        mIDMap.put(newUser.getID(), newUser);
+
+        this.changed(newUser);
         return Optional.of(newUser);
     }
 
-    public synchronized void add(User user) {
-        mJIDMap.put(user.getJID(), user);
-        mIDMap.put(user.getID(), user);
-        this.save();
-        this.changed();
+    public synchronized void changeJID(User user, String jid) {
+        if (!this.isValid(jid))
+            return;
+
+        mJIDMap.put(jid, user);
+        mJIDMap.remove(user.getJID());
+        user.setJID(jid);
+
+        this.changed(user);
+    }
+
+    private boolean isValid(String jid) {
+        jid = XmppStringUtils.parseBareJid(jid);
+        if (!XMPPUtils.isValid(jid)) {
+            LOGGER.warning("invalid jid: "+jid);
+            return false;
+        }
+
+        if (mJIDMap.containsKey(jid)) {
+            LOGGER.warning("jid already exists: "+jid);
+            return false;
+        }
+
+        return true;
     }
 
     public synchronized void save() {
@@ -116,11 +140,10 @@ public final class UserList extends Observable {
         return optUser;
     }
 
-    public synchronized void remove(String jid) {
-        User user = mJIDMap.remove(jid);
-        if (user == null) {
-            LOGGER.warning("can't find user to remove with JID: "+jid);
-            return;
+    public synchronized void remove(User user) {
+        boolean removed = mJIDMap.remove(user.getJID(), user);
+        if (!removed) {
+            LOGGER.warning("can't find user to remove: "+user);
         }
         mIDMap.remove(user.getID());
     }
@@ -147,9 +170,9 @@ public final class UserList extends Observable {
         return mJIDMap.containsKey(jid);
     }
 
-    private synchronized void changed() {
+    private synchronized void changed(Object arg) {
         this.setChanged();
-        this.notifyObservers();
+        this.notifyObservers(arg);
     }
 
     public static UserList getInstance() {

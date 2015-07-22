@@ -221,13 +221,19 @@ public final class Control extends Observable {
         ThreadList.getInstance().delete(thread.getID());
     }
 
-    public void createNewUser(String jid, String name, boolean encrypted) {
-        Optional<User> optNewUser = UserList.getInstance().add(jid, name);
+    public Optional<User> createNewUser(String jid, String name, boolean encrypted) {
+        Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
         if (!optNewUser.isPresent()) {
             LOGGER.warning("can't create new user");
-            return;
+            return Optional.empty();
         }
-        optNewUser.get().setEncrypted(encrypted);
+        User newUser = optNewUser.get();
+
+        newUser.setEncrypted(encrypted);
+
+        mClient.addToRoster(newUser);
+
+        return Optional.of(newUser);
     }
 
     public void changeJID(User user, String jid) {
@@ -235,14 +241,7 @@ public final class Control extends Observable {
         if (user.getJID().equals(jid))
             return;
 
-        if (UserList.getInstance().contains(jid)) {
-            LOGGER.warning("another user has this JID");
-            return;
-        }
-
-        UserList.getInstance().remove(user.getJID());
-        user.setJID(jid);
-        UserList.getInstance().add(user);
+        UserList.getInstance().changeJID(user, jid);
     }
 
     public void sendKeyRequest(User user) {
@@ -327,7 +326,10 @@ public final class Control extends Observable {
             Optional<Date> serverDate,
             MessageContent content) {
         String jid = XmppStringUtils.parseBareJid(ids.jid);
-        Optional<User> optUser = this.getOrAddUser(jid);
+        UserList userList = UserList.getInstance();
+        Optional<User> optUser = userList.contains(jid) ?
+                userList.get(jid) :
+                this.createNewUser(jid, "", true);
         if (!optUser.isPresent()) {
             LOGGER.warning("can't get user for message");
             return false;
@@ -444,15 +446,18 @@ public final class Control extends Observable {
                 name = "";
             }
 
-            Optional<User> optUser = this.addUser(jid, name);
+            Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
+            if (!optNewUser.isPresent())
+                return;
+            User newUser = optNewUser.get();
 
-            if (optUser.isPresent()) {
-                User.Subscription status = rosterToModelSubscription(itemStatus, type);
-                optUser.get().setSubScriptionStatus(status);
+            User.Subscription status = rosterToModelSubscription(itemStatus, type);
+            newUser.setSubScriptionStatus(status);
 
-                if (status == User.Subscription.UNSUBSCRIBED)
-                    mClient.sendPresenceSubscriptionRequest(jid);
-            }
+            if (status == User.Subscription.UNSUBSCRIBED)
+                mClient.sendPresenceSubscriptionRequest(jid);
+
+            this.sendKeyRequest(newUser);
     }
 
     public void setSubscriptionStatus(String jid, ItemType type, ItemStatus itemStatus) {
@@ -548,35 +553,6 @@ public final class Control extends Observable {
     private void changed(ViewEvent event) {
         this.setChanged();
         this.notifyObservers(event);
-    }
-
-    // only for new incoming messages
-    private Optional<User> getOrAddUser(String jid) {
-        UserList userList = UserList.getInstance();
-
-        Optional<User> optUser;
-        if (userList.contains(jid)) {
-            optUser = userList.get(jid);
-        } else {
-            optUser = this.addUser(jid, "");
-            if (optUser.isPresent())
-                mClient.addToRoster(optUser.get());
-        }
-        return optUser;
-    }
-
-    private Optional<User> addUser(String jid, String name) {
-        UserList userList = UserList.getInstance();
-        Optional<User> optNewUser = userList.add(jid, name);
-        if (!optNewUser.isPresent()) {
-            LOGGER.warning("can't add user");
-            return optNewUser;
-        }
-
-        // send request for public key
-        this.sendKeyRequest(optNewUser.get());
-
-        return optNewUser;
     }
 
     private void sendMessage(OutMessage message) {

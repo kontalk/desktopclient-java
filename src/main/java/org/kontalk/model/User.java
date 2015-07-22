@@ -87,11 +87,6 @@ public final class User extends Observable implements Comparable<User> {
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
 
-    // used for incoming messages of unknown user
-    User(String jid) {
-        this(jid, "");
-    }
-
     // used for creating new users (eg from roster)
     User(String jid, String name) {
         mJID = XmppStringUtils.parseBareJid(jid);
@@ -134,7 +129,7 @@ public final class User extends Observable implements Comparable<User> {
         return mJID;
     }
 
-    public void setJID(String jid) {
+    void setJID(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
         if (jid.equals(mJID))
             return;
@@ -200,7 +195,6 @@ public final class User extends Observable implements Comparable<User> {
         }
     }
 
-
     public byte[] getKey() {
         return Base64.getDecoder().decode(mKey);
     }
@@ -248,7 +242,7 @@ public final class User extends Observable implements Comparable<User> {
                 mJID.equals(Config.getInstance().getProperty(Config.ACC_JID));
     }
 
-    public void save() {
+    void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
