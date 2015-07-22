@@ -21,29 +21,22 @@ package org.kontalk.model;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Objects;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.kontalk.crypto.Coder;
 import org.kontalk.system.Database;
-import org.kontalk.util.EncodingUtils;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
@@ -81,12 +74,9 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
     private final int mID;
     private final String mXMPPID;
-    /**
-     * Messages of thread.
-     */
-    private final NavigableSet<KonMessage> mSet =
-            Collections.synchronizedNavigableSet(new TreeSet<KonMessage>());
+    private final ThreadMessages mMessages;
     private final HashMap<User, KonChatState> mUserMap = new HashMap<>();
+
     private String mSubject;
     private boolean mRead;
     private ViewSettings mViewSettings;
@@ -108,6 +98,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         }
         mRead = true;
         mViewSettings = new ViewSettings();
+        mMessages = new ThreadMessages(this);
 
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
@@ -140,47 +131,13 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         mSubject = subject;
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
+        mMessages = new ThreadMessages(this);
 
-        this.loadMessages();
+        mMessages.loadMessages();
     }
 
-    public NavigableSet<KonMessage> getMessages() {
-        return mSet;
-    }
-
-    /**
-     * Get all outgoing messages with status "PENDING" for this thread.
-     */
-    public SortedSet<OutMessage> getPending() {
-        SortedSet<OutMessage> s = new TreeSet<>();
-        // TODO performance, probably additional map needed
-        // TODO use lambda in near future
-        for (KonMessage m : mSet) {
-            if (m.getReceiptStatus() == KonMessage.Status.PENDING &&
-                    m instanceof OutMessage) {
-                s.add((OutMessage) m);
-            }
-        }
-        return s;
-    }
-
-    /**
-     * Get the newest (ie last received) outgoing message.
-     */
-    public Optional<OutMessage> getLast(String xmppID) {
-        // TODO performance
-        OutMessage message = null;
-        for (KonMessage m: mSet.descendingSet()) {
-            if (m.getXMPPID().equals(xmppID) && m instanceof OutMessage) {
-                message = (OutMessage) m;
-            }
-        }
-
-        if (message == null) {
-            return Optional.empty();
-        }
-
-        return Optional.of(message);
+    public ThreadMessages getMessages() {
+        return mMessages;
     }
 
     public int getID() {
@@ -254,7 +211,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     public boolean addMessage(KonMessage message) {
-        boolean added = this.add(message);
+        boolean added = mMessages.add(message);
         if (added) {
             if (message.getDir() == KonMessage.Direction.IN) {
                 mRead = false;
@@ -302,12 +259,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     void delete() {
-        // delete messages
-        // TODO very slow
-        for (KonMessage message : mSet) {
-            boolean deleted = message.delete();
-            if (!deleted) return;
-        }
+        mMessages.delete();
 
         Database db = Database.getInstance();
         // delete receiver
@@ -319,19 +271,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
         // delete thread itself
         db.execDelete(TABLE, mID);
-    }
-
-    /**
-     * Add message to thread without notifying other components.
-     */
-    private boolean add(KonMessage message) {
-        // see KonMessage.equals()
-        if (mSet.contains(message)) {
-            LOGGER.warning("message already in thread: " + message);
-            return false;
-        }
-        boolean added = mSet.add(message);
-        return added;
     }
 
     private Map<Integer, Integer> loadReceiver() {
@@ -397,69 +336,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     @Override
     public int compareTo(KonThread o) {
         return Integer.compare(this.mID, o.mID);
-    }
-
-    private void loadMessages() {
-        Database db = Database.getInstance();
-        KonMessage.Direction[] dirValues = KonMessage.Direction.values();
-        KonMessage.Status[] statusValues = KonMessage.Status.values();
-        Coder.Encryption[] encryptionValues = Coder.Encryption.values();
-        Coder.Signing[] signingValues = Coder.Signing.values();
-        String where = KonMessage.COL_THREAD_ID + " == " + mID;
-        try (ResultSet resultSet = db.execSelectWhereInsecure(KonMessage.TABLE,
-                where)) {
-            while (resultSet.next()) {
-                int id = resultSet.getInt("_id");
-
-                int dirIndex = resultSet.getInt(KonMessage.COL_DIR);
-                KonMessage.Direction dir = dirValues[dirIndex];
-                int userID = resultSet.getInt(KonMessage.COL_USER_ID);
-                Optional<User> optUser = UserList.getInstance().get(userID);
-                if (!optUser.isPresent()) {
-                    LOGGER.warning("can't find user in db, id: "+userID);
-                    continue;
-                }
-                String jid = resultSet.getString(KonMessage.COL_JID);
-                String xmppID = Database.getString(resultSet, KonMessage.COL_XMPP_ID);
-                Date date = new Date(resultSet.getLong(KonMessage.COL_DATE));
-                int statusIndex = resultSet.getInt(KonMessage.COL_REC_STAT);
-                KonMessage.Status status = statusValues[statusIndex];
-                String jsonContent = resultSet.getString(KonMessage.COL_CONTENT);
-                MessageContent content = MessageContent.fromJSONString(jsonContent);
-
-                int encryptionIndex = resultSet.getInt(KonMessage.COL_ENCR_STAT);
-                Coder.Encryption encryption = encryptionValues[encryptionIndex];
-                int signingIndex = resultSet.getInt(KonMessage.COL_SIGN_STAT);
-                Coder.Signing signing = signingValues[signingIndex];
-                int errorFlags = resultSet.getInt(KonMessage.COL_COD_ERR);
-                EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(
-                        Coder.Error.class, errorFlags);
-                CoderStatus coderStatus = new CoderStatus(encryption, signing, coderErrors);
-                String jsonServerError = resultSet.getString(KonMessage.COL_SERV_ERR);
-                KonMessage.ServerError serverError =
-                        KonMessage.ServerError.fromJSON(jsonServerError);
-                long sDate = resultSet.getLong(KonMessage.COL_SERV_DATE);
-                Optional<Date> serverDate = sDate == 0 ?
-                        Optional.<Date>empty() :
-                        Optional.of(new Date(sDate));
-
-                KonMessage.Builder builder = new KonMessage.Builder(id, this,
-                        dir, optUser.get(), date);
-                builder.jid(jid);
-                builder.xmppID(xmppID);
-                builder.serverDate(serverDate);
-                builder.receiptStatus(status);
-                builder.content(content);
-                builder.coderStatus(coderStatus);
-                builder.serverError(serverError);
-
-                KonMessage newMessage = builder.build();
-
-                this.add(newMessage);
-            }
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't load messages from db", ex);
-        }
     }
 
     public class KonChatState {

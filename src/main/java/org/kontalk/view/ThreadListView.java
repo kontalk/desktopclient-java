@@ -70,7 +70,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             public void actionPerformed(ActionEvent event) {
                 // TODO call over control
                 ThreadItem t = ThreadListView.this.getSelectedItem();
-                if (t.mValue.getMessages().size() == 0 ||
+                if (t.mValue.getMessages().getAll().size() == 0 ||
                         ThreadListView.this.confirmDeletion()) {
                     ThreadItem threadItem = ThreadListView.this.getSelectedItem();
                     mView.getControl().deleteThread(threadItem.mValue);
@@ -292,10 +292,10 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
         @Override
         public int compareTo(TableItem o) {
-            SortedSet<KonMessage> messages = this.mValue.getMessages();
+            SortedSet<KonMessage> messages = this.mValue.getMessages().getAll();
             if (messages.isEmpty())
                 return -1;
-            SortedSet<KonMessage> oMessages = o.mValue.getMessages();
+            SortedSet<KonMessage> oMessages = o.mValue.getMessages().getAll();
             if (oMessages.isEmpty())
                 return 1;
 
@@ -304,7 +304,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
     }
 
     private static String lastActivity(KonThread thread) {
-        SortedSet<KonMessage> messageSet = thread.getMessages();
+        SortedSet<KonMessage> messageSet = thread.getMessages().getAll();
         String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
                     Utils.PRETTY_TIME.format(messageSet.last().getDate());
 

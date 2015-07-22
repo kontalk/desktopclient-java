@@ -164,7 +164,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             this.insertMessage((KonMessage) arg);
         } else {
             // check for new messages to add
-            if (this.getModel().getRowCount() < mThread.getMessages().size())
+            if (this.getModel().getRowCount() < mThread.getMessages().getAll().size())
                 this.insertMessages();
         }
 
@@ -175,20 +175,20 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
     private void insertMessages() {
         Set<MessageItem> newItems = new HashSet<>();
-        for (KonMessage message: mThread.getMessages()) {
+        for (KonMessage message: mThread.getMessages().getAll()) {
             if (!this.containsValue(message)) {
                 newItems.add(new MessageItem(message));
                 // trigger scrolling
                 mThreadView.setScrolling();
             }
         }
-        this.sync(mThread.getMessages(), newItems);
+        this.sync(mThread.getMessages().getAll(), newItems);
     }
 
     private void insertMessage(KonMessage message) {
         Set<MessageItem> newItems = new HashSet<>();
         newItems.add(new MessageItem(message));
-        this.sync(mThread.getMessages(), newItems);
+        this.sync(mThread.getMessages().getAll(), newItems);
         // trigger scrolling
         mThreadView.setScrolling();
     }

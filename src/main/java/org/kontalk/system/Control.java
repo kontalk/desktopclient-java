@@ -271,7 +271,7 @@ public final class Control extends Observable {
         if (status == Status.CONNECTED) {
             // send all pending messages
             for (KonThread thread: ThreadList.getInstance().getAll())
-                for (OutMessage m : thread.getPending()) {
+                for (OutMessage m : thread.getMessages().getPending()) {
                     this.sendMessage(m);
             }
 
@@ -595,20 +595,20 @@ public final class Control extends Observable {
         ThreadList tl = ThreadList.getInstance();
         Optional<KonThread> optThread = tl.get(ids.threadID);
         if (optThread.isPresent()) {
-            return optThread.get().getLast(ids.xmppID);
+            return optThread.get().getMessages().getLast(ids.xmppID);
         }
 
         // get thread by thread by jid
         Optional<User> optUser = UserList.getInstance().get(ids.jid);
         if (optUser.isPresent() && tl.contains(optUser.get())) {
-            Optional<OutMessage> optM = tl.get(optUser.get()).getLast(ids.xmppID);
+            Optional<OutMessage> optM = tl.get(optUser.get()).getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
         }
 
         // fallback: search everywhere
         for (KonThread thread: tl.getAll()) {
-            Optional<OutMessage> optM = thread.getLast(ids.xmppID);
+            Optional<OutMessage> optM = thread.getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
         }
