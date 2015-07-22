@@ -71,7 +71,6 @@ final class ThreadView extends WebPanel implements Observer {
     private final WebScrollPane mScrollPane;
     private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
     private Background mDefaultBG;
-    private final WebToggleButton mEditButton;
     private WebPopup mPopup = new WebPopup();
 
     private boolean mScrollDown = false;
@@ -90,18 +89,19 @@ final class ThreadView extends WebPanel implements Observer {
         mSubLabel.setForeground(Color.GRAY);
         titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel), BorderLayout.CENTER);
 
-        mEditButton = new WebToggleButton(Utils.getIcon("ic_ui_menu.png"));
+        final WebToggleButton editButton = new WebToggleButton(
+                Utils.getIcon("ic_ui_menu.png"));
         //editButton.setToolTipText(Tr.tr("Edit this chat"));
-        mEditButton.setTopBgColor(titlePanel.getBackground());
-        mEditButton.setBottomBgColor(titlePanel.getBackground());
-        mEditButton.addActionListener(new ActionListener() {
+        editButton.setTopBgColor(titlePanel.getBackground());
+        editButton.setBottomBgColor(titlePanel.getBackground());
+        editButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (!ThreadView.this.mPopup.isShowing())
-                    ThreadView.this.showPopup();
+                    ThreadView.this.showPopup(editButton);
             }
         });
-        titlePanel.add(mEditButton, BorderLayout.EAST);
+        titlePanel.add(editButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
         mScrollPane = new ScrollPane(this);
@@ -254,7 +254,7 @@ final class ThreadView extends WebPanel implements Observer {
         }
     }
 
-    private void showPopup() {
+    private void showPopup(final WebToggleButton invoker) {
         Optional<KonThread> optThread = ThreadView.this.getCurrentThread();
         if (!optThread.isPresent())
             return;
@@ -265,12 +265,12 @@ final class ThreadView extends WebPanel implements Observer {
         mPopup.addPopupListener(new PopupAdapter() {
             @Override
             public void popupWillBeClosed() {
-                mEditButton.doClick();
+                invoker.doClick();
             }
         });
-        mPopup.add(new ThreadDetails(mEditButton, optThread.get()));
+        mPopup.add(new ThreadDetails(invoker, optThread.get()));
         //mPopup.packPopup();
-        mPopup.showAsPopupMenu(mEditButton);
+        mPopup.showAsPopupMenu(invoker);
     }
 
     /** A background image of thread view with efficient async reloading. */
