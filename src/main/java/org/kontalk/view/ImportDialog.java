@@ -28,6 +28,7 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebPasswordField;
+import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -42,7 +43,6 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.kontalk.misc.KonException;
 import org.kontalk.system.AccountLoader;
@@ -78,10 +78,12 @@ final class ImportDialog extends WebDialog {
         mConnect = connect;
 
         this.setTitle(Tr.tr("Import Wizard"));
-        this.setSize(420, 260);
+        this.setSize(420, 300);
 
         this.setResizable(false);
         this.setModal(true);
+
+        this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
 
         // buttons
         mBackButton = new WebButton(Tr.tr("Back"));
@@ -114,7 +116,8 @@ final class ImportDialog extends WebDialog {
         });
         mFinishButton.setVisible(false);
 
-        GroupPanel buttonPanel = new GroupPanel(2, mBackButton, mNextButton, mCancelButton, mFinishButton);
+        GroupPanel buttonPanel = new GroupPanel(mBackButton, mNextButton,
+                mCancelButton, mFinishButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -211,17 +214,9 @@ final class ImportDialog extends WebDialog {
             mPassField = new WebPasswordField(42);
             mPassField.setInputPrompt(Tr.tr("Enter password..."));
             mPassField.setHideInputPromptOnFocus(false);
-            mPassField.getDocument().addDocumentListener(new DocumentListener() {
+            mPassField.getDocument().addDocumentListener(new DocumentChangeListener() {
                 @Override
-                public void insertUpdate(DocumentEvent e) {
-                    SettingsPanel.this.checkNextButton();
-                }
-                @Override
-                public void removeUpdate(DocumentEvent e) {
-                    SettingsPanel.this.checkNextButton();
-                }
-                @Override
-                public void changedUpdate(DocumentEvent e) {
+                public void documentChanged(DocumentEvent e) {
                     SettingsPanel.this.checkNextButton();
                 }
             });

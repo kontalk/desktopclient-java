@@ -179,7 +179,6 @@ final class ThreadDetails extends WebPanel {
                 ThreadDetails.this.save();
 
                 // close popup
-                System.out.println("close");
                 focusGainer.requestFocus();
             }
         });

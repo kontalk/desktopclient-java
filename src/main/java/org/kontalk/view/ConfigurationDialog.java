@@ -106,7 +106,7 @@ final class ConfigurationDialog extends WebDialog {
             }
         });
 
-        GroupPanel buttonPanel = new GroupPanel(2, saveButton, cancelButton);
+        GroupPanel buttonPanel = new GroupPanel(saveButton, cancelButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
     }
