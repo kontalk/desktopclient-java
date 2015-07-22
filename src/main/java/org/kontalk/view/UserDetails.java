@@ -42,6 +42,8 @@ import java.util.Observable;
 import java.util.Observer;
 import javax.swing.Box;
 import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import org.kontalk.model.User;
 import org.kontalk.util.Tr;
 
@@ -146,6 +148,12 @@ final class UserDetails extends WebPanel implements Observer {
         mEncryptionBox.setSelected(mUser.getEncrypted());
         String encText = Tr.tr("Encrypt and sign all messages send to this contact");
         TooltipManager.addTooltip(mEncryptionBox, encText);
+        mEncryptionBox.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                mUser.setEncrypted(mEncryptionBox.isSelected());
+            }
+        });
         groupPanel.add(new GroupPanel(mEncryptionBox, Box.createGlue()));
 
         this.add(groupPanel, BorderLayout.WEST);
@@ -217,7 +225,6 @@ final class UserDetails extends WebPanel implements Observer {
             return;
 
         mUser.setName(name);
-        mUser.setEncrypted(mEncryptionBox.isSelected());
     }
 
     private void saveJID(String jid) {
