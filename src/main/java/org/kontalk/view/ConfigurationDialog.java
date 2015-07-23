@@ -338,7 +338,7 @@ final class ConfigurationDialog extends WebDialog {
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
 
         boolean passSet = AccountLoader.getInstance().isPasswordProtected();
-        final Utils.PassPanel passPanel = new Utils.PassPanel(passSet) {
+        final ComponentUtils.PassPanel passPanel = new ComponentUtils.PassPanel(passSet) {
            @Override
            void onValidInput() {
                saveButton.setEnabled(true);

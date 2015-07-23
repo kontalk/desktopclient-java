@@ -74,7 +74,7 @@ final class UserDetails extends WebPanel implements Observer {
         groupPanel.add(new WebSeparator(true, true));
 
         // editable fields
-        mNameField = new Utils.EditableTextField(20, this) {
+        mNameField = new ComponentUtils.EditableTextField(20, this) {
             @Override
             protected String labelText() {
                 return mUser.getName();
@@ -94,7 +94,7 @@ final class UserDetails extends WebPanel implements Observer {
                 new WebLabel(Tr.tr("Display Name:")), mNameField));
 
         final int length = 30;
-        final WebTextField jidField = new Utils.EditableTextField(length, this) {
+        final WebTextField jidField = new ComponentUtils.EditableTextField(length, this) {
             @Override
             protected String labelText() {
                 return Utils.shortenJID(mUser.getJID(), length);

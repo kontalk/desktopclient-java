@@ -20,29 +20,16 @@ package org.kontalk.view;
 
 import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.filefilter.ImageFilesFilter;
-import com.alee.extended.panel.GroupPanel;
-import com.alee.laf.checkbox.WebCheckBox;
-import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
-import com.alee.managers.tooltip.TooltipManager;
-import java.awt.Color;
-import java.awt.Component;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
@@ -52,16 +39,12 @@ import java.net.URL;
 import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
@@ -84,9 +67,7 @@ final class Utils {
     static final SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
     static final PrettyTime PRETTY_TIME = new PrettyTime();
 
-    private Utils() {
-        throw new AssertionError();
-    }
+    private Utils() {}
 
     static WebFileChooserField createImageChooser(boolean enabled, String path) {
         WebFileChooserField chooser = new WebFileChooserField();
@@ -290,169 +271,5 @@ final class Utils {
                 pretty ? Utils.PRETTY_TIME.format(user.getLastSeen().get()) :
                 Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());
         return Tr.tr("Last seen")+": " + lastSeen;
-    }
-
-    static abstract class PassPanel extends WebPanel {
-
-        private final boolean mPassSet;
-        private final WebCheckBox mSetPass;
-        private final WebPasswordField mOldPassField;
-        private final WebLabel mWrongPassLabel;
-        private final WebPasswordField mNewPassField;
-        private final WebPasswordField mConfirmPassField;
-
-        PassPanel(boolean passSet) {
-            mPassSet = passSet;
-
-            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
-            groupPanel.setMargin(View.MARGIN_SMALL);
-
-            DocumentListener docListener = new DocumentListener() {
-                @Override
-                public void insertUpdate(DocumentEvent e) {
-                    PassPanel.this.checkDoneButton();
-                }
-                @Override
-                public void removeUpdate(DocumentEvent e) {
-                    PassPanel.this.checkDoneButton();
-                }
-                @Override
-                public void changedUpdate(DocumentEvent e) {
-                    PassPanel.this.checkDoneButton();
-                }
-            };
-
-            mOldPassField = new WebPasswordField(30);
-            mWrongPassLabel = new WebLabel(Tr.tr("Wrong password"));
-            if (mPassSet) {
-                groupPanel.add(new WebLabel(Tr.tr("Current password:")));
-                mOldPassField.getDocument().addDocumentListener(docListener);
-                groupPanel.add(mOldPassField);
-                mWrongPassLabel.setBoldFont();
-                mWrongPassLabel.setForeground(Color.RED);
-                mWrongPassLabel.setVisible(false);
-                groupPanel.add(mWrongPassLabel);
-                groupPanel.add(new WebSeparator());
-            }
-
-            mSetPass = new WebCheckBox(Tr.tr("Set key password"));
-            String setPassText = Tr.tr("If not set, key is saved unprotected!");
-            TooltipManager.addTooltip(mSetPass, setPassText);
-            groupPanel.add(new GroupPanel(mSetPass, new WebSeparator()));
-            mSetPass.addItemListener(new ItemListener() {
-                @Override
-                public void itemStateChanged(ItemEvent e) {
-                    boolean selected = e.getStateChange() == ItemEvent.SELECTED;
-                    mNewPassField.setEnabled(selected);
-                    mConfirmPassField.setEnabled(selected);
-                    PassPanel.this.checkDoneButton();
-                }
-            });
-            mNewPassField = new WebPasswordField(30);
-            mNewPassField.setInputPrompt(Tr.tr("Enter new password"));
-            mNewPassField.setEnabled(false);
-            mNewPassField.setHideInputPromptOnFocus(false);
-            mNewPassField.getDocument().addDocumentListener(docListener);
-            groupPanel.add(mNewPassField);
-            mConfirmPassField = new WebPasswordField(30);
-            mConfirmPassField.setInputPrompt(Tr.tr("Confirm password"));
-            mConfirmPassField.setEnabled(false);
-            mConfirmPassField.setHideInputPromptOnFocus(false);
-            mConfirmPassField.getDocument().addDocumentListener(docListener);
-            groupPanel.add(mConfirmPassField);
-
-            this.checkDoneButton();
-
-            this.add(groupPanel);
-        }
-
-        private void checkDoneButton() {
-            if (mPassSet && mOldPassField.getPassword().length < 1) {
-                this.onInvalidInput();
-                return;
-            }
-            if (!mSetPass.isSelected()) {
-                this.onValidInput();
-                return;
-            }
-            char[] newPass = mNewPassField.getPassword();
-            if (newPass.length > 0 &&
-                    Arrays.equals(newPass, mConfirmPassField.getPassword())) {
-                this.onValidInput();
-            } else {
-                this.onInvalidInput();
-            }
-        }
-
-        char[] getOldPassword() {
-            return mOldPassField.getPassword();
-        }
-
-        Optional<char[]> getNewPassword() {
-            if (!mSetPass.isSelected())
-                return Optional.of(new char[0]);
-
-            char[] newPass = mNewPassField.getPassword();
-            // better check again
-            if (!Arrays.equals(newPass, mConfirmPassField.getPassword()))
-                Optional.empty();
-
-            return Optional.of(newPass);
-        }
-
-        void showWrongPassword() {
-            mWrongPassLabel.setVisible(true);
-        }
-
-        abstract void onValidInput();
-
-        abstract void onInvalidInput();
-    }
-
-    abstract static class EditableTextField extends WebTextField {
-
-        public EditableTextField(int width, final Component focusGainer) {
-            super(width, false);
-
-            this.setMinimumHeight(20);
-            this.setHideInputPromptOnFocus(false);
-            this.addFocusListener(new FocusListener() {
-                @Override
-                public void focusGained(FocusEvent e) {
-                    EditableTextField.this.setEdit();
-                }
-                @Override
-                public void focusLost(FocusEvent e) {
-                    EditableTextField.this.onFocusLost();
-                    EditableTextField.this.setLabel();
-                }
-            });
-            this.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    focusGainer.requestFocus();
-                }
-            });
-
-            this.setLabel();
-        }
-
-        private void setEdit() {
-            String text = this.editText();
-            this.setInputPrompt(text);
-            this.setText(text);
-            this.setDrawBorder(true);
-        }
-
-        private void setLabel() {
-            this.setText(this.labelText());
-            this.setDrawBorder(false);
-        }
-
-        abstract protected String labelText();
-
-        abstract protected String editText();
-
-        abstract protected void onFocusLost();
     }
 }

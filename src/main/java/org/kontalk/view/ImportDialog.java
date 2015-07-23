@@ -261,7 +261,7 @@ final class ImportDialog extends WebDialog {
 
         private final WebLabel mResultLabel;
         private final WebLabel mErrorLabel;
-        private final Utils.PassPanel mPassPanel;
+        private final ComponentUtils.PassPanel mPassPanel;
 
         ResultPanel() {
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
@@ -275,7 +275,7 @@ final class ImportDialog extends WebDialog {
             mErrorLabel = new WebLabel();
             groupPanel.add(mErrorLabel);
 
-            mPassPanel = new Utils.PassPanel(false) {
+            mPassPanel = new ComponentUtils.PassPanel(false) {
                 @Override
                 void onValidInput() {
                     mFinishButton.setEnabled(true);
