@@ -17,7 +17,11 @@
  */
 package org.kontalk.util;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import java.io.StringReader;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.PacketParserUtils;
@@ -88,5 +92,22 @@ public final class XMPPUtils {
     public static boolean isValid(String jid) {
         return !XmppStringUtils.parseLocalpart(jid).isEmpty() &&
                 !XmppStringUtils.parseDomain(jid).isEmpty();
+    }
+
+    public static String phoneNumberToKontalkLocal(String number) {
+        PhoneNumberUtil pnUtil = PhoneNumberUtil.getInstance();
+        PhoneNumber n;
+        try {
+            n = pnUtil.parse(number, null);
+        } catch (NumberParseException ex) {
+            return "";
+        }
+
+        if (!pnUtil.isValidNumber(n))
+            return "";
+
+        return DigestUtils.shaHex(
+                PhoneNumberUtil.getInstance().format(n,
+                PhoneNumberUtil.PhoneNumberFormat.E164));
     }
 }
