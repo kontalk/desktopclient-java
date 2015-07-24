@@ -18,8 +18,8 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.layout.FormLayout;
 import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
@@ -28,10 +28,12 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.swing.DocumentChangeListener;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -45,11 +47,15 @@ import java.awt.event.ItemListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
@@ -155,8 +161,15 @@ final class ComponentUtils {
 
         private final View mView;
         private final WebTextField mNameField;
+
         private final WebTextField mJIDField;
+
+        private final WebTextField mServerField;
+        private final WebTextField mNumberField;
+        private final WebTextField mPrefixField;
+
         private final WebCheckBox mEncryptionBox;
+        private final WebButton mSaveButton;
 
         AddUserPanel(View view, final Component focusGainer) {
             mView = view;
@@ -167,29 +180,58 @@ final class ComponentUtils {
             groupPanel.add(new WebLabel(Tr.tr("Add Contact")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
-            final WebButton mSaveButton = new WebButton(Tr.tr("Create"));
-
             // editable fields
             mNameField = new WebTextField(20);
-            mNameField.getDocument().addDocumentListener(new DocumentChangeListener() {
-                @Override
-                public void documentChanged(DocumentEvent e) {
-                    mSaveButton.setEnabled(XMPPUtils.isValid(mJIDField.getText()));
-                }
-            });
+            addListener(this, mNameField);
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
                     new WebLabel(Tr.tr("Name:")), mNameField));
 
-            mJIDField = new WebTextField();
-            mJIDField.setInputPrompt("username@jabber-server.com");
-            mJIDField.getDocument().addDocumentListener(new DocumentChangeListener() {
+            mSaveButton = new WebButton(Tr.tr("Create"));
+
+            mTabbedPane = new WebTabbedPane();
+            mTabbedPane.addChangeListener(new ChangeListener() {
                 @Override
-                public void documentChanged(DocumentEvent e) {
-                    mSaveButton.setEnabled(XMPPUtils.isValid(mJIDField.getText()));
+                public void stateChanged(ChangeEvent e) {
+                    AddUserPanel.this.checkSaveButton();
                 }
             });
-            groupPanel.add(new GroupPanel(GroupingType.fillLast, View.GAP_DEFAULT,
-                    new WebLabel("Jabber ID:"), mJIDField));
+
+            WebPanel kontalkPanel = new WebPanel(new FormLayout(false, false,
+                    View.GAP_DEFAULT, View.GAP_DEFAULT));
+            kontalkPanel.setMargin(View.MARGIN_BIG);
+            kontalkPanel.add(new WebLabel("Country code:"));
+            PhoneNumberUtil phoneUtil = PhoneNumberUtil.getInstance();
+            int countryCode = phoneUtil.getCountryCodeForRegion(
+                    Locale.getDefault().getCountry());
+            String prefix = "+"+Integer.toString(countryCode);
+            mPrefixField = new WebTextField(prefix, 3);
+            mPrefixField.setInputPrompt(prefix);
+            addListener(this, mPrefixField);
+            kontalkPanel.add(mPrefixField);
+            kontalkPanel.add(new WebLabel("Number:"));
+            mNumberField = new WebTextField(12);
+            mNumberField.setInputPrompt("0123-9876543");
+            addListener(this, mNumberField);
+            kontalkPanel.add(mNumberField);
+            kontalkPanel.add(new WebLabel("Server:"));
+            String serverText = XmppStringUtils.parseDomain(
+                    Config.getInstance().getString(Config.SERV_HOST));
+            mServerField = new WebTextField(serverText, 16);
+            mServerField.setInputPrompt(serverText);
+            addListener(this, mServerField);
+            kontalkPanel.add(mServerField);
+            mTabbedPane.addTab(Tr.tr("Kontalk Contact"), kontalkPanel);
+
+            WebPanel jabberPanel = new WebPanel(new FormLayout(false, false,
+                    View.GAP_DEFAULT, View.GAP_DEFAULT));
+            jabberPanel.setMargin(View.MARGIN_BIG);
+            jabberPanel.add(new WebLabel("Jabber ID:"));
+            mJIDField = new WebTextField(20);
+            mJIDField.setInputPrompt(Tr.tr("username")+"@jabber-server.com");
+            addListener(this, mJIDField);
+            jabberPanel.add(mJIDField);
+            mTabbedPane.addTab(Tr.tr("Jabber Contact"), jabberPanel);
+            groupPanel.add(mTabbedPane);
             groupPanel.add(new WebSeparator(true, true));
 
             mEncryptionBox = new WebCheckBox(Tr.tr("Encryption"));
@@ -204,9 +246,7 @@ final class ComponentUtils {
             mSaveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    AddUserPanel.this.saveUser(mJIDField.getText(),
-                            mNameField.getText(),
-                            mEncryptionBox.isSelected());
+                    AddUserPanel.this.saveUser();
                     focusGainer.requestFocus();
                 }
             });
@@ -215,9 +255,46 @@ final class ComponentUtils {
             buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
             this.add(buttonPanel, BorderLayout.SOUTH);
         }
+        private final WebTabbedPane mTabbedPane;
 
-        void saveUser(String name, String jid, boolean encrypt) {
-            mView.getControl().createNewUser(jid, name, encrypt);
+        private void checkSaveButton() {
+            boolean enable;
+            if (mTabbedPane.getSelectedIndex() == 0) {
+                enable = !XMPPUtils.phoneNumberToKontalkLocal(
+                        mPrefixField.getText()+mNumberField.getText()).isEmpty() &&
+                        !mServerField.getText().isEmpty();
+            } else {
+                enable = XMPPUtils.isValid(mJIDField.getText());
+            }
+            mSaveButton.setEnabled(enable);
+        }
+
+        private void saveUser() {
+            String jid;
+            if (mTabbedPane.getSelectedIndex() == 0) {
+                String kontalkLocal = XMPPUtils.phoneNumberToKontalkLocal(
+                    mPrefixField.getText()+mNumberField.getText());
+                if (kontalkLocal.isEmpty()) {
+                    // huh?
+                    return;
+                }
+                jid = kontalkLocal + "@" + mServerField.getText();
+            } else {
+                jid = mJIDField.getText();
+            }
+            mView.getControl().createNewUser(jid,
+                    mNameField.getText(),
+                    mEncryptionBox.isSelected());
+        }
+
+        private static void addListener(final AddUserPanel panel,
+                WebTextField field) {
+            field.getDocument().addDocumentListener(new DocumentChangeListener() {
+                @Override
+                public void documentChanged(DocumentEvent e) {
+                    panel.checkSaveButton();
+                }
+            });
         }
     }
 
