@@ -90,9 +90,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         this.setUserMap(user);
         if (user.size() > 1){
             mSubject = "New group chat";
-        } else if (user.size() == 1 &&
-                !user.iterator().next().getName().isEmpty()) {
-            mSubject = user.iterator().next().getName();
         } else {
             mSubject = "";
         }
