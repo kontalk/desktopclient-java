@@ -37,7 +37,10 @@ import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JTable;
@@ -67,6 +70,8 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
     /** Map synced with model for faster access. */
     private final SortedMap<V, I> mItems = new TreeMap<>();
 
+    private final Timer mTimer;
+
     /** The current search string. */
     private String mSearch = "";
 
@@ -74,7 +79,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    Table(View view) {
+    Table(View view, boolean activateTimer) {
         mView = view;
 
         // model
@@ -136,6 +141,21 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
                     mTip.closeTooltip();
             }
         });
+
+        if (activateTimer) {
+            mTimer = new Timer();
+            // update periodically items to be up-to-date with 'last seen' text
+            TimerTask statusTask = new TimerTask() {
+                        @Override
+                        public void run() {
+                            Table.this.timerUpdate();
+                        }
+                    };
+            long timerInterval = TimeUnit.SECONDS.toMillis(60);
+            mTimer.schedule(statusTask, timerInterval, timerInterval);
+        } else {
+            mTimer = null;
+        }
     }
 
     protected boolean containsValue(V value) {
@@ -215,10 +235,10 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
     }
 
     @SuppressWarnings("unchecked")
-    protected void updateAllItems() {
+    private void timerUpdate() {
         for (int i = 0; i < mModel.getRowCount(); i++) {
             I item = (I) mModel.getValueAt(i, 0);
-            item.update(null, null);
+            item.update(null, mTimer);
         }
     }
 

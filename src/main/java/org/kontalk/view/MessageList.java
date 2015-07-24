@@ -94,7 +94,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
     private Optional<Background> mBackground = Optional.empty();
 
     MessageList(View view, ThreadView threadView, KonThread thread) {
-        super(view);
+        super(view, false);
         mThreadView = threadView;
         mThread = thread;
 

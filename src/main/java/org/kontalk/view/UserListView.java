@@ -32,9 +32,6 @@ import java.util.HashSet;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.TimeUnit;
 import javax.swing.ListSelectionModel;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.ThreadList;
@@ -52,10 +49,9 @@ final class UserListView extends Table<UserItem, User> implements Observer {
 
     private final UserList mUserList;
     private final UserPopupMenu mPopupMenu;
-    private final Timer mTimer = new Timer();
 
     UserListView(final View view, UserList userList) {
-        super(view);
+        super(view, true);
 
         mUserList = userList;
 
@@ -96,16 +92,6 @@ final class UserListView extends Table<UserItem, User> implements Observer {
                 }
             }
         });
-
-        // update periodically items to be up-to-date with 'last seen' text
-        TimerTask statusTask = new TimerTask() {
-                    @Override
-                    public void run() {
-                        UserListView.this.updateAllItems();
-                    }
-                };
-        long timerInterval = TimeUnit.SECONDS.toMillis(60);
-        mTimer.schedule(statusTask, timerInterval, timerInterval);
 
         this.updateOnEDT(null);
     }
@@ -209,7 +195,6 @@ final class UserListView extends Table<UserItem, User> implements Observer {
                     mValue.isBlocked() ? View.LIGHT_GREY :
                     Color.WHITE;
             this.setBackground(mBackround);
-
 
             UserListView.this.repaint();
         }

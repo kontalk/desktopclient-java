@@ -33,6 +33,7 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.Timer;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -55,7 +56,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
     private final WebPopupMenu mPopupMenu;
 
     ThreadListView(final View view, ThreadList threadList) {
-        super(view);
+        super(view, true);
         mThreadList = threadList;
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
@@ -248,6 +249,8 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
                 ThreadListView.this.updateSorting();
             } else if (arg instanceof Boolean) {
                 this.updateBG();
+            } else if (arg instanceof Timer) {
+                mStatusLabel.setText(lastActivity(mValue));
             }
 
             if (arg instanceof KonThread.KonChatState) {
