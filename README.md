@@ -30,6 +30,10 @@ applications on your computer!**
 
 - Java 8 / JDK 8
 
+## Debian package
+
+- [kontalk_3.0.1+git.20150725.affa0726-1_all.deb](https://mega.nz/#!cIw0VJyJ!jUK5Lnxem-X8Xek34hEhsWkQvsUE7aWeAVkGX6gk6Qw)
+   
 ## For building
 
 - [Gradle](http://gradle.org) (wrapper included in project)
