@@ -41,6 +41,7 @@ import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
@@ -318,19 +319,39 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void addToRoster(User user) {
-        Roster roster = Roster.getInstanceFor(mConn);
         String rosterName = user.getName();
         if (rosterName.isEmpty())
             rosterName = XmppStringUtils.parseLocalpart(rosterName);
         try {
             // also sends presence subscription request
-            roster.createEntry(user.getJID(), rosterName, null);
+            Roster.getInstanceFor(mConn).createEntry(user.getJID(), rosterName,
+                    null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
                 SmackException.NotConnectedException ex) {
             LOGGER.log(Level.WARNING, "can't add user to roster", ex);
         }
+    }
+
+    public boolean removeFromRoster(User user) {
+        Roster roster = Roster.getInstanceFor(mConn);
+        RosterEntry entry = roster.getEntry(user.getJID());
+        if (entry == null) {
+            LOGGER.warning("can't find roster entry for user: "+user);
+            return true;
+        }
+        try {
+            // sync call
+            roster.removeEntry(entry);
+        } catch (SmackException.NotLoggedInException |
+                SmackException.NoResponseException |
+                XMPPException.XMPPErrorException |
+                SmackException.NotConnectedException ex) {
+            LOGGER.log(Level.WARNING, "can't remove user from roster", ex);
+            return false;
+        }
+        return true;
     }
 
     @Override

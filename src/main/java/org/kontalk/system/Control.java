@@ -225,6 +225,7 @@ public final class Control extends Observable {
         Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
         if (!optNewUser.isPresent()) {
             LOGGER.warning("can't create new user");
+            // TODO tell view
             return Optional.empty();
         }
         User newUser = optNewUser.get();
@@ -234,6 +235,17 @@ public final class Control extends Observable {
         mClient.addToRoster(newUser);
 
         return Optional.of(newUser);
+    }
+
+    public void deleteUser(User user) {
+        boolean succ = mClient.removeFromRoster(user);
+        if (!succ)
+            // only delete if not in roster
+            return;
+
+        UserList.getInstance().remove(user);
+
+        user.setDeleted();
     }
 
     public void changeJID(User user, String jid) {

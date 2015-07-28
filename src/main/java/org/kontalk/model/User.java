@@ -237,9 +237,29 @@ public final class User extends Observable implements Comparable<User> {
         mSubStatus = status;
         this.changed(mSubStatus);
     }
+
     public boolean isMe() {
         return !mJID.isEmpty() &&
                 mJID.equals(Config.getInstance().getProperty(Config.ACC_JID));
+    }
+
+    /**
+     * 'Delete' this user: faked by resetting all values.
+     */
+    public void setDeleted() {
+        mJID = Integer.toString(mID);
+        mName = "";
+        mStatus = "";
+        mLastSeen = Optional.empty();
+        mEncrypted = false;
+        mKey = "";
+        mFingerprint = "";
+
+        this.save();
+    }
+
+    boolean isDeleted() {
+        return mJID.equals(Integer.toString(mID));
     }
 
     void save() {

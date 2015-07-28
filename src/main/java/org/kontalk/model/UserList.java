@@ -76,8 +76,15 @@ public final class UserList extends Observable {
         this.changed(null);
     }
 
+    /**
+     * Return all but deleted user.
+     */
     public synchronized SortedSet<User> getAll() {
-        return new TreeSet<>(mJIDMap.values());
+        SortedSet<User> user = new TreeSet<>();
+        for (User u : mJIDMap.values())
+            if (!u.isDeleted())
+                user.add(u);
+        return user;
     }
 
     /**
@@ -146,6 +153,7 @@ public final class UserList extends Observable {
             LOGGER.warning("can't find user to remove: "+user);
         }
         mIDMap.remove(user.getID());
+        this.changed(user);
     }
 
     /**
