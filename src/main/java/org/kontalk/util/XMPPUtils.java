@@ -106,7 +106,7 @@ public final class XMPPUtils {
         if (!pnUtil.isValidNumber(n))
             return "";
 
-        return DigestUtils.shaHex(
+        return DigestUtils.sha1Hex(
                 PhoneNumberUtil.getInstance().format(n,
                 PhoneNumberUtil.PhoneNumberFormat.E164));
     }
