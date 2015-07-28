@@ -255,7 +255,9 @@ final class Utils {
     }
 
     static String name(User user) {
-        return !user.getName().isEmpty() ? user.getName() : Tr.tr("<unknown>");
+        return user.isDeleted() ? Tr.tr("<deleted>") :
+                !user.getName().isEmpty() ? user.getName() :
+                Tr.tr("<unknown>");
     }
 
     static String mainStatus(User u) {
