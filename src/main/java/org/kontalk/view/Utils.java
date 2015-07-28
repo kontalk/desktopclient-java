@@ -22,8 +22,10 @@ import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.filefilter.ImageFilesFilter;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
+import java.awt.Component;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -271,5 +273,14 @@ final class Utils {
                 pretty ? Utils.PRETTY_TIME.format(user.getLastSeen().get()) :
                 Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());
         return Tr.tr("Last seen")+": " + lastSeen;
+    }
+
+    static boolean confirmDeletion(Component parent, String text) {
+        int selectedOption = WebOptionPane.showConfirmDialog(parent,
+                text,
+                Tr.tr("Please Confirm"),
+                WebOptionPane.OK_CANCEL_OPTION,
+                WebOptionPane.WARNING_MESSAGE);
+        return selectedOption == WebOptionPane.OK_OPTION;
     }
 }

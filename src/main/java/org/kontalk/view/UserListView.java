@@ -211,6 +211,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
         WebMenuItem mNewMenuItem;
         WebMenuItem mBlockMenuItem;
         WebMenuItem mUnblockMenuItem;
+        WebMenuItem mDeleteMenuItem;
 
         UserPopupMenu() {
             mNewMenuItem = new WebMenuItem(Tr.tr("New Chat"));
@@ -245,17 +246,19 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             });
             this.add(mUnblockMenuItem);
 
-            WebMenuItem deleteMenuItem = new WebMenuItem(Tr.tr("Delete Contact"));
-            deleteMenuItem.setToolTipText(Tr.tr("Delete this contact"));
-            deleteMenuItem.addActionListener(new ActionListener() {
+            mDeleteMenuItem = new WebMenuItem(Tr.tr("Delete Contact"));
+            mDeleteMenuItem.setToolTipText(Tr.tr("Delete this contact"));
+            mDeleteMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    // TODO delete threads/messages too? android client may add it
-                    // to roster again? useful at all? only self-created contacts?
+                    String text = Tr.tr("Permanently delete this contact?") + "\n" +
+                            Tr.tr("Chats and messages will not be deleted.");
+                    if (!Utils.confirmDeletion(UserListView.this, text))
+                        return;
+                    mView.getControl().deleteUser(mItem.mValue);
                 }
             });
-            // see above
-            //this.add(deleteMenuItem);
+            this.add(mDeleteMenuItem);
         }
 
         void show(UserItem item, Component invoker, int x, int y) {
@@ -273,8 +276,10 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             }
 
             Control.Status status = UserListView.this.mView.getCurrentStatus();
-            mBlockMenuItem.setEnabled(status == Control.Status.CONNECTED);
-            mUnblockMenuItem.setEnabled(status == Control.Status.CONNECTED);
+            boolean connected = status == Control.Status.CONNECTED;
+            mBlockMenuItem.setEnabled(connected);
+            mUnblockMenuItem.setEnabled(connected);
+            mDeleteMenuItem.setEnabled(connected);
 
             this.show(invoker, x, y);
         }

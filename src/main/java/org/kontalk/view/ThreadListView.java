@@ -22,7 +22,6 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.optionpane.WebOptionPane;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
@@ -69,12 +68,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                ThreadItem t = ThreadListView.this.getSelectedItem();
-                if (t.mValue.getMessages().getAll().size() == 0 ||
-                        ThreadListView.this.confirmDeletion()) {
-                    ThreadItem threadItem = ThreadListView.this.getSelectedItem();
-                    mView.getControl().deleteThread(threadItem.mValue);
-                }
+                ThreadListView.this.deleteSelectedThread();
             }
         });
         mPopupMenu.add(deleteMenuItem);
@@ -149,13 +143,15 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
            mPopupMenu.show(this, e.getX(), e.getY());
     }
 
-    private boolean confirmDeletion() {
-        int selectedOption = WebOptionPane.showConfirmDialog(ThreadListView.this,
-                Tr.tr("Permanently delete all messages in this chat?"),
-                Tr.tr("Please Confirm"),
-                WebOptionPane.OK_CANCEL_OPTION,
-                WebOptionPane.WARNING_MESSAGE);
-        return selectedOption == WebOptionPane.OK_OPTION;
+    private void deleteSelectedThread() {
+        ThreadItem t = this.getSelectedItem();
+        if (t.mValue.getMessages().getAll().size() != 0) {
+            String text = Tr.tr("Permanently delete all messages in this chat?");
+            if (!Utils.confirmDeletion(this, text))
+                return;
+        }
+        ThreadItem threadItem = this.getSelectedItem();
+        mView.getControl().deleteThread(threadItem.mValue);
     }
 
     protected final class ThreadItem extends Table<ThreadItem, KonThread>.TableItem {
