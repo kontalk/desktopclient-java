@@ -68,9 +68,6 @@ import org.kontalk.util.Tr;
  */
 final class MainFrame extends WebFrame {
 
-    private static final String WIKI_URL =
-            "https://github.com/kontalk/desktopclient-java/wiki";
-
     static enum Tab {THREADS, USER};
 
     private final View mView;
@@ -189,7 +186,7 @@ final class MainFrame extends WebFrame {
         wikiItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                WebUtils.browseSiteSafely(WIKI_URL);
+                WebUtils.browseSiteSafely(Tr.getLocalizedWikiLink());
             }
         });
         helpMenu.add(wikiItem);
