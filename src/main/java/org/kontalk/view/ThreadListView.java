@@ -69,7 +69,6 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                // TODO call over control
                 ThreadItem t = ThreadListView.this.getSelectedItem();
                 if (t.mValue.getMessages().getAll().size() == 0 ||
                         ThreadListView.this.confirmDeletion()) {
@@ -208,9 +207,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
         @Override
         protected String getTooltipText() {
-            String html = "<html><body>" + lastActivity(mValue) + "<br>" +
-                    "";
-            return html;
+            return "<html><body>" + lastActivity(mValue, false) + "<br>" + "";
         }
 
         @Override
@@ -245,12 +242,12 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             if (arg == null || arg instanceof KonMessage) {
                 this.updateBG();
 
-                mStatusLabel.setText(lastActivity(mValue));
+                mStatusLabel.setText(lastActivity(mValue, true));
                 ThreadListView.this.updateSorting();
             } else if (arg instanceof Boolean) {
                 this.updateBG();
             } else if (arg instanceof Timer) {
-                mStatusLabel.setText(lastActivity(mValue));
+                mStatusLabel.setText(lastActivity(mValue, true));
             }
 
             if (arg instanceof KonThread.KonChatState) {
@@ -306,10 +303,11 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         }
     }
 
-    private static String lastActivity(KonThread thread) {
+    private static String lastActivity(KonThread thread, boolean pretty) {
         SortedSet<KonMessage> messageSet = thread.getMessages().getAll();
         String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
-                    Utils.PRETTY_TIME.format(messageSet.last().getDate());
+                pretty ? Utils.PRETTY_TIME.format(messageSet.last().getDate()) :
+                Utils.MID_DATE_FORMAT.format(messageSet.last().getDate());
 
         return Tr.tr("Last activity")+": " + lastActivity;
     }
