@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.layout.FormLayout;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
@@ -73,8 +74,11 @@ final class UserDetails extends WebPanel implements Observer {
         groupPanel.add(new WebLabel(Tr.tr("Contact details")).setBoldFont());
         groupPanel.add(new WebSeparator(true, true));
 
+        WebPanel mainPanel = new WebPanel(new FormLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
+
         // editable fields
-        mNameField = new ComponentUtils.EditableTextField(20, this) {
+        mainPanel.add(new WebLabel(Tr.tr("Display Name:")));
+        mNameField = new ComponentUtils.EditableTextField(15, this) {
             @Override
             protected String labelText() {
                 return mUser.getName();
@@ -90,10 +94,10 @@ final class UserDetails extends WebPanel implements Observer {
         };
         mNameField.setFontSizeAndStyle(14, true, false);
         mNameField.setHideInputPromptOnFocus(false);
-        groupPanel.add(new GroupPanel(GroupingType.fillLast, View.GAP_DEFAULT,
-                new WebLabel(Tr.tr("Display Name:")), mNameField));
+        mainPanel.add(mNameField);
 
-        final int length = 30;
+        mainPanel.add(new WebLabel("Jabber ID:"));
+        final int length = 28;
         final WebTextField jidField = new ComponentUtils.EditableTextField(length, this) {
             @Override
             protected String labelText() {
@@ -111,16 +115,21 @@ final class UserDetails extends WebPanel implements Observer {
 
         String jidText = Tr.tr("The unique address of this contact");
         TooltipManager.addTooltip(jidField, jidText);
-        groupPanel.add(new GroupPanel(GroupingType.fillLast, View.GAP_DEFAULT,
-                new WebLabel("Jabber ID:"), jidField));
+        mainPanel.add(jidField);
 
-        WebLabel authLabel = new WebLabel(Tr.tr("Authorization: "));
+        mainPanel.add(new WebLabel(Tr.tr("Authorization:")));
         mAuthorization = new WebLabel();
-        groupPanel.add(new GroupPanel(View.GAP_DEFAULT, authLabel, mAuthorization));
+        String authText = Tr.tr("Permission to view presence status and public key");
+        TooltipManager.addTooltip(mAuthorization, authText);
+        mainPanel.add(mAuthorization);
+
+        groupPanel.add(mainPanel);
 
         groupPanel.add(new WebSeparator(true, true));
 
-        WebLabel keyLabel = new WebLabel(Tr.tr("Public Key")+":");
+        WebPanel keyPanel = new WebPanel(new FormLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
+
+        keyPanel.add(new WebLabel(Tr.tr("Public Key")+":"));
         mKeyStatus = new WebLabel();
         WebButton updButton = new WebButton(Tr.tr("Update"));
         String updText = Tr.tr("Update key");
@@ -131,17 +140,19 @@ final class UserDetails extends WebPanel implements Observer {
                 mView.getControl().sendKeyRequest(UserDetails.this.mUser);
             }
         });
-        groupPanel.add(new GroupPanel(GroupingType.fillMiddle,
-                View.GAP_BIG, keyLabel, mKeyStatus, updButton));
+        keyPanel.add(new GroupPanel(GroupingType.fillFirst,
+                View.GAP_DEFAULT, mKeyStatus, updButton));
 
-        mFPLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
+        mFPLabel = new WebLabel(Tr.tr("Fingerprint:"));
+        keyPanel.add(mFPLabel);
         mFPArea = Utils.createFingerprintArea();
         String fpText = Tr.tr("The unique ID of this contact's key");
         TooltipManager.addTooltip(mFPArea, fpText);
         mFPLabel.setAlignmentY(Component.TOP_ALIGNMENT);
-        GroupPanel fpLabelPanel = new GroupPanel(false, mFPLabel, Box.createGlue());
-        groupPanel.add(new GroupPanel(View.GAP_DEFAULT, fpLabelPanel, mFPArea));
+        keyPanel.add(mFPArea);
         this.updateOnEDT();
+
+        groupPanel.add(keyPanel);
 
         mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));
         mEncryptionBox.setAnimated(false);
