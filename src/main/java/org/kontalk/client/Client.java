@@ -55,6 +55,7 @@ import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.User;
 import org.kontalk.system.Control;
+import org.kontalk.util.XMPPUtils;
 
 /**
  * Network client for an XMPP Kontalk Server.
@@ -170,6 +171,7 @@ public final class Client implements StanzaListener, Runnable {
                 mConn.login();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
+                mConn.disconnect();
                 mControl.setStatus(Control.Status.FAILED);
                 mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
                 return;
@@ -200,7 +202,7 @@ public final class Client implements StanzaListener, Runnable {
      * logged in
      */
     public String getOwnJID() {
-        return mConn == null || !mConn.isAuthenticated() ? "" : mConn.getUser();
+        return !this.isConnected() ? "" : mConn.getUser();
     }
 
     public void sendMessage(OutMessage message) {
@@ -209,8 +211,13 @@ public final class Client implements StanzaListener, Runnable {
         assert status == Status.PENDING || status == Status.ERROR;
         message.setStatus(Status.PENDING);
 
-        if (mConn == null || !mConn.isAuthenticated()) {
+        if (!this.isConnected()) {
             LOGGER.info("not sending message, not connected");
+            return;
+        }
+
+        if (!XMPPUtils.isValid(message.getJID())) {
+            LOGGER.warning("not sending message, invalid JID: "+message.getJID());
             return;
         }
 
@@ -259,7 +266,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendBlockingCommand(String jid, boolean blocking) {
-        if (mConn == null || !mConn.isAuthenticated()) {
+        if (!this.isConnected()) {
             LOGGER.warning("not sending blocking command, not connected");
             return;
         }
@@ -319,6 +326,11 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void addToRoster(User user) {
+        if (!this.isConnected()) {
+            LOGGER.info("can't add user to roster, not connected");
+            return;
+        }
+
         String rosterName = user.getName();
         if (rosterName.isEmpty())
             rosterName = XmppStringUtils.parseLocalpart(rosterName);
@@ -335,6 +347,10 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public boolean removeFromRoster(User user) {
+        if (!this.isConnected()) {
+            LOGGER.info("can't remove user from roster, not connected");
+            return false;
+        }
         Roster roster = Roster.getInstanceFor(mConn);
         RosterEntry entry = roster.getEntry(user.getJID());
         if (entry == null) {
@@ -342,7 +358,7 @@ public final class Client implements StanzaListener, Runnable {
             return true;
         }
         try {
-            // sync call
+            // blocking
             roster.removeEntry(entry);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
@@ -374,6 +390,10 @@ public final class Client implements StanzaListener, Runnable {
                     break;
             }
         }
+    }
+
+    private boolean isConnected() {
+        return mConn != null && mConn.isAuthenticated();
     }
 
     private static class Task {
