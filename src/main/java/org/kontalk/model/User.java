@@ -195,6 +195,14 @@ public final class User extends Observable implements Comparable<User> {
         }
     }
 
+    /**
+     * Reset online status when client is disconneted.
+     */
+    public void setOffline() {
+        mAvailable = Online.UNKNOWN;
+        this.changed(mAvailable);
+    }
+
     public byte[] getKey() {
         return Base64.getDecoder().decode(mKey);
     }

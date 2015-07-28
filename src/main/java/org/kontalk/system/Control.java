@@ -69,7 +69,9 @@ public final class Control extends Observable {
         CONNECTING,
         CONNECTED,
         SHUTTING_DOWN,
+        /** Connection attempt failed. */
         FAILED,
+        /** Connect was lost due to error. */
         ERROR
     }
 
@@ -232,6 +234,7 @@ public final class Control extends Observable {
 
         newUser.setEncrypted(encrypted);
 
+        // TODO do this later if not connected
         mClient.addToRoster(newUser);
 
         return Optional.of(newUser);
@@ -294,6 +297,9 @@ public final class Control extends Observable {
                     this.sendKeyRequest(user);
                 }
             }
+        } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
+            for (User user : UserList.getInstance().getAll())
+                user.setOffline();
         }
     }
 
