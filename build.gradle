@@ -23,9 +23,10 @@ evaluationDependsOn ':'+clientCommonDir
 ext.bcVersion = '1.52'
 ext.smackVersion = project(':'+clientCommonDir).smackVersion
 
-//configurations.all {
-//    transitive = false
-//}
+//configurations.all { transitive = false }
+
+// missing <scope> in json-simple's pom
+configurations { runtime.exclude module:'junit' }
 
 dependencies {
     compile project(':'+clientCommonDir)
