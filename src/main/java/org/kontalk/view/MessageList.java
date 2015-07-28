@@ -63,6 +63,7 @@ import javax.swing.text.ParagraphView;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledEditorKit;
 import javax.swing.text.ViewFactory;
+import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
@@ -550,13 +551,13 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 popupMenu.add(decryptMenuItem);
             }
             WebMenuItem cItem = Utils.createCopyMenuItem(
-                    this.toPrettyString(),
+                    this.toCopyString(),
                     Tr.tr("Copy message content"));
             popupMenu.add(cItem);
             return popupMenu;
         }
 
-        private String toPrettyString() {
+        private String toCopyString() {
             String date = Utils.LONG_DATE_FORMAT.format(mValue.getDate());
             String from = getFromString(mValue);
             return date + " - " + from + " : " + mValue.getContent().getText();
@@ -606,7 +607,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         if (!message.getUser().getName().isEmpty()) {
             from = message.getUser().getName();
         } else {
-            from = message.getJID();
+            from = XmppStringUtils.parseBareJid(message.getJID());
             if (from.length() > 40)
                 from = from.substring(0, 8) + "...";
         }
