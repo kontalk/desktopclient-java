@@ -266,7 +266,7 @@ public final class User extends Observable implements Comparable<User> {
         this.save();
     }
 
-    boolean isDeleted() {
+    public boolean isDeleted() {
         return mJID.equals(Integer.toString(mID));
     }
 

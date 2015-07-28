@@ -198,6 +198,8 @@ public final class Control extends Observable {
         // TODO no group chat support yet
         Set<User> user = thread.getUser();
         for (User oneUser: user) {
+            if (oneUser.isDeleted())
+                continue;
             OutMessage newMessage = newOutMessage(
                     thread,
                     oneUser,
