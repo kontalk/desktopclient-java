@@ -57,7 +57,7 @@ import org.kontalk.util.XMPPUtils;
  * Application control logic.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Control extends Observable {
+public final class Control {
     private static final Logger LOGGER = Logger.getLogger(Control.class.getName());
 
     private static final String LEGACY_CUT_FROM_ID = " (NO COMMENT)";
@@ -71,7 +71,7 @@ public final class Control extends Observable {
         SHUTTING_DOWN,
         /** Connection attempt failed. */
         FAILED,
-        /** Connect was lost due to error. */
+        /** Connection was lost due to error. */
         ERROR
     }
 
@@ -111,178 +111,22 @@ public final class Control extends Observable {
     private final Client mClient;
     private final ChatStateManager mChatStateManager;
 
+    private final ViewControl mViewControl;
+
     private Status mCurrentStatus = Status.DISCONNECTED;
 
-    public Control() {
+    private Control() {
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
-    }
 
-    public void launch() {
-        new Thread(mClient).start();
-
-        boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-        if (!AccountLoader.getInstance().isPresent()) {
-            this.changed(new ViewEvent.MissingAccount(connect));
-            return;
-        }
-
-        if (connect)
-            this.connect();
-    }
-
-    /* commands from view */
-
-    public void shutDown() {
-        this.disconnect();
-        LOGGER.info("Shutting down...");
-        mCurrentStatus = Status.SHUTTING_DOWN;
-        this.changed(new ViewEvent.StatusChanged());
-        UserList.getInstance().save();
-        ThreadList.getInstance().save();
-        try {
-            Database.getInstance().close();
-        } catch (RuntimeException ex) {
-            // ignore
-        }
-        Config.getInstance().saveToFile();
-
-        Kontalk.exit();
-    }
-
-    public void connect() {
-        this.connect(new char[0]);
-    }
-
-    public void connect(char[] password) {
-        Optional<PersonalKey> optKey = this.loadKey(password);
-        if (!optKey.isPresent())
-            return;
-
-        mClient.connect(optKey.get());
-    }
-
-    private Optional<PersonalKey> loadKey(char[] password) {
-        AccountLoader account = AccountLoader.getInstance();
-        Optional<PersonalKey> optKey = account.getPersonalKey();
-        if (optKey.isPresent())
-            return optKey;
-
-        if (password.length == 0) {
-            if (account.isPasswordProtected()) {
-                this.changed(new ViewEvent.PasswordSet());
-                return Optional.empty();
-            }
-
-            password = Config.getInstance().getString(Config.ACC_PASS).toCharArray();
-        }
-
-        try {
-            optKey = Optional.of(account.load(password));
-        } catch (KonException ex) {
-            // something wrong with the account, tell view
-            this.handleException(ex);
-            return Optional.empty();
-        }
-        return optKey;
-    }
-
-    public void disconnect() {
-        mChatStateManager.imGone();
-        mCurrentStatus = Status.DISCONNECTING;
-        this.changed(new ViewEvent.StatusChanged());
-        mClient.disconnect();
-    }
-
-    public void sendText(KonThread thread, String text) {
-        // TODO no group chat support yet
-        Set<User> user = thread.getUser();
-        for (User oneUser: user) {
-            if (oneUser.isDeleted())
-                continue;
-            OutMessage newMessage = newOutMessage(
-                    thread,
-                    oneUser,
-                    text,
-                    oneUser.getEncrypted());
-            this.sendMessage(newMessage);
-        }
-    }
-
-    public void sendUserBlocking(User user, boolean blocking) {
-        mClient.sendBlockingCommand(user.getJID(), blocking);
-    }
-
-    public Status getCurrentStatus() {
-        return mCurrentStatus;
-    }
-
-    public KonThread createNewThread(Set<User> user) {
-        return ThreadList.getInstance().createNew(user);
-    }
-
-    public void deleteThread(KonThread thread) {
-        ThreadList.getInstance().delete(thread.getID());
-    }
-
-    public Optional<User> createNewUser(String jid, String name, boolean encrypted) {
-        Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
-        if (!optNewUser.isPresent()) {
-            LOGGER.warning("can't create new user");
-            // TODO tell view
-            return Optional.empty();
-        }
-        User newUser = optNewUser.get();
-
-        newUser.setEncrypted(encrypted);
-
-        // TODO do this later if not connected
-        mClient.addToRoster(newUser);
-
-        return Optional.of(newUser);
-    }
-
-    public void deleteUser(User user) {
-        boolean succ = mClient.removeFromRoster(user);
-        if (!succ)
-            // only delete if not in roster
-            return;
-
-        UserList.getInstance().remove(user);
-
-        user.setDeleted();
-    }
-
-    public void changeJID(User user, String jid) {
-        jid = XmppStringUtils.parseBareJid(jid);
-        if (user.getJID().equals(jid))
-            return;
-
-        UserList.getInstance().changeJID(user, jid);
-    }
-
-    public void sendKeyRequest(User user) {
-        if (user.getSubScription() == User.Subscription.UNSUBSCRIBED ||
-                user.getSubScription() == User.Subscription.PENDING) {
-            LOGGER.info("no presence subscription, not sending key request, user: "+user);
-            return;
-        }
-        mClient.sendPublicKeyRequest(user.getJID());
-    }
-
-    public void handleOwnChatStateEvent(KonThread thread, ChatState state) {
-        mChatStateManager.handleOwnChatStateEvent(thread, state);
-    }
-
-    public void sendStatusText() {
-        mClient.sendInitialPresence();
+        mViewControl = new ViewControl();
     }
 
     /* events from network client */
 
     public void setStatus(Status status) {
         mCurrentStatus = status;
-        this.changed(new ViewEvent.StatusChanged());
+        mViewControl.changed(new ViewEvent.StatusChanged());
 
         if (status == Status.CONNECTED) {
             // send all pending messages
@@ -296,7 +140,7 @@ public final class Control extends Observable {
                 // TODO only for domains that are part of the Kontalk network
                 if (user.getFingerprint().isEmpty()) {
                     LOGGER.info("public key missing for user, requesting it...");
-                    this.sendKeyRequest(user);
+                    Control.this.sendKeyRequest(user);
                 }
             }
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
@@ -306,7 +150,7 @@ public final class Control extends Observable {
     }
 
     public void handleException(KonException ex) {
-        this.changed(new ViewEvent.Exception(ex));
+        mViewControl.changed(new ViewEvent.Exception(ex));
     }
 
     public void handleSecurityErrors(KonMessage message) {
@@ -317,24 +161,7 @@ public final class Control extends Observable {
             // maybe there is something wrong with the senders key
             this.sendKeyRequest(message.getUser());
         }
-        this.changed(new ViewEvent.SecurityError(message));
-    }
-
-    /**
-     * All-in-one method for a new outgoing message (except sending): Create,
-     * save and process the message.
-     * @return the new created message
-     */
-    private OutMessage newOutMessage(KonThread thread, User user, String text, boolean encrypted) {
-        MessageContent content = new MessageContent(text);
-        OutMessage.Builder builder = new OutMessage.Builder(thread, user, encrypted);
-        builder.content(content);
-        OutMessage newMessage = builder.build();
-        boolean added = thread.addMessage(newMessage);
-        if (!added) {
-            LOGGER.warning("could not add outgoing message to thread");
-        }
-        return newMessage;
+        mViewControl.changed(new ViewEvent.SecurityError(message));
     }
 
     /**
@@ -371,24 +198,9 @@ public final class Control extends Observable {
 
         this.decryptAndDownload(newMessage);
 
-        this.changed(new ViewEvent.NewMessage(newMessage));
+        mViewControl.changed(new ViewEvent.NewMessage(newMessage));
 
         return newMessage.getID() >= -1;
-    }
-
-    /**
-     * Decrypt an incoming message and download attachment if present.
-     */
-    public void decryptAndDownload(InMessage message) {
-        Coder.processInMessage(message);
-
-        if (!message.getCoderStatus().getErrors().isEmpty()) {
-            this.handleSecurityErrors(message);
-        }
-
-        if (message.getContent().getAttachment().isPresent()) {
-            Downloader.getInstance().queueDownload(message);
-        }
     }
 
     /**
@@ -449,35 +261,35 @@ public final class Control extends Observable {
     }
 
     public void addUserFromRoster(String jid,
-            String rosterName,
-            ItemType type,
-            ItemStatus itemStatus) {
-            if (UserList.getInstance().contains(jid)) {
-                this.setSubscriptionStatus(jid, type, itemStatus);
-                return;
-            }
+        String rosterName,
+        ItemType type,
+        ItemStatus itemStatus) {
+        if (UserList.getInstance().contains(jid)) {
+            this.setSubscriptionStatus(jid, type, itemStatus);
+            return;
+        }
 
-            LOGGER.info("adding user from roster, jid: "+jid);
+        LOGGER.info("adding user from roster, jid: "+jid);
 
-            String name = rosterName == null ? "" : rosterName;
-            if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
-                    XMPPUtils.isHash(jid)) {
-                // this must be the hash string, don't use it as name
-                name = "";
-            }
+        String name = rosterName == null ? "" : rosterName;
+        if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
+                XMPPUtils.isHash(jid)) {
+            // this must be the hash string, don't use it as name
+            name = "";
+        }
 
-            Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
-            if (!optNewUser.isPresent())
-                return;
-            User newUser = optNewUser.get();
+        Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
+        if (!optNewUser.isPresent())
+            return;
+        User newUser = optNewUser.get();
 
-            User.Subscription status = rosterToModelSubscription(itemStatus, type);
-            newUser.setSubScriptionStatus(status);
+        User.Subscription status = rosterToModelSubscription(itemStatus, type);
+        newUser.setSubScriptionStatus(status);
 
-            if (status == User.Subscription.UNSUBSCRIBED)
-                mClient.sendPresenceSubscriptionRequest(jid);
+        if (status == User.Subscription.UNSUBSCRIBED)
+            mClient.sendPresenceSubscriptionRequest(jid);
 
-            this.sendKeyRequest(newUser);
+        this.sendKeyRequest(newUser);
     }
 
     public void setSubscriptionStatus(String jid, ItemType type, ItemStatus itemStatus) {
@@ -570,14 +382,56 @@ public final class Control extends Observable {
 
     /* private */
 
-    private void changed(ViewEvent event) {
-        this.setChanged();
-        this.notifyObservers(event);
+    private Optional<User> createNewUser(String jid, String name, boolean encrypted) {
+        Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
+        if (!optNewUser.isPresent()) {
+            LOGGER.warning("can't create new user");
+            // TODO tell view
+            return Optional.empty();
+        }
+        User newUser = optNewUser.get();
+
+        newUser.setEncrypted(encrypted);
+
+        // TODO do this later if not connected
+        mClient.addToRoster(newUser);
+
+        return Optional.of(newUser);
     }
 
     private void sendMessage(OutMessage message) {
         mClient.sendMessage(message);
         mChatStateManager.handleOwnChatStateEvent(message.getThread(), ChatState.active);
+    }
+
+    private void sendKeyRequest(User user) {
+        if (user.getSubScription() == User.Subscription.UNSUBSCRIBED ||
+                user.getSubScription() == User.Subscription.PENDING) {
+            LOGGER.info("no presence subscription, not sending key request, user: "+user);
+            return;
+        }
+        mClient.sendPublicKeyRequest(user.getJID());
+    }
+
+    /**
+     * Decrypt an incoming message and download attachment if present.
+     */
+    private void decryptAndDownload(InMessage message) {
+        Coder.processInMessage(message);
+
+        if (!message.getCoderStatus().getErrors().isEmpty()) {
+            this.handleSecurityErrors(message);
+        }
+
+        if (message.getContent().getAttachment().isPresent()) {
+            Downloader.getInstance().queueDownload(message);
+        }
+    }
+
+    /* static */
+
+    public static ViewControl create() {
+        return new Control().mViewControl;
     }
 
     private static KonThread getThread(String xmppThreadID, User user) {
@@ -624,5 +478,184 @@ public final class Control extends Observable {
             return User.Subscription.PENDING;
 
         return User.Subscription.UNSUBSCRIBED;
+    }
+
+    /* commands from view */
+
+    public class ViewControl extends Observable {
+
+        public void launch() {
+            new Thread(mClient).start();
+
+            boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
+            if (!AccountLoader.getInstance().isPresent()) {
+                this.changed(new ViewEvent.MissingAccount(connect));
+                return;
+            }
+
+            if (connect)
+                this.connect();
+        }
+
+        public void shutDown() {
+            this.disconnect();
+            LOGGER.info("Shutting down...");
+            mCurrentStatus = Status.SHUTTING_DOWN;
+            this.changed(new ViewEvent.StatusChanged());
+            UserList.getInstance().save();
+            ThreadList.getInstance().save();
+            try {
+                Database.getInstance().close();
+            } catch (RuntimeException ex) {
+                // ignore
+            }
+            Config.getInstance().saveToFile();
+
+            Kontalk.exit();
+        }
+
+        public void connect() {
+            this.connect(new char[0]);
+        }
+
+        public void connect(char[] password) {
+            Optional<PersonalKey> optKey = this.loadKey(password);
+            if (!optKey.isPresent())
+                return;
+
+            mClient.connect(optKey.get());
+        }
+
+        public void disconnect() {
+            mChatStateManager.imGone();
+            mCurrentStatus = Status.DISCONNECTING;
+            this.changed(new ViewEvent.StatusChanged());
+            mClient.disconnect();
+        }
+
+        public Status getCurrentStatus() {
+            return mCurrentStatus;
+        }
+
+        public void sendStatusText() {
+            mClient.sendInitialPresence();
+        }
+
+        /* user */
+
+        public Optional<User> createUser(String jid, String name, boolean encrypted) {
+            return Control.this.createNewUser(jid, name, encrypted);
+        }
+
+        public void deleteUser(User user) {
+            boolean succ = mClient.removeFromRoster(user);
+            if (!succ)
+                // only delete if not in roster
+                return;
+
+            UserList.getInstance().remove(user);
+
+            user.setDeleted();
+        }
+
+        public void sendUserBlocking(User user, boolean blocking) {
+            mClient.sendBlockingCommand(user.getJID(), blocking);
+        }
+
+        public void changeJID(User user, String jid) {
+            jid = XmppStringUtils.parseBareJid(jid);
+            if (user.getJID().equals(jid))
+                return;
+
+            UserList.getInstance().changeJID(user, jid);
+        }
+
+        public void requestKey(User user) {
+            Control.this.sendKeyRequest(user);
+        }
+
+        /* threads */
+
+        public KonThread createNewThread(Set<User> user) {
+            return ThreadList.getInstance().createNew(user);
+        }
+
+        public void deleteThread(KonThread thread) {
+            ThreadList.getInstance().delete(thread.getID());
+        }
+
+        public void handleOwnChatStateEvent(KonThread thread, ChatState state) {
+            mChatStateManager.handleOwnChatStateEvent(thread, state);
+        }
+
+        /* messages */
+
+        public void decryptAgain(InMessage message) {
+            Control.this.decryptAndDownload(message);
+        }
+
+        public void sendText(KonThread thread, String text) {
+            // TODO no group chat support yet
+            Set<User> user = thread.getUser();
+            for (User oneUser: user) {
+                if (oneUser.isDeleted())
+                    continue;
+                OutMessage newMessage = this.newOutMessage(
+                        thread,
+                        oneUser,
+                        text,
+                        oneUser.getEncrypted());
+                Control.this.sendMessage(newMessage);
+            }
+        }
+
+        /* private */
+
+        private Optional<PersonalKey> loadKey(char[] password) {
+            AccountLoader account = AccountLoader.getInstance();
+            Optional<PersonalKey> optKey = account.getPersonalKey();
+            if (optKey.isPresent())
+                return optKey;
+
+            if (password.length == 0) {
+                if (account.isPasswordProtected()) {
+                    this.changed(new ViewEvent.PasswordSet());
+                    return Optional.empty();
+                }
+
+                password = Config.getInstance().getString(Config.ACC_PASS).toCharArray();
+            }
+
+            try {
+                optKey = Optional.of(account.load(password));
+            } catch (KonException ex) {
+                // something wrong with the account, tell view
+                Control.this.handleException(ex);
+                return Optional.empty();
+            }
+            return optKey;
+        }
+
+        /**
+         * All-in-one method for a new outgoing message (except sending): Create,
+         * save and process the message.
+         * @return the new created message
+         */
+        private OutMessage newOutMessage(KonThread thread, User user, String text, boolean encrypted) {
+            MessageContent content = new MessageContent(text);
+            OutMessage.Builder builder = new OutMessage.Builder(thread, user, encrypted);
+            builder.content(content);
+            OutMessage newMessage = builder.build();
+            boolean added = thread.addMessage(newMessage);
+            if (!added) {
+                LOGGER.warning("could not add outgoing message to thread");
+            }
+            return newMessage;
+        }
+
+        private void changed(ViewEvent event) {
+            this.setChanged();
+            this.notifyObservers(event);
+        }
     }
 }

@@ -66,6 +66,7 @@ import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Control;
+import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.Tr;
 
 /**
@@ -88,7 +89,7 @@ public final class View implements Observer {
     static final Color LIGHT_GREY = new Color(240, 240, 240);
     static final Color GREEN = new Color(83, 196, 46);
 
-    private final Control mControl;
+    private final ViewControl mControl;
     private final TrayManager mTrayManager;
 
     private final Notifier mNotifier;
@@ -103,7 +104,7 @@ public final class View implements Observer {
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
 
-    private View(Control control) {
+    private View(ViewControl control) {
         mControl = control;
 
         WebLookAndFeel.install();
@@ -398,7 +399,7 @@ public final class View implements Observer {
 
     /* view to control */
 
-    Control getControl() {
+    ViewControl getControl() {
         return mControl;
     }
 
@@ -494,7 +495,7 @@ public final class View implements Observer {
         mTrayManager.setTray();
     }
 
-    public static Optional<View> create(final Control control) {
+    public static Optional<View> create(final ViewControl control) {
         Optional<View> optView = invokeAndWait(new Callable<View>() {
             @Override
             public View call() throws Exception {

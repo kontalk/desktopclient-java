@@ -282,7 +282,7 @@ final class ComponentUtils {
             } else {
                 jid = mJIDField.getText();
             }
-            mView.getControl().createNewUser(jid,
+            mView.getControl().createUser(jid,
                     mNameField.getText(),
                     mEncryptionBox.isSelected());
         }
