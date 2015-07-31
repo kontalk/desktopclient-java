@@ -286,7 +286,7 @@ final class ConfigurationDialog extends WebDialog {
         private void updateFingerprint() {
             Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
             mFingerprintArea.setText(optKey.isPresent() ?
-                    Utils.formatFingerprint(optKey.get().getFingerprint()) :
+                    Utils.fingerprint(optKey.get().getFingerprint()) :
                     "- " + Tr.tr("no key loaded") + " -");
         }
 

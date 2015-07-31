@@ -222,7 +222,7 @@ final class ThreadDetails extends WebPanel {
 
         @Override
         public String toString() {
-            String jid = "<" + Utils.shortenJID(user.getJID(), 40) + ">";
+            String jid = Utils.jid(user.getJID(), 40, true);
             String name = StringUtils.abbreviate(user.getName(), 24);
             return name.isEmpty() ? jid : name +" " + jid;
         }

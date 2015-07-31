@@ -101,7 +101,7 @@ final class UserDetails extends WebPanel implements Observer {
         final WebTextField jidField = new ComponentUtils.EditableTextField(length, this) {
             @Override
             protected String labelText() {
-                return Utils.shortenJID(mUser.getJID(), length);
+                return Utils.jid(mUser.getJID(), length, false);
             }
             @Override
             protected String editText() {
@@ -218,7 +218,7 @@ final class UserDetails extends WebPanel implements Observer {
         if (mUser.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";
             TooltipManager.removeTooltips(mKeyStatus);
-            mFPArea.setText(Utils.formatFingerprint(mUser.getFingerprint()));
+            mFPArea.setText(Utils.fingerprint(mUser.getFingerprint()));
             mFPLabel.setVisible(true);
             mFPArea.setVisible(true);
         } else {

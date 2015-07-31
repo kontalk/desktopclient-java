@@ -211,7 +211,9 @@ final class Utils {
         return XmppStringUtils.completeJidFrom(local, domain);
     }
 
-    static String shortenJID(String jid, int maxLength) {
+    static String jid(String jid, int maxLength, boolean brackets) {
+        if (brackets)
+            jid = "<" + jid + ">";
         if (jid.length() > maxLength) {
             String local = XmppStringUtils.parseLocalpart(jid);
             local = StringUtils.abbreviate(local, (int) (maxLength * 0.4));
@@ -235,7 +237,7 @@ final class Utils {
         return Toolkit.getDefaultToolkit().createImage(imageUrl);
     }
 
-    static String formatFingerprint(String fp) {
+    static String fingerprint(String fp) {
         int m = fp.length() / 2;
         return group(fp.substring(0, m)) + "\n" + group(fp.substring(m));
     }
