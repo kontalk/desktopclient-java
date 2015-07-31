@@ -18,7 +18,7 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.StyleConstants;
+import com.alee.global.StyleConstants;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;

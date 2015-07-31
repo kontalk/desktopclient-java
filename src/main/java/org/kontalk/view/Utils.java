@@ -19,12 +19,12 @@
 package org.kontalk.view;
 
 import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.extended.filefilter.ImageFilesFilter;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
+import com.alee.utils.filefilter.ImageFilesFilter;
 import java.awt.Component;
 import java.awt.Image;
 import java.awt.Toolkit;
