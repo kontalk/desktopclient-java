@@ -437,29 +437,29 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             String sec = null;
             // usual states
             if (enc == Coder.Encryption.NOT && sign == Coder.Signing.NOT)
-                sec = Tr.tr("not encrypted");
+                sec = Tr.tr("Not encrypted");
             else if (enc == Coder.Encryption.DECRYPTED &&
                     ((isOut && sign == Coder.Signing.SIGNED) ||
                     (!isOut && sign == Coder.Signing.VERIFIED))) {
-                        sec = Tr.tr("safe");
+                        sec = Tr.tr("Secure");
             }
             if (sec == null) {
                 // unusual states
-                String encryption = Tr.tr("unknown");
+                String encryption = Tr.tr("Unknown");
                 switch (enc) {
-                    case NOT: encryption = Tr.tr("not encrypted"); break;
-                    case ENCRYPTED: encryption = Tr.tr("encrypted"); break;
-                    case DECRYPTED: encryption = Tr.tr("decrypted"); break;
+                    case NOT: encryption = Tr.tr("Not encrypted"); break;
+                    case ENCRYPTED: encryption = Tr.tr("Encrypted"); break;
+                    case DECRYPTED: encryption = Tr.tr("Decrypted"); break;
                 }
-                String verification = Tr.tr("unknown");
+                String verification = Tr.tr("Unknown");
                 switch (sign) {
-                    case NOT: verification = Tr.tr("not signed"); break;
-                    case SIGNED: verification = Tr.tr("signed"); break;
-                    case VERIFIED: verification = Tr.tr("verified"); break;
+                    case NOT: verification = Tr.tr("Not signed"); break;
+                    case SIGNED: verification = Tr.tr("Signed"); break;
+                    case VERIFIED: verification = Tr.tr("Verified"); break;
                 }
                 sec = encryption + " / " + verification;
             }
-            html += Tr.tr("Security")+": " + sec + "<br>";
+            html += Tr.tr("Encryption")+": " + sec + "<br>";
 
             String errors = "";
             for (Coder.Error error: mValue.getCoderStatus().getErrors()) {

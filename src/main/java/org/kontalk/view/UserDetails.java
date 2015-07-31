@@ -207,11 +207,11 @@ final class UserDetails extends WebPanel implements Observer {
         mNameField.setText(mUser.getName());
         mNameField.setInputPrompt(mUser.getName());
         User.Subscription subscription = mUser.getSubScription();
-        String auth = Tr.tr("unknown");
+        String auth = Tr.tr("Unknown");
         switch(subscription) {
-            case PENDING: auth = Tr.tr("awaiting reply"); break;
-            case SUBSCRIBED: auth = Tr.tr("authorized"); break;
-            case UNSUBSCRIBED: auth = Tr.tr("not authorized"); break;
+            case PENDING: auth = Tr.tr("Awaiting reply"); break;
+            case SUBSCRIBED: auth = Tr.tr("Authorized"); break;
+            case UNSUBSCRIBED: auth = Tr.tr("Not authorized"); break;
         }
         mAuthorization.setText(auth);
         String hasKey = "<html>";
