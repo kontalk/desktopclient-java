@@ -31,24 +31,36 @@ import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextField;
+import com.alee.managers.popup.WebPopup;
 import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.SwingUtils;
 import com.alee.utils.swing.DocumentChangeListener;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
+import java.awt.Window;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.FocusListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowStateListener;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import javax.swing.AbstractButton;
+import javax.swing.JLayeredPane;
+import javax.swing.JRootPane;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -460,5 +472,76 @@ final class ComponentUtils {
         abstract protected String editText();
 
         abstract protected void onFocusLost();
+    }
+
+    static class ModalPopup extends WebPopup {
+
+        private final AbstractButton mInvoker;
+        private final WebPanel layerPanel;
+
+        public ModalPopup(AbstractButton invokerButton) {
+            super();
+            mInvoker = invokerButton;
+
+            layerPanel = new WebPanel();
+            layerPanel.setOpaque(false);
+            layerPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+
+                }
+            });
+
+            JRootPane rootPane = SwingUtils.getRootPane(mInvoker);
+            if (rootPane == null) {
+                throw new IllegalStateException("not on UI start, dummkopf!");
+            }
+            installPopupLayer(layerPanel, rootPane);
+            layerPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    ModalPopup.this.close();
+                }
+            });
+        }
+
+        public void showPopup() {
+            layerPanel.setVisible(true);
+            this.showAsPopupMenu(mInvoker);
+        }
+
+        public void close() {
+            this.hidePopup();
+            mInvoker.setSelected(false);
+            layerPanel.setVisible(false);
+        }
+
+        // taken from com.alee.managers.popup.PopupManager
+        private static void installPopupLayer(final WebPanel popupLayer,
+                JRootPane rootPane) {
+            final JLayeredPane layeredPane = rootPane.getLayeredPane();
+            popupLayer.setBounds(0, 0, layeredPane.getWidth(), layeredPane.getHeight());
+            layeredPane.add(popupLayer, JLayeredPane.DEFAULT_LAYER);
+            layeredPane.revalidate();
+
+            layeredPane.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(final ComponentEvent e) {
+                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
+                            layeredPane.getHeight());
+                    popupLayer.revalidate();
+                }
+            });
+
+            final Window window = SwingUtils.getWindowAncestor(rootPane);
+            window.addWindowStateListener(new WindowStateListener() {
+                @Override
+                public void windowStateChanged(final WindowEvent e) {
+                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
+                            layeredPane.getHeight());
+                    popupLayer.revalidate();
+                }
+            });
+        }
     }
 }

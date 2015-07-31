@@ -25,8 +25,6 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.viewport.WebViewport;
-import com.alee.managers.popup.PopupAdapter;
-import com.alee.managers.popup.WebPopup;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -70,8 +68,8 @@ final class ThreadView extends WebPanel implements Observer {
     private final WebLabel mSubLabel;
     private final WebScrollPane mScrollPane;
     private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
+    private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
-    private WebPopup mPopup = new WebPopup();
 
     private boolean mScrollDown = false;
 
@@ -97,7 +95,6 @@ final class ThreadView extends WebPanel implements Observer {
         editButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (!ThreadView.this.mPopup.isShowing())
                     ThreadView.this.showPopup(editButton);
             }
         });
@@ -258,19 +255,11 @@ final class ThreadView extends WebPanel implements Observer {
         Optional<KonThread> optThread = ThreadView.this.getCurrentThread();
         if (!optThread.isPresent())
             return;
+        if (mPopup == null)
+            mPopup = new ComponentUtils.ModalPopup(invoker);
 
-        mPopup = new WebPopup();
-        // TODO focus lost when choosing background color / picture
-        mPopup.setCloseOnFocusLoss(true);
-        mPopup.addPopupListener(new PopupAdapter() {
-            @Override
-            public void popupWillBeClosed() {
-                invoker.doClick();
-            }
-        });
-        mPopup.add(new ThreadDetails(invoker, optThread.get()));
-        //mPopup.packPopup();
-        mPopup.showAsPopupMenu(invoker);
+        mPopup.add(new ThreadDetails(mPopup, optThread.get()));
+        mPopup.showPopup();
     }
 
     /** A background image of thread view with efficient async reloading. */

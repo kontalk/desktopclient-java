@@ -32,7 +32,6 @@ import com.alee.laf.text.WebTextField;
 import com.alee.utils.swing.UnselectableButtonGroup;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -63,7 +62,7 @@ final class ThreadDetails extends WebPanel {
     // TODO group chat
     //WebCheckBoxList mParticipantsList;
 
-    ThreadDetails(final Component focusGainer, KonThread thread) {
+    ThreadDetails(final ComponentUtils.ModalPopup popup, KonThread thread) {
         mThread = thread;
 
         GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
@@ -178,8 +177,7 @@ final class ThreadDetails extends WebPanel {
 //                }
                 ThreadDetails.this.save();
 
-                // close popup
-                focusGainer.requestFocus();
+                popup.close();
             }
         });
         //this.getRootPane().setDefaultButton(saveButton);
