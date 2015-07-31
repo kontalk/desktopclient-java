@@ -25,9 +25,6 @@ ext.smackVersion = project(':'+clientCommonDir).smackVersion
 
 //configurations.all { transitive = false }
 
-// missing <scope> in json-simple's pom
-configurations { runtime.exclude module:'junit' }
-
 dependencies {
     compile project(':'+clientCommonDir)
 
@@ -44,7 +41,8 @@ dependencies {
     compile group: 'org.jxmpp', name: 'jxmpp-core', version: "0.4.1"
     compile group: 'org.jxmpp', name: 'jxmpp-util-cache', version: "0.4.1"
     compile group: 'net.sf.kxml', name: 'kxml2', version: "2.3.0"
-    compile group: 'com.googlecode.json-simple', name: 'json-simple', version: "1.1.1"
+    // missing <scope> for junit in json-simple's pom
+    compile group: 'com.googlecode.json-simple', name: 'json-simple', version: "1.1.1", transitive: false
     compile group: 'com.googlecode.libphonenumber', name: 'libphonenumber', version: "7.0.8"
     compile group: 'org.ocpsoft.prettytime', name: 'prettytime', version: "3.2.7.Final"
     compile group: 'org.igniterealtime.smack', name: 'smack-core', version: "$smackVersion"
