@@ -415,7 +415,9 @@ public final class Control {
     }
 
     private void sendKeyRequest(User user) {
-        // TODO only for domains that are part of the Kontalk network
+        if (!XMPPUtils.isKontalkUser(user))
+            return;
+
         if (user.getSubScription() == User.Subscription.UNSUBSCRIBED ||
                 user.getSubScription() == User.Subscription.PENDING) {
             LOGGER.info("no presence subscription, not sending key request, user: "+user);

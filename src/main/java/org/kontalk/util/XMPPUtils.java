@@ -21,11 +21,13 @@ import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import java.io.StringReader;
+import java.util.Arrays;
+import java.util.List;
 import org.apache.commons.codec.digest.DigestUtils;
-
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.PacketParserUtils;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.model.User;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -38,6 +40,9 @@ import org.xmlpull.v1.XmlPullParserFactory;
 public final class XMPPUtils {
 
     public static final String XML_XMPP_TYPE = "application/xmpp+xml";
+
+    // TODO do not hardcode, maybe download
+    private static final List<String> KONTALK_SERVER = Arrays.asList("beta.kontalk.org");
 
     private XMPPUtils() {
         throw new AssertionError();
@@ -109,5 +114,9 @@ public final class XMPPUtils {
         return DigestUtils.sha1Hex(
                 PhoneNumberUtil.getInstance().format(n,
                 PhoneNumberUtil.PhoneNumberFormat.E164));
+    }
+
+    public static boolean isKontalkUser(User user){
+        return KONTALK_SERVER.contains(XmppStringUtils.parseDomain(user.getJID()));
     }
 }
