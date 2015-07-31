@@ -18,14 +18,18 @@
 
 package org.kontalk.misc;
 
+import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
+import org.kontalk.model.User;
 
 /**
  * Events passed from controller to view.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public abstract class ViewEvent {
+public class ViewEvent {
+
+    private ViewEvent() {}
 
     /** Application status changed. */
     public static class StatusChanged extends ViewEvent {
@@ -62,12 +66,23 @@ public abstract class ViewEvent {
         }
     }
 
-    /** We got a new message. */
+    /** Got a new message. */
     public static class NewMessage extends ViewEvent {
         public final InMessage message;
 
         public NewMessage(InMessage message) {
             this.message = message;
+        }
+    }
+
+    /** Got a new public key (ask whattodo). */
+    public static class NewKey extends ViewEvent {
+        public final User user;
+        public final PGPCoderKey key;
+
+        public NewKey(User user, PGPCoderKey key) {
+            this.user = user;
+            this.key = key;
         }
     }
 }

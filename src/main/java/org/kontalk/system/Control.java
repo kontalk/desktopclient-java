@@ -40,6 +40,7 @@ import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
+import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.misc.ViewEvent;
@@ -131,18 +132,13 @@ public final class Control {
         if (status == Status.CONNECTED) {
             // send all pending messages
             for (KonThread thread: ThreadList.getInstance().getAll())
-                for (OutMessage m : thread.getMessages().getPending()) {
+                for (OutMessage m : thread.getMessages().getPending())
                     this.sendMessage(m);
-            }
 
             // send public key requests for Kontalk users with missing key
-            for (User user : UserList.getInstance().getAll()) {
-                // TODO only for domains that are part of the Kontalk network
-                if (user.getFingerprint().isEmpty()) {
-                    LOGGER.info("public key missing for user, requesting it...");
+            for (User user : UserList.getInstance().getAll())
+                if (user.getFingerprint().isEmpty())
                     Control.this.sendKeyRequest(user);
-                }
-            }
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
             for (User user : UserList.getInstance().getAll())
                 user.setOffline();
@@ -329,7 +325,7 @@ public final class Control {
         }
     }
 
-    public void setPGPKey(String jid, byte[] rawKey) {
+    public void handlePGPKey(String jid, byte[] rawKey) {
         Optional<User> optUser = UserList.getInstance().get(jid);
         if (!optUser.isPresent()) {
             LOGGER.warning("(PGPKey) can't find user with jid: "+jid);
@@ -337,13 +333,27 @@ public final class Control {
         }
         User user = optUser.get();
 
-        Optional<PGPUtils.PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
+        Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
         if (!optKey.isPresent()) {
-            LOGGER.log(Level.WARNING, "can't get public key");
+            LOGGER.warning("invalid public PGP key, user: "+user);
             return;
         }
-        PGPUtils.PGPCoderKey key = optKey.get();
-        user.setKey(rawKey, key.fingerprint);
+        PGPCoderKey key = optKey.get();
+
+        if (key.fingerprint.equals(user.getFingerprint()))
+            // same key
+            return;
+
+        if (user.hasKey())
+            // ask before overwriting
+            mViewControl.changed(new ViewEvent.NewKey(user, key));
+        else
+            this.setKey(user, key);
+    }
+
+    public void setKey(User user, PGPCoderKey key) {
+
+        user.setKey(key.rawKey, key.fingerprint);
 
         // if not set, use uid in key for user name
         LOGGER.info("full UID in key: '" + key.userID + "'");
@@ -405,6 +415,7 @@ public final class Control {
     }
 
     private void sendKeyRequest(User user) {
+        // TODO only for domains that are part of the Kontalk network
         if (user.getSubScription() == User.Subscription.UNSUBSCRIBED ||
                 user.getSubScription() == User.Subscription.PENDING) {
             LOGGER.info("no presence subscription, not sending key request, user: "+user);
@@ -572,6 +583,14 @@ public final class Control {
 
         public void requestKey(User user) {
             Control.this.sendKeyRequest(user);
+        }
+
+        public void acceptKey(User user, PGPCoderKey key) {
+            Control.this.setKey(user, key);
+        }
+
+        public void declineKey(User user) {
+            this.sendUserBlocking(user, true);
         }
 
         /* threads */
