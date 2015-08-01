@@ -221,7 +221,7 @@ final class MainFrame extends WebFrame {
         WebScrollPane contactPane = createTablePane(contactList, "contactOverlayText");
         mAddContactButton = new WebToggleButton(
                 Utils.getIcon("ic_ui_add.png"));
-        TooltipManager.addTooltip(mAddContactButton, Tr.tr("Add a new Contact"));
+        TooltipManager.addTooltip(mAddContactButton, Tr.tr("Add a new contact"));
         mAddContactButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {

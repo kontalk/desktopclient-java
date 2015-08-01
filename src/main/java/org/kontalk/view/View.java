@@ -410,7 +410,7 @@ public final class View implements Observer {
         WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
         panel.setOpaque(false);
 
-        panel.add(new WebLabel(Tr.tr("Received new key for Contact")).setBoldFont());
+        panel.add(new WebLabel(Tr.tr("Received new key for contact")).setBoldFont());
         panel.add(new WebSeparator(true, true));
 
         panel.add(new WebLabel(Tr.tr("Contact:")));
