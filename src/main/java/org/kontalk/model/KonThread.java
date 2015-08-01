@@ -63,13 +63,15 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
     // many to many relationship requires additional table for receiver
     public static final String TABLE_RECEIVER = "receiver";
+    public static final String COL_REC_THREAD_ID = "thread_id";
+    public static final String COL_REC_CONTACT_ID = "user_id";
     public static final String CREATE_TABLE_RECEIVER = "(" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "thread_id INTEGER NOT NULL, " +
-            "user_id INTEGER NOT NULL, " +
-            "UNIQUE (thread_id, user_id), " +
-            "FOREIGN KEY (thread_id) REFERENCES "+TABLE+" (_id), " +
-            "FOREIGN KEY (user_id) REFERENCES "+Contact.TABLE+" (_id) " +
+            COL_REC_THREAD_ID+" INTEGER NOT NULL, " +
+            COL_REC_CONTACT_ID+" INTEGER NOT NULL, " +
+            "UNIQUE ("+COL_REC_THREAD_ID+", "+COL_REC_CONTACT_ID+"), " +
+            "FOREIGN KEY ("+COL_REC_THREAD_ID+") REFERENCES "+TABLE+" (_id), " +
+            "FOREIGN KEY ("+COL_REC_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
     private final int mID;
