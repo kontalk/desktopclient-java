@@ -112,9 +112,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             COL_SERV_DATE + " INTEGER, " +
             // if this combinations is equal we consider messages to be equal
             // (see .equals())
-            "UNIQUE (direction, jid, xmpp_id, date), " +
-            "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
-            "FOREIGN KEY (user_id) REFERENCES "+Contact.TABLE+" (_id) " +
+            "UNIQUE ("+COL_DIR+", "+COL_JID+", "+COL_XMPP_ID+", "+COL_DATE+"), " +
+            "FOREIGN KEY ("+COL_THREAD_ID+") REFERENCES "+KonThread.TABLE+" (_id), " +
+            "FOREIGN KEY ("+COL_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
     private int mID;
