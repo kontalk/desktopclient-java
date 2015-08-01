@@ -13,7 +13,7 @@
 ;Defines  
   
 !define APPNAME "Kontalk Desktop Client"
-!define VERSION "3.0.1"
+!define VERSION "3.0.2"
 !define JARNAME "KontalkDesktopApp.jar"
 !define WEBSITE "kontalk.org"
 !define ICON "kontalk.ico"
