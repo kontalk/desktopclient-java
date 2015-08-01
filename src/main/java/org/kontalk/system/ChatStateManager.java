@@ -96,14 +96,14 @@ final class ChatStateManager {
             // currently set states from XEP-0085: active, inactive, composing
             mCurrentState = state;
 
-            Set<Contact> contact = mThread.getContacts();
+            Set<Contact> contacts = mThread.getContacts();
 
-            if (contact.size() > 1 || state == ChatState.active)
+            if (contacts.size() > 1 || state == ChatState.active)
                 // don't send for groups
                 // 'active' is send inside a message
                 return;
 
-            for (Contact contact : contact)
+            for (Contact contact : contacts)
                 if (!contact.isMe() && !contact.isBlocked())
                     mClient.sendChatState(contact.getJID(),
                             mThread.getXMPPID(),

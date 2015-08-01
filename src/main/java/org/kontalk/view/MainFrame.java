@@ -68,17 +68,17 @@ import org.kontalk.util.Tr;
  */
 final class MainFrame extends WebFrame {
 
-    static enum Tab {THREADS, USER};
+    static enum Tab {THREADS, CONTACT};
 
     private final View mView;
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
-    private final WebToggleButton mAddUserButton;
-    private WebPopup mAddUserPopup = new WebPopup();
+    private final WebToggleButton mAddContactButton;
+    private WebPopup mAddContactPopup = new WebPopup();
 
     MainFrame(final View view,
-            Table<?, ?> userList,
+            Table<?, ?> contactList,
             Table<?, ?> threadList,
             Component content,
             Component searchPanel,
@@ -217,22 +217,22 @@ final class MainFrame extends WebFrame {
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
-        //String userOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
-        WebScrollPane userPane = createTablePane(userList, "userOverlayText");
-        mAddUserButton = new WebToggleButton(
+        //String contactOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
+        WebScrollPane contactPane = createTablePane(contactList, "contactOverlayText");
+        mAddContactButton = new WebToggleButton(
                 Utils.getIcon("ic_ui_add.png"));
-        TooltipManager.addTooltip(mAddUserButton, Tr.tr("Add a new Contact"));
-        mAddUserButton.addActionListener(new ActionListener() {
+        TooltipManager.addTooltip(mAddContactButton, Tr.tr("Add a new Contact"));
+        mAddContactButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (!MainFrame.this.mAddUserPopup.isShowing())
-                    MainFrame.this.showAddUserPopup(mAddUserButton);
+                if (!MainFrame.this.mAddContactPopup.isShowing())
+                    MainFrame.this.showAddContactPopup(mAddContactButton);
             }
         });
         mTabbedPane.addTab("", new GroupPanel(GroupingType.fillFirst, false,
-                userPane, mAddUserButton));
+                contactPane, mAddContactButton));
 
-        mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
+        mTabbedPane.setTabComponentAt(Tab.CONTACT.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         mTabbedPane.setPreferredSize(new Dimension(250, -1));
         mTabbedPane.addChangeListener(new ChangeListener() {
@@ -284,11 +284,11 @@ final class MainFrame extends WebFrame {
             case CONNECTED:
                 mConnectMenuItem.setEnabled(false);
                 mDisconnectMenuItem.setEnabled(true);
-                mAddUserButton.setEnabled(true);
+                mAddContactButton.setEnabled(true);
                 break;
             case DISCONNECTING:
                 mDisconnectMenuItem.setEnabled(false);
-                mAddUserButton.setEnabled(false);
+                mAddContactButton.setEnabled(false);
                 break;
             case DISCONNECTED:
                 // fallthrough
@@ -318,18 +318,18 @@ final class MainFrame extends WebFrame {
                 icon);
     }
 
-    private void showAddUserPopup(final WebToggleButton invoker) {
-        mAddUserPopup = new WebPopup();
-        mAddUserPopup.setCloseOnFocusLoss(true);
-        mAddUserPopup.addPopupListener(new PopupAdapter() {
+    private void showAddContactPopup(final WebToggleButton invoker) {
+        mAddContactPopup = new WebPopup();
+        mAddContactPopup.setCloseOnFocusLoss(true);
+        mAddContactPopup.addPopupListener(new PopupAdapter() {
             @Override
             public void popupWillBeClosed() {
                 invoker.doClick();
             }
         });
-        mAddUserPopup.add(new ComponentUtils.AddUserPanel(mView, this));
+        mAddContactPopup.add(new ComponentUtils.AddContactPanel(mView, this));
         //mPopup.packPopup();
-        mAddUserPopup.showAsPopupMenu(invoker);
+        mAddContactPopup.showAsPopupMenu(invoker);
     }
 
     private static WebScrollPane createTablePane(final Table<?, ?> table,

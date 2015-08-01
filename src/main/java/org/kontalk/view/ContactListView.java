@@ -39,41 +39,41 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
-import org.kontalk.view.UserListView.UserItem;
+import org.kontalk.view.ContactListView.ContactItem;
 
 /**
- * Display all user (aka contacts) in a brief list.
+ * Display all contact (aka contacts) in a brief list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class UserListView extends Table<UserItem, Contact> implements Observer {
+final class ContactListView extends Table<ContactItem, Contact> implements Observer {
 
-    private final ContactList mUserList;
-    private final UserPopupMenu mPopupMenu;
+    private final ContactList mContactList;
+    private final ContactPopupMenu mPopupMenu;
 
-    UserListView(final View view, ContactList userList) {
+    ContactListView(final View view, ContactList contactList) {
         super(view, true);
 
-        mUserList = userList;
+        mContactList = contactList;
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         //this.setDragEnabled(true);
 
         // right click popup menu
-        mPopupMenu = new UserPopupMenu();
+        mPopupMenu = new ContactPopupMenu();
 
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                Optional<Contact> optUser = UserListView.this.getSelectedValue();
-                if (!optUser.isPresent())
+                Optional<Contact> optContact = ContactListView.this.getSelectedValue();
+                if (!optContact.isPresent())
                     return;
 
-                Contact selectedUser = optUser.get();
+                Contact selectedContact = optContact.get();
                 if (e.getClickCount() == 2) {
-                    mView.showThread(selectedUser);
+                    mView.showThread(selectedContact);
                 } else {
-                    mView.showUserDetails(selectedUser);
+                    mView.showContactDetails(selectedContact);
                 }
             }
             @Override
@@ -86,9 +86,9 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    int row = UserListView.this.rowAtPoint(e.getPoint());
-                    UserListView.this.setSelectedItem(row);
-                    UserListView.this.showPopupMenu(e);
+                    int row = ContactListView.this.rowAtPoint(e.getPoint());
+                    ContactListView.this.setSelectedItem(row);
+                    ContactListView.this.showPopupMenu(e);
                 }
             }
         });
@@ -98,12 +98,12 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        Set<UserItem> newItems = new HashSet<>();
-        Set<Contact> user = mUserList.getAll();
-        for (Contact oneUser: user)
-            if (!this.containsValue(oneUser))
-                newItems.add(new UserItem(oneUser));
-        this.sync(user, newItems);
+        Set<ContactItem> newItems = new HashSet<>();
+        Set<Contact> contacts = mContactList.getAll();
+        for (Contact contact: contacts)
+            if (!this.containsValue(contact))
+                newItems.add(new ContactItem(contact));
+        this.sync(contacts, newItems);
     }
 
     private void showPopupMenu(MouseEvent e) {
@@ -111,15 +111,15 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
         mPopupMenu.show(this.getSelectedItem(), this, e.getX(), e.getY());
     }
 
-    /** One item in the contact list representing a user. */
-    final class UserItem extends Table<UserItem, Contact>.TableItem {
+    /** One item in the contact list representing a contact. */
+    final class ContactItem extends Table<ContactItem, Contact>.TableItem {
 
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;
         private Color mBackround;
 
-        UserItem(Contact user) {
-            super(user);
+        ContactItem(Contact contact) {
+            super(contact);
 
             //this.setPaintFocus(true);
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
@@ -181,7 +181,7 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
             String name = Utils.name(mValue);
             if (!name.equals(mNameLabel.getText())) {
                 mNameLabel.setText(name);
-                UserListView.this.updateSorting();
+                ContactListView.this.updateSorting();
             }
 
             // status
@@ -196,7 +196,7 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
                     Color.WHITE;
             this.setBackground(mBackround);
 
-            UserListView.this.repaint();
+            ContactListView.this.repaint();
         }
 
         @Override
@@ -205,23 +205,23 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
         }
     }
 
-    private class UserPopupMenu extends WebPopupMenu {
+    private class ContactPopupMenu extends WebPopupMenu {
 
-        UserItem mItem;
+        ContactItem mItem;
         WebMenuItem mNewMenuItem;
         WebMenuItem mBlockMenuItem;
         WebMenuItem mUnblockMenuItem;
         WebMenuItem mDeleteMenuItem;
 
-        UserPopupMenu() {
+        ContactPopupMenu() {
             mNewMenuItem = new WebMenuItem(Tr.tr("New Chat"));
             mNewMenuItem.setToolTipText(Tr.tr("Creates a new chat for this contact"));
             mNewMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    Set<Contact> user = new HashSet<>();
-                    user.add(mItem.mValue);
-                    UserListView.this.mView.callCreateNewThread(user);
+                    Set<Contact> contact = new HashSet<>();
+                    contact.add(mItem.mValue);
+                    ContactListView.this.mView.callCreateNewThread(contact);
                 }
             });
             this.add(mNewMenuItem);
@@ -253,7 +253,7 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
                 public void actionPerformed(ActionEvent event) {
                     String text = Tr.tr("Permanently delete this contact?") + "\n" +
                             Tr.tr("Chats and messages will not be deleted.");
-                    if (!Utils.confirmDeletion(UserListView.this, text))
+                    if (!Utils.confirmDeletion(ContactListView.this, text))
                         return;
                     mView.getControl().deleteContact(mItem.mValue);
                 }
@@ -261,10 +261,10 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
             this.add(mDeleteMenuItem);
         }
 
-        void show(UserItem item, Component invoker, int x, int y) {
+        void show(ContactItem item, Component invoker, int x, int y) {
             mItem = item;
 
-            // dont allow creation of more than one thread for a user
+            // dont allow creation of more than one thread for a contact
             mNewMenuItem.setVisible(!ThreadList.getInstance().contains(item.mValue));
 
             if (mItem.mValue.isBlocked()) {
@@ -275,7 +275,7 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
                 mUnblockMenuItem.setVisible(false);
             }
 
-            Control.Status status = UserListView.this.mView.getCurrentStatus();
+            Control.Status status = ContactListView.this.mView.getCurrentStatus();
             boolean connected = status == Control.Status.CONNECTED;
             mBlockMenuItem.setEnabled(connected);
             mUnblockMenuItem.setEnabled(connected);

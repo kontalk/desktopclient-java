@@ -38,7 +38,7 @@ import org.kontalk.model.InMessage;
 import org.kontalk.util.MediaUtils;
 
 /**
- * Inform user about events.
+ * Inform contact about events.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class Notifier {

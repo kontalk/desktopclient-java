@@ -163,14 +163,14 @@ final class ThreadView extends WebPanel implements Observer {
     }
 
     void showThread(KonThread thread) {
-        List<Contact> user = new ArrayList<>(thread.getContacts());
-        mTitleLabel.setText(user.size() == 1 ? Utils.name(user.get(0)) :
+        List<Contact> contact = new ArrayList<>(thread.getContacts());
+        mTitleLabel.setText(contact.size() == 1 ? Utils.name(contact.get(0)) :
                 !thread.getSubject().isEmpty() ? thread.getSubject() :
                 Tr.tr("Group Chat"));
         // TODO update
-        mSubLabel.setText(user.size() == 1 ?
-                Utils.mainStatus(user.get(0)) :
-                Utils.userNameList(thread.getContacts()));
+        mSubLabel.setText(contact.size() == 1 ?
+                Utils.mainStatus(contact.get(0)) :
+                Utils.contactNameList(thread.getContacts()));
         if (!mThreadCache.containsKey(thread.getID())) {
             MessageList newMessageList = new MessageList(mView, this, thread);
             thread.addObserver(newMessageList);

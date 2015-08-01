@@ -77,11 +77,11 @@ public class ViewEvent {
 
     /** Got a new public key (ask whattodo). */
     public static class NewKey extends ViewEvent {
-        public final Contact user;
+        public final Contact contact;
         public final PGPCoderKey key;
 
-        public NewKey(Contact user, PGPCoderKey key) {
-            this.user = user;
+        public NewKey(Contact contact, PGPCoderKey key) {
+            this.contact = contact;
             this.key = key;
         }
     }

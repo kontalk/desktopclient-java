@@ -147,7 +147,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 arg instanceof String ||
                 arg instanceof Boolean ||
                 arg instanceof KonThread.KonChatState) {
-            // users, subject, read status or chat state changed, nothing
+            // contacts, subject, read status or chat state changed, nothing
             // to do here
             return;
         }

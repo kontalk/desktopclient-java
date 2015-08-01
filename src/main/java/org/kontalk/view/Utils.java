@@ -204,7 +204,7 @@ final class Utils {
         return errorText;
     }
 
-    static String shortenUserName(String jid, int maxLength) {
+    static String shortenContactName(String jid, int maxLength) {
         String local = XmppStringUtils.parseLocalpart(jid);
         local = StringUtils.abbreviate(local, maxLength);
         String domain = XmppStringUtils.parseDomain(jid);
@@ -246,19 +246,19 @@ final class Utils {
         return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
     }
 
-    static String userNameList(Set<Contact> users) {
-        List<String> nameList = new ArrayList<>(users.size());
-        for (Contact user : users) {
-            nameList.add(user.getName().isEmpty() ?
+    static String contactNameList(Set<Contact> contacts) {
+        List<String> nameList = new ArrayList<>(contacts.size());
+        for (Contact contact : contacts) {
+            nameList.add(contact.getName().isEmpty() ?
                     Tr.tr("<unknown>") :
-                    user.getName());
+                    contact.getName());
         }
         return StringUtils.join(nameList, ", ");
     }
 
-    static String name(Contact user) {
-        return user.isDeleted() ? Tr.tr("<deleted>") :
-                !user.getName().isEmpty() ? user.getName() :
+    static String name(Contact contact) {
+        return contact.isDeleted() ? Tr.tr("<deleted>") :
+                !contact.getName().isEmpty() ? contact.getName() :
                 Tr.tr("<unknown>");
     }
 
@@ -272,10 +272,10 @@ final class Utils {
                     lastSeen(u, true);
     }
 
-    static String lastSeen(Contact user, boolean pretty) {
-        String lastSeen = !user.getLastSeen().isPresent() ? Tr.tr("never") :
-                pretty ? Utils.PRETTY_TIME.format(user.getLastSeen().get()) :
-                Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());
+    static String lastSeen(Contact contact, boolean pretty) {
+        String lastSeen = !contact.getLastSeen().isPresent() ? Tr.tr("never") :
+                pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
+                Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get());
         return Tr.tr("Last seen")+": " + lastSeen;
     }
 

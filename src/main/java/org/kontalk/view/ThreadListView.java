@@ -214,9 +214,9 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
         private void updateView(Object arg) {
             if (arg == null || arg instanceof Contact) {
-                Optional<Contact> optUser = mValue.getSingleContact();
-                if (optUser.isPresent())
-                    mNameLabel.setText(Utils.name(optUser.get()));
+                Optional<Contact> optContact = mValue.getSingleContact();
+                if (optContact.isPresent())
+                    mNameLabel.setText(Utils.name(optContact.get()));
             }
 
             if (arg == null || arg instanceof String) {
@@ -225,13 +225,13 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
             if (arg == null || arg instanceof Set) {
                 // TODO group chat
-//                List<String> nameList = new ArrayList<>(mValue.getUser().size());
-//                for (User user : mValue.getUser()) {
-//                    nameList.add(user.getName().isEmpty() ?
+//                List<String> nameList = new ArrayList<>(mValue.getContact().size());
+//                for (Contact contact : mValue.getContact()) {
+//                    nameList.add(contact.getName().isEmpty() ?
 //                            Tr.tr("<unknown>") :
-//                            user.getName());
+//                            contact.getName());
 //                }
-//                mUserLabel.setText(StringUtils.join(nameList, ", "));
+//                mContactLabel.setText(StringUtils.join(nameList, ", "));
             }
 
             if (arg == null || arg instanceof KonMessage) {
@@ -277,9 +277,9 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             if (optThread.isPresent() && optThread.get() == mValue)
                 return true;
 
-            for (Contact user: mValue.getContacts()) {
-                if (user.getName().toLowerCase().contains(search) ||
-                        user.getJID().toLowerCase().contains(search))
+            for (Contact contact: mValue.getContacts()) {
+                if (contact.getName().toLowerCase().contains(search) ||
+                        contact.getJID().toLowerCase().contains(search))
                     return true;
             }
             return mValue.getSubject().toLowerCase().contains(search);

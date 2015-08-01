@@ -53,10 +53,10 @@ import org.kontalk.util.Tr;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class UserDetails extends WebPanel implements Observer {
+final class ContactDetails extends WebPanel implements Observer {
 
     private final View mView;
-    private final Contact mUser;
+    private final Contact mContact;
     private final WebTextField mNameField;
     private final WebLabel mAuthorization;
     private final WebLabel mKeyStatus;
@@ -64,9 +64,9 @@ final class UserDetails extends WebPanel implements Observer {
     private final WebTextArea mFPArea;
     private final WebCheckBox mEncryptionBox;
 
-    UserDetails(View view, Contact user) {
+    ContactDetails(View view, Contact contact) {
         mView = view;
-        mUser = user;
+        mContact = contact;
 
         GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
         groupPanel.setMargin(View.MARGIN_BIG);
@@ -81,15 +81,15 @@ final class UserDetails extends WebPanel implements Observer {
         mNameField = new ComponentUtils.EditableTextField(15, this) {
             @Override
             protected String labelText() {
-                return mUser.getName();
+                return mContact.getName();
             }
             @Override
             protected String editText() {
-                return mUser.getName();
+                return mContact.getName();
             }
             @Override
             protected void onFocusLost() {
-                UserDetails.this.saveName(this.getText().trim());
+                ContactDetails.this.saveName(this.getText().trim());
             }
         };
         mNameField.setFontSizeAndStyle(14, true, false);
@@ -101,15 +101,15 @@ final class UserDetails extends WebPanel implements Observer {
         final WebTextField jidField = new ComponentUtils.EditableTextField(length, this) {
             @Override
             protected String labelText() {
-                return Utils.jid(mUser.getJID(), length, false);
+                return Utils.jid(mContact.getJID(), length, false);
             }
             @Override
             protected String editText() {
-                return mUser.getJID();
+                return mContact.getJID();
             }
             @Override
             protected void onFocusLost() {
-                UserDetails.this.saveJID(this.getText().trim());
+                ContactDetails.this.saveJID(this.getText().trim());
             }
         };
 
@@ -137,7 +137,7 @@ final class UserDetails extends WebPanel implements Observer {
         updButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                mView.getControl().requestKey(UserDetails.this.mUser);
+                mView.getControl().requestKey(ContactDetails.this.mContact);
             }
         });
         keyPanel.add(new GroupPanel(GroupingType.fillFirst,
@@ -156,13 +156,13 @@ final class UserDetails extends WebPanel implements Observer {
 
         mEncryptionBox = new WebCheckBox(Tr.tr("Use Encryption"));
         mEncryptionBox.setAnimated(false);
-        mEncryptionBox.setSelected(mUser.getEncrypted());
+        mEncryptionBox.setSelected(mContact.getEncrypted());
         String encText = Tr.tr("Encrypt and sign all messages send to this contact");
         TooltipManager.addTooltip(mEncryptionBox, encText);
         mEncryptionBox.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
-                mUser.setEncrypted(mEncryptionBox.isSelected());
+                mContact.setEncrypted(mEncryptionBox.isSelected());
             }
         });
         groupPanel.add(new GroupPanel(mEncryptionBox, Box.createGlue()));
@@ -197,16 +197,16 @@ final class UserDetails extends WebPanel implements Observer {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                UserDetails.this.updateOnEDT();
+                ContactDetails.this.updateOnEDT();
             }
         });
     }
 
     private void updateOnEDT() {
-        // may have changed: user name and/or key
-        mNameField.setText(mUser.getName());
-        mNameField.setInputPrompt(mUser.getName());
-        Contact.Subscription subscription = mUser.getSubScription();
+        // may have changed: contact name and/or key
+        mNameField.setText(mContact.getName());
+        mNameField.setInputPrompt(mContact.getName());
+        Contact.Subscription subscription = mContact.getSubScription();
         String auth = Tr.tr("Unknown");
         switch(subscription) {
             case PENDING: auth = Tr.tr("Awaiting reply"); break;
@@ -215,15 +215,15 @@ final class UserDetails extends WebPanel implements Observer {
         }
         mAuthorization.setText(auth);
         String hasKey = "<html>";
-        if (mUser.hasKey()) {
+        if (mContact.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";
             TooltipManager.removeTooltips(mKeyStatus);
-            mFPArea.setText(Utils.fingerprint(mUser.getFingerprint()));
+            mFPArea.setText(Utils.fingerprint(mContact.getFingerprint()));
             mFPLabel.setVisible(true);
             mFPArea.setVisible(true);
         } else {
             hasKey += "<font color='red'>"+Tr.tr("Not Available")+"</font></html>";
-            String keyText = Tr.tr("The key for this user could not yet be received");
+            String keyText = Tr.tr("The key for this contact could not yet be received");
             TooltipManager.addTooltip(mKeyStatus, keyText);
             mFPLabel.setVisible(false);
             mFPArea.setVisible(false);
@@ -232,14 +232,14 @@ final class UserDetails extends WebPanel implements Observer {
     }
 
     private void saveName(String name) {
-        if (name.equals(mUser.getName()))
+        if (name.equals(mContact.getName()))
             return;
 
-        mUser.setName(name);
+        mContact.setName(name);
     }
 
     private void saveJID(String jid) {
-        if (jid.isEmpty() || jid.equals(mUser.getJID()))
+        if (jid.isEmpty() || jid.equals(mContact.getJID()))
             return;
 
         String warningText =
@@ -250,10 +250,10 @@ final class UserDetails extends WebPanel implements Observer {
                 WebOptionPane.OK_CANCEL_OPTION,
                 WebOptionPane.WARNING_MESSAGE);
         if (selectedOption == WebOptionPane.OK_OPTION)
-            mView.getControl().changeJID(mUser, jid);
+            mView.getControl().changeJID(mContact, jid);
     }
 
     void onClose() {
-        this.mUser.deleteObserver(this);
+        this.mContact.deleteObserver(this);
     }
 }

@@ -140,10 +140,10 @@ final class ThreadDetails extends WebPanel {
 //        groupPanel.add(new WebLabel(Tr.tr("Participants:")));
 //        mParticipantsList = new WebCheckBoxList();
 //        mParticipantsList.setVisibleRowCount(10);
-//        for (User oneUser : UserList.getInstance().getAll()) {
-//            boolean selected = mThread.getUser().contains(oneUser);
+//        for (Contact oneContact : ContactList.getInstance().getAll()) {
+//            boolean selected = mThread.getContact().contains(oneContact);
 //            mParticipantsList.getCheckBoxListModel().addCheckBoxElement(
-//                    new UserElement(oneUser),
+//                    new ContactElement(oneContact),
 //                    selected);
 //        }
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
@@ -193,11 +193,11 @@ final class ThreadDetails extends WebPanel {
             mThread.setSubject(mSubjectField.getText());
         }
 //        List<?> participants = mParticipantsList.getCheckedValues();
-//        Set<User> threadUser = new HashSet<>();
+//        Set<Contact> threadContact = new HashSet<>();
 //        for (Object o: participants) {
-//            threadUser.add(((UserElement) o).user);
+//            threadContact.add(((ContactElement) o).contact);
 //        }
-//        mThread.setUser(threadUser);
+//        mThread.setContact(threadContact);
 
         KonThread.ViewSettings newSettings;
         if (mColorOpt.isSelected())
@@ -212,17 +212,17 @@ final class ThreadDetails extends WebPanel {
         }
     }
 
-    private class UserElement {
-        Contact user;
+    private class ContactElement {
+        Contact contact;
 
-        UserElement(Contact user) {
-            this.user = user;
+        ContactElement(Contact contact) {
+            this.contact = contact;
         }
 
         @Override
         public String toString() {
-            String jid = Utils.jid(user.getJID(), 40, true);
-            String name = StringUtils.abbreviate(user.getName(), 24);
+            String jid = Utils.jid(contact.getJID(), 40, true);
+            String name = StringUtils.abbreviate(contact.getName(), 24);
             return name.isEmpty() ? jid : name +" " + jid;
         }
     }

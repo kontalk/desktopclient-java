@@ -101,7 +101,7 @@ public final class View implements Observer {
     private final Notifier mNotifier;
 
     private final SearchPanel mSearchPanel;
-    private final UserListView mUserListView;
+    private final ContactListView mContactListView;
     private final ThreadListView mThreadListView;
     private final Content mContent;
     private final ThreadView mThreadView;
@@ -117,8 +117,8 @@ public final class View implements Observer {
 
         ToolTipManager.sharedInstance().setInitialDelay(200);
 
-        mUserListView = new UserListView(this, ContactList.getInstance());
-        ContactList.getInstance().addObserver(mUserListView);
+        mContactListView = new ContactListView(this, ContactList.getInstance());
+        ContactList.getInstance().addObserver(mContactListView);
         mThreadListView = new ThreadListView(this, ThreadList.getInstance());
         ThreadList.getInstance().addObserver(mThreadListView);
 
@@ -168,7 +168,7 @@ public final class View implements Observer {
 
         // search panel
         mSearchPanel = new SearchPanel(
-                new Table[]{mUserListView, mThreadListView},
+                new Table[]{mContactListView, mThreadListView},
                 mThreadView);
 
         // status bar
@@ -177,7 +177,7 @@ public final class View implements Observer {
         statusBar.add(mStatusBarLabel);
 
         // main frame
-        mMainFrame = new MainFrame(this, mUserListView, mThreadListView,
+        mMainFrame = new MainFrame(this, mContactListView, mThreadListView,
                 mContent, mSearchPanel, statusBar);
         mMainFrame.setVisible(true);
 
@@ -236,7 +236,7 @@ public final class View implements Observer {
                 View.this.mThreadListView.selectLastThread();
 
                 if (ThreadList.getInstance().getAll().isEmpty())
-                    mMainFrame.selectTab(MainFrame.Tab.USER);
+                    mMainFrame.selectTab(MainFrame.Tab.CONTACT);
             }
         });
     }
@@ -285,7 +285,7 @@ public final class View implements Observer {
            mNotifier.onNewMessage(newMessage.message);
        } else if (arg instanceof ViewEvent.NewKey) {
            ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
-           this.confirmNewKey(newKey.user, newKey.key);
+           this.confirmNewKey(newKey.contact, newKey.key);
        } else {
            LOGGER.warning("unexpected argument");
        }
@@ -406,7 +406,7 @@ public final class View implements Observer {
         //NotificationManager.showNotification(mThreadView, errorText);
     }
 
-    private void confirmNewKey(final Contact user, final PGPUtils.PGPCoderKey key) {
+    private void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {
         WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
         panel.setOpaque(false);
 
@@ -414,8 +414,8 @@ public final class View implements Observer {
         panel.add(new WebSeparator(true, true));
 
         panel.add(new WebLabel(Tr.tr("Contact:")));
-        String userText = Utils.name(user) + " " + Utils.jid(user.getJID(), 30, true);
-        panel.add(new WebLabel(userText).setBoldFont());
+        String contactText = Utils.name(contact) + " " + Utils.jid(contact.getJID(), 30, true);
+        panel.add(new WebLabel(contactText).setBoldFont());
 
         panel.add(new WebLabel(Tr.tr("Key fingerprint:")));
         WebTextArea fpArea = Utils.createFingerprintArea();
@@ -438,10 +438,10 @@ public final class View implements Observer {
             public void optionSelected(NotificationOption option) {
                 switch (option) {
                     case accept :
-                        mControl.acceptKey(user, key);
+                        mControl.acceptKey(contact, key);
                         break;
                     case decline :
-                        mControl.declineKey(user);
+                        mControl.declineKey(contact);
                 }
             }
             @Override
@@ -458,13 +458,13 @@ public final class View implements Observer {
     }
 
     void callShutDown() {
-        // trigger save if user details are shown
+        // trigger save if contact details are shown
         mContent.showNothing();
         mControl.shutDown();
     }
 
-    void callCreateNewThread(Set<Contact> user) {
-        KonThread thread = mControl.createNewThread(user);
+    void callCreateNewThread(Set<Contact> contact) {
+        KonThread thread = mControl.createNewThread(contact);
         this.selectThread(thread);
     }
 
@@ -480,8 +480,8 @@ public final class View implements Observer {
 
     /* view internal */
 
-    void showThread(Contact user) {
-        KonThread thread = ThreadList.getInstance().get(user);
+    void showThread(Contact contact) {
+        KonThread thread = ThreadList.getInstance().get(contact);
         this.selectThread(thread);
     }
 
@@ -490,8 +490,8 @@ public final class View implements Observer {
         mThreadListView.setSelectedItem(thread);
     }
 
-    void showUserDetails(Contact user) {
-        mContent.showUser(user);
+    void showContactDetails(Contact contact) {
+        mContent.showContact(contact);
     }
 
     void showThread(KonThread thread) {
@@ -512,9 +512,9 @@ public final class View implements Observer {
                 return;
             }
         } else {
-            Optional<Contact> optUser = mUserListView.getSelectedValue();
-            if (optUser.isPresent()) {
-                mContent.showUser(optUser.get());
+            Optional<Contact> optContact = mContactListView.getSelectedValue();
+            if (optContact.isPresent()) {
+                mContent.showContact(optContact.get());
                 return;
             }
         }

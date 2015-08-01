@@ -28,7 +28,7 @@ import org.kontalk.model.KonThread;
 import org.kontalk.model.Contact;
 
 /**
- * Content view area: show a thread or user details
+ * Content view area: show a thread or contact details
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Content extends WebPanel {
@@ -55,8 +55,8 @@ public class Content extends WebPanel {
             this.show(mThreadView);
     }
 
-    void showUser(Contact user) {
-        this.show(new UserDetails(mView, user));
+    void showContact(Contact contact) {
+        this.show(new ContactDetails(mView, contact));
     }
 
     void showNothing() {
@@ -69,8 +69,8 @@ public class Content extends WebPanel {
     }
 
     private void show(Component comp) {
-        if (mCurrent instanceof UserDetails) {
-            ((UserDetails) mCurrent).onClose();
+        if (mCurrent instanceof ContactDetails) {
+            ((ContactDetails) mCurrent).onClose();
         }
         // Swing...
         this.removeAll();

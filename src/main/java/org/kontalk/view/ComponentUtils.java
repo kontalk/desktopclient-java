@@ -169,7 +169,7 @@ final class ComponentUtils {
         }
     }
 
-    static class AddUserPanel extends WebPanel {
+    static class AddContactPanel extends WebPanel {
 
         private final View mView;
         private final WebTextField mNameField;
@@ -183,7 +183,7 @@ final class ComponentUtils {
         private final WebCheckBox mEncryptionBox;
         private final WebButton mSaveButton;
 
-        AddUserPanel(View view, final Component focusGainer) {
+        AddContactPanel(View view, final Component focusGainer) {
             mView = view;
 
             GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
@@ -204,7 +204,7 @@ final class ComponentUtils {
             mTabbedPane.addChangeListener(new ChangeListener() {
                 @Override
                 public void stateChanged(ChangeEvent e) {
-                    AddUserPanel.this.checkSaveButton();
+                    AddContactPanel.this.checkSaveButton();
                 }
             });
 
@@ -258,7 +258,7 @@ final class ComponentUtils {
             mSaveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    AddUserPanel.this.saveUser();
+                    AddContactPanel.this.saveContact();
                     focusGainer.requestFocus();
                 }
             });
@@ -281,7 +281,7 @@ final class ComponentUtils {
             mSaveButton.setEnabled(enable);
         }
 
-        private void saveUser() {
+        private void saveContact() {
             String jid;
             if (mTabbedPane.getSelectedIndex() == 0) {
                 String kontalkLocal = XMPPUtils.phoneNumberToKontalkLocal(
@@ -299,7 +299,7 @@ final class ComponentUtils {
                     mEncryptionBox.isSelected());
         }
 
-        private static void addListener(final AddUserPanel panel,
+        private static void addListener(final AddContactPanel panel,
                 WebTextField field) {
             field.getDocument().addDocumentListener(new DocumentChangeListener() {
                 @Override
