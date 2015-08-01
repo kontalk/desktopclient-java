@@ -119,7 +119,6 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        // TODO, performance
         Set<ThreadItem> newItems = new HashSet<>();
         Set<KonThread> threads = mThreadList.getAll();
         for (KonThread thread: threads)

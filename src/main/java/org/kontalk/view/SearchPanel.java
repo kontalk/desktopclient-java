@@ -30,7 +30,7 @@ import javax.swing.event.DocumentListener;
 import org.kontalk.util.Tr;
 
 /**
- * A search bar to search for containing text in contact, thread and message lists.
+ * A search bar to search for text in contact, thread and message lists.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class SearchPanel extends WebPanel {
@@ -70,8 +70,6 @@ final class SearchPanel extends WebPanel {
         });
         mSearchField.setTrailingComponent(clearSearchButton);
         this.add(mSearchField, BorderLayout.CENTER);
-        // TODO add new button
-        //searchPanel.add(newButton, BorderLayout.EAST);
     }
 
     void clear() {

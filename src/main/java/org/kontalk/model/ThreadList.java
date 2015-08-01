@@ -84,10 +84,14 @@ public final class ThreadList extends Observable implements Observer {
                     LOGGER.warning("no users found for thread");
                     userSet = new HashSet<>();
                 }
-                String subject = Database.getString(threadRS, KonThread.COL_SUBJ);
+                String subject = Database.getString(threadRS,
+                        KonThread.COL_SUBJ);
                 boolean read = threadRS.getBoolean(KonThread.COL_READ);
-                String jsonViewSettings = Database.getString(threadRS, KonThread.COL_VIEW_SET);
-                this.put(new KonThread(id, xmppThreadID, userSet, subject, read, jsonViewSettings));
+                String jsonViewSettings = Database.getString(threadRS,
+                        KonThread.COL_VIEW_SET);
+
+                this.put(new KonThread(id, xmppThreadID, userSet, subject, read,
+                        jsonViewSettings));
                 if (!read)
                     mUnread = true;
             }
