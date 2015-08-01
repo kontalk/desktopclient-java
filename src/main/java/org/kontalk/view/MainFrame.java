@@ -74,6 +74,7 @@ final class MainFrame extends WebFrame {
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
+    private final WebToggleButton mAddUserButton;
     private WebPopup mAddUserPopup = new WebPopup();
 
     MainFrame(final View view,
@@ -218,18 +219,18 @@ final class MainFrame extends WebFrame {
 
         //String userOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
         WebScrollPane userPane = createTablePane(userList, "userOverlayText");
-        final WebToggleButton addUserButton = new WebToggleButton(
+        mAddUserButton = new WebToggleButton(
                 Utils.getIcon("ic_ui_add.png"));
-        TooltipManager.addTooltip(addUserButton, Tr.tr("Add a new Contact"));
-        addUserButton.addActionListener(new ActionListener() {
+        TooltipManager.addTooltip(mAddUserButton, Tr.tr("Add a new Contact"));
+        mAddUserButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (!MainFrame.this.mAddUserPopup.isShowing())
-                    MainFrame.this.showAddUserPopup(addUserButton);
+                    MainFrame.this.showAddUserPopup(mAddUserButton);
             }
         });
         mTabbedPane.addTab("", new GroupPanel(GroupingType.fillFirst, false,
-                userPane, addUserButton));
+                userPane, mAddUserButton));
 
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
@@ -275,7 +276,7 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    final void statusChanged(Control.Status status) {
+    final void onStatusChanged(Control.Status status) {
         switch (status) {
             case CONNECTING:
                 mConnectMenuItem.setEnabled(false);
@@ -283,9 +284,11 @@ final class MainFrame extends WebFrame {
             case CONNECTED:
                 mConnectMenuItem.setEnabled(false);
                 mDisconnectMenuItem.setEnabled(true);
+                mAddUserButton.setEnabled(true);
                 break;
             case DISCONNECTING:
                 mDisconnectMenuItem.setEnabled(false);
+                mAddUserButton.setEnabled(false);
                 break;
             case DISCONNECTED:
                 // fallthrough

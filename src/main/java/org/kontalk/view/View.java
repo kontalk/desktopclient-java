@@ -327,7 +327,7 @@ public final class View implements Observer {
                 break;
             }
 
-        mMainFrame.statusChanged(status);
+        mMainFrame.onStatusChanged(status);
     }
 
     void showPasswordDialog(boolean wasWrong) {
