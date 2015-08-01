@@ -58,7 +58,7 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.info("roster entry: "+entry.toString());
-            mControl.addUserFromRoster(entry.getUser(),
+            mControl.addContactFromRoster(entry.getUser(),
                     entry.getName(),
                     entry.getType(),
                     entry.getStatus());

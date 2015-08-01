@@ -47,7 +47,7 @@ final class BlockListListener implements StanzaListener {
         LOGGER.info("got blocklist response: "+p.toXML());
 
         if (p.getItems() != null) {
-            mControl.setBlockedUser(p.getItems());
+            mControl.setBlockedContact(p.getItems());
         }
     }
 }

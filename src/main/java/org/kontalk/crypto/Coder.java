@@ -179,7 +179,7 @@ public final class Coder {
 
         // secure the message against the most basic attacks using Message/CPIM
         String from = keys.myKey.getUserId();
-        String to = keys.otherKey.userID + "; ";
+        String to = keys.otherKey.contactID + "; ";
         String mime = "text/plain";
         // TODO encrypt more possible content
         String text = message.getContent().getPlainText();
@@ -300,7 +300,7 @@ public final class Coder {
         if (decResult.decrypted) {
             // parse encrypted CPIM content
             String myUID = keys.myKey.getUserId();
-            String senderUID = keys.otherKey.userID;
+            String senderUID = keys.otherKey.contactID;
             String encrText = EncodingUtils.getString(
                     outStream.toByteArray(),
                     CPIMMessage.CHARSET);

@@ -66,6 +66,6 @@ final class BlockResponseListener implements StanzaListener {
             return;
         }
 
-        mControl.setUserBlocking(mJID, mBlocking);
+        mControl.setContactBlocking(mJID, mBlocking);
     }
 };

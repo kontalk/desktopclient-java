@@ -231,7 +231,7 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
             mBlockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    mView.getControl().sendUserBlocking(mItem.mValue, true);
+                    mView.getControl().sendContactBlocking(mItem.mValue, true);
                 }
             });
             this.add(mBlockMenuItem);
@@ -241,7 +241,7 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
             mUnblockMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    mView.getControl().sendUserBlocking(mItem.mValue, false);
+                    mView.getControl().sendContactBlocking(mItem.mValue, false);
                 }
             });
             this.add(mUnblockMenuItem);
@@ -255,7 +255,7 @@ final class UserListView extends Table<UserItem, Contact> implements Observer {
                             Tr.tr("Chats and messages will not be deleted.");
                     if (!Utils.confirmDeletion(UserListView.this, text))
                         return;
-                    mView.getControl().deleteUser(mItem.mValue);
+                    mView.getControl().deleteContact(mItem.mValue);
                 }
             });
             this.add(mDeleteMenuItem);

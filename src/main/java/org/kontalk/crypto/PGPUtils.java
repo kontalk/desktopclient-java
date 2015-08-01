@@ -81,7 +81,7 @@ public final class PGPUtils {
     public static final class PGPCoderKey {
         final PGPPublicKey encryptKey;
         final PGPPublicKey signKey;
-        public final String userID;
+        public final String contactID;
         public final String fingerprint;
         public final byte[] rawKey;
 
@@ -89,7 +89,7 @@ public final class PGPUtils {
                 String userID, String fingerprint, byte[] rawKey) {
             this.encryptKey = encryptKey;
             this.signKey = signKey;
-            this.userID = userID;
+            this.contactID = userID;
             this.fingerprint = fingerprint;
             this.rawKey = rawKey;
         }
