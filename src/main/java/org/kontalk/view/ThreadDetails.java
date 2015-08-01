@@ -130,6 +130,7 @@ final class ThreadDetails extends WebPanel {
             }
         });
         mImgChooser = Utils.createImageChooser(!imgPath.isEmpty(), imgPath);
+        mImgChooser.setPreferredWidth(1);
         groupPanel.add(new GroupPanel(GroupingType.fillLast,
                 mImgOpt,
                 mImgChooser));

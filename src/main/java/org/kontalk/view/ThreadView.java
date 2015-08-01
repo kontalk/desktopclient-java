@@ -258,6 +258,7 @@ final class ThreadView extends WebPanel implements Observer {
         if (mPopup == null)
             mPopup = new ComponentUtils.ModalPopup(invoker);
 
+        mPopup.removeAll();
         mPopup.add(new ThreadDetails(mPopup, optThread.get()));
         mPopup.showPopup();
     }
