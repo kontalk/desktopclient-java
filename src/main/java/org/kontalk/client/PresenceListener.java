@@ -30,7 +30,7 @@ import org.kontalk.system.Control;
 
 /**
  * Listen for presence packets. They also may include a custom Kontalk extension
- * for the public key fingerprint of a user.
+ * for the public key fingerprint of a contact.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class PresenceListener implements StanzaListener {

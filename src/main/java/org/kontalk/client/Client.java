@@ -325,38 +325,38 @@ public final class Client implements StanzaListener, Runnable {
         LOGGER.info("got packet (unhandled): "+packet.toXML());
     }
 
-    public boolean addToRoster(Contact user) {
+    public boolean addToRoster(Contact contact) {
         if (!this.isConnected()) {
-            LOGGER.info("can't add user to roster, not connected");
+            LOGGER.info("can't add contact to roster, not connected");
             return false;
         }
 
-        String rosterName = user.getName();
+        String rosterName = contact.getName();
         if (rosterName.isEmpty())
             rosterName = XmppStringUtils.parseLocalpart(rosterName);
         try {
             // also sends presence subscription request
-            Roster.getInstanceFor(mConn).createEntry(user.getJID(), rosterName,
+            Roster.getInstanceFor(mConn).createEntry(contact.getJID(), rosterName,
                     null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
                 SmackException.NotConnectedException ex) {
-            LOGGER.log(Level.WARNING, "can't add user to roster", ex);
+            LOGGER.log(Level.WARNING, "can't add contact to roster", ex);
             return false;
         }
         return true;
     }
 
-    public boolean removeFromRoster(Contact user) {
+    public boolean removeFromRoster(Contact contact) {
         if (!this.isConnected()) {
-            LOGGER.info("can't remove user from roster, not connected");
+            LOGGER.info("can't remove contact from roster, not connected");
             return false;
         }
         Roster roster = Roster.getInstanceFor(mConn);
-        RosterEntry entry = roster.getEntry(user.getJID());
+        RosterEntry entry = roster.getEntry(contact.getJID());
         if (entry == null) {
-            LOGGER.warning("can't find roster entry for user: "+user);
+            LOGGER.warning("can't find roster entry for contact: "+contact);
             return true;
         }
         try {
@@ -366,7 +366,7 @@ public final class Client implements StanzaListener, Runnable {
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
                 SmackException.NotConnectedException ex) {
-            LOGGER.log(Level.WARNING, "can't remove user from roster", ex);
+            LOGGER.log(Level.WARNING, "can't remove contact from roster", ex);
             return false;
         }
         return true;

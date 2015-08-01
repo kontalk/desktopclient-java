@@ -75,13 +75,13 @@ public final class PGPUtils {
     }
 
     /**
-     * A users public keys for encryption and signing together with UID and
+     * A contacts public keys for encryption and signing together with UID and
      * fingerprint (from signing key).
      */
     public static final class PGPCoderKey {
         final PGPPublicKey encryptKey;
         final PGPPublicKey signKey;
-        public final String contactID;
+        public final String userID;
         public final String fingerprint;
         public final byte[] rawKey;
 
@@ -89,7 +89,7 @@ public final class PGPUtils {
                 String userID, String fingerprint, byte[] rawKey) {
             this.encryptKey = encryptKey;
             this.signKey = signKey;
-            this.contactID = userID;
+            this.userID = userID;
             this.fingerprint = fingerprint;
             this.rawKey = rawKey;
         }

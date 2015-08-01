@@ -179,7 +179,7 @@ public final class Coder {
 
         // secure the message against the most basic attacks using Message/CPIM
         String from = keys.myKey.getUserId();
-        String to = keys.otherKey.contactID + "; ";
+        String to = keys.otherKey.userID + "; ";
         String mime = "text/plain";
         // TODO encrypt more possible content
         String text = message.getContent().getPlainText();
@@ -300,7 +300,7 @@ public final class Coder {
         if (decResult.decrypted) {
             // parse encrypted CPIM content
             String myUID = keys.myKey.getUserId();
-            String senderUID = keys.otherKey.contactID;
+            String senderUID = keys.otherKey.userID;
             String encrText = EncodingUtils.getString(
                     outStream.toByteArray(),
                     CPIMMessage.CHARSET);
@@ -401,7 +401,7 @@ public final class Coder {
         LOGGER.info("attachment decryption successful");
     }
 
-    private static KeysResult getKeys(Contact user) {
+    private static KeysResult getKeys(Contact contact) {
         KeysResult result = new KeysResult();
 
         Optional<PersonalKey> optMyKey = AccountLoader.getInstance().getPersonalKey();
@@ -412,9 +412,9 @@ public final class Coder {
         }
         result.myKey = optMyKey.get();
 
-        Optional<PGPCoderKey> optKey = getKey(user);
+        Optional<PGPCoderKey> optKey = getKey(contact);
         if (!optKey.isPresent()) {
-            LOGGER.warning("key not found for user: "+user);
+            LOGGER.warning("key not found for contact: "+contact);
             result.errors.add(Error.KEY_UNAVAILABLE);
             return result;
         }
@@ -647,14 +647,14 @@ public final class Coder {
         return result;
     }
 
-    private static Optional<PGPCoderKey> getKey(Contact user) {
-        if (KEY_MAP.containsKey(user)) {
-            PGPCoderKey key = KEY_MAP.get(user);
-            if (key.fingerprint.equals(user.getFingerprint()))
+    private static Optional<PGPCoderKey> getKey(Contact contact) {
+        if (KEY_MAP.containsKey(contact)) {
+            PGPCoderKey key = KEY_MAP.get(contact);
+            if (key.fingerprint.equals(contact.getFingerprint()))
                 return Optional.of(key);
         }
 
-        byte[] rawKey = user.getKey();
+        byte[] rawKey = contact.getKey();
         if (rawKey.length == 0) {
             return Optional.empty();
         }
@@ -662,7 +662,7 @@ public final class Coder {
         Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
 
         if (optKey.isPresent())
-            KEY_MAP.put(user, optKey.get());
+            KEY_MAP.put(contact, optKey.get());
 
         return optKey;
     }

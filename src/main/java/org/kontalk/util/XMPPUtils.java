@@ -116,7 +116,7 @@ public final class XMPPUtils {
                 PhoneNumberUtil.PhoneNumberFormat.E164));
     }
 
-    public static boolean isKontalkContact(Contact user){
-        return KONTALK_SERVER.contains(XmppStringUtils.parseDomain(user.getJID()));
+    public static boolean isKontalkContact(Contact contact){
+        return KONTALK_SERVER.contains(XmppStringUtils.parseDomain(contact.getJID()));
     }
 }

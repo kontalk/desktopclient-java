@@ -356,9 +356,9 @@ public final class Control {
         contact.setKey(key.rawKey, key.fingerprint);
 
         // if not set, use uid in key for contact name
-        LOGGER.info("full UID in key: '" + key.contactID + "'");
-        if (contact.getName().isEmpty() && key.contactID != null) {
-            String contactName = key.contactID.replaceFirst(" <[a-f0-9]+@.+>$", "");
+        LOGGER.info("full UID in key: '" + key.userID + "'");
+        if (contact.getName().isEmpty() && key.userID != null) {
+            String contactName = key.userID.replaceFirst(" <[a-f0-9]+@.+>$", "");
             if (contactName.endsWith(LEGACY_CUT_FROM_ID))
                 contactName = contactName.substring(0,
                         contactName.length() - LEGACY_CUT_FROM_ID.length());
