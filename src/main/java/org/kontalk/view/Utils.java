@@ -53,7 +53,7 @@ import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
 
@@ -246,9 +246,9 @@ final class Utils {
         return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
     }
 
-    static String userNameList(Set<User> users) {
+    static String userNameList(Set<Contact> users) {
         List<String> nameList = new ArrayList<>(users.size());
-        for (User user : users) {
+        for (Contact user : users) {
             nameList.add(user.getName().isEmpty() ?
                     Tr.tr("<unknown>") :
                     user.getName());
@@ -256,23 +256,23 @@ final class Utils {
         return StringUtils.join(nameList, ", ");
     }
 
-    static String name(User user) {
+    static String name(Contact user) {
         return user.isDeleted() ? Tr.tr("<deleted>") :
                 !user.getName().isEmpty() ? user.getName() :
                 Tr.tr("<unknown>");
     }
 
-    static String mainStatus(User u) {
-        User.Subscription subStatus = u.getSubScription();
+    static String mainStatus(Contact u) {
+        Contact.Subscription subStatus = u.getSubScription();
         return u.isMe() ? Tr.tr("Me myself") :
                     u.isBlocked() ? Tr.tr("Blocked") :
-                    u.getOnline() == User.Online.YES ? Tr.tr("Online") :
-                    subStatus == User.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
-                    subStatus == User.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
+                    u.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
+                    subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
+                    subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
                     lastSeen(u, true);
     }
 
-    static String lastSeen(User user, boolean pretty) {
+    static String lastSeen(Contact user, boolean pretty) {
         String lastSeen = !user.getLastSeen().isPresent() ? Tr.tr("never") :
                 pretty ? Utils.PRETTY_TIME.format(user.getLastSeen().get()) :
                 Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());

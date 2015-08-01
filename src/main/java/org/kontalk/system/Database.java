@@ -37,7 +37,7 @@ import org.apache.commons.lang.StringUtils;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.util.EncodingUtils;
 import org.sqlite.SQLiteConfig;
 
@@ -104,7 +104,7 @@ public final class Database {
             LOGGER.info("new database, creating tables");
             String create = "CREATE TABLE IF NOT EXISTS ";
             try (Statement stat = mConn.createStatement()) {
-                stat.executeUpdate(create + User.TABLE + " " + User.CREATE_TABLE);
+                stat.executeUpdate(create + Contact.TABLE + " " + Contact.CREATE_TABLE);
                 stat.executeUpdate(create +
                         KonThread.TABLE +
                         " " +

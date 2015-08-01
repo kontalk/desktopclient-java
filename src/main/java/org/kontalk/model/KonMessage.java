@@ -69,7 +69,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String TABLE = "messages";
     public static final String COL_THREAD_ID = "thread_id";
     public static final String COL_DIR = "direction";
-    public static final String COL_USER_ID = "user_id";
+    public static final String COL_CONTACT_ID = "user_id";
     public static final String COL_JID = "jid";
     public static final String COL_XMPP_ID = "xmpp_id";
     public static final String COL_DATE = "date";
@@ -85,8 +85,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             COL_THREAD_ID + " INTEGER NOT NULL, " +
             // enum, in- or outgoing
             COL_DIR + " INTEGER NOT NULL, " +
-            // from or to user
-            COL_USER_ID + " INTEGER NOT NULL, " +
+            // from or to contact
+            COL_CONTACT_ID + " INTEGER NOT NULL, " +
             // full jid with resource
             COL_JID + " TEXT NOT NULL, " +
             // XMPP ID attribute; only recommended (RFC 6120), but we generate
@@ -114,13 +114,13 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // (see .equals())
             "UNIQUE (direction, jid, xmpp_id, date), " +
             "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
-            "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
+            "FOREIGN KEY (user_id) REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
     private int mID;
     private final KonThread mThread;
     private final Direction mDir;
-    private final User mUser;
+    private final Contact mContact;
 
     private final String mJID;
     private final String mXMPPID;
@@ -142,7 +142,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mThread = builder.mThread;
         mDir = builder.mDir;
         // TODO group message stuff
-        mUser = builder.mUser;
+        mContact = builder.mContact;
         mJID = builder.mJID;
         mXMPPID = builder.mXMPPID;
         mDate = builder.mDate;
@@ -184,8 +184,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mDir;
     }
 
-    public User getUser() {
-        return mUser;
+    public Contact getContact() {
+        return mContact;
     }
 
     public String getJID() {
@@ -255,7 +255,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         List<Object> values = new LinkedList<>();
         values.add(mThread.getID());
         values.add(mDir);
-        values.add(mUser.getID());
+        values.add(mContact.getID());
         values.add(mJID);
         values.add(Database.setString(mXMPPID));
         values.add(mDate);
@@ -285,7 +285,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     @Override
     public String toString() {
-        return "M:id="+mID+",thread="+mThread+",dir="+mDir+",mUser="+mUser
+        return "M:id="+mID+",thread="+mThread+",dir="+mDir+",mContact="+mContact
                 +",jid="+mJID+",xmppid="+mXMPPID
                 +",date="+mDate+",sdate="+mServerDate
                 +",recstat="+mReceiptStatus+",cont="+mContent
@@ -377,7 +377,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         private final int mID;
         private final KonThread mThread;
         private final Direction mDir;
-        private final User mUser;
+        private final Contact mContact;
         private final Date mDate;
 
         private ServerError mServerError = new ServerError();
@@ -395,12 +395,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         Builder(int id,
                 KonThread thread,
                 Direction dir,
-                User user,
+                Contact contact,
                 Date date) {
             mID = id;
             mThread = thread;
             mDir = dir;
-            mUser = user;
+            mContact = contact;
             mDate = date;
         }
 

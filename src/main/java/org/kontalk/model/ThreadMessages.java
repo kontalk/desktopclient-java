@@ -73,10 +73,10 @@ public final class ThreadMessages {
 
                 int dirIndex = resultSet.getInt(KonMessage.COL_DIR);
                 KonMessage.Direction dir = dirValues[dirIndex];
-                int userID = resultSet.getInt(KonMessage.COL_USER_ID);
-                Optional<User> optUser = UserList.getInstance().get(userID);
-                if (!optUser.isPresent()) {
-                    LOGGER.warning("can't find user in db, id: "+userID);
+                int contactID = resultSet.getInt(KonMessage.COL_CONTACT_ID);
+                Optional<Contact> optContact = ContactList.getInstance().get(contactID);
+                if (!optContact.isPresent()) {
+                    LOGGER.warning("can't find contact in db, id: "+contactID);
                     continue;
                 }
                 String jid = resultSet.getString(KonMessage.COL_JID);
@@ -104,7 +104,7 @@ public final class ThreadMessages {
                         Optional.of(new Date(sDate));
 
                 KonMessage.Builder builder = new KonMessage.Builder(id, mThread,
-                        dir, optUser.get(), date);
+                        dir, optContact.get(), date);
                 builder.jid(jid);
                 builder.xmppID(xmppID);
                 builder.serverDate(serverDate);

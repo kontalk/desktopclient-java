@@ -25,7 +25,7 @@ import java.awt.Component;
 import java.awt.GridBagLayout;
 import java.util.Optional;
 import org.kontalk.model.KonThread;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 
 /**
  * Content view area: show a thread or user details
@@ -55,7 +55,7 @@ public class Content extends WebPanel {
             this.show(mThreadView);
     }
 
-    void showUser(User user) {
+    void showUser(Contact user) {
         this.show(new UserDetails(mView, user));
     }
 

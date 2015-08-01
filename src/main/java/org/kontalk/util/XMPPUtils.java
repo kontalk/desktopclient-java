@@ -27,7 +27,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.PacketParserUtils;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -116,7 +116,7 @@ public final class XMPPUtils {
                 PhoneNumberUtil.PhoneNumberFormat.E164));
     }
 
-    public static boolean isKontalkUser(User user){
+    public static boolean isKontalkUser(Contact user){
         return KONTALK_SERVER.contains(XmppStringUtils.parseDomain(user.getJID()));
     }
 }

@@ -34,7 +34,7 @@ import java.util.logging.SimpleFormatter;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.ThreadList;
-import org.kontalk.model.UserList;
+import org.kontalk.model.ContactList;
 import org.kontalk.system.Config;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
@@ -137,7 +137,7 @@ public final class Kontalk {
         }
 
         // order matters!
-        UserList.getInstance().load();
+        ContactList.getInstance().load();
         ThreadList.getInstance().load();
 
         view.init();

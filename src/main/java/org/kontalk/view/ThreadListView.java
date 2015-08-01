@@ -41,7 +41,7 @@ import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.KonThread.KonChatState;
 import org.kontalk.model.ThreadList;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ThreadListView.ThreadItem;
 
@@ -213,8 +213,8 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         }
 
         private void updateView(Object arg) {
-            if (arg == null || arg instanceof User) {
-                Optional<User> optUser = mValue.getSingleUser();
+            if (arg == null || arg instanceof Contact) {
+                Optional<Contact> optUser = mValue.getSingleContact();
                 if (optUser.isPresent())
                     mNameLabel.setText(Utils.name(optUser.get()));
             }
@@ -259,8 +259,8 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
                     return;
                 }
 
-                if (mValue.getUser().size() > 1)
-                    stateText = state.getUser().getName() + " " + stateText;
+                if (mValue.getContacts().size() > 1)
+                    stateText = state.getContact().getName() + " " + stateText;
 
                 mChatStateLabel.setText(stateText + " ");
             }
@@ -277,7 +277,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
             if (optThread.isPresent() && optThread.get() == mValue)
                 return true;
 
-            for (User user: mValue.getUser()) {
+            for (Contact user: mValue.getContacts()) {
                 if (user.getName().toLowerCase().contains(search) ||
                         user.getJID().toLowerCase().contains(search))
                     return true;

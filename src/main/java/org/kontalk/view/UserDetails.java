@@ -45,7 +45,7 @@ import javax.swing.Box;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 
 /**
@@ -56,7 +56,7 @@ import org.kontalk.util.Tr;
 final class UserDetails extends WebPanel implements Observer {
 
     private final View mView;
-    private final User mUser;
+    private final Contact mUser;
     private final WebTextField mNameField;
     private final WebLabel mAuthorization;
     private final WebLabel mKeyStatus;
@@ -64,7 +64,7 @@ final class UserDetails extends WebPanel implements Observer {
     private final WebTextArea mFPArea;
     private final WebCheckBox mEncryptionBox;
 
-    UserDetails(View view, User user) {
+    UserDetails(View view, Contact user) {
         mView = view;
         mUser = user;
 
@@ -206,7 +206,7 @@ final class UserDetails extends WebPanel implements Observer {
         // may have changed: user name and/or key
         mNameField.setText(mUser.getName());
         mNameField.setInputPrompt(mUser.getName());
-        User.Subscription subscription = mUser.getSubScription();
+        Contact.Subscription subscription = mUser.getSubScription();
         String auth = Tr.tr("Unknown");
         switch(subscription) {
             case PENDING: auth = Tr.tr("Awaiting reply"); break;

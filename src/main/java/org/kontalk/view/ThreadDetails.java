@@ -42,7 +42,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.KonThread;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 
 /**
@@ -213,9 +213,9 @@ final class ThreadDetails extends WebPanel {
     }
 
     private class UserElement {
-        User user;
+        Contact user;
 
-        UserElement(User user) {
+        UserElement(Contact user) {
             this.user = user;
         }
 

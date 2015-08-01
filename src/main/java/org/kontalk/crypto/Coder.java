@@ -72,7 +72,7 @@ import org.kontalk.model.InMessage;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.OutMessage;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.system.AccountLoader;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.XMPPUtils;
@@ -132,7 +132,7 @@ public final class Coder {
     /** Buffer size for encryption. It should always be a power of 2. */
     private static final int BUFFER_SIZE = 1 << 8;
 
-    private static final HashMap<User, PGPCoderKey> KEY_MAP = new HashMap<>();
+    private static final HashMap<Contact, PGPCoderKey> KEY_MAP = new HashMap<>();
 
     private static class KeysResult {
         PersonalKey myKey = null;
@@ -171,7 +171,7 @@ public final class Coder {
         LOGGER.info("encrypting message...");
 
         // get keys
-        KeysResult keys = getKeys(message.getUser());
+        KeysResult keys = getKeys(message.getContact());
         if (keys.myKey == null || keys.otherKey == null) {
             message.setSecurityErrors(keys.errors);
             return Optional.empty();
@@ -274,7 +274,7 @@ public final class Coder {
         LOGGER.info("decrypting encrypted message...");
 
         // get keys
-        KeysResult keys = getKeys(message.getUser());
+        KeysResult keys = getKeys(message.getContact());
         if (keys.myKey == null || keys.otherKey == null) {
             message.setSecurityErrors(keys.errors);
             return;
@@ -360,7 +360,7 @@ public final class Coder {
         LOGGER.info("decrypting encrypted attachment...");
 
         // get keys
-        KeysResult keys = getKeys(message.getUser());
+        KeysResult keys = getKeys(message.getContact());
         if (keys.myKey == null || keys.otherKey == null) {
             message.setAttachmentErrors(keys.errors);
             return;
@@ -401,7 +401,7 @@ public final class Coder {
         LOGGER.info("attachment decryption successful");
     }
 
-    private static KeysResult getKeys(User user) {
+    private static KeysResult getKeys(Contact user) {
         KeysResult result = new KeysResult();
 
         Optional<PersonalKey> optMyKey = AccountLoader.getInstance().getPersonalKey();
@@ -647,7 +647,7 @@ public final class Coder {
         return result;
     }
 
-    private static Optional<PGPCoderKey> getKey(User user) {
+    private static Optional<PGPCoderKey> getKey(Contact user) {
         if (KEY_MAP.containsKey(user)) {
             PGPCoderKey key = KEY_MAP.get(user);
             if (key.fingerprint.equals(user.getFingerprint()))

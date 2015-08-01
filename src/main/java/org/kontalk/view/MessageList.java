@@ -69,7 +69,7 @@ import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.MessageContent;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.system.Downloader;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ThreadView.Background;
@@ -311,7 +311,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 this.add(messagePanel, BorderLayout.EAST);
             }
 
-            mValue.getUser().addObserver(this);
+            mValue.getContact().addObserver(this);
         }
 
         @Override
@@ -333,7 +333,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             if (!mCreated)
                 return;
 
-            if ((arg == null || arg instanceof User) && mFromLabel != null)
+            if ((arg == null || arg instanceof Contact) && mFromLabel != null)
                 mFromLabel.setText(" "+getFromString(mValue));
 
             if (arg == null || arg instanceof String)
@@ -566,13 +566,13 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         @Override
         protected boolean contains(String search) {
             return mValue.getContent().getText().toLowerCase().contains(search) ||
-                    mValue.getUser().getName().toLowerCase().contains(search) ||
+                    mValue.getContact().getName().toLowerCase().contains(search) ||
                     mValue.getJID().toLowerCase().contains(search);
         }
 
         @Override
         protected void onRemove() {
-            mValue.getUser().deleteObserver(this);
+            mValue.getContact().deleteObserver(this);
         }
 
         @Override
@@ -604,8 +604,8 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
     private static String getFromString(KonMessage message) {
         String from;
-        if (!message.getUser().getName().isEmpty()) {
-            from = message.getUser().getName();
+        if (!message.getContact().getName().isEmpty()) {
+            from = message.getContact().getName();
         } else {
             from = XmppStringUtils.parseBareJid(message.getJID());
             if (from.length() > 40)

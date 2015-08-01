@@ -21,7 +21,7 @@ package org.kontalk.misc;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 
 /**
  * Events passed from controller to view.
@@ -77,10 +77,10 @@ public class ViewEvent {
 
     /** Got a new public key (ask whattodo). */
     public static class NewKey extends ViewEvent {
-        public final User user;
+        public final Contact user;
         public final PGPCoderKey key;
 
-        public NewKey(User user, PGPCoderKey key) {
+        public NewKey(Contact user, PGPCoderKey key) {
             this.user = user;
             this.key = key;
         }

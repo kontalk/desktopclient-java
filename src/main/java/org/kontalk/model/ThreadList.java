@@ -51,38 +51,38 @@ public final class ThreadList extends Observable implements Observer {
     public void load() {
         assert mMap.isEmpty();
 
-        HashMap<Integer, Set<User>> threadUserMapping = new HashMap<>();
-        UserList userList = UserList.getInstance();
+        HashMap<Integer, Set<Contact>> threadContactMapping = new HashMap<>();
+        ContactList contactList = ContactList.getInstance();
         Database db = Database.getInstance();
         try (ResultSet receiverRS = db.execSelectAll(KonThread.TABLE_RECEIVER);
                 ResultSet threadRS = db.execSelectAll(KonThread.TABLE)) {
-            // first, find user for threads
+            // first, find contact for threads
             // TODO: rewrite
             while (receiverRS.next()) {
                 Integer threadID = receiverRS.getInt("thread_id");
-                Integer userID = receiverRS.getInt("user_id");
-                Optional<User> optUser = userList.get(userID);
-                if (!optUser.isPresent()) {
-                    LOGGER.warning("can't find user");
+                Integer contactID = receiverRS.getInt("user_id");
+                Optional<Contact> optContact = contactList.get(contactID);
+                if (!optContact.isPresent()) {
+                    LOGGER.warning("can't find contact");
                     continue;
                 }
-                User user = optUser.get();
-                if (threadUserMapping.containsKey(threadID)) {
-                    threadUserMapping.get(threadID).add(user);
+                Contact contact = optContact.get();
+                if (threadContactMapping.containsKey(threadID)) {
+                    threadContactMapping.get(threadID).add(contact);
                 } else {
-                    Set<User> userSet = new HashSet<>();
-                    userSet.add(user);
-                    threadUserMapping.put(threadID, userSet);
+                    Set<Contact> contactSet = new HashSet<>();
+                    contactSet.add(contact);
+                    threadContactMapping.put(threadID, contactSet);
                 }
             }
             // now, create threads
             while (threadRS.next()) {
                 int id = threadRS.getInt("_id");
                 String xmppThreadID = Database.getString(threadRS, "xmpp_id");
-                Set<User> userSet = threadUserMapping.get(id);
-                if (userSet == null) {
-                    LOGGER.warning("no users found for thread");
-                    userSet = new HashSet<>();
+                Set<Contact> contactSet = threadContactMapping.get(id);
+                if (contactSet == null) {
+                    LOGGER.warning("no contacts found for thread");
+                    contactSet = new HashSet<>();
                 }
                 String subject = Database.getString(threadRS,
                         KonThread.COL_SUBJ);
@@ -90,7 +90,7 @@ public final class ThreadList extends Observable implements Observer {
                 String jsonViewSettings = Database.getString(threadRS,
                         KonThread.COL_VIEW_SET);
 
-                this.put(new KonThread(id, xmppThreadID, userSet, subject, read,
+                this.put(new KonThread(id, xmppThreadID, contactSet, subject, read,
                         jsonViewSettings));
                 if (!read)
                     mUnread = true;
@@ -112,21 +112,21 @@ public final class ThreadList extends Observable implements Observer {
     }
 
     /**
-     * Get a thread with only the user as additional member.
+     * Get a thread with only the contact as additional member.
      * Creates a new thread if necessary.
      */
-    public KonThread get(User user) {
-        KonThread thread = this.getOrNull(user);
+    public KonThread get(Contact contact) {
+        KonThread thread = this.getOrNull(contact);
         if (thread != null)
             return thread;
 
-        Set<User> userSet = new HashSet<>();
-        userSet.add(user);
-        return this.createNew(userSet);
+        Set<Contact> contactSet = new HashSet<>();
+        contactSet.add(contact);
+        return this.createNew(contactSet);
     }
 
-    public KonThread createNew(Set<User> user) {
-        KonThread newThread = new KonThread(user);
+    public KonThread createNew(Set<Contact> contact) {
+        KonThread newThread = new KonThread(contact);
         this.put(newThread);
         this.changed(newThread);
         return newThread;
@@ -161,8 +161,8 @@ public final class ThreadList extends Observable implements Observer {
         return mMap.containsKey(id);
     }
 
-    public boolean contains(User user) {
-        return this.getOrNull(user) != null;
+    public boolean contains(Contact contact) {
+        return this.getOrNull(contact) != null;
     }
 
     public synchronized void delete(int id) {
@@ -183,10 +183,10 @@ public final class ThreadList extends Observable implements Observer {
         return mUnread;
     }
 
-    private synchronized KonThread getOrNull(User user) {
+    private synchronized KonThread getOrNull(Contact contact) {
         for (KonThread thread : mMap.values()) {
-            Set<User> threadUser = thread.getUser();
-            if (threadUser.size() == 1 && threadUser.contains(user))
+            Set<Contact> threadContact = thread.getContacts();
+            if (threadContact.size() == 1 && threadContact.contains(contact))
                 return thread;
         }
         return null;

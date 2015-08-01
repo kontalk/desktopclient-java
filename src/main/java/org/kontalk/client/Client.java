@@ -53,7 +53,7 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.system.Control;
 import org.kontalk.util.XMPPUtils;
 
@@ -325,7 +325,7 @@ public final class Client implements StanzaListener, Runnable {
         LOGGER.info("got packet (unhandled): "+packet.toXML());
     }
 
-    public boolean addToRoster(User user) {
+    public boolean addToRoster(Contact user) {
         if (!this.isConnected()) {
             LOGGER.info("can't add user to roster, not connected");
             return false;
@@ -348,7 +348,7 @@ public final class Client implements StanzaListener, Runnable {
         return true;
     }
 
-    public boolean removeFromRoster(User user) {
+    public boolean removeFromRoster(Contact user) {
         if (!this.isConnected()) {
             LOGGER.info("can't remove user from roster, not connected");
             return false;

@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
 import org.kontalk.model.KonThread;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 
 /**
  * Manager handling own chat status for all threads.
@@ -96,14 +96,14 @@ final class ChatStateManager {
             // currently set states from XEP-0085: active, inactive, composing
             mCurrentState = state;
 
-            Set<User> user = mThread.getUser();
+            Set<Contact> user = mThread.getContacts();
 
             if (user.size() > 1 || state == ChatState.active)
                 // don't send for groups
                 // 'active' is send inside a message
                 return;
 
-            for (User oneUser : user)
+            for (Contact oneUser : user)
                 if (!oneUser.isMe() && !oneUser.isBlocked())
                     mClient.sendChatState(oneUser.getJID(),
                             mThread.getXMPPID(),

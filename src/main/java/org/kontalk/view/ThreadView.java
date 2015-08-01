@@ -52,7 +52,7 @@ import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 
@@ -163,14 +163,14 @@ final class ThreadView extends WebPanel implements Observer {
     }
 
     void showThread(KonThread thread) {
-        List<User> user = new ArrayList<>(thread.getUser());
+        List<Contact> user = new ArrayList<>(thread.getContacts());
         mTitleLabel.setText(user.size() == 1 ? Utils.name(user.get(0)) :
                 !thread.getSubject().isEmpty() ? thread.getSubject() :
                 Tr.tr("Group Chat"));
         // TODO update
         mSubLabel.setText(user.size() == 1 ?
                 Utils.mainStatus(user.get(0)) :
-                Utils.userNameList(thread.getUser()));
+                Utils.userNameList(thread.getContacts()));
         if (!mThreadCache.containsKey(thread.getID())) {
             MessageList newMessageList = new MessageList(mView, this, thread);
             thread.addObserver(newMessageList);

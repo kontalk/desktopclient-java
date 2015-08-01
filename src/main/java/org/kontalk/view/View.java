@@ -69,8 +69,8 @@ import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
 import org.kontalk.model.ThreadList;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
+import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.Tr;
@@ -117,8 +117,8 @@ public final class View implements Observer {
 
         ToolTipManager.sharedInstance().setInitialDelay(200);
 
-        mUserListView = new UserListView(this, UserList.getInstance());
-        UserList.getInstance().addObserver(mUserListView);
+        mUserListView = new UserListView(this, ContactList.getInstance());
+        ContactList.getInstance().addObserver(mUserListView);
         mThreadListView = new ThreadListView(this, ThreadList.getInstance());
         ThreadList.getInstance().addObserver(mThreadListView);
 
@@ -406,7 +406,7 @@ public final class View implements Observer {
         //NotificationManager.showNotification(mThreadView, errorText);
     }
 
-    private void confirmNewKey(final User user, final PGPUtils.PGPCoderKey key) {
+    private void confirmNewKey(final Contact user, final PGPUtils.PGPCoderKey key) {
         WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
         panel.setOpaque(false);
 
@@ -463,7 +463,7 @@ public final class View implements Observer {
         mControl.shutDown();
     }
 
-    void callCreateNewThread(Set<User> user) {
+    void callCreateNewThread(Set<Contact> user) {
         KonThread thread = mControl.createNewThread(user);
         this.selectThread(thread);
     }
@@ -480,7 +480,7 @@ public final class View implements Observer {
 
     /* view internal */
 
-    void showThread(User user) {
+    void showThread(Contact user) {
         KonThread thread = ThreadList.getInstance().get(user);
         this.selectThread(thread);
     }
@@ -490,7 +490,7 @@ public final class View implements Observer {
         mThreadListView.setSelectedItem(thread);
     }
 
-    void showUserDetails(User user) {
+    void showUserDetails(Contact user) {
         mContent.showUser(user);
     }
 
@@ -512,7 +512,7 @@ public final class View implements Observer {
                 return;
             }
         } else {
-            Optional<User> optUser = mUserListView.getSelectedValue();
+            Optional<Contact> optUser = mUserListView.getSelectedValue();
             if (optUser.isPresent()) {
                 mContent.showUser(optUser.get());
                 return;

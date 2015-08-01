@@ -61,10 +61,10 @@ public final class OutMessage extends KonMessage {
 
 public static class Builder extends KonMessage.Builder {
 
-        public Builder(KonThread thread, User user, boolean encrypted) {
-            super(-1, thread, Direction.OUT, user, new Date());
+        public Builder(KonThread thread, Contact contact, boolean encrypted) {
+            super(-1, thread, Direction.OUT, contact, new Date());
 
-            mJID = user.getJID();
+            mJID = contact.getJID();
             mXMPPID = "Kon_" + StringUtils.randomString(8);
             mServerDate = Optional.empty();
             mReceiptStatus = Status.PENDING;

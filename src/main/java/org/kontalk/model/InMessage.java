@@ -113,8 +113,8 @@ public final class InMessage extends KonMessage {
 
     public static class Builder extends KonMessage.Builder {
 
-        public Builder(KonThread thread, User user) {
-            super(-1, thread, Direction.IN, user, new Date());
+        public Builder(KonThread thread, Contact contact) {
+            super(-1, thread, Direction.IN, contact, new Date());
 
             mReceiptStatus = Status.IN;
         }

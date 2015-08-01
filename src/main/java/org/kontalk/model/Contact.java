@@ -38,11 +38,11 @@ import org.kontalk.system.Database;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class User extends Observable implements Comparable<User> {
-    private static final Logger LOGGER = Logger.getLogger(User.class.getName());
+public final class Contact extends Observable implements Comparable<Contact> {
+    private static final Logger LOGGER = Logger.getLogger(Contact.class.getName());
 
     /**
-     * Online status of one user.
+     * Online status of one contact.
      * Not saved to database.
      */
     public static enum Online {UNKNOWN, YES, NO};
@@ -87,8 +87,8 @@ public final class User extends Observable implements Comparable<User> {
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
 
-    // used for creating new users (eg from roster)
-    User(String jid, String name) {
+    // used for creating new contacts (eg from roster)
+    Contact(String jid, String name) {
         mJID = XmppStringUtils.parseBareJid(jid);
         mName = name;
 
@@ -103,11 +103,11 @@ public final class User extends Observable implements Comparable<User> {
         values.add(null); // fingerprint
         mID = db.execInsert(TABLE, values);
         if (mID < 1)
-            LOGGER.log(Level.WARNING, "could not insert user");
+            LOGGER.log(Level.WARNING, "could not insert contact");
     }
 
-    // used for loading users from database
-    User(int id,
+    // used for loading contacts from database
+    Contact(int id,
             String jid,
             String name,
             String status,
@@ -153,7 +153,7 @@ public final class User extends Observable implements Comparable<User> {
 
         mName = name;
         this.save();
-        // user itself as argument for thread view items
+        // contact itself as argument for thread view items
         this.changed(this);
     }
 
@@ -217,7 +217,7 @@ public final class User extends Observable implements Comparable<User> {
 
     public void setKey(byte[] rawKey, String fingerprint) {
         if (!mKey.isEmpty())
-            LOGGER.info("overwriting public key of user: "+this);
+            LOGGER.info("overwriting public key of contact: "+this);
 
         mKey = Base64.getEncoder().encodeToString(rawKey);
         mFingerprint = fingerprint;
@@ -252,7 +252,7 @@ public final class User extends Observable implements Comparable<User> {
     }
 
     /**
-     * 'Delete' this user: faked by resetting all values.
+     * 'Delete' this contact: faked by resetting all values.
      */
     public void setDeleted() {
         mJID = Integer.toString(mID);
@@ -295,7 +295,7 @@ public final class User extends Observable implements Comparable<User> {
     }
 
     @Override
-    public int compareTo(User o) {
+    public int compareTo(Contact o) {
         return Integer.compare(this.mID, o.mID);
     }
 }

@@ -40,7 +40,7 @@ import org.kontalk.system.Database;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
- * Changes of user in this thread are forwarded.
+ * Changes of contact in this thread are forwarded.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class KonThread extends Observable implements Comparable<KonThread>, Observer {
@@ -69,26 +69,26 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             "user_id INTEGER NOT NULL, " +
             "UNIQUE (thread_id, user_id), " +
             "FOREIGN KEY (thread_id) REFERENCES "+TABLE+" (_id), " +
-            "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
+            "FOREIGN KEY (user_id) REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
     private final int mID;
     private final String mXMPPID;
     private final ThreadMessages mMessages;
-    private final HashMap<User, KonChatState> mUserMap = new HashMap<>();
+    private final HashMap<Contact, KonChatState> mContactMap = new HashMap<>();
 
     private String mSubject;
     private boolean mRead;
     private ViewSettings mViewSettings;
 
     // used when creating a new thread
-    KonThread(Set<User> user) {
-        assert user != null;
+    KonThread(Set<Contact> contacts) {
+        assert contacts != null;
         // Kontalk Android client is ignoring the thread id, don't set it for now
         //mXMPPID = StringUtils.randomString(8);
         mXMPPID = "";
-        this.setUserMap(user);
-        if (user.size() > 1){
+        this.setContactMap(contacts);
+        if (contacts.size() > 1){
             mSubject = "New group chat";
         } else {
             mSubject = "";
@@ -109,22 +109,22 @@ public final class KonThread extends Observable implements Comparable<KonThread>
             return;
         }
 
-        for (User oneUser : user)
-            this.insertReceiver(oneUser);
+        for (Contact contact : contacts)
+            this.insertReceiver(contact);
     }
 
     // used when loading from database
     KonThread(int id,
             String xmppID,
-            Set<User> user,
+            Set<Contact> contacts,
             String subject,
             boolean read,
             String jsonViewSettings
             ) {
-        assert user != null;
+        assert contacts != null;
         mID = id;
         mXMPPID = xmppID;
-        this.setUserMap(user);
+        this.setContactMap(contacts);
         mSubject = subject;
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
@@ -143,29 +143,29 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         return mXMPPID.isEmpty() ? Optional.<String>empty() : Optional.of(mXMPPID);
     }
 
-    public Set<User> getUser() {
-        return mUserMap.keySet();
+    public Set<Contact> getContacts() {
+        return mContactMap.keySet();
     }
 
     /**
-     * Get user if there is only one.
+     * Get contact if there is only one.
      */
-    public Optional<User> getSingleUser() {
-        return mUserMap.keySet().size() == 1 ?
-                Optional.of(mUserMap.keySet().iterator().next()) :
-                Optional.<User>empty();
+    public Optional<Contact> getSingleContact() {
+        return mContactMap.keySet().size() == 1 ?
+                Optional.of(mContactMap.keySet().iterator().next()) :
+                Optional.<Contact>empty();
     }
 
-    public void setUser(Set<User> user) {
-        if (user.equals(mUserMap.keySet()))
+    public void setContacts(Set<Contact> contacts) {
+        if (contacts.equals(mContactMap.keySet()))
             return;
 
-        this.setUserMap(user);
-        this.changed(user);
+        this.setContactMap(contacts);
+        this.changed(contacts);
     }
 
     /**
-     * Get the user defined subject of this thread (empty string if not set).
+     * Get the contact defined subject of this thread (empty string if not set).
      */
     public String getSubject() {
         return mSubject;
@@ -217,10 +217,10 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         return added;
     }
 
-    public void setChatState(User user, ChatState chatState) {
-        KonChatState state = mUserMap.get(user);
+    public void setChatState(Contact contact, ChatState chatState) {
+        KonChatState state = mContactMap.get(contact);
         if (state == null) {
-            LOGGER.warning("can't find user in user map!?");
+            LOGGER.warning("can't find contact in contact map!?");
             return;
         }
         state.setState(chatState);
@@ -239,12 +239,12 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         // get receiver for this thread
         Map<Integer, Integer> dbReceiver = this.loadReceiver();
 
-        // add missing user
-        for (User user : mUserMap.keySet()) {
-            if (!dbReceiver.keySet().contains(user.getID())) {
-                this.insertReceiver(user);
+        // add missing contact
+        for (Contact contact : mContactMap.keySet()) {
+            if (!dbReceiver.keySet().contains(contact.getID())) {
+                this.insertReceiver(contact);
             }
-            dbReceiver.remove(user.getID());
+            dbReceiver.remove(contact.getID());
         }
 
         // whats left is too much and can be removed
@@ -292,26 +292,26 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         return dbReceiver;
     }
 
-    private void insertReceiver(User user) {
+    private void insertReceiver(Contact contact) {
         Database db = Database.getInstance();
         List<Object> recValues = new LinkedList<>();
         recValues.add(mID);
-        recValues.add(user.getID());
+        recValues.add(contact.getID());
         int id = db.execInsert(TABLE_RECEIVER, recValues);
         if (id < 1) {
             LOGGER.warning("couldn't insert receiver");
         }
     }
 
-    private void setUserMap(Set<User> user){
+    private void setContactMap(Set<Contact> contacts){
         // TODO only apply differences to preserve chat states
-        for (User oneUser: mUserMap.keySet())
-            oneUser.deleteObserver(this);
+        for (Contact contact: mContactMap.keySet())
+            contact.deleteObserver(this);
 
-        mUserMap.clear();
-        for (User oneUser : user) {
-            oneUser.addObserver(this);
-            mUserMap.put(oneUser, new KonChatState(oneUser));
+        mContactMap.clear();
+        for (Contact contact : contacts) {
+            contact.addObserver(this);
+            mContactMap.put(contact, new KonChatState(contact));
         }
     }
 
@@ -336,7 +336,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     public class KonChatState {
-        private final User mUser;
+        private final Contact mContact;
         private ChatState mState = ChatState.gone;
         // note: the Android client does not set active states when only viewing
         // the thread (not necessary according to XEP-0085), this makes the
@@ -344,12 +344,12 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         // TODO save last active date to DB
         private Optional<Date> mLastActive = Optional.empty();
 
-        private KonChatState(User user) {
-            mUser = user;
+        private KonChatState(Contact contact) {
+            mContact = contact;
         }
 
-        public User getUser() {
-            return mUser;
+        public Contact getContact() {
+            return mContact;
         }
 
         public ChatState getState() {

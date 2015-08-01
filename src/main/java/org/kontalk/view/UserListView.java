@@ -35,8 +35,8 @@ import java.util.Set;
 import javax.swing.ListSelectionModel;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.ThreadList;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
+import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 import org.kontalk.view.UserListView.UserItem;
@@ -45,12 +45,12 @@ import org.kontalk.view.UserListView.UserItem;
  * Display all user (aka contacts) in a brief list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class UserListView extends Table<UserItem, User> implements Observer {
+final class UserListView extends Table<UserItem, Contact> implements Observer {
 
-    private final UserList mUserList;
+    private final ContactList mUserList;
     private final UserPopupMenu mPopupMenu;
 
-    UserListView(final View view, UserList userList) {
+    UserListView(final View view, ContactList userList) {
         super(view, true);
 
         mUserList = userList;
@@ -65,11 +65,11 @@ final class UserListView extends Table<UserItem, User> implements Observer {
         this.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                Optional<User> optUser = UserListView.this.getSelectedValue();
+                Optional<Contact> optUser = UserListView.this.getSelectedValue();
                 if (!optUser.isPresent())
                     return;
 
-                User selectedUser = optUser.get();
+                Contact selectedUser = optUser.get();
                 if (e.getClickCount() == 2) {
                     mView.showThread(selectedUser);
                 } else {
@@ -99,8 +99,8 @@ final class UserListView extends Table<UserItem, User> implements Observer {
     @Override
     protected void updateOnEDT(Object arg) {
         Set<UserItem> newItems = new HashSet<>();
-        Set<User> user = mUserList.getAll();
-        for (User oneUser: user)
+        Set<Contact> user = mUserList.getAll();
+        for (Contact oneUser: user)
             if (!this.containsValue(oneUser))
                 newItems.add(new UserItem(oneUser));
         this.sync(user, newItems);
@@ -112,13 +112,13 @@ final class UserListView extends Table<UserItem, User> implements Observer {
     }
 
     /** One item in the contact list representing a user. */
-    final class UserItem extends Table<UserItem, User>.TableItem {
+    final class UserItem extends Table<UserItem, Contact>.TableItem {
 
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;
         private Color mBackround;
 
-        UserItem(User user) {
+        UserItem(Contact user) {
             super(user);
 
             //this.setPaintFocus(true);
@@ -142,7 +142,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             String html = "<html><body>";
                     //"<h3>Header</h3>" +
 
-            if (mValue.getOnline() == User.Online.YES)
+            if (mValue.getOnline() == Contact.Online.YES)
                 html += Tr.tr("Online")+"<br>";
 
             if (!mValue.getStatus().isEmpty()) {
@@ -150,7 +150,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
                 html += Tr.tr("Status")+": " + status + "<br>";
             }
 
-            if (mValue.getOnline() != User.Online.YES) {
+            if (mValue.getOnline() != Contact.Online.YES) {
                 html += Utils.lastSeen(mValue, false) + "<br>";
             }
 
@@ -188,10 +188,10 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             mStatusLabel.setText(Utils.mainStatus(mValue));
 
             // online status
-            User.Subscription subStatus = mValue.getSubScription();
-            mBackround = mValue.getOnline() == User.Online.YES ? View.LIGHT_BLUE:
-                    subStatus == User.Subscription.UNSUBSCRIBED ||
-                    subStatus == User.Subscription.PENDING ||
+            Contact.Subscription subStatus = mValue.getSubScription();
+            mBackround = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
+                    subStatus == Contact.Subscription.UNSUBSCRIBED ||
+                    subStatus == Contact.Subscription.PENDING ||
                     mValue.isBlocked() ? View.LIGHT_GREY :
                     Color.WHITE;
             this.setBackground(mBackround);
@@ -219,7 +219,7 @@ final class UserListView extends Table<UserItem, User> implements Observer {
             mNewMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    Set<User> user = new HashSet<>();
+                    Set<Contact> user = new HashSet<>();
                     user.add(mItem.mValue);
                     UserListView.this.mView.callCreateNewThread(user);
                 }
