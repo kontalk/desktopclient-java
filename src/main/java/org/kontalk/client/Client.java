@@ -325,10 +325,10 @@ public final class Client implements StanzaListener, Runnable {
         LOGGER.info("got packet (unhandled): "+packet.toXML());
     }
 
-    public void addToRoster(User user) {
+    public boolean addToRoster(User user) {
         if (!this.isConnected()) {
             LOGGER.info("can't add user to roster, not connected");
-            return;
+            return false;
         }
 
         String rosterName = user.getName();
@@ -343,7 +343,9 @@ public final class Client implements StanzaListener, Runnable {
                 XMPPException.XMPPErrorException |
                 SmackException.NotConnectedException ex) {
             LOGGER.log(Level.WARNING, "can't add user to roster", ex);
+            return false;
         }
+        return true;
     }
 
     public boolean removeFromRoster(User user) {
@@ -392,7 +394,7 @@ public final class Client implements StanzaListener, Runnable {
         }
     }
 
-    private boolean isConnected() {
+    public boolean isConnected() {
         return mConn != null && mConn.isAuthenticated();
     }
 

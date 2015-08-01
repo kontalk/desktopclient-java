@@ -393,6 +393,11 @@ public final class Control {
     /* private */
 
     private Optional<User> createNewUser(String jid, String name, boolean encrypted) {
+        if (!mClient.isConnected()) {
+            // workaround: create only if user can be added to roster
+            return Optional.empty();
+        }
+
         Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
         if (!optNewUser.isPresent()) {
             LOGGER.warning("can't create new user");
@@ -403,8 +408,9 @@ public final class Control {
 
         newUser.setEncrypted(encrypted);
 
-        // TODO do this later if not connected
-        mClient.addToRoster(newUser);
+        boolean succ = mClient.addToRoster(newUser);
+        if (!succ)
+            LOGGER.warning("can't add new user to roster: "+newUser);
 
         return Optional.of(newUser);
     }
