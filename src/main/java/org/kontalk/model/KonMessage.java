@@ -278,11 +278,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mID = id;
     }
 
-    boolean delete() {
-        Database db = Database.getInstance();
-        return db.execDelete(TABLE, mID);
-    }
-
     protected synchronized void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);

@@ -254,9 +254,11 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     void delete() {
-        mMessages.delete();
-
         Database db = Database.getInstance();
+        // delete messages
+        db.execDeleteWhereInsecure(KonMessage.TABLE,
+                KonMessage.COL_THREAD_ID + " == " + mID);
+
         // delete receiver
         Map<Integer, Integer> dbReceiver = this.loadReceiver();
         for (int id : dbReceiver.values()) {

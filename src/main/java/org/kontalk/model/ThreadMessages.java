@@ -185,14 +185,4 @@ public final class ThreadMessages {
 
         return Optional.of(message);
     }
-
-    void delete() {
-        this.ensureLoaded();
-
-        // TODO very slow
-        for (KonMessage message : mSet) {
-            boolean deleted = message.delete();
-            if (!deleted) return;
-        }
-    }
 }
