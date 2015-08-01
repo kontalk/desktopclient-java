@@ -119,7 +119,7 @@ final class TrayManager implements Observer {
 
     private static TrayIcon createTrayIcon(final View view, final MainFrame mainFrame) {
         // popup menu outside of frame, officially not supported
-        final WebPopupMenu popup = new WebPopupMenu("Kontalk");
+        final WebPopupMenu popup = new WebPopupMenu();
         WebMenuItem quitItem = new WebMenuItem(Tr.tr("Quit"));
         quitItem.addActionListener(new ActionListener() {
             @Override
