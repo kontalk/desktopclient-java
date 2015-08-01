@@ -17,11 +17,17 @@
  */
 package org.kontalk.util;
 
+import com.google.i18n.phonenumbers.NumberParseException;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
+import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import java.io.StringReader;
-
+import java.util.Arrays;
+import java.util.List;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.PacketParserUtils;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.model.User;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -34,6 +40,9 @@ import org.xmlpull.v1.XmlPullParserFactory;
 public final class XMPPUtils {
 
     public static final String XML_XMPP_TYPE = "application/xmpp+xml";
+
+    // TODO do not hardcode, maybe download
+    private static final List<String> KONTALK_SERVER = Arrays.asList("beta.kontalk.org");
 
     private XMPPUtils() {
         throw new AssertionError();
@@ -83,5 +92,31 @@ public final class XMPPUtils {
 
     public static boolean isHash(String jid) {
         return XmppStringUtils.parseLocalpart(jid).matches("[0-9a-f]{40}");
+    }
+
+    public static boolean isValid(String jid) {
+        return !XmppStringUtils.parseLocalpart(jid).isEmpty() &&
+                !XmppStringUtils.parseDomain(jid).isEmpty();
+    }
+
+    public static String phoneNumberToKontalkLocal(String number) {
+        PhoneNumberUtil pnUtil = PhoneNumberUtil.getInstance();
+        PhoneNumber n;
+        try {
+            n = pnUtil.parse(number, null);
+        } catch (NumberParseException ex) {
+            return "";
+        }
+
+        if (!pnUtil.isValidNumber(n))
+            return "";
+
+        return DigestUtils.sha1Hex(
+                PhoneNumberUtil.getInstance().format(n,
+                PhoneNumberUtil.PhoneNumberFormat.E164));
+    }
+
+    public static boolean isKontalkUser(User user){
+        return KONTALK_SERVER.contains(XmppStringUtils.parseDomain(user.getJID()));
     }
 }

@@ -22,11 +22,10 @@ import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.label.WebVerticalLabel;
 import com.alee.extended.painter.BorderPainter;
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.extended.panel.WebOverlay;
-import com.alee.laf.button.WebButton;
-import com.alee.laf.checkbox.WebCheckBox;
+import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.label.WebLabel;
-import com.alee.laf.list.WebList;
 import com.alee.laf.menu.WebMenu;
 import com.alee.laf.menu.WebMenuBar;
 import com.alee.laf.menu.WebMenuItem;
@@ -35,17 +34,17 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextArea;
-import com.alee.laf.text.WebTextField;
 import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.popup.PopupAdapter;
+import com.alee.managers.popup.WebPopup;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.WebUtils;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Frame;
 import java.awt.GridLayout;
 import java.awt.SystemTray;
@@ -54,18 +53,10 @@ import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import javax.swing.Icon;
-import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import org.kontalk.system.Config;
 import org.kontalk.Kontalk;
 import org.kontalk.system.Control;
@@ -80,33 +71,35 @@ final class MainFrame extends WebFrame {
     static enum Tab {THREADS, USER};
 
     private final View mView;
-    private final Config mConf = Config.getInstance();
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
+    private final WebToggleButton mAddUserButton;
+    private WebPopup mAddUserPopup = new WebPopup();
 
     MainFrame(final View view,
-            TableView<?, ?> userList,
-            TableView<?, ?> threadList,
-            ThreadView threadView,
-            Component sendTextField,
-            Component sendButton,
+            Table<?, ?> userList,
+            Table<?, ?> threadList,
+            Component content,
+            Component searchPanel,
             Component statusBar) {
         mView = view;
 
+        final Config conf = Config.getInstance();
+
         // general view + behaviour
         this.setTitle("Kontalk Java Client");
-        this.setSize(mConf.getInt(Config.VIEW_FRAME_WIDTH),
-                mConf.getInt(Config.VIEW_FRAME_HEIGHT));
+        this.setSize(conf.getInt(Config.VIEW_FRAME_WIDTH),
+                conf.getInt(Config.VIEW_FRAME_HEIGHT));
 
-        this.setIconImage(View.getImage("kontalk.png"));
+        this.setIconImage(Utils.getImage("kontalk.png"));
 
         // closing behaviour
         this.setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         this.addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(WindowEvent e) {
-                if (mConf.getBoolean(Config.MAIN_TRAY_CLOSE) &&
+                if (conf.getBoolean(Config.MAIN_TRAY_CLOSE) &&
                         SystemTray.getSystemTray().getTrayIcons().length > 0)
                     MainFrame.this.toggleState();
                 else
@@ -127,7 +120,7 @@ final class MainFrame extends WebFrame {
         mConnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.callConnect();
+                mView.getControl().connect();
             }
         });
         konNetMenu.add(mConnectMenuItem);
@@ -138,7 +131,7 @@ final class MainFrame extends WebFrame {
         mDisconnectMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.callDisconnect();
+                mView.getControl().disconnect();
             }
         });
         konNetMenu.add(mDisconnectMenuItem);
@@ -150,7 +143,7 @@ final class MainFrame extends WebFrame {
         statusMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                WebDialog statusDialog = new StatusDialog();
+                WebDialog statusDialog = new ComponentUtils.StatusDialog(mView);
                 statusDialog.setVisible(true);
             }
         });
@@ -189,6 +182,15 @@ final class MainFrame extends WebFrame {
         WebMenu helpMenu = new WebMenu(Tr.tr("Help"));
         helpMenu.setMnemonic(KeyEvent.VK_H);
 
+        WebMenuItem wikiItem = new WebMenuItem(Tr.tr("Online wiki"));
+        wikiItem.setToolTipText(Tr.tr("Visit the wiki"));
+        wikiItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                WebUtils.browseSiteSafely(Tr.getLocalizedWikiLink());
+            }
+        });
+        helpMenu.add(wikiItem);
         WebMenuItem aboutMenuItem = new WebMenuItem(Tr.tr("About"));
         aboutMenuItem.setToolTipText(Tr.tr("About Kontalk"));
         aboutMenuItem.addActionListener(new ActionListener() {
@@ -202,49 +204,41 @@ final class MainFrame extends WebFrame {
         menubar.add(helpMenu);
 
         // Layout...
-        this.setLayout(new BorderLayout(5, 5));
+        this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
 
         // ...left...
         WebPanel sidePanel = new WebPanel(false);
-        WebPanel searchPanel = createSearchPanel(new TableView[]{threadList, userList}, threadView);
         sidePanel.add(searchPanel, BorderLayout.NORTH);
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-        WebButton newThreadButton = new WebButton(Tr.tr("New"));
-        newThreadButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // TODO new thread button
-            }
-        });
         //String threadOverlayText =
         //        Tr.t/r("No chats to display. You can create a new chat from your contacts");
-        WebScrollPane threadPane = createTablePane(threadList,
-                newThreadButton,
-                "threadOverlayText");
+        WebScrollPane threadPane = createTablePane(threadList, "threadOverlayText");
         mTabbedPane.addTab("", threadPane);
         mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
-        WebButton newUserButton = new WebButton(Tr.tr("Add"));
-        newUserButton.addActionListener(new ActionListener() {
+        //String userOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
+        WebScrollPane userPane = createTablePane(userList, "userOverlayText");
+        mAddUserButton = new WebToggleButton(
+                Utils.getIcon("ic_ui_add.png"));
+        TooltipManager.addTooltip(mAddUserButton, Tr.tr("Add a new Contact"));
+        mAddUserButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                WebDialog addUserDialog = new AddUserDialog();
-                addUserDialog.setVisible(true);
+                if (!MainFrame.this.mAddUserPopup.isShowing())
+                    MainFrame.this.showAddUserPopup(mAddUserButton);
             }
         });
-        //String userOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
-        WebScrollPane userPane = createTablePane(userList,
-                newUserButton,
-                "userOverlayText");
-        mTabbedPane.addTab("", userPane);
+        mTabbedPane.addTab("", new GroupPanel(GroupingType.fillFirst, false,
+                userPane, mAddUserButton));
+
         mTabbedPane.setTabComponentAt(Tab.USER.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         mTabbedPane.setPreferredSize(new Dimension(250, -1));
         mTabbedPane.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
-                mView.showThread(mTabbedPane.getSelectedIndex() != Tab.USER.ordinal());
+                mView.tabPaneChanged(Tab.values()[mTabbedPane.getSelectedIndex()]);
             }
         });
 
@@ -252,17 +246,14 @@ final class MainFrame extends WebFrame {
         this.add(sidePanel, BorderLayout.WEST);
 
         // ...right...
-        WebPanel bottomPanel = new WebPanel();
-        WebScrollPane textFieldScrollPane = new ScrollPane(sendTextField);
-        bottomPanel.add(textFieldScrollPane, BorderLayout.CENTER);
-        bottomPanel.add(sendButton, BorderLayout.EAST);
-        bottomPanel.setMinimumSize(new Dimension(0, 32));
-        WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT, threadView, bottomPanel);
-        splitPane.setResizeWeight(1.0);
-        this.add(splitPane, BorderLayout.CENTER);
+        this.add(content, BorderLayout.CENTER);
 
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);
+    }
+
+    public Tab getCurrentTab() {
+        return Tab.values()[mTabbedPane.getSelectedIndex()];
     }
 
     void selectTab(Tab tab) {
@@ -270,8 +261,9 @@ final class MainFrame extends WebFrame {
     }
 
     void save() {
-        mConf.setProperty(Config.VIEW_FRAME_WIDTH, this.getWidth());
-        mConf.setProperty(Config.VIEW_FRAME_HEIGHT, this.getHeight());
+        Config conf = Config.getInstance();
+        conf.setProperty(Config.VIEW_FRAME_WIDTH, this.getWidth());
+        conf.setProperty(Config.VIEW_FRAME_HEIGHT, this.getHeight());
     }
 
     void toggleState() {
@@ -284,7 +276,7 @@ final class MainFrame extends WebFrame {
         }
     }
 
-    final void statusChanged(Control.Status status) {
+    final void onStatusChanged(Control.Status status) {
         switch (status) {
             case CONNECTING:
                 mConnectMenuItem.setEnabled(false);
@@ -292,9 +284,11 @@ final class MainFrame extends WebFrame {
             case CONNECTED:
                 mConnectMenuItem.setEnabled(false);
                 mDisconnectMenuItem.setEnabled(true);
+                mAddUserButton.setEnabled(true);
                 break;
             case DISCONNECTING:
                 mDisconnectMenuItem.setEnabled(false);
+                mAddUserButton.setEnabled(false);
                 break;
             case DISCONNECTED:
                 // fallthrough
@@ -308,7 +302,7 @@ final class MainFrame extends WebFrame {
     }
 
     private void showAboutDialog() {
-        WebPanel aboutPanel = new WebPanel(new GridLayout(0, 1, 5, 5));
+        WebPanel aboutPanel = new WebPanel(new GridLayout(0, 1, View.GAP_SMALL, View.GAP_SMALL));
         aboutPanel.add(new WebLabel("Kontalk Java Client v" + Kontalk.VERSION));
         WebLinkLabel linkLabel = new WebLinkLabel();
         linkLabel.setLink("http://www.kontalk.org");
@@ -316,7 +310,7 @@ final class MainFrame extends WebFrame {
         aboutPanel.add(linkLabel);
         WebLabel soundLabel = new WebLabel(Tr.tr("Notification sound by")+" FxProSound");
         aboutPanel.add(soundLabel);
-        Icon icon = View.getIcon("kontalk.png");
+        Icon icon = Utils.getIcon("kontalk.png");
         WebOptionPane.showMessageDialog(this,
                 aboutPanel,
                 Tr.tr("About"),
@@ -324,200 +318,21 @@ final class MainFrame extends WebFrame {
                 icon);
     }
 
-    private class StatusDialog extends WebDialog {
-
-        private final WebTextField mStatusField;
-        private final WebList mStatusList;
-
-        StatusDialog() {
-            this.setTitle(Tr.tr("Status"));
-            this.setResizable(false);
-            this.setModal(true);
-
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
-
-            String[] strings = mConf.getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
-            String currentStatus = "";
-            if (!stats.isEmpty())
-                currentStatus = stats.remove(0);
-
-            stats.remove("");
-
-            groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
-            mStatusField = new WebTextField(currentStatus, 30);
-            groupPanel.add(mStatusField);
-            groupPanel.add(new WebSeparator(true, true));
-
-            groupPanel.add(new WebLabel(Tr.tr("Previously used:")));
-            mStatusList = new WebList(stats);
-            mStatusList.setMultiplySelectionAllowed(false);
-            mStatusList.addListSelectionListener(new ListSelectionListener() {
-                @Override
-                public void valueChanged(ListSelectionEvent e) {
-                    if (e.getValueIsAdjusting())
-                        return;
-                    mStatusField.setText(mStatusList.getSelectedValue().toString());
-                }
-            });
-            WebScrollPane listScrollPane = new ScrollPane(mStatusList);
-            groupPanel.add(listScrollPane);
-            this.add(groupPanel, BorderLayout.CENTER);
-
-            // buttons
-            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    StatusDialog.this.dispose();
-                }
-            });
-            final WebButton saveButton = new WebButton(Tr.tr("Save"));
-            saveButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    StatusDialog.this.saveStatus();
-                    StatusDialog.this.dispose();
-                }
-            });
-            this.getRootPane().setDefaultButton(saveButton);
-
-            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
-            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
-            this.add(buttonPanel, BorderLayout.SOUTH);
-
-            this.pack();
-        }
-
-        private void saveStatus() {
-            String newStatus = mStatusField.getText();
-
-            String[] strings = mConf.getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.asList(strings));
-
-            stats.remove(newStatus);
-
-            stats.add(0, newStatus);
-
-            if (stats.size() > 20)
-                stats = stats.subList(0, 20);
-
-            mConf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
-            mView.callSendStatusText();
-        }
-    }
-
-    private class AddUserDialog extends WebDialog {
-
-        private final WebTextField mNameField;
-        private final WebTextField mJIDField;
-        private final WebCheckBox mEncryptionBox;
-
-        AddUserDialog() {
-            this.setTitle(Tr.tr("Add New Contact"));
-            //this.setSize(400, 280);
-            this.setResizable(false);
-            this.setModal(true);
-
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
-
-            // editable fields
-            WebPanel namePanel = new WebPanel();
-            namePanel.setLayout(new BorderLayout(10, 5));
-            namePanel.add(new WebLabel(Tr.tr("Display Name:")), BorderLayout.WEST);
-            mNameField = new WebTextField();
-            namePanel.add(mNameField, BorderLayout.CENTER);
-            groupPanel.add(namePanel);
-            groupPanel.add(new WebSeparator(true, true));
-
-            mEncryptionBox = new WebCheckBox(Tr.tr("Encryption"));
-            mEncryptionBox.setAnimated(false);
-            mEncryptionBox.setSelected(true);
-            groupPanel.add(mEncryptionBox);
-            groupPanel.add(new WebSeparator(true, true));
-
-            groupPanel.add(new WebLabel("JID:"));
-            mJIDField = new WebTextField(38);
-            groupPanel.add(mJIDField);
-            groupPanel.add(new WebSeparator(true, true));
-
-            this.add(groupPanel, BorderLayout.CENTER);
-
-            // buttons
-            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    AddUserDialog.this.dispose();
-                }
-            });
-            final WebButton saveButton = new WebButton(Tr.tr("Save"));
-            saveButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    AddUserDialog.this.saveUser();
-                    AddUserDialog.this.dispose();
-                }
-            });
-
-            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
-            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
-            this.add(buttonPanel, BorderLayout.SOUTH);
-
-            this.pack();
-        }
-
-        private void saveUser() {
-            mView.callCreateNewUser(mJIDField.getText(),
-                    mNameField.getText(),
-                    mEncryptionBox.isSelected());
-        }
-    }
-
-    private static WebPanel createSearchPanel(final TableView[] tables, final ThreadView threadView) {
-        WebPanel searchPanel = new WebPanel();
-        final WebTextField searchField = new WebTextField();
-        searchField.setInputPrompt(Tr.tr("Search..."));
-        searchField.getDocument().addDocumentListener(new DocumentListener() {
+    private void showAddUserPopup(final WebToggleButton invoker) {
+        mAddUserPopup = new WebPopup();
+        mAddUserPopup.setCloseOnFocusLoss(true);
+        mAddUserPopup.addPopupListener(new PopupAdapter() {
             @Override
-            public void insertUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            @Override
-            public void removeUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            @Override
-            public void changedUpdate(DocumentEvent e) {
-                this.filterList();
-            }
-            private void filterList() {
-                String searchText = searchField.getText();
-                for (TableView table : tables)
-                    table.filterItems(searchText);
-                threadView.filterCurrentList(searchText);
+            public void popupWillBeClosed() {
+                invoker.doClick();
             }
         });
-        Icon clearIcon = View.getIcon("ic_ui_clear.png");
-        WebButton clearSearchButton = new WebButton(clearIcon);
-        clearSearchButton.setUndecorated(true);
-        clearSearchButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                searchField.clear();
-            }
-        });
-        searchField.setTrailingComponent(clearSearchButton);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        // TODO add new button
-        //searchPanel.add(newButton, BorderLayout.EAST);
-        return searchPanel;
+        mAddUserPopup.add(new ComponentUtils.AddUserPanel(mView, this));
+        //mPopup.packPopup();
+        mAddUserPopup.showAsPopupMenu(invoker);
     }
 
-    private static WebScrollPane createTablePane(final TableView<?, ?> table,
-            Component newButton,
+    private static WebScrollPane createTablePane(final Table<?, ?> table,
             String overlayText) {
 
         WebScrollPane scrollPane = new ScrollPane(table);
@@ -528,7 +343,7 @@ final class MainFrame extends WebFrame {
         overlayArea.setText(overlayText);
         overlayArea.setLineWrap(true);
         overlayArea.setWrapStyleWord(true);
-        overlayArea.setMargin(10);
+        overlayArea.setMargin(View.MARGIN_DEFAULT);
         overlayArea.setFontSize(15);
         overlayArea.setEditable(false);
         BorderPainter<WebTextArea> borderPainter = new BorderPainter<>(Color.LIGHT_GRAY);

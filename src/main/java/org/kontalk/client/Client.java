@@ -41,6 +41,7 @@ import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
@@ -54,6 +55,7 @@ import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.User;
 import org.kontalk.system.Control;
+import org.kontalk.util.XMPPUtils;
 
 /**
  * Network client for an XMPP Kontalk Server.
@@ -64,9 +66,9 @@ import org.kontalk.system.Control;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Client implements StanzaListener, Runnable {
-    private final static Logger LOGGER = Logger.getLogger(Client.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
-    private final static LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
+    private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
     private static enum Command {CONNECT, DISCONNECT};
 
@@ -111,7 +113,7 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
         // packet listeners
-        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), this, mControl);
+        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), mControl);
         Roster.getInstanceFor(mConn).addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
@@ -169,6 +171,7 @@ public final class Client implements StanzaListener, Runnable {
                 mConn.login();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login", ex);
+                mConn.disconnect();
                 mControl.setStatus(Control.Status.FAILED);
                 mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
                 return;
@@ -176,7 +179,6 @@ public final class Client implements StanzaListener, Runnable {
         }
 
         mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
-
 
         this.sendInitialPresence();
 
@@ -200,7 +202,7 @@ public final class Client implements StanzaListener, Runnable {
      * logged in
      */
     public String getOwnJID() {
-        return mConn == null || !mConn.isAuthenticated() ? "" : mConn.getUser();
+        return !this.isConnected() ? "" : mConn.getUser();
     }
 
     public void sendMessage(OutMessage message) {
@@ -209,8 +211,13 @@ public final class Client implements StanzaListener, Runnable {
         assert status == Status.PENDING || status == Status.ERROR;
         message.setStatus(Status.PENDING);
 
-        if (mConn == null || !mConn.isAuthenticated()) {
+        if (!this.isConnected()) {
             LOGGER.info("not sending message, not connected");
+            return;
+        }
+
+        if (!XMPPUtils.isValid(message.getJID())) {
+            LOGGER.warning("not sending message, invalid JID: "+message.getJID());
             return;
         }
 
@@ -259,7 +266,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendBlockingCommand(String jid, boolean blocking) {
-        if (mConn == null || !mConn.isAuthenticated()) {
+        if (!this.isConnected()) {
             LOGGER.warning("not sending blocking command, not connected");
             return;
         }
@@ -318,20 +325,51 @@ public final class Client implements StanzaListener, Runnable {
         LOGGER.info("got packet (unhandled): "+packet.toXML());
     }
 
-    public void addToRoster(User user) {
-        Roster roster = Roster.getInstanceFor(mConn);
+    public boolean addToRoster(User user) {
+        if (!this.isConnected()) {
+            LOGGER.info("can't add user to roster, not connected");
+            return false;
+        }
+
         String rosterName = user.getName();
         if (rosterName.isEmpty())
             rosterName = XmppStringUtils.parseLocalpart(rosterName);
         try {
             // also sends presence subscription request
-            roster.createEntry(user.getJID(), rosterName, null);
+            Roster.getInstanceFor(mConn).createEntry(user.getJID(), rosterName,
+                    null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
                 SmackException.NotConnectedException ex) {
             LOGGER.log(Level.WARNING, "can't add user to roster", ex);
+            return false;
         }
+        return true;
+    }
+
+    public boolean removeFromRoster(User user) {
+        if (!this.isConnected()) {
+            LOGGER.info("can't remove user from roster, not connected");
+            return false;
+        }
+        Roster roster = Roster.getInstanceFor(mConn);
+        RosterEntry entry = roster.getEntry(user.getJID());
+        if (entry == null) {
+            LOGGER.warning("can't find roster entry for user: "+user);
+            return true;
+        }
+        try {
+            // blocking
+            roster.removeEntry(entry);
+        } catch (SmackException.NotLoggedInException |
+                SmackException.NoResponseException |
+                XMPPException.XMPPErrorException |
+                SmackException.NotConnectedException ex) {
+            LOGGER.log(Level.WARNING, "can't remove user from roster", ex);
+            return false;
+        }
+        return true;
     }
 
     @Override
@@ -354,6 +392,10 @@ public final class Client implements StanzaListener, Runnable {
                     break;
             }
         }
+    }
+
+    public boolean isConnected() {
+        return mConn != null && mConn.isAuthenticated();
     }
 
     private static class Task {

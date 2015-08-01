@@ -42,7 +42,7 @@ import org.kontalk.util.EncodingUtils;
  * Personal asymmetric encryption key.
  */
 public final class PersonalKey {
-    private final static Logger LOGGER = Logger.getLogger(PersonalKey.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(PersonalKey.class.getName());
 
     /** (Server) Authentication key. */
     private final PGPKeyPair mAuthKey;

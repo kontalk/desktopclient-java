@@ -30,23 +30,24 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
+import org.kontalk.util.XMPPUtils;
 
 /**
- * The global list of all contacts known.
+ * Global list of all contacts.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class UserList extends Observable {
-    private final static Logger LOGGER = Logger.getLogger(UserList.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(UserList.class.getName());
 
-    private final static UserList INSTANCE = new UserList();
+    private static final UserList INSTANCE = new UserList();
 
     /** JID to user. */
     private final HashMap<String, User> mJIDMap = new HashMap<>();
     /** Database ID to user. */
     private final HashMap<Integer, User> mIDMap = new HashMap<>();
 
-    private UserList() {
-    }
+    private UserList() {}
 
     public void load() {
         Database db = Database.getInstance();
@@ -72,31 +73,65 @@ public final class UserList extends Observable {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load users from db", ex);
         }
-        this.changed();
-    }
-
-    public synchronized SortedSet<User> getAll() {
-        return new TreeSet<>(mJIDMap.values());
+        this.changed(null);
     }
 
     /**
-     * Add a new user to the list.
+     * Return all but deleted user.
+     */
+    public synchronized SortedSet<User> getAll() {
+        SortedSet<User> user = new TreeSet<>();
+        for (User u : mJIDMap.values())
+            if (!u.isDeleted())
+                user.add(u);
+        return user;
+    }
+
+    /**
+     * Create and add a new user.
      * @param jid JID of new user
      * @param name nickname of new user, use an empty string if not known
      * @return the newly created user, if one was created
      */
-    public synchronized Optional<User> add(String jid, String name) {
-        jid = XmppStringUtils.parseBareJid(jid);
-        if (mJIDMap.containsKey(jid)) {
-            LOGGER.warning("user already exists, jid: "+jid);
+    public synchronized Optional<User> createUser(String jid, String name) {
+        if (!this.isValid(jid))
             return Optional.empty();
-        }
+
         User newUser = new User(jid, name);
-        mJIDMap.put(jid, newUser);
+        if (newUser.getID() < 1)
+            return Optional.empty();
+
+        mJIDMap.put(newUser.getJID(), newUser);
         mIDMap.put(newUser.getID(), newUser);
-        this.save();
-        this.changed();
+
+        this.changed(newUser);
         return Optional.of(newUser);
+    }
+
+    public synchronized void changeJID(User user, String jid) {
+        if (!this.isValid(jid))
+            return;
+
+        mJIDMap.put(jid, user);
+        mJIDMap.remove(user.getJID());
+        user.setJID(jid);
+
+        this.changed(user);
+    }
+
+    private boolean isValid(String jid) {
+        jid = XmppStringUtils.parseBareJid(jid);
+        if (!XMPPUtils.isValid(jid)) {
+            LOGGER.warning("invalid jid: "+jid);
+            return false;
+        }
+
+        if (mJIDMap.containsKey(jid)) {
+            LOGGER.warning("jid already exists: "+jid);
+            return false;
+        }
+
+        return true;
     }
 
     public synchronized void save() {
@@ -110,6 +145,15 @@ public final class UserList extends Observable {
         if (!optUser.isPresent())
             LOGGER.warning("can't find user with ID: "+id);
         return optUser;
+    }
+
+    public synchronized void remove(User user) {
+        boolean removed = mJIDMap.remove(user.getJID(), user);
+        if (!removed) {
+            LOGGER.warning("can't find user to remove: "+user);
+        }
+        mIDMap.remove(user.getID());
+        this.changed(user);
     }
 
     /**
@@ -134,9 +178,9 @@ public final class UserList extends Observable {
         return mJIDMap.containsKey(jid);
     }
 
-    public synchronized void changed() {
+    private synchronized void changed(Object arg) {
         this.setChanged();
-        this.notifyObservers();
+        this.notifyObservers(arg);
     }
 
     public static UserList getInstance() {

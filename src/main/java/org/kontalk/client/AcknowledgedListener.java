@@ -27,13 +27,14 @@ import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.system.Control;
+import org.kontalk.system.Control.MessageIDs;
 
 /**
  * Listener for acknowledged packets (Stream Management, XEP-0198).
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class AcknowledgedListener implements StanzaListener {
-    private final static Logger LOGGER = Logger.getLogger(AcknowledgedListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(AcknowledgedListener.class.getName());
 
     private final Control mControl;
 
@@ -65,12 +66,7 @@ public final class AcknowledgedListener implements StanzaListener {
             return;
         }
 
-        String xmppID = p.getStanzaId();
-        if (xmppID == null || xmppID.isEmpty()) {
-            LOGGER.warning("acknowledged message has invalid XMPP ID: "+xmppID);
-            return;
-        }
-        mControl.setMessageStatus(xmppID, Status.SENT);
+        mControl.setMessageStatus(MessageIDs.from(m), Status.SENT);
     }
 
 }

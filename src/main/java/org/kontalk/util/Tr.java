@@ -19,8 +19,10 @@
 package org.kontalk.util;
 
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
@@ -36,12 +38,17 @@ import org.kontalk.Kontalk;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Tr {
-    private final static Logger LOGGER = Logger.getLogger(Tr.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Tr.class.getName());
 
-    private final static String DEFAULT_LANG = "en";
-    private final static String I18N_DIR = "i18n/";
-    private final static String STRING_FILE = "strings";
-    private final static String PROP_EXT = ".properties";
+    private static final String DEFAULT_LANG = "en";
+    private static final String I18N_DIR = "i18n/";
+    private static final String STRING_FILE = "strings";
+    private static final String PROP_EXT = ".properties";
+
+    private static final String WIKI_BASE = "https://github.com/kontalk/desktopclient-java/wiki";
+    private static final String WIKI_HOME = "Home";
+    private static final List<String> WIKI_LANGS = Arrays.asList("de");
+
 
     /** Map default (English) strings to translated strings. **/
     private static Map<String, String> TR_MAP = null;
@@ -103,5 +110,14 @@ public class Tr {
             }
             TR_MAP.put(stringKeys.getString(k), tr.getString(k));
         }
+    }
+
+    public static String getLocalizedWikiLink() {
+        String lang = Locale.getDefault().getLanguage();
+        if (WIKI_LANGS.contains(lang)) {
+            // damn URI decoding
+            return WIKI_BASE + "/%5B" + lang + "%5D-" + WIKI_HOME;
+        }
+        return WIKI_BASE;
     }
 }

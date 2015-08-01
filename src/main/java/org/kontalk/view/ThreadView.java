@@ -18,23 +18,17 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.panel.GroupPanel;
+import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.label.WebLabel;
-import com.alee.laf.list.UnselectableListModel;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
-import com.alee.laf.text.WebEditorPane;
-import com.alee.laf.text.WebTextPane;
+import com.alee.laf.scroll.WebScrollPane;
+import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.viewport.WebViewport;
-import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Desktop;
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -44,51 +38,21 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.Set;
-import java.util.logging.Logger;
-import java.util.logging.Level;
-import javax.swing.AbstractCellEditor;
-import javax.swing.Icon;
-import javax.swing.JTable;
+import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
-import javax.swing.table.TableCellEditor;
-import javax.swing.text.AbstractDocument;
-import javax.swing.text.BoxView;
-import javax.swing.text.ComponentView;
-import javax.swing.text.Element;
-import javax.swing.text.IconView;
-import javax.swing.text.LabelView;
-import javax.swing.text.ParagraphView;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledEditorKit;
-import javax.swing.text.ViewFactory;
-import org.kontalk.crypto.Coder;
-import org.kontalk.model.InMessage;
-import org.kontalk.model.KonMessage;
 import org.kontalk.model.KonThread;
-import org.kontalk.model.KonThread.KonChatState;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.User;
-import org.kontalk.system.Downloader;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 
@@ -96,33 +60,49 @@ import org.kontalk.util.Tr;
  * Pane that shows the currently selected thread.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ThreadView extends ScrollPane implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(ThreadView.class.getName());
-
-    private final static Icon PENDING_ICON = View.getIcon("ic_msg_pending.png");;
-    private final static Icon SENT_ICON = View.getIcon("ic_msg_sent.png");
-    private final static Icon DELIVERED_ICON = View.getIcon("ic_msg_delivered.png");
-    private final static Icon ERROR_ICON = View.getIcon("ic_msg_error.png");
-    private final static Icon WARNING_ICON = View.getIcon("ic_msg_warning.png");
-    private final static Icon CRYPT_ICON = View.getIcon("ic_msg_crypt.png");
-    private final static Icon UNENCRYPT_ICON = View.getIcon("ic_msg_unencrypt.png");
-
-    private final static SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
-    private final static SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
-    private final static SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
+final class ThreadView extends WebPanel implements Observer {
 
     private final View mView;
 
+    private final WebLabel mTitleLabel;
+    private final WebLabel mSubLabel;
+    private final WebScrollPane mScrollPane;
     private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
+    private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
 
-    ThreadView(View view) {
-        super(null);
+    ThreadView(View view, Component sendTextField, Component sendButton) {
         mView = view;
 
-        this.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
+        WebPanel titlePanel = new WebPanel(false,
+                new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
+        titlePanel.setMargin(View.MARGIN_DEFAULT);
+        mTitleLabel = new WebLabel();
+        mTitleLabel.setFontSize(16);
+        mTitleLabel.setDrawShade(true);
+        mSubLabel = new WebLabel();
+        mSubLabel.setFontSize(11);
+        mSubLabel.setForeground(Color.GRAY);
+        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel), BorderLayout.CENTER);
+
+        final WebToggleButton editButton = new WebToggleButton(
+                Utils.getIcon("ic_ui_menu.png"));
+        //editButton.setToolTipText(Tr.tr("Edit this chat"));
+        editButton.setTopBgColor(titlePanel.getBackground());
+        editButton.setBottomBgColor(titlePanel.getBackground());
+        editButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                    ThreadView.this.showPopup(editButton);
+            }
+        });
+        titlePanel.add(editButton, BorderLayout.EAST);
+        this.add(titlePanel, BorderLayout.NORTH);
+
+        mScrollPane = new ScrollPane(this);
+        mScrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
                 // this is not perfect at all: after adding all items, they still
@@ -135,8 +115,7 @@ final class ThreadView extends ScrollPane implements Observer {
                     e.getAdjustable().setValue(e.getAdjustable().getMaximum());
             }
         });
-
-        this.setViewport(new WebViewport() {
+        mScrollPane.setViewport(new WebViewport() {
             @Override
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
@@ -148,12 +127,23 @@ final class ThreadView extends ScrollPane implements Observer {
             }
         });
 
+        WebPanel bottomPanel = new WebPanel();
+        WebScrollPane textFieldScrollPane = new ScrollPane(sendTextField);
+        bottomPanel.add(textFieldScrollPane, BorderLayout.CENTER);
+        bottomPanel.add(sendButton, BorderLayout.EAST);
+        bottomPanel.setMinimumSize(new Dimension(0, 32));
+        WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT,
+                mScrollPane,
+                bottomPanel);
+        splitPane.setResizeWeight(1.0);
+        this.add(splitPane, BorderLayout.CENTER);
+
         this.loadDefaultBG();
     }
 
     private Optional<MessageList> getCurrentList() {
-        Component view = this.getViewport().getView();
-        if (view == null)
+        Component view = mScrollPane.getViewport().getView();
+        if (view == null || !(view instanceof MessageList))
             return Optional.empty();
         return Optional.of((MessageList) view);
     }
@@ -165,44 +155,43 @@ final class ThreadView extends ScrollPane implements Observer {
                 Optional.<KonThread>empty();
     }
 
-    void filterCurrentList(String searchText) {
+    void filterCurrentThread(String searchText) {
         Optional<MessageList> optList = this.getCurrentList();
         if (!optList.isPresent())
             return;
         optList.get().filterItems(searchText);
     }
 
-    /**
-     * Show messages in thread.
-     * @param thread thread to show, can be null.
-     */
     void showThread(KonThread thread) {
-        if (thread == null) {
-            this.getViewport().setView(null);
-        } else {
-            if (!mThreadCache.containsKey(thread.getID())) {
-                MessageList newMessageList = new MessageList(thread);
-                thread.addObserver(newMessageList);
-                mThreadCache.put(thread.getID(), newMessageList);
-            }
-            MessageList table = mThreadCache.get(thread.getID());
-            this.getViewport().setView(table);
-
-            thread.setRead();
+        List<User> user = new ArrayList<>(thread.getUser());
+        mTitleLabel.setText(user.size() == 1 ? Utils.name(user.get(0)) :
+                !thread.getSubject().isEmpty() ? thread.getSubject() :
+                Tr.tr("Group Chat"));
+        // TODO update
+        mSubLabel.setText(user.size() == 1 ?
+                Utils.mainStatus(user.get(0)) :
+                Utils.userNameList(thread.getUser()));
+        if (!mThreadCache.containsKey(thread.getID())) {
+            MessageList newMessageList = new MessageList(mView, this, thread);
+            thread.addObserver(newMessageList);
+            mThreadCache.put(thread.getID(), newMessageList);
         }
-        mView.checkSendButtonStatus();
+        MessageList list = mThreadCache.get(thread.getID());
+        mScrollPane.getViewport().setView(list);
+
+        thread.setRead();
     }
 
     void setColor(Color color) {
-        this.getViewport().setBackground(color);
+        mScrollPane.getViewport().setBackground(color);
     }
 
     void loadDefaultBG() {
         String imagePath = Config.getInstance().getString(Config.VIEW_THREAD_BG);
         mDefaultBG = !imagePath.isEmpty() ?
-                new Background(this.getViewport(), imagePath) :
-                new Background(this.getViewport());
-        this.getViewport().repaint();
+                new Background(mScrollPane.getViewport(), imagePath) :
+                new Background(mScrollPane.getViewport());
+        mScrollPane.getViewport().repaint();
     }
 
     private Background getCurrentBackground() {
@@ -213,6 +202,22 @@ final class ThreadView extends ScrollPane implements Observer {
         if (!optBG.isPresent())
             return mDefaultBG;
         return optBG.get();
+    }
+
+    Optional<Background> createBG(KonThread.ViewSettings s){
+        JViewport p = this.mScrollPane.getViewport();
+        if (s.getBGColor().isPresent()) {
+            Color c = s.getBGColor().get();
+            return Optional.of(new Background(p, c));
+        } else if (!s.getImagePath().isEmpty()) {
+            return Optional.of(new Background(p, s.getImagePath()));
+        } else {
+            return Optional.empty();
+        }
+    }
+
+    void setScrolling() {
+        mScrollDown = true;
     }
 
     @Override
@@ -240,484 +245,38 @@ final class ThreadView extends ScrollPane implements Observer {
                 thread.deleteObserver(viewList);
                 mThreadCache.remove(thread.getID());
                 if(this.getCurrentThread().orElse(null) == thread) {
-                    this.setViewportView(null);
+                    mScrollPane.setViewportView(null);
                 }
             }
         }
     }
 
-    /**
-     * View all messages of one thread in a left/right MIM style list.
-     */
-    private final class MessageList extends TableView<MessageList.MessageItem, KonMessage> {
+    private void showPopup(final WebToggleButton invoker) {
+        Optional<KonThread> optThread = ThreadView.this.getCurrentThread();
+        if (!optThread.isPresent())
+            return;
+        if (mPopup == null)
+            mPopup = new ComponentUtils.ModalPopup(invoker);
 
-        private final KonThread mThread;
-        private Optional<Background> mBackground = Optional.empty();
-
-        private MessageList(KonThread thread) {
-            super();
-            mThread = thread;
-
-            // use custom editor (for mouse events)
-            this.setDefaultEditor(TableView.TableItem.class, new TableEditor());
-
-            //this.setEditable(false);
-            //this.setAutoscrolls(true);
-            this.setOpaque(false);
-
-            // disable selection
-            this.setSelectionModel(new UnselectableListModel());
-
-            // actions triggered by mouse events
-            this.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    check(e);
-                }
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    check(e);
-                }
-                private void check(MouseEvent e) {
-                    if (e.isPopupTrigger()) {
-                        MessageList.this.showPopupMenu(e);
-                    }
-                }
-            });
-
-            this.setBackground(mThread.getViewSettings());
-
-            this.setVisible(false);
-            this.updateOnEDT(null);
-            this.setVisible(true);
-        }
-
-        KonThread getThread() {
-            return mThread;
-        }
-
-        Optional<Background> getBG() {
-            return mBackground;
-        }
-
-        @Override
-        protected void updateOnEDT(Object arg) {
-            if (arg instanceof Set ||
-                    arg instanceof String ||
-                    arg instanceof Boolean ||
-                    arg instanceof KonChatState) {
-                // users, subject, read status or chat state changed, nothing
-                // to do here
-                return;
-            }
-
-            if (arg instanceof KonThread.ViewSettings) {
-                this.setBackground((KonThread.ViewSettings) arg);
-                if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
-                    ThreadView.this.getViewport().repaint();
-                }
-                return;
-            }
-
-            if (arg instanceof KonMessage) {
-                this.insertMessage((KonMessage) arg);
-                return;
-            }
-
-            // check for new messages to add
-            if (this.getModel().getRowCount() < mThread.getMessages().size())
-                this.insertMessages();
-
-            if (ThreadView.this.getCurrentThread().orElse(null) == mThread) {
-                mThread.setRead();
-            }
-        }
-
-        private void insertMessages() {
-            Set<MessageItem> newItems = new HashSet<>();
-            for (KonMessage message: mThread.getMessages()) {
-                if (!this.containsValue(message)) {
-                    newItems.add(new MessageItem(message));
-                    // trigger scrolling
-                    mScrollDown = true;
-                }
-            }
-            this.sync(mThread.getMessages(), newItems);
-        }
-
-        private void insertMessage(KonMessage message) {
-            Set<MessageItem> newItems = new HashSet<>();
-            newItems.add(new MessageItem(message));
-            this.sync(mThread.getMessages(), newItems);
-            // trigger scrolling
-            mScrollDown = true;
-        }
-
-        private void showPopupMenu(MouseEvent e) {
-            int row = this.rowAtPoint(e.getPoint());
-            if (row < 0)
-                return;
-
-            MessageItem messageView = this.getDisplayedItemAt(row);
-            WebPopupMenu popupMenu = messageView.getPopupMenu();
-            popupMenu.show(this, e.getX(), e.getY());
-        }
-
-        private void setBackground(KonThread.ViewSettings s) {
-            JViewport p = ThreadView.this.getViewport();
-            // simply overwrite
-            if (s.getBGColor().isPresent()) {
-                Color c = s.getBGColor().get();
-                mBackground = Optional.of(new Background(p, c));
-            } else if (!s.getImagePath().isEmpty()) {
-                mBackground = Optional.of(new Background(p, s.getImagePath()));
-            } else {
-                mBackground = Optional.empty();
-            }
-        }
-
-        /**
-         * View for one message.
-         * The content is added to a panel inside this panel. For performance
-         * reasons the content is created when the item is rendered in the table
-         */
-        final class MessageItem extends TableView<MessageItem, KonMessage>.TableItem {
-
-            private WebLabel mFromLabel = null;
-            private WebPanel mContentPanel;
-            private WebTextPane mTextPane;
-            private WebPanel mStatusPanel;
-            private WebLabel mStatusIconLabel;
-            private int mPreferredTextWidth;
-            private boolean mCreated = false;
-
-            MessageItem(KonMessage message) {
-                super(message);
-
-                this.setOpaque(false);
-                this.setMargin(2);
-                //this.setBorder(new EmptyBorder(10, 10, 10, 10));
-            }
-
-            private void createContent() {
-                if (mCreated)
-                    return;
-                mCreated = true;
-
-                WebPanel messagePanel = new WebPanel(true);
-                messagePanel.setWebColoredBackground(false);
-                messagePanel.setMargin(2);
-                if (mValue.getDir().equals(KonMessage.Direction.IN))
-                    messagePanel.setBackground(Color.WHITE);
-                else
-                    messagePanel.setBackground(View.LIGHT_BLUE);
-
-                // from label
-                if (mValue.getDir().equals(KonMessage.Direction.IN)) {
-                    mFromLabel = new WebLabel();
-                    mFromLabel.setFontSize(12);
-                    mFromLabel.setForeground(Color.BLUE);
-                    mFromLabel.setItalicFont();
-                    messagePanel.add(mFromLabel, BorderLayout.NORTH);
-                }
-
-                mContentPanel = new WebPanel();
-                mContentPanel.setOpaque(false);
-                mContentPanel.setMargin(5);
-                // text area
-                mTextPane = new WebTextPane();
-                mTextPane.setEditable(false);
-                mTextPane.setOpaque(false);
-                //mTextPane.setFontSize(12);
-                // sets default font
-                mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
-                //for detecting clicks
-                mTextPane.addMouseListener(LinkUtils.CLICK_LISTENER);
-                //for detecting motion
-                mTextPane.addMouseMotionListener(LinkUtils.MOTION_LISTENER);
-                // fix word wrap for long words
-                mTextPane.setEditorKit(FIX_WRAP_KIT);
-                mContentPanel.add(mTextPane, BorderLayout.CENTER);
-                messagePanel.add(mContentPanel, BorderLayout.CENTER);
-
-                mStatusPanel = new WebPanel();
-                mStatusPanel.setOpaque(false);
-                TooltipManager.addTooltip(mStatusPanel, "???");
-                mStatusPanel.setLayout(new FlowLayout());
-                // icons
-                mStatusIconLabel = new WebLabel();
-
-                this.updateOnEDT(null);
-
-                // save the width that is requied to show the text in one line;
-                // before line wrap and only once!
-                mPreferredTextWidth = mTextPane.getPreferredSize().width;
-
-                mStatusPanel.add(mStatusIconLabel);
-                WebLabel encryptIconLabel = new WebLabel();
-                if (mValue.getCoderStatus().isSecure()) {
-                    encryptIconLabel.setIcon(CRYPT_ICON);
-                } else {
-                    encryptIconLabel.setIcon(UNENCRYPT_ICON);
-                }
-                mStatusPanel.add(encryptIconLabel);
-                // date label
-                WebLabel dateLabel = new WebLabel(SHORT_DATE_FORMAT.format(mValue.getDate()));
-                dateLabel.setForeground(Color.GRAY);
-                dateLabel.setFontSize(11);
-                mStatusPanel.add(dateLabel);
-
-                WebPanel southPanel = new WebPanel();
-                southPanel.setOpaque(false);
-                southPanel.add(mStatusPanel, BorderLayout.EAST);
-                messagePanel.add(southPanel, BorderLayout.SOUTH);
-
-                if (mValue.getDir().equals(KonMessage.Direction.IN)) {
-                    this.add(messagePanel, BorderLayout.WEST);
-                } else {
-                    this.add(messagePanel, BorderLayout.EAST);
-                }
-
-                mValue.getUser().addObserver(this);
-            }
-
-            @Override
-            protected void render(int listWidth, boolean isSelected) {
-                this.createContent();
-
-                // note: on the very first call the list width is zero
-                int maxWidth = (int)(listWidth * 0.8);
-                int width = Math.min(mPreferredTextWidth, maxWidth);
-                // height is reset later
-                mTextPane.setSize(width, -1);
-                // textArea does not need this but textPane does, and editorPane
-                // is again totally different; I love Swing
-                mTextPane.setPreferredSize(new Dimension(width, mTextPane.getMinimumSize().height));
-            }
-
-            /**
-             * Update what can change in a message: text, icon and attachment.
-             */
-            @Override
-            protected void updateOnEDT(Object arg) {
-                if (!mCreated)
-                    return;
-
-                if ((arg == null || arg instanceof User) && mFromLabel != null)
-                    mFromLabel.setText(" "+getFromString(mValue));
-
-                if (arg == null || arg instanceof String)
-                    this.updateText();
-
-                if (arg == null || arg instanceof KonMessage.Status)
-                    this.updateStatus();
-
-                if (arg == null || arg instanceof MessageContent.Attachment)
-                    this.updateAttachment();
-
-                // changes are not instantly painted
-                // TODO height problem for new messages again
-                MessageList.this.repaint();
-            }
-
-            // text in text area, before/after encryption
-            private void updateText() {
-                boolean encrypted = mValue.getCoderStatus().isEncrypted();
-                String text = encrypted ? Tr.tr("[encrypted]") : mValue.getContent().getText();
-                mTextPane.setFontStyle(false, encrypted);
-                //mTextPane.setText(text);
-                LinkUtils.linkify(mTextPane.getStyledDocument(), text);
-                // hide area if there is no text
-                mTextPane.setVisible(!text.isEmpty());
-            }
-
-            // status icon
-            private void updateStatus() {
-                String sent = Tr.tr("Sent:")+" ";
-                final String firstStat;
-                final Date firstDate;
-                String secStat = null;
-                final Date secDate;
-                if (mValue.getDir() == KonMessage.Direction.OUT) {
-                    firstStat = Tr.tr("Created:")+" ";
-                    firstDate = mValue.getDate();
-                    secDate = mValue.getServerDate().orElse(null);
-                    switch (mValue.getReceiptStatus()) {
-                        case PENDING :
-                            mStatusIconLabel.setIcon(PENDING_ICON);
-                            break;
-                        case SENT :
-                            mStatusIconLabel.setIcon(SENT_ICON);
-                            secStat = sent;
-                            break;
-                        case RECEIVED:
-                            mStatusIconLabel.setIcon(DELIVERED_ICON);
-                            secStat = Tr.tr("Delivered:")+" ";
-                            break;
-                        case ERROR:
-                            mStatusIconLabel.setIcon(ERROR_ICON);
-                            secStat = Tr.tr("Error report:")+" ";
-                            break;
-                        default:
-                            LOGGER.warning("unknown message receipt status!?");
-                    }
-                } else {
-                    firstStat = sent;
-                    firstDate = mValue.getServerDate().orElse(null);
-                    secStat = Tr.tr("Received:")+" ";
-                    secDate = mValue.getDate();
-                    if (!mValue.getCoderStatus().getErrors().isEmpty()) {
-                        mStatusIconLabel.setIcon(WARNING_ICON);
-                    }
-                }
-
-                // tooltip
-                String encryption = Tr.tr("unknown");
-                switch (mValue.getCoderStatus().getEncryption()) {
-                    case NOT: encryption = Tr.tr("not encrypted"); break;
-                    case ENCRYPTED: encryption = Tr.tr("encrypted"); break;
-                    case DECRYPTED: encryption = Tr.tr("decrypted"); break;
-                }
-                String verification = Tr.tr("unknown");
-                switch (mValue.getCoderStatus().getSigning()) {
-                    case NOT: verification = Tr.tr("not signed"); break;
-                    case SIGNED: verification = Tr.tr("signed"); break;
-                    case VERIFIED: verification = Tr.tr("verified"); break;
-                }
-                String problems = "";
-                for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
-                    problems += error.toString() + " <br> ";
-                }
-
-                String html = "<html><body>" + //"<h3>Header</h3>"+
-                        "<br>";
-                if (firstDate != null)
-                    html += firstStat + MID_DATE_FORMAT.format(firstDate) + "<br>";
-                if (secStat != null && secDate != null)
-                    html += secStat + MID_DATE_FORMAT.format(secDate) + "<br>";
-                html += Tr.tr("Security")+": " + encryption + " / " + verification + "<br>";
-                if (!problems.isEmpty())
-                    html += Tr.tr("Problems")+": " + problems;
-
-                // TODO temporary catching for tracing bug
-                try {
-                    TooltipManager.setTooltip(mStatusPanel, html);
-                } catch (NullPointerException ex) {
-                    LOGGER.log(Level.WARNING, "cant set tooltip", ex);
-                    LOGGER.warning("statusPanel="+mStatusPanel+",html="+html);
-                    LOGGER.warning("edt: "+SwingUtilities.isEventDispatchThread());
-                }
-            }
-
-            // attachment / image, note: loading many images is very slow
-            private void updateAttachment() {
-                // remove possible old component (replacing does not work right)
-                BorderLayout layout = (BorderLayout) mContentPanel.getLayout();
-                Component oldComp = layout.getLayoutComponent(BorderLayout.SOUTH);
-                if (oldComp != null)
-                    mContentPanel.remove(oldComp);
-
-                Optional<MessageContent.Attachment> optAttachment =
-                        mValue.getContent().getAttachment();
-                if (!optAttachment.isPresent())
-                    return;
-
-                Attachment att = optAttachment.get();
-                String base = Downloader.getInstance().getAttachmentDir();
-                String fName = att.getFileName();
-                Path path = Paths.get(base, fName);
-
-                // rely on mime type in message
-                if (!att.getFileName().isEmpty() &&
-                        att.getMimeType().startsWith("image")) {
-                    WebLinkLabel imageView = new WebLinkLabel();
-                    imageView.setLink("", createLinkRunnable(path));
-                    // file should be present and should be an image, show it
-                    ImageLoader.setImageIconAsync(imageView, path.toString());
-                    mContentPanel.add(imageView, BorderLayout.SOUTH);
-                    return;
-                }
-
-                // show a link to the file
-                WebLabel attLabel;
-                if (att.getFileName().isEmpty()) {
-                    String statusText = Tr.tr("loading...");
-                    switch (att.getDownloadProgress()) {
-                        case 0:
-                        case -2: statusText = Tr.tr("downloading..."); break;
-                        case -3: statusText = Tr.tr("download failed"); break;
-                    }
-                    attLabel = new WebLabel(statusText);
-                } else {
-                    WebLinkLabel linkLabel = new WebLinkLabel();
-                    linkLabel.setLink(fName, createLinkRunnable(path));
-                    attLabel = linkLabel;
-                }
-                WebLabel labelLabel = new WebLabel(Tr.tr("Attachment:")+" ");
-                labelLabel.setItalicFont();
-                GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
-                mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
-            }
-
-            private WebPopupMenu getPopupMenu() {
-                WebPopupMenu popupMenu = new WebPopupMenu();
-                if (mValue.getCoderStatus().isEncrypted()) {
-                    WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
-                    decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
-                    decryptMenuItem.addActionListener(new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent event) {
-                            KonMessage m = MessageItem.this.mValue;
-                            if (!(m instanceof InMessage)) {
-                                LOGGER.warning("decrypted message not incoming message");
-                                return;
-                            }
-                            ThreadView.this.mView.callDecrypt((InMessage) m);
-                        }
-                    });
-                    popupMenu.add(decryptMenuItem);
-                }
-                WebMenuItem cItem = View.createCopyMenuItem(
-                        this.toPrettyString(),
-                        Tr.tr("Copy message content"));
-                popupMenu.add(cItem);
-                return popupMenu;
-            }
-
-            private String toPrettyString() {
-                String date = LONG_DATE_FORMAT.format(mValue.getDate());
-                String from = getFromString(mValue);
-                return date + " - " + from + " : " + mValue.getContent().getText();
-            }
-
-            @Override
-            protected boolean contains(String search) {
-                return mValue.getContent().getText().toLowerCase().contains(search) ||
-                        mValue.getUser().getName().toLowerCase().contains(search) ||
-                        mValue.getJID().toLowerCase().contains(search);
-            }
-
-            @Override
-            protected void onRemove() {
-                mValue.getUser().deleteObserver(this);
-            }
-        }
+        mPopup.removeAll();
+        mPopup.add(new ThreadDetails(mPopup, optThread.get()));
+        mPopup.showPopup();
     }
 
     /** A background image of thread view with efficient async reloading. */
-    private final class Background implements ImageObserver {
+    final class Background implements ImageObserver {
         private final Component mParent;
         // background image from resource or user selected
         private final Image mOrigin;
         // background color, can be set by user
-        private final Color mBottomColor;
+        private final Color mCustomColor;
         // cached background with size of viewport
         private BufferedImage mCached = null;
 
         private Background(Component parent, Image origin, Color color) {
             mParent = parent;
             mOrigin = origin;
-            mBottomColor = color;
+            mCustomColor = color;
         }
 
         /** Default, no thread specific settings. */
@@ -788,10 +347,10 @@ final class ThreadView extends ScrollPane implements Observer {
             mCached = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
             Graphics2D cachedG = mCached.createGraphics();
             // gradient background of background
-            if (mBottomColor != null) {
+            if (mCustomColor != null) {
                 GradientPaint p2 = new GradientPaint(
-                        0, 0, new Color(0, 0, 0, 0),
-                        0, height, mBottomColor);
+                        0, 0, mCustomColor,
+                        width, 0, new Color(0, 0, 0, 0));
                 cachedG.setPaint(p2);
                 cachedG.fillRect(0, 0, width, ThreadView.this.getHeight());
             }
@@ -825,105 +384,6 @@ final class ThreadView extends ScrollPane implements Observer {
                 this.updateCachedBG(img);
                 mParent.repaint();
                 return false;
-            }
-        }
-    }
-
-    // needed for correct mouse behaviour for components in items
-    // (and breaks selection behaviour somehow)
-    private class TableEditor extends AbstractCellEditor implements TableCellEditor {
-        private TableView<?, ?>.TableItem mValue;
-        @Override
-        public Component getTableCellEditorComponent(JTable table,
-                Object value,
-                boolean isSelected,
-                int row,
-                int column) {
-            mValue = (TableView.TableItem) value;
-            return mValue;
-        }
-        @Override
-        public Object getCellEditorValue() {
-            return mValue;
-        }
-    }
-
-    private static String getFromString(KonMessage message) {
-        String from;
-        if (!message.getUser().getName().isEmpty()) {
-            from = message.getUser().getName();
-        } else {
-            from = message.getJID();
-            if (from.length() > 40)
-                from = from.substring(0, 8) + "...";
-        }
-        return from;
-    }
-
-    private static Runnable createLinkRunnable(final Path path) {
-        return new Runnable () {
-            @Override
-            public void run () {
-                Desktop dt = Desktop.getDesktop();
-                try {
-                    dt.open(new File(path.toString()));
-                } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
-                }
-            }
-        };
-    }
-
-    private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();
-
-    /**
-     * Fix for the infamous "Wrap long words" problem in Java 7+.
-     * Source: https://stackoverflow.com/a/13375811
-     */
-    private static class WrapEditorKit extends StyledEditorKit {
-        ViewFactory defaultFactory = new WrapColumnFactory();
-        @Override
-        public ViewFactory getViewFactory() {
-            return defaultFactory;
-        }
-
-        private static class WrapColumnFactory implements ViewFactory {
-            @Override
-            public javax.swing.text.View create(Element elem) {
-                String kind = elem.getName();
-                if (kind != null) {
-                    switch (kind) {
-                        case AbstractDocument.ContentElementName:
-                            return new WrapLabelView(elem);
-                        case AbstractDocument.ParagraphElementName:
-                            return new ParagraphView(elem);
-                        case AbstractDocument.SectionElementName:
-                            return new BoxView(elem, javax.swing.text.View.Y_AXIS);
-                        case StyleConstants.ComponentElementName:
-                            return new ComponentView(elem);
-                        case StyleConstants.IconElementName:
-                            return new IconView(elem);
-                    }
-                }
-                // default to text display
-                return new LabelView(elem);
-            }
-        }
-
-        private static class WrapLabelView extends LabelView {
-            public WrapLabelView(Element elem) {
-                super(elem);
-            }
-            @Override
-            public float getMinimumSpan(int axis) {
-                switch (axis) {
-                    case javax.swing.text.View.X_AXIS:
-                        return 0;
-                    case javax.swing.text.View.Y_AXIS:
-                        return super.getMinimumSpan(axis);
-                    default:
-                        throw new IllegalArgumentException("Invalid axis: " + axis);
-                }
             }
         }
     }

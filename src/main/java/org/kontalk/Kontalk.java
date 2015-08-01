@@ -33,11 +33,11 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
-import org.kontalk.model.MessageList;
 import org.kontalk.model.ThreadList;
 import org.kontalk.model.UserList;
 import org.kontalk.system.Config;
 import org.kontalk.system.Control;
+import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.CryptoUtils;
 import org.kontalk.util.Tr;
 import org.kontalk.view.View;
@@ -46,11 +46,11 @@ import org.kontalk.view.View;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Kontalk {
-    private final static Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
-    public final static String VERSION = "3.0.1";
-    public final static String RES_PATH = "res/";
-    private final static String CONFIG_DIR;
+    public static final String VERSION = "3.0.1";
+    public static final String RES_PATH = "res/";
+    private static final String CONFIG_DIR;
 
     private static ServerSocket RUN_LOCK;
 
@@ -119,7 +119,7 @@ public final class Kontalk {
     public void start() {
         Config.initialize(CONFIG_DIR + "/" + Config.CONF_NAME);
 
-        Control control = new Control();
+        ViewControl control = Control.create();
 
         Optional<View> optView = View.create(control);
         if (!optView.isPresent()) {
@@ -139,7 +139,6 @@ public final class Kontalk {
         // order matters!
         UserList.getInstance().load();
         ThreadList.getInstance().load();
-        MessageList.getInstance().load();
 
         view.init();
 

@@ -31,12 +31,12 @@ import org.kontalk.system.Control;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class KonConnectionListener implements ConnectionListener {
-    private final static Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());
+final class KonConnectionListener implements ConnectionListener {
+    private static final Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());
 
     private final Control mControl;
 
-    public KonConnectionListener(Control control) {
+    KonConnectionListener(Control control) {
         mControl = control;
     }
 

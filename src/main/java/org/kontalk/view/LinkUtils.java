@@ -45,15 +45,15 @@ import javax.swing.text.StyledDocument;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class LinkUtils {
-    private final static Logger LOGGER = Logger.getLogger(LinkUtils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(LinkUtils.class.getName());
 
-    final static TextClickListener CLICK_LISTENER = new TextClickListener();
-    final static TextMotionListener MOTION_LISTENER = new TextMotionListener();
+    static final TextClickListener CLICK_LISTENER = new TextClickListener();
+    static final TextMotionListener MOTION_LISTENER = new TextMotionListener();
 
-    private final static Style DEFAULT_STYLE
+    private static final Style DEFAULT_STYLE
             = StyleContext.getDefaultStyleContext().getStyle(StyleContext.DEFAULT_STYLE);
     /** Undoubtedly the best URL regex ever made. */
-    private final static Pattern URL_PATTERN = Pattern.compile(
+    private static final Pattern URL_PATTERN = Pattern.compile(
             "(http[s]?://)?" + // scheme
             "(\\w+(-+\\w+)*\\.)+" + // sub- and host-level(s)
             "[a-zA]{2,}" + // TLD
@@ -62,7 +62,7 @@ final class LinkUtils {
             "(\\#[^\\s?#]*)*", // fragment
             Pattern.CASE_INSENSITIVE);
 
-    private final static String URL_ATT_NAME = "URL";
+    private static final String URL_ATT_NAME = "URL";
 
     static void linkify(StyledDocument doc, String text) {
         // style for all links in a document

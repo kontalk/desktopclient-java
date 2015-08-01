@@ -28,6 +28,7 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebPasswordField;
+import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -42,7 +43,6 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.kontalk.misc.KonException;
 import org.kontalk.system.AccountLoader;
@@ -53,7 +53,7 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ImportDialog extends WebDialog {
-    private final static Logger LOGGER = Logger.getLogger(ImportDialog.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ImportDialog.class.getName());
 
     private static enum ImportPage {INTRO, SETTINGS, RESULT};
     private static enum Direction {BACK, FORTH};
@@ -78,10 +78,12 @@ final class ImportDialog extends WebDialog {
         mConnect = connect;
 
         this.setTitle(Tr.tr("Import Wizard"));
-        this.setSize(420, 260);
+        this.setSize(420, 300);
 
         this.setResizable(false);
         this.setModal(true);
+
+        this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
 
         // buttons
         mBackButton = new WebButton(Tr.tr("Back"));
@@ -114,7 +116,8 @@ final class ImportDialog extends WebDialog {
         });
         mFinishButton.setVisible(false);
 
-        GroupPanel buttonPanel = new GroupPanel(2, mBackButton, mNextButton, mCancelButton, mFinishButton);
+        GroupPanel buttonPanel = new GroupPanel(mBackButton, mNextButton,
+                mCancelButton, mFinishButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
 
@@ -157,8 +160,8 @@ final class ImportDialog extends WebDialog {
     private class IntroPanel extends ImportPanel {
 
         IntroPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Get Started")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -187,8 +190,8 @@ final class ImportDialog extends WebDialog {
         private final WebPasswordField mPassField;
 
         SettingsPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Setup")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -211,17 +214,9 @@ final class ImportDialog extends WebDialog {
             mPassField = new WebPasswordField(42);
             mPassField.setInputPrompt(Tr.tr("Enter password..."));
             mPassField.setHideInputPromptOnFocus(false);
-            mPassField.getDocument().addDocumentListener(new DocumentListener() {
+            mPassField.getDocument().addDocumentListener(new DocumentChangeListener() {
                 @Override
-                public void insertUpdate(DocumentEvent e) {
-                    SettingsPanel.this.checkNextButton();
-                }
-                @Override
-                public void removeUpdate(DocumentEvent e) {
-                    SettingsPanel.this.checkNextButton();
-                }
-                @Override
-                public void changedUpdate(DocumentEvent e) {
+                public void documentChanged(DocumentEvent e) {
                     SettingsPanel.this.checkNextButton();
                 }
             });
@@ -266,11 +261,11 @@ final class ImportDialog extends WebDialog {
 
         private final WebLabel mResultLabel;
         private final WebLabel mErrorLabel;
-        private final View.PassPanel mPassPanel;
+        private final ComponentUtils.PassPanel mPassPanel;
 
         ResultPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Import results")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -280,7 +275,7 @@ final class ImportDialog extends WebDialog {
             mErrorLabel = new WebLabel();
             groupPanel.add(mErrorLabel);
 
-            mPassPanel = new View.PassPanel(false) {
+            mPassPanel = new ComponentUtils.PassPanel(false) {
                 @Override
                 void onValidInput() {
                     mFinishButton.setEnabled(true);
@@ -305,7 +300,7 @@ final class ImportDialog extends WebDialog {
             try {
                 AccountLoader.getInstance().importAccount(mZipPath, mPasswd);
             } catch (KonException ex) {
-                errorText = View.getErrorText(ex);
+                errorText = Utils.getErrorText(ex);
             }
 
             mPassPanel.setVisible(errorText == null);
@@ -341,7 +336,7 @@ final class ImportDialog extends WebDialog {
             }
             ImportDialog.this.dispose();
             if (mConnect)
-                mView.callConnect();
+                mView.getControl().connect();
         }
     }
 

@@ -21,7 +21,6 @@ package org.kontalk.model;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -32,8 +31,6 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -47,7 +44,7 @@ import org.kontalk.system.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class KonThread extends Observable implements Comparable<KonThread>, Observer {
-    private final static Logger LOGGER = Logger.getLogger(KonThread.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonThread.class.getName());
 
     public static final String TABLE = "threads";
     public static final String COL_SUBJ = "subject";
@@ -77,13 +74,9 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
     private final int mID;
     private final String mXMPPID;
-    /**
-     * Messages of thread.
-     * remember that KonMessage's natural ordering is not consistent with equals
-     */
-    private final SortedSet<KonMessage> mSet =
-            Collections.synchronizedSortedSet(new TreeSet<KonMessage>());
+    private final ThreadMessages mMessages;
     private final HashMap<User, KonChatState> mUserMap = new HashMap<>();
+
     private String mSubject;
     private boolean mRead;
     private ViewSettings mViewSettings;
@@ -97,14 +90,12 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         this.setUserMap(user);
         if (user.size() > 1){
             mSubject = "New group chat";
-        } else if (user.size() == 1 &&
-                !user.iterator().next().getName().isEmpty()) {
-            mSubject = user.iterator().next().getName();
         } else {
             mSubject = "";
         }
         mRead = true;
         mViewSettings = new ViewSettings();
+        mMessages = new ThreadMessages(this);
 
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
@@ -137,10 +128,11 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         mSubject = subject;
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
+        mMessages = new ThreadMessages(this);
     }
 
-    public SortedSet<KonMessage> getMessages() {
-        return mSet;
+    public ThreadMessages getMessages() {
+        return mMessages;
     }
 
     public int getID() {
@@ -153,6 +145,15 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
     public Set<User> getUser() {
         return mUserMap.keySet();
+    }
+
+    /**
+     * Get user if there is only one.
+     */
+    public Optional<User> getSingleUser() {
+        return mUserMap.keySet().size() == 1 ?
+                Optional.of(mUserMap.keySet().iterator().next()) :
+                Optional.<User>empty();
     }
 
     public void setUser(Set<User> user) {
@@ -201,17 +202,19 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
         mViewSettings = settings;
         this.save();
-        this.setChanged();
-        this.notifyObservers(mViewSettings);
+        this.changed(mViewSettings);
     }
 
-    public void addMessage(KonMessage message) {
-        boolean added = this.add(message);
+    public boolean addMessage(KonMessage message) {
+        boolean added = mMessages.add(message);
         if (added) {
-            if (message.getDir() == KonMessage.Direction.IN)
+            if (message.getDir() == KonMessage.Direction.IN) {
                 mRead = false;
+                this.changed(mRead);
+            }
             this.changed(message);
         }
+        return added;
     }
 
     public void setChatState(User user, ChatState chatState) {
@@ -222,19 +225,6 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         }
         state.setState(chatState);
         this.changed(state);
-    }
-
-    /**
-     * Add message to thread without notifying other components.
-     */
-    boolean add(KonMessage message) {
-        // see KonMessage.equals()
-        if (mSet.contains(message)) {
-            LOGGER.warning("message already in thread, ID: " + message.getID());
-            return false;
-        }
-        boolean added = mSet.add(message);
-        return added;
     }
 
     void save() {
@@ -264,13 +254,11 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     void delete() {
-        // delete messages
-        for (KonMessage message : mSet) {
-            boolean deleted = message.delete();
-            if (!deleted) return;
-        }
-
         Database db = Database.getInstance();
+        // delete messages
+        db.execDeleteWhereInsecure(KonMessage.TABLE,
+                KonMessage.COL_THREAD_ID + " == " + mID);
+
         // delete receiver
         Map<Integer, Integer> dbReceiver = this.loadReceiver();
         for (int id : dbReceiver.values()) {
@@ -376,8 +364,8 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     public static class ViewSettings {
-        private final static String JSON_BG_COLOR = "bg_color";
-        private final static String JSON_IMAGE_PATH = "img";
+        private static final String JSON_BG_COLOR = "bg_color";
+        private static final String JSON_IMAGE_PATH = "img";
 
         // background color, if set
         private final Optional<Color> mOptColor;

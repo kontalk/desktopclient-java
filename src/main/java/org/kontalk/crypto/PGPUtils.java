@@ -60,7 +60,7 @@ import org.kontalk.util.EncodingUtils;
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
 public final class PGPUtils {
-    private final static Logger LOGGER = Logger.getLogger(PGPUtils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(PGPUtils.class.getName());
 
     /** Security provider: Bouncy Castle. */
     public static final String PROVIDER = "BC";
@@ -83,14 +83,15 @@ public final class PGPUtils {
         final PGPPublicKey signKey;
         public final String userID;
         public final String fingerprint;
+        public final byte[] rawKey;
 
-        public PGPCoderKey(PGPPublicKey encryptKey,
-                PGPPublicKey signKey,
-                String userID, String fingerprint) {
+        PGPCoderKey(PGPPublicKey encryptKey, PGPPublicKey signKey,
+                String userID, String fingerprint, byte[] rawKey) {
             this.encryptKey = encryptKey;
             this.signKey = signKey;
             this.userID = userID;
             this.fingerprint = fingerprint;
+            this.rawKey = rawKey;
         }
     }
 
@@ -148,7 +149,7 @@ public final class PGPUtils {
             LOGGER.warning("can't find public keys in key ring, uid: "+uid);
             return Optional.empty();
         }
-        return Optional.of(new PGPCoderKey(encryptKey, signKey, uid, fp));
+        return Optional.of(new PGPCoderKey(encryptKey, signKey, uid, fp, publicKeyring));
     }
 
     public static X509Certificate loadX509Cert(byte[] certData)

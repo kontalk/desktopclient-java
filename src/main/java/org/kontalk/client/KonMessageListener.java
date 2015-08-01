@@ -39,13 +39,14 @@ import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.system.Control;
+import org.kontalk.system.Control.MessageIDs;
 
 /**
  * Listen and handle all incoming XMPP message packets.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final public class KonMessageListener implements StanzaListener {
-    private final static Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
 
     // plain text body added by Android client
 
@@ -69,18 +70,14 @@ final public class KonMessageListener implements StanzaListener {
             this.processChatMessage(m);
         } else if (m.getType() == Message.Type.error) {
             LOGGER.warning("got error message: "+m.toXML());
-            String xmppID = m.getStanzaId();
-            if (xmppID == null || xmppID.isEmpty()) {
-                LOGGER.warning("error message has invalid XMPP ID: "+xmppID);
-                return;
-            }
+
             XMPPError error = m.getError();
             if (error == null) {
                 LOGGER.warning("error message does not contain error");
                 return;
             }
             String text = StringUtils.defaultString(error.getDescriptiveText());
-            mControl.setMessageError(xmppID, error.getCondition(), text);
+            mControl.setMessageError(MessageIDs.from(m), error.getCondition(), text);
         } else {
             LOGGER.warning("unknown message type: "+m.getType());
         }
@@ -134,7 +131,8 @@ final public class KonMessageListener implements StanzaListener {
             if (receiptID == null || receiptID.isEmpty()) {
                 LOGGER.warning("message has invalid receipt ID: "+receiptID);
             } else {
-                mControl.setMessageStatus(receiptID, Status.RECEIVED);
+                MessageIDs ids = MessageIDs.from(m, receiptID);
+                mControl.setMessageStatus(ids, Status.RECEIVED);
             }
             // we ignore anything else that might be in this message
             return;
@@ -151,23 +149,16 @@ final public class KonMessageListener implements StanzaListener {
             return;
         }
 
-        String xmppID = m.getStanzaId();
-        if (!StringUtils.isNotEmpty(xmppID)) {
-            LOGGER.warning("message does not have a XMPP ID");
-        }
+        MessageIDs ids = MessageIDs.from(m);
 
         // add message
-        boolean success = mControl.newInMessage(m.getFrom(),
-                xmppID,
-                threadID,
-                serverDate,
-                content);
+        boolean success = mControl.newInMessage(ids, serverDate, content);
 
         // on success, send a 'received' for a request (XEP-0184)
         DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);
-        if (request != null && success && !xmppID.isEmpty()) {
+        if (request != null && success && !ids.xmppID.isEmpty()) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
-            received.addExtension(new DeliveryReceipt(xmppID));
+            received.addExtension(new DeliveryReceipt(ids.xmppID));
             mClient.sendPacket(received);
         }
     }

@@ -52,7 +52,7 @@ import org.sqlite.SQLiteConfig;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Database {
-    private final static Logger LOGGER = Logger.getLogger(Database.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Database.class.getName());
 
     private static Database INSTANCE = null;
 
@@ -261,10 +261,14 @@ public final class Database {
         }
     }
 
-    public synchronized boolean execDelete(String table, int id) {
-        LOGGER.info("deleting id "+id+" from table "+table);
+    public boolean execDelete(String table, int id) {
+        return this.execDeleteWhereInsecure(table, "_id = " + id);
+    }
+
+    public boolean execDeleteWhereInsecure(String table, String where) {
         try (Statement stat = mConn.createStatement()) {
-            stat.executeUpdate("DELETE FROM " + table + " WHERE _id = " + id);
+            int c = stat.executeUpdate("DELETE FROM " + table + " WHERE " + where);
+            LOGGER.info("deleted "+c+" rows from table "+table+" where "+where);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't delete", ex);
             return false;

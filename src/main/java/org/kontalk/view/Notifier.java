@@ -18,7 +18,7 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.StyleConstants;
+import com.alee.global.StyleConstants;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
@@ -33,22 +33,17 @@ import java.awt.GraphicsConfiguration;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
-import java.util.Observable;
-import java.util.Observer;
 import javax.swing.Icon;
-import javax.swing.SwingUtilities;
 import org.kontalk.model.InMessage;
-import org.kontalk.model.KonMessage;
 import org.kontalk.util.MediaUtils;
-import static org.kontalk.view.View.getIcon;
 
 /**
  * Inform user about events.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class Notifier implements Observer {
+final class Notifier {
 
-    private final static Icon NOTIFICATION_ICON = getIcon("ic_msg_pending.png");
+    private static final Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
 
     private final View mView;
 
@@ -56,23 +51,7 @@ final class Notifier implements Observer {
         mView = view;
     }
 
-    @Override
-    public void update(Observable o, final Object arg) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                Notifier.this.updateOnEDT(arg);
-            }
-        });
-    }
-
-    private void updateOnEDT(Object arg) {
-        // handle only incoming messages
-        if (!(arg instanceof InMessage))
-            return;
-
-        KonMessage newMessage = (InMessage) arg;
-
+    public void onNewMessage(InMessage newMessage) {
         if (newMessage.getThread() == mView.getCurrentShownThread().orElse(null) &&
                 mView.mainFrameIsFocused())
             return;
@@ -87,8 +66,8 @@ final class Notifier implements Observer {
         dialog.setBackground(StyleConstants.transparent);
 
         WebNotificationPopup popup = new WebNotificationPopup(PopupStyle.dark);
-        popup.setIcon(getIcon("kontalk_small.png"));
-        popup.setMargin(10);
+        popup.setIcon(Utils.getIcon("kontalk_small.png"));
+        popup.setMargin(View.MARGIN_DEFAULT);
         popup.setDisplayTime(6000);
         popup.addNotificationListener(new NotificationListener() {
             @Override
@@ -105,7 +84,7 @@ final class Notifier implements Observer {
 
         // content
         WebPanel panel = new WebPanel();
-        panel.setMargin(10);
+        panel.setMargin(View.MARGIN_DEFAULT);
         panel.setOpaque(false);
         WebLabel title = new WebLabel("A new Message!");
         title.setFontSize(14);
@@ -135,5 +114,4 @@ final class Notifier implements Observer {
         dialog.setVisible(true);
         NotificationManager.showNotification(dialog, popup);
     }
-
 }

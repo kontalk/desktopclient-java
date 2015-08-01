@@ -29,9 +29,11 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebFormattedTextField;
+import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
@@ -43,6 +45,7 @@ import java.text.NumberFormat;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.Box;
 import javax.swing.JFrame;
 import javax.swing.text.NumberFormatter;
 import org.kontalk.system.Config;
@@ -50,14 +53,13 @@ import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.system.AccountLoader;
 import org.kontalk.util.Tr;
-import org.kontalk.view.View.PassPanel;
 
 /**
  * Dialog for showing and changing all application options.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ConfigurationDialog extends WebDialog {
-    private final static Logger LOGGER = Logger.getLogger(ConfigurationDialog.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ConfigurationDialog.class.getName());
 
     private static enum ConfPage {MAIN, ACCOUNT};
 
@@ -72,9 +74,10 @@ final class ConfigurationDialog extends WebDialog {
         this.setSize(550, 500);
         this.setResizable(false);
         this.setModal(true);
-        this.setLayout(new BorderLayout(5, 5));
+        this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
 
         WebTabbedPane tabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
+        tabbedPane.setFontSize(13);
         final MainPanel mainPanel = new MainPanel();
         final AccountPanel accountPanel = new AccountPanel();
         final PrivacyPanel privacyPanel = new PrivacyPanel();
@@ -103,7 +106,7 @@ final class ConfigurationDialog extends WebDialog {
             }
         });
 
-        GroupPanel buttonPanel = new GroupPanel(2, saveButton, cancelButton);
+        GroupPanel buttonPanel = new GroupPanel(saveButton, cancelButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
     }
@@ -118,8 +121,8 @@ final class ConfigurationDialog extends WebDialog {
         private final WebFileChooserField mBGChooser;
 
         MainPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Main Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -142,7 +145,7 @@ final class ConfigurationDialog extends WebDialog {
             mCloseTrayBox.setAnimated(false);
             mCloseTrayBox.setSelected(mConf.getBoolean(Config.MAIN_TRAY_CLOSE));
             mCloseTrayBox.setEnabled(mTrayBox.isSelected());
-            groupPanel.add(new GroupPanel(10, mTrayBox, mCloseTrayBox));
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT, mTrayBox, mCloseTrayBox));
 
             mEnterSendsBox = new WebCheckBox(Tr.tr("Enter key sends"));
             mEnterSendsBox.setAnimated(false);
@@ -164,7 +167,7 @@ final class ConfigurationDialog extends WebDialog {
                 }
             });
 
-            mBGChooser = View.createImageChooser(mBGBox.isSelected(), bgPath);
+            mBGChooser = Utils.createImageChooser(mBGBox.isSelected(), bgPath);
 
             groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
 
@@ -175,7 +178,7 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(Config.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
             mConf.setProperty(Config.MAIN_TRAY, mTrayBox.isSelected());
             mConf.setProperty(Config.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
-            mView.setTray();
+            mView.updateTray();
             mConf.setProperty(Config.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
             String bgPath;
@@ -197,11 +200,11 @@ final class ConfigurationDialog extends WebDialog {
         private final WebTextField mServerField;
         private final WebFormattedTextField mPortField;
         private final WebCheckBox mDisableCertBox;
-        private final WebTextField mFingerprintField;
+        private final WebTextArea mFingerprintArea;
 
         AccountPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Account Configuration")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -233,10 +236,12 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
             groupPanel.add(new WebSeparator(true, true));
-            mFingerprintField = View.createTextField("");
-            this.updateFingerprint();
             WebLabel fpLabel = new WebLabel(Tr.tr("Key fingerprint:")+" ");
-            groupPanel.add(new GroupPanel(fpLabel, mFingerprintField));
+            fpLabel.setAlignmentY(Component.TOP_ALIGNMENT);
+            GroupPanel fpLabelPanel = new GroupPanel(false, fpLabel, Box.createGlue());
+            mFingerprintArea = Utils.createFingerprintArea();
+            this.updateFingerprint();
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT, fpLabelPanel, mFingerprintArea));
 
             final WebButton passButton = new WebButton(getPassTitle());
             passButton.addActionListener(new ActionListener() {
@@ -269,7 +274,7 @@ final class ConfigurationDialog extends WebDialog {
                 public void actionPerformed(ActionEvent e) {
                     AccountPanel.this.saveConfiguration();
                     ConfigurationDialog.this.dispose();
-                    mView.callConnect();
+                    mView.getControl().connect();
                 }
             });
 
@@ -280,8 +285,8 @@ final class ConfigurationDialog extends WebDialog {
 
         private void updateFingerprint() {
             Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
-            mFingerprintField.setText(optKey.isPresent() ?
-                    optKey.get().getFingerprint() :
+            mFingerprintArea.setText(optKey.isPresent() ?
+                    Utils.fingerprint(optKey.get().getFingerprint()) :
                     "- " + Tr.tr("no key loaded") + " -");
         }
 
@@ -298,8 +303,8 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mChatStateBox;
 
         PrivacyPanel() {
-            GroupPanel groupPanel = new GroupPanel(10, false);
-            groupPanel.setMargin(5);
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
 
             groupPanel.add(new WebLabel(Tr.tr("Privacy Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
@@ -327,13 +332,13 @@ final class ConfigurationDialog extends WebDialog {
 
     private static WebDialog createPassDialog(WebDialog parent) {
         final WebDialog passDialog = new WebDialog(parent, getPassTitle(), true);
-        passDialog.setLayout(new BorderLayout(5, 5));
+        passDialog.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
         passDialog.setResizable(false);
 
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
 
         boolean passSet = AccountLoader.getInstance().isPasswordProtected();
-        final PassPanel passPanel = new View.PassPanel(passSet) {
+        final ComponentUtils.PassPanel passPanel = new ComponentUtils.PassPanel(passSet) {
            @Override
            void onValidInput() {
                saveButton.setEnabled(true);

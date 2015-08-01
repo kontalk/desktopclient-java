@@ -21,8 +21,8 @@ package org.kontalk.view;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.table.WebTable;
 import com.alee.laf.table.renderers.WebTableCellRenderer;
+import com.alee.managers.language.data.TooltipWay;
 import com.alee.managers.tooltip.TooltipManager;
-import com.alee.managers.tooltip.TooltipWay;
 import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Component;
 import java.awt.Point;
@@ -34,9 +34,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JTable;
@@ -47,7 +51,6 @@ import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
-import org.ocpsoft.prettytime.PrettyTime;
 
 /**
  * A generic list view for subclassing.
@@ -57,30 +60,34 @@ import org.ocpsoft.prettytime.PrettyTime;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observable & Comparable<V>> extends WebTable implements Observer {
-    private final static Logger LOGGER = Logger.getLogger(TableView.class.getName());
+abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
+    private static final Logger LOGGER = Logger.getLogger(Table.class.getName());
+
+    protected final View mView;
 
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
     /** Map synced with model for faster access. */
     private final SortedMap<V, I> mItems = new TreeMap<>();
 
+    private final Timer mTimer;
+
     /** The current search string. */
     private String mSearch = "";
-
-    protected final static PrettyTime TOOLTIP_DATE_FORMAT = new PrettyTime();
 
     private WebCustomTooltip mTip = null;
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    TableView() {
+    Table(View view, boolean activateTimer) {
+        mView = view;
+
         // model
         mModel = new DefaultTableModel(0, 1) {
             // row sorter needs this
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                return TableView.this.getColumnClass(columnIndex);
+                return Table.this.getColumnClass(columnIndex);
             }
         };
         this.setModel(mModel);
@@ -119,9 +126,9 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
                 }
                 @Override
                 public void mouseMoved(MouseEvent e) {
-                    int row = TableView.this.rowAtPoint(e.getPoint());
+                    int row = Table.this.rowAtPoint(e.getPoint());
                     if (row >= 0) {
-                        TableView.this.editCellAt(row, 0);
+                        Table.this.editCellAt(row, 0);
                     }
                 }
         });
@@ -134,6 +141,21 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
                     mTip.closeTooltip();
             }
         });
+
+        if (activateTimer) {
+            mTimer = new Timer();
+            // update periodically items to be up-to-date with 'last seen' text
+            TimerTask statusTask = new TimerTask() {
+                        @Override
+                        public void run() {
+                            Table.this.timerUpdate();
+                        }
+                    };
+            long timerInterval = TimeUnit.SECONDS.toMillis(60);
+            mTimer.schedule(statusTask, timerInterval, timerInterval);
+        } else {
+            mTimer = null;
+        }
     }
 
     protected boolean containsValue(V value) {
@@ -179,11 +201,10 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         return (I) mModel.getValueAt(mRowSorter.convertRowIndexToModel(this.getSelectedRow()), 0);
     }
 
-    // nullable
-    protected V getSelectedValue() {
+    protected Optional<V> getSelectedValue() {
         if (this.getSelectedRow() == -1)
-            return null;
-        return this.getSelectedItem().mValue;
+            return Optional.empty();
+        return Optional.of(this.getSelectedItem().mValue);
     }
 
     /** Resets filtering and selects the item containing the value specified. */
@@ -197,7 +218,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
             }
         }
 
-        if (this.getSelectedValue() != value)
+        if (this.getSelectedValue().orElse(null) != value)
             // fallback
             this.setSelectedItem(0);
     }
@@ -211,6 +232,24 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
     void filterItems(String search) {
         mSearch = search;
         mRowSorter.sort();
+    }
+
+    @SuppressWarnings("unchecked")
+    private void timerUpdate() {
+        for (int i = 0; i < mModel.getRowCount(); i++) {
+            I item = (I) mModel.getValueAt(i, 0);
+            item.update(null, mTimer);
+        }
+    }
+
+    protected void updateSorting(){
+        int viewRow = this.getSelectedRow();
+        int modelRow = viewRow > -1 ?
+                mRowSorter.convertRowIndexToModel(viewRow) :
+                -1;
+        mModel.fireTableDataChanged();
+        if (modelRow > -1)
+            this.setSelectedItem(mRowSorter.convertRowIndexToView(modelRow));
     }
 
     private void showTooltip(TableItem item) {
@@ -256,7 +295,7 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                TableView.this.updateOnEDT(arg);
+                Table.this.updateOnEDT(arg);
             }
         });
     }
@@ -306,16 +345,11 @@ abstract class TableView<I extends TableView<I, V>.TableItem, V extends Observab
         // directly to the item, but the behaviour is buggy so we keep this
         @Override
         public String getToolTipText(MouseEvent event) {
-            TableView.this.showTooltip(this);
+            Table.this.showTooltip(this);
             return null;
         }
 
         protected void onRemove() {};
-
-        @Override
-        public int compareTo(TableItem o) {
-            return mValue.compareTo(o.mValue);
-        }
     }
 
     private class TableRenderer extends WebTableCellRenderer {

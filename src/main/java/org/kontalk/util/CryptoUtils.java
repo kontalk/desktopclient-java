@@ -32,7 +32,7 @@ import javax.crypto.Cipher;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class CryptoUtils {
-    private final static Logger LOGGER = Logger.getLogger(CryptoUtils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(CryptoUtils.class.getName());
 
     /**
      * Ugly hack to get “unlimited strength” for the Java Encryption Extension.

@@ -49,9 +49,9 @@ import org.kontalk.crypto.PGPUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class TrustUtils {
-    private final static Logger LOGGER = Logger.getLogger(TrustUtils.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(TrustUtils.class.getName());
 
-    private final static String TRUSSTORE_FILE = "truststore.bks";
+    private static final String TRUSSTORE_FILE = "truststore.bks";
 
     private static TrustManager BLIND_TM = null;
     private static KeyStore MERGED_TS = null;

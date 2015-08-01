@@ -33,6 +33,7 @@ import java.text.ParseException;
 import java.util.Base64;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -82,7 +83,7 @@ import org.kontalk.util.XMPPUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Coder {
-    private final static Logger LOGGER = Logger.getLogger(Coder.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Coder.class.getName());
 
     /**
      * Encryption status of a message.
@@ -107,8 +108,6 @@ public final class Coder {
         MY_KEY_UNAVAILABLE,
         /** Public key of sender not found. */
         KEY_UNAVAILABLE,
-        /** Key data invalid. */
-        INVALID_KEY,
         /** My private key does not match. */
         INVALID_PRIVATE_KEY,
         /** Invalid data / parsing failed. */
@@ -132,6 +131,8 @@ public final class Coder {
 
     /** Buffer size for encryption. It should always be a power of 2. */
     private static final int BUFFER_SIZE = 1 << 8;
+
+    private static final HashMap<User, PGPCoderKey> KEY_MAP = new HashMap<>();
 
     private static class KeysResult {
         PersonalKey myKey = null;
@@ -411,18 +412,13 @@ public final class Coder {
         }
         result.myKey = optMyKey.get();
 
-        if (!user.hasKey()) {
-            LOGGER.warning("key not found for user, id: "+user.getID());
+        Optional<PGPCoderKey> optKey = getKey(user);
+        if (!optKey.isPresent()) {
+            LOGGER.warning("key not found for user: "+user);
             result.errors.add(Error.KEY_UNAVAILABLE);
             return result;
         }
 
-        Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(user.getKey());
-        if (!optKey.isPresent()) {
-            LOGGER.warning("can't get sender key");
-            result.errors.add(Error.INVALID_KEY);
-            return result;
-        }
         result.otherKey = optKey.get();
 
         return result;
@@ -649,5 +645,25 @@ public final class Coder {
 
         result.content = decryptedContent;
         return result;
+    }
+
+    private static Optional<PGPCoderKey> getKey(User user) {
+        if (KEY_MAP.containsKey(user)) {
+            PGPCoderKey key = KEY_MAP.get(user);
+            if (key.fingerprint.equals(user.getFingerprint()))
+                return Optional.of(key);
+        }
+
+        byte[] rawKey = user.getKey();
+        if (rawKey.length == 0) {
+            return Optional.empty();
+        }
+
+        Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
+
+        if (optKey.isPresent())
+            KEY_MAP.put(user, optKey.get());
+
+        return optKey;
     }
 }

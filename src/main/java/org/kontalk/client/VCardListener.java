@@ -19,7 +19,7 @@ import org.kontalk.system.Control;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class VCardListener implements StanzaListener {
-    private final static Logger LOGGER = Logger.getLogger(VCardListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(VCardListener.class.getName());
 
     private final Control mControl;
 
@@ -47,7 +47,7 @@ final class VCardListener implements StanzaListener {
                 LOGGER.warning("got vcard without pgp key included");
                 return;
             }
-            mControl.setPGPKey(p.getFrom(), publicKey);
+            mControl.handlePGPKey(p.getFrom(), publicKey);
         }
     }
 }

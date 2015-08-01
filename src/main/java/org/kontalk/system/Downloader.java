@@ -38,7 +38,7 @@ import org.kontalk.model.MessageContent.Attachment;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Downloader implements Runnable {
-    private final static Logger LOGGER = Logger.getLogger(Downloader.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Downloader.class.getName());
 
     private static Downloader INSTANCE = null;
 

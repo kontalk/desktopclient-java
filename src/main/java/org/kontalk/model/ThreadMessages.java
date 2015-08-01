@@ -20,61 +20,63 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Observable;
+import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
+import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
 
 /**
- * Central list of all messages.
+ * Messages of thread.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class MessageList extends Observable {
-    private final static Logger LOGGER = Logger.getLogger(MessageList.class.getName());
+public final class ThreadMessages {
+    private static final Logger LOGGER = Logger.getLogger(ThreadMessages.class.getName());
 
-    private final static MessageList INSTANCE = new MessageList();
+    private final KonThread mThread;
+    private final NavigableSet<KonMessage> mSet =
+        Collections.synchronizedNavigableSet(new TreeSet<KonMessage>());
 
-    // the list is implemented as 'XMPP ID' to "list of messages" map, as equal
-    // XMPP IDs are possible but assumed to happen rarely
-    // note: map and lists are not thread-safe on modification / iteration!
-    private final HashMap<String, List<KonMessage>> mMap = new HashMap<>();
+    private boolean mLoaded = false;
 
-    private MessageList() {
+    public ThreadMessages(KonThread thread) {
+        mThread = thread;
     }
 
-    public void load() {
+    private void ensureLoaded() {
+        if (mLoaded)
+            return;
+
+        this.loadMessages();
+        mLoaded = true;
+    }
+
+    private void loadMessages() {
         Database db = Database.getInstance();
         KonMessage.Direction[] dirValues = KonMessage.Direction.values();
         KonMessage.Status[] statusValues = KonMessage.Status.values();
         Coder.Encryption[] encryptionValues = Coder.Encryption.values();
         Coder.Signing[] signingValues = Coder.Signing.values();
-        try (ResultSet resultSet = db.execSelectAll(KonMessage.TABLE)) {
+        String where = KonMessage.COL_THREAD_ID + " == " + mThread.getID();
+        try (ResultSet resultSet = db.execSelectWhereInsecure(KonMessage.TABLE,
+                where)) {
             while (resultSet.next()) {
                 int id = resultSet.getInt("_id");
-                int threadID = resultSet.getInt(KonMessage.COL_THREAD_ID);
-                Optional<KonThread> optThread =
-                        ThreadList.getInstance().get(threadID);
-                if (!optThread.isPresent()) {
-                    LOGGER.warning("can't find thread, id:"+threadID);
-                    continue;
-                }
+
                 int dirIndex = resultSet.getInt(KonMessage.COL_DIR);
                 KonMessage.Direction dir = dirValues[dirIndex];
                 int userID = resultSet.getInt(KonMessage.COL_USER_ID);
-                Optional<User> optUser =
-                        UserList.getInstance().get(userID);
+                Optional<User> optUser = UserList.getInstance().get(userID);
                 if (!optUser.isPresent()) {
-                    LOGGER.warning("can't find user, id:"+userID);
+                    LOGGER.warning("can't find user in db, id: "+userID);
                     continue;
                 }
                 String jid = resultSet.getString(KonMessage.COL_JID);
@@ -90,7 +92,8 @@ public final class MessageList extends Observable {
                 int signingIndex = resultSet.getInt(KonMessage.COL_SIGN_STAT);
                 Coder.Signing signing = signingValues[signingIndex];
                 int errorFlags = resultSet.getInt(KonMessage.COL_COD_ERR);
-                EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(Coder.Error.class, errorFlags);
+                EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(
+                        Coder.Error.class, errorFlags);
                 CoderStatus coderStatus = new CoderStatus(encryption, signing, coderErrors);
                 String jsonServerError = resultSet.getString(KonMessage.COL_SERV_ERR);
                 KonMessage.ServerError serverError =
@@ -100,11 +103,8 @@ public final class MessageList extends Observable {
                         Optional.<Date>empty() :
                         Optional.of(new Date(sDate));
 
-                KonMessage.Builder builder = new KonMessage.Builder(id,
-                        optThread.get(),
-                        dir,
-                        optUser.get(),
-                        date);
+                KonMessage.Builder builder = new KonMessage.Builder(id, mThread,
+                        dir, optUser.get(), date);
                 builder.jid(jid);
                 builder.xmppID(xmppID);
                 builder.serverDate(serverDate);
@@ -115,8 +115,7 @@ public final class MessageList extends Observable {
 
                 KonMessage newMessage = builder.build();
 
-                optThread.get().add(newMessage);
-                this.addMessage(newMessage);
+                this.addSilent(newMessage);
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load messages from db", ex);
@@ -124,44 +123,43 @@ public final class MessageList extends Observable {
     }
 
     /**
-     * Add message without notifying observers.
+     * Add message to thread without notifying other components.
      */
-    private synchronized boolean addMessage(KonMessage m) {
-        // small capacity (dunno if this even matters)
-        List<KonMessage> l = mMap.getOrDefault(m.getXMPPID(), new ArrayList<KonMessage>(3));
-        mMap.putIfAbsent(m.getXMPPID(), l);
+    boolean add(KonMessage message) {
+        this.ensureLoaded();
+
+        return this.addSilent(message);
+    }
+
+    private boolean addSilent(KonMessage message) {
         // see KonMessage.equals()
-        if (l.contains(m)) {
-            LOGGER.warning("message already in message list, ID: "+m.getID());
-            return true;
+        if (mSet.contains(message)) {
+            LOGGER.warning("message already in thread: " + message);
+            return false;
         }
-        return l.add(m);
+        boolean added = mSet.add(message);
+        return added;
+    }
+
+    public NavigableSet<KonMessage> getAll() {
+        this.ensureLoaded();
+
+        return mSet;
     }
 
     /**
-     * Add a new message to this list.
-     * @return true on success, else false
+     * Get all outgoing messages with status "PENDING" for this thread.
      */
-    public boolean add(KonMessage newMessage) {
-        boolean success = this.addMessage(newMessage);
-        this.setChanged();
-        this.notifyObservers(newMessage);
-        return success;
-    }
+    public SortedSet<OutMessage> getPending() {
+        this.ensureLoaded();
 
-    /**
-     * Get all outgoing messages with status "PENDING".
-     */
-    public synchronized SortedSet<OutMessage> getPending() {
-        // TODO performance, probably additional map needed
         SortedSet<OutMessage> s = new TreeSet<>();
-        for (List<KonMessage> l : mMap.values()) {
-            // TODO use lambda in near future
-            for (KonMessage m : l) {
-                if (m.getReceiptStatus() == KonMessage.Status.PENDING &&
-                        m instanceof OutMessage) {
-                    s.add((OutMessage) m);
-                }
+        // TODO performance, probably additional map needed
+        // TODO use lambda in near future
+        for (KonMessage m : mSet) {
+            if (m.getReceiptStatus() == KonMessage.Status.PENDING &&
+                    m instanceof OutMessage) {
+                s.add((OutMessage) m);
             }
         }
         return s;
@@ -170,22 +168,21 @@ public final class MessageList extends Observable {
     /**
      * Get the newest (ie last received) outgoing message.
      */
-    public synchronized Optional<OutMessage> getLast(String xmppID) {
-        if (mMap.containsKey(xmppID)) {
-            SortedSet<OutMessage> s = new TreeSet<>();
-            for (KonMessage m : mMap.get(xmppID)) {
-                if (m instanceof OutMessage) {
-                    s.add((OutMessage) m);
-                }
-            }
-            if (!s.isEmpty())
-                return Optional.of(s.last());
-        }
-        LOGGER.warning("can't find any outgoing message with XMPP ID: " + xmppID);
-        return Optional.empty();
-    }
+    public Optional<OutMessage> getLast(String xmppID) {
+        this.ensureLoaded();
 
-    public static MessageList getInstance() {
-        return INSTANCE;
+        // TODO performance
+        OutMessage message = null;
+        for (KonMessage m: mSet.descendingSet()) {
+            if (m.getXMPPID().equals(xmppID) && m instanceof OutMessage) {
+                message = (OutMessage) m;
+            }
+        }
+
+        if (message == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(message);
     }
 }

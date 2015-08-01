@@ -31,7 +31,7 @@ import org.kontalk.system.Control;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class PublicKeyListener implements StanzaListener {
-    private final static Logger LOGGER = Logger.getLogger(PublicKeyListener.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(PublicKeyListener.class.getName());
 
     private final Control mControl;
 
@@ -60,7 +60,7 @@ public class PublicKeyListener implements StanzaListener {
                 LOGGER.warning("got public key packet without public key");
                 return;
             }
-            mControl.setPGPKey(publicKeyPacket.getFrom(), keyData);
+            mControl.handlePGPKey(publicKeyPacket.getFrom(), keyData);
         }
     }
 

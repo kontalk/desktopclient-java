@@ -40,7 +40,7 @@ import org.kontalk.util.EncodingUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class KonMessage extends Observable implements Comparable<KonMessage> {
-    private final static Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
      * Direction (in-, outgoing) of one message.
@@ -66,7 +66,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         ERROR
     };
 
-    public final static String TABLE = "messages";
+    public static final String TABLE = "messages";
     public static final String COL_THREAD_ID = "thread_id";
     public static final String COL_DIR = "direction";
     public static final String COL_USER_ID = "user_id";
@@ -80,14 +80,14 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String COL_COD_ERR = "coder_errors";
     public static final String COL_SERV_ERR = "server_error";
     public static final String COL_SERV_DATE = "server_date";
-    public final static String CREATE_TABLE = "( " +
+    public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             COL_THREAD_ID + " INTEGER NOT NULL, " +
             // enum, in- or outgoing
             COL_DIR + " INTEGER NOT NULL, " +
             // from or to user
             COL_USER_ID + " INTEGER NOT NULL, " +
-            // full jid with ressource
+            // full jid with resource
             COL_JID + " TEXT NOT NULL, " +
             // XMPP ID attribute; only recommended (RFC 6120), but we generate
             // a random string if not in message for model consistency
@@ -221,48 +221,28 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         this.save();
     }
 
-    /**
-     * Return if two messages are logically equal.
-     * Inconsistent with "natural ordering"!
-     */
-    @Override
-    public boolean equals(Object obj) {
-        // performance optimization
-        if (this == obj)
-            return true;
-
-        if (!(obj instanceof KonMessage))
-            return false;
-
-        KonMessage o = (KonMessage) obj;
-
-        // note: use ONLY final fields
-        return mDir == o.mDir &&
-                mJID.equals(o.mJID) &&
-                mXMPPID.equals(o.mXMPPID) &&
-                mDate.equals(o.mDate);
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 67 * hash + Objects.hashCode(this.mDir);
-        hash = 67 * hash + Objects.hashCode(this.mJID);
-        hash = 67 * hash + Objects.hashCode(this.mXMPPID);
-        hash = 67 * hash + Objects.hashCode(this.mDate);
-        return hash;
+    public ServerError getServerError() {
+        return mServerError;
     }
 
     /**
-     * Java's "natural ordering", used for sorting the messages in the order
-     * they were created.
-     * Inconsistent with equals!
+     * Save (or insert) this message to/into the database.
      */
-    @Override
-    public int compareTo(KonMessage o) {
-        int idComp = Integer.compare(this.mID, o.mID);
-        int dateComp = mDate.compareTo(o.getDate());
-        return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
+    public final void save() {
+        if (mID < 0) {
+            this.insert();
+            return;
+        }
+        Database db = Database.getInstance();
+        Map<String, Object> set = new HashMap<>();
+        set.put(COL_REC_STAT, mReceiptStatus);
+        set.put(COL_CONTENT, mContent.toJSONString());
+        set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
+        set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
+        set.put(COL_COD_ERR, mCoderStatus.getErrors());
+        set.put(COL_SERV_ERR, mServerError.toJSON());
+        set.put(COL_SERV_DATE, mServerDate);
+        db.execUpdate(TABLE, set, mID);
     }
 
     private void insert() {
@@ -298,30 +278,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mID = id;
     }
 
-    /**
-     * Save (or insert) this message to/into the database.
-     */
-    public final void save() {
-        if (mID < 0) {
-            this.insert();
-            return;
-        }
-        Database db = Database.getInstance();
-        Map<String, Object> set = new HashMap<>();
-        set.put(COL_REC_STAT, mReceiptStatus);
-        set.put(COL_CONTENT, mContent.toJSONString());
-        set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
-        set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
-        set.put(COL_COD_ERR, mCoderStatus.getErrors());
-        set.put(COL_SERV_DATE, mServerDate);
-        db.execUpdate(TABLE, set, mID);
-    }
-
-    boolean delete() {
-        Database db = Database.getInstance();
-        return db.execDelete(TABLE, mID);
-    }
-
     protected synchronized void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
@@ -336,9 +292,52 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
-    public final static class ServerError {
-        private final static String JSON_COND = "cond";
-        private final static String JSON_TEXT = "text";
+    /**
+     * Return if two messages are logically equal.
+     * Inconsistent with "natural ordering"!
+     */
+    @Override
+    public boolean equals(Object obj) {
+        // performance optimization
+        if (this == obj)
+            return true;
+
+        if (!(obj instanceof KonMessage))
+            return false;
+
+        KonMessage o = (KonMessage) obj;
+        // note: use ONLY final fields
+        if (mID == o.mID) {
+            LOGGER.warning("different messages have same ID: "+mID);
+            return true;
+        }
+        return mDir == o.mDir &&
+                mJID.equals(o.mJID) &&
+                mXMPPID.equals(o.mXMPPID) &&
+                mDate.equals(o.mDate);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 67 * hash + Objects.hashCode(this.mDir);
+        hash = 67 * hash + Objects.hashCode(this.mJID);
+        hash = 67 * hash + Objects.hashCode(this.mXMPPID);
+        hash = 67 * hash + Objects.hashCode(this.mDate);
+        return hash;
+    }
+
+    @Override
+    public int compareTo(KonMessage o) {
+        if (this.equals(o))
+            return 0;
+
+        return Integer.compare(mID, o.getID());
+    }
+
+    public static final class ServerError {
+        private static final String JSON_COND = "cond";
+        private static final String JSON_TEXT = "text";
 
         public final String condition;
         public final String text;

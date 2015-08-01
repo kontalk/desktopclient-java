@@ -39,7 +39,7 @@ import org.kontalk.system.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class User extends Observable implements Comparable<User> {
-    private final static Logger LOGGER = Logger.getLogger(User.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(User.class.getName());
 
     /**
      * Online status of one user.
@@ -47,15 +47,22 @@ public final class User extends Observable implements Comparable<User> {
      */
     public static enum Online {UNKNOWN, YES, NO};
 
-    public final static String TABLE = "user";
-    public final static String COL_JID = "jid";
-    public final static String COL_NAME = "name";
-    public final static String COL_STAT = "status";
-    public final static String COL_LAST_SEEN = "last_seen";
-    public final static String COL_ENCR = "encrypted";
-    public final static String COL_PUB_KEY = "public_key";
-    public final static String COL_KEY_FP = "key_fingerprint";
-    public final static String CREATE_TABLE = "(" +
+    /**
+     * XMPP subscription status in roster.
+     */
+    public static enum Subscription {
+        UNKNOWN, PENDING, SUBSCRIBED, UNSUBSCRIBED
+    }
+
+    public static final String TABLE = "user";
+    public static final String COL_JID = "jid";
+    public static final String COL_NAME = "name";
+    public static final String COL_STAT = "status";
+    public static final String COL_LAST_SEEN = "last_seen";
+    public static final String COL_ENCR = "encrypted";
+    public static final String COL_PUB_KEY = "public_key";
+    public static final String COL_KEY_FP = "key_fingerprint";
+    public static final String CREATE_TABLE = "(" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             COL_JID + " TEXT NOT NULL UNIQUE, " +
             COL_NAME + " TEXT, " +
@@ -77,12 +84,8 @@ public final class User extends Observable implements Comparable<User> {
     private String mKey = "";
     private String mFingerprint = "";
     private boolean mBlocked = false;
+    private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
-
-    // used for incoming messages of unknown user
-    User(String jid) {
-        this(jid, "");
-    }
 
     // used for creating new users (eg from roster)
     User(String jid, String name) {
@@ -126,7 +129,7 @@ public final class User extends Observable implements Comparable<User> {
         return mJID;
     }
 
-    public void setJID(String jid) {
+    void setJID(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
         if (jid.equals(mJID))
             return;
@@ -192,6 +195,13 @@ public final class User extends Observable implements Comparable<User> {
         }
     }
 
+    /**
+     * Reset online status when client is disconneted.
+     */
+    public void setOffline() {
+        mAvailable = Online.UNKNOWN;
+        this.changed(mAvailable);
+    }
 
     public byte[] getKey() {
         return Base64.getDecoder().decode(mKey);
@@ -221,6 +231,19 @@ public final class User extends Observable implements Comparable<User> {
 
     public void setBlocked(boolean blocked) {
         mBlocked = blocked;
+        this.changed(mBlocked);
+    }
+
+    public Subscription getSubScription() {
+        return mSubStatus;
+    }
+
+    public void setSubScriptionStatus(Subscription status) {
+        if (status == mSubStatus)
+            return;
+
+        mSubStatus = status;
+        this.changed(mSubStatus);
     }
 
     public boolean isMe() {
@@ -228,7 +251,26 @@ public final class User extends Observable implements Comparable<User> {
                 mJID.equals(Config.getInstance().getProperty(Config.ACC_JID));
     }
 
-    public void save() {
+    /**
+     * 'Delete' this user: faked by resetting all values.
+     */
+    public void setDeleted() {
+        mJID = Integer.toString(mID);
+        mName = "";
+        mStatus = "";
+        mLastSeen = Optional.empty();
+        mEncrypted = false;
+        mKey = "";
+        mFingerprint = "";
+
+        this.save();
+    }
+
+    public boolean isDeleted() {
+        return mJID.equals(Integer.toString(mID));
+    }
+
+    void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
@@ -248,7 +290,8 @@ public final class User extends Observable implements Comparable<User> {
 
     @Override
     public String toString() {
-        return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint;
+        return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
+                +",subsc="+mSubStatus;
     }
 
     @Override

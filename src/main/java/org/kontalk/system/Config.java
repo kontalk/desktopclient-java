@@ -34,35 +34,35 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Config extends PropertiesConfiguration {
-    private final static Logger LOGGER = Logger.getLogger(Config.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(Config.class.getName());
 
     private static Config INSTANCE = null;
 
-    public final static String CONF_NAME = "kontalk.properties";
+    public static final String CONF_NAME = "kontalk.properties";
     // all configuration property keys
     // disable network property for now -> same as server host
-    //public final static String SERV_NET = "server.network";
-    public final static String SERV_HOST = "server.host";
-    public final static String SERV_PORT = "server.port";
-    public final static String SERV_CERT_VALIDATION = "server.cert_validation";
-    public final static String ACC_PASS = "account.passphrase";
-    public final static String ACC_JID = "account.jid";
-    public final static String VIEW_FRAME_WIDTH = "view.frame.width";
-    public final static String VIEW_FRAME_HEIGHT = "view.frame.height";
-    public final static String VIEW_SELECTED_THREAD = "view.thread";
-    public final static String VIEW_THREAD_BG = "view.thread_bg";
-    public final static String NET_SEND_CHAT_STATE = "net.chatstate";
-    public final static String NET_STATUS_LIST = "net.status_list";
-    public final static String MAIN_CONNECT_STARTUP = "main.connect_startup";
-    public final static String MAIN_TRAY = "main.tray";
-    public final static String MAIN_TRAY_CLOSE = "main.tray_close";
-    public final static String MAIN_ENTER_SENDS = "main.enter_sends";
+    //public static final String SERV_NET = "server.network";
+    public static final String SERV_HOST = "server.host";
+    public static final String SERV_PORT = "server.port";
+    public static final String SERV_CERT_VALIDATION = "server.cert_validation";
+    public static final String ACC_PASS = "account.passphrase";
+    public static final String ACC_JID = "account.jid";
+    public static final String VIEW_FRAME_WIDTH = "view.frame.width";
+    public static final String VIEW_FRAME_HEIGHT = "view.frame.height";
+    public static final String VIEW_SELECTED_THREAD = "view.thread";
+    public static final String VIEW_THREAD_BG = "view.thread_bg";
+    public static final String NET_SEND_CHAT_STATE = "net.chatstate";
+    public static final String NET_STATUS_LIST = "net.status_list";
+    public static final String MAIN_CONNECT_STARTUP = "main.connect_startup";
+    public static final String MAIN_TRAY = "main.tray";
+    public static final String MAIN_TRAY_CLOSE = "main.tray_close";
+    public static final String MAIN_ENTER_SENDS = "main.enter_sends";
 
     // default server address
-    //public final static String DEFAULT_SERV_NET = "kontalk.net";
-    public final static String DEFAULT_SERV_HOST = "beta.kontalk.net";
-    public final static int DEFAULT_SERV_PORT = 5999;
-    private final static String DEFAULT_XMPP_STATUS =
+    //public static final String DEFAULT_SERV_NET = "kontalk.net";
+    public static final String DEFAULT_SERV_HOST = "beta.kontalk.net";
+    public static final int DEFAULT_SERV_PORT = 5999;
+    private static final String DEFAULT_XMPP_STATUS =
             Tr.tr("Hey, I'm using Kontalk on my PC!");
 
     private Config(String filePath) {
