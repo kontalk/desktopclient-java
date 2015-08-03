@@ -28,31 +28,31 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 
 /**
- * Content view area: show a thread or contact details
+ * Content view area: show a chat or contact details
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Content extends WebPanel {
 
     private final View mView;
-    private final ThreadView mThreadView;
+    private final ChatView mChatView;
     private Component mCurrent;
 
-    Content(View view, ThreadView threadView) {
+    Content(View view, ChatView chatView) {
         mView = view;
-        mThreadView = threadView;
-        this.show(mThreadView);
+        mChatView = chatView;
+        this.show(mChatView);
     }
 
-    Optional<Chat> getCurrentThread() {
-        if (!(mCurrent instanceof ThreadView))
+    Optional<Chat> getCurrentChat() {
+        if (!(mCurrent instanceof ChatView))
             return Optional.empty();
-        return mThreadView.getCurrentThread();
+        return mChatView.getCurrentChat();
     }
 
-    void showThread(Chat thread) {
-        mThreadView.showThread(thread);
-        if (mCurrent != mThreadView)
-            this.show(mThreadView);
+    void showChat(Chat chat) {
+        mChatView.showChat(chat);
+        if (mCurrent != mChatView)
+            this.show(mChatView);
     }
 
     void showContact(Contact contact) {

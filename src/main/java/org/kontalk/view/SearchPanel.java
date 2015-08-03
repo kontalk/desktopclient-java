@@ -30,13 +30,13 @@ import javax.swing.event.DocumentListener;
 import org.kontalk.util.Tr;
 
 /**
- * A search bar to search for text in contact, thread and message lists.
+ * A search bar to search for text in contact, chat and message lists.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class SearchPanel extends WebPanel {
     private final WebTextField mSearchField;
 
-    SearchPanel(final Table[] tables, final ThreadView threadView) {
+    SearchPanel(final Table[] tables, final ChatView chatView) {
         mSearchField = new WebTextField();
         mSearchField.setInputPrompt(Tr.tr("Search..."));
         mSearchField.getDocument().addDocumentListener(new DocumentListener() {
@@ -56,7 +56,7 @@ final class SearchPanel extends WebPanel {
                 String searchText = mSearchField.getText().toLowerCase();
                 for (Table table : tables)
                     table.filterItems(searchText);
-                threadView.filterCurrentThread(searchText);
+                chatView.filterCurrentChat(searchText);
             }
         });
         Icon clearIcon = Utils.getIcon("ic_ui_clear.png");

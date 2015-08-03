@@ -190,7 +190,7 @@ final class ConfigurationDialog extends WebDialog {
             String oldBGPath = mConf.getString(Config.VIEW_THREAD_BG);
             if (!bgPath.equals(oldBGPath)) {
                 mConf.setProperty(Config.VIEW_THREAD_BG, bgPath);
-                mView.reloadThreadBG();
+                mView.reloadChatBG();
             }
         }
     }

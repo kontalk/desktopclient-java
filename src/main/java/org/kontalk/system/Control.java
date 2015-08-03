@@ -603,11 +603,11 @@ public final class Control {
 
         /* threads */
 
-        public Chat createNewThread(Set<Contact> contact) {
+        public Chat createNewChat(Set<Contact> contact) {
             return ChatList.getInstance().createNew(contact);
         }
 
-        public void deleteThread(Chat thread) {
+        public void deleteChat(Chat thread) {
             ChatList.getInstance().delete(thread.getID());
         }
 

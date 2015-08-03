@@ -49,11 +49,11 @@ import org.kontalk.util.Tr;
  * Show and edit thread/chat settings.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ThreadDetails extends WebPanel {
+final class ChatDetails extends WebPanel {
 
     private static final Color DEFAULT_BG = Color.WHITE;
 
-    private final Chat mThread;
+    private final Chat mChat;
     private final WebTextField mSubjectField;
     private final WebRadioButton mColorOpt;
     private final WebButton mColor;
@@ -62,8 +62,8 @@ final class ThreadDetails extends WebPanel {
     // TODO group chat
     //WebCheckBoxList mParticipantsList;
 
-    ThreadDetails(final ComponentUtils.ModalPopup popup, Chat thread) {
-        mThread = thread;
+    ChatDetails(final ComponentUtils.ModalPopup popup, Chat chat) {
+        mChat = chat;
 
         GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
         groupPanel.setMargin(View.MARGIN_BIG);
@@ -73,7 +73,7 @@ final class ThreadDetails extends WebPanel {
 
         // editable fields
         groupPanel.add(new WebLabel(Tr.tr("Subject:")));
-        String subj = mThread.getSubject();
+        String subj = mChat.getSubject();
         mSubjectField = new WebTextField(subj, 22);
         mSubjectField.setInputPrompt(subj);
         mSubjectField.setHideInputPromptOnFocus(false);
@@ -84,7 +84,7 @@ final class ThreadDetails extends WebPanel {
 
         groupPanel.add(new WebLabel(Tr.tr("Custom Background")));
         mColorOpt = new WebRadioButton(Tr.tr("Color:")+" ");
-        Optional<Color> optBGColor = mThread.getViewSettings().getBGColor();
+        Optional<Color> optBGColor = mChat.getViewSettings().getBGColor();
         mColorOpt.setSelected(optBGColor.isPresent());
         mColorOpt.addItemListener(new ItemListener() {
             @Override
@@ -120,7 +120,7 @@ final class ThreadDetails extends WebPanel {
         groupPanel.add(colorSlider);
 
         mImgOpt = new WebRadioButton(Tr.tr("Image:")+" ");
-        String imgPath = mThread.getViewSettings().getImagePath();
+        String imgPath = mChat.getViewSettings().getImagePath();
         mImgOpt.setSelected(!imgPath.isEmpty());
         mImgOpt.addItemListener(new ItemListener() {
             @Override
@@ -141,7 +141,7 @@ final class ThreadDetails extends WebPanel {
 //        mParticipantsList = new WebCheckBoxList();
 //        mParticipantsList.setVisibleRowCount(10);
 //        for (Contact oneContact : ContactList.getInstance().getAll()) {
-//            boolean selected = mThread.getContact().contains(oneContact);
+//            boolean selected = mChat.getContact().contains(oneContact);
 //            mParticipantsList.getCheckBoxListModel().addCheckBoxElement(
 //                    new ContactElement(oneContact),
 //                    selected);
@@ -170,13 +170,13 @@ final class ThreadDetails extends WebPanel {
             public void actionPerformed(ActionEvent e) {
 //                if (mParticipantsList.getCheckedValues().size() > 1) {
 //                        String infoText = Tr.t/r("More than one receiver not supported (yet).");
-//                        WebOptionPane.showMessageDialog(ThreadListView.this,
+//                        WebOptionPane.showMessageDialog(ChatListView.this,
 //                                infoText,
 //                                Tr.t/r("Sorry"),
 //                                WebOptionPane.INFORMATION_MESSAGE);
 //                    return;
 //                }
-                ThreadDetails.this.save();
+                ChatDetails.this.save();
 
                 popup.close();
             }
@@ -189,15 +189,15 @@ final class ThreadDetails extends WebPanel {
     }
 
     private void save() {
-        if (!mSubjectField.getText().equals(mThread.getSubject())) {
-            mThread.setSubject(mSubjectField.getText());
+        if (!mSubjectField.getText().equals(mChat.getSubject())) {
+            mChat.setSubject(mSubjectField.getText());
         }
 //        List<?> participants = mParticipantsList.getCheckedValues();
-//        Set<Contact> threadContact = new HashSet<>();
+//        Set<Contact> chatContact = new HashSet<>();
 //        for (Object o: participants) {
-//            threadContact.add(((ContactElement) o).contact);
+//            chatContact.add(((ContactElement) o).contact);
 //        }
-//        mThread.setContact(threadContact);
+//        mChat.setContact(chatContact);
 
         Chat.ViewSettings newSettings;
         if (mColorOpt.isSelected())
@@ -207,8 +207,8 @@ final class ThreadDetails extends WebPanel {
         else
             newSettings = new Chat.ViewSettings();
 
-        if (!newSettings.equals(mThread.getViewSettings())) {
-             mThread.setViewSettings(newSettings);
+        if (!newSettings.equals(mChat.getViewSettings())) {
+             mChat.setViewSettings(newSettings);
         }
     }
 

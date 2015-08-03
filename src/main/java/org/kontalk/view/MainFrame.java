@@ -68,7 +68,7 @@ import org.kontalk.util.Tr;
  */
 final class MainFrame extends WebFrame {
 
-    static enum Tab {THREADS, CONTACT};
+    static enum Tab {CHATS, CONTACT};
 
     private final View mView;
     private final WebMenuItem mConnectMenuItem;
@@ -79,7 +79,7 @@ final class MainFrame extends WebFrame {
 
     MainFrame(final View view,
             Table<?, ?> contactList,
-            Table<?, ?> threadList,
+            Table<?, ?> chatList,
             Component content,
             Component searchPanel,
             Component statusBar) {
@@ -210,11 +210,11 @@ final class MainFrame extends WebFrame {
         WebPanel sidePanel = new WebPanel(false);
         sidePanel.add(searchPanel, BorderLayout.NORTH);
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-        //String threadOverlayText =
+        //String chatOverlayText =
         //        Tr.t/r("No chats to display. You can create a new chat from your contacts");
-        WebScrollPane threadPane = createTablePane(threadList, "threadOverlayText");
-        mTabbedPane.addTab("", threadPane);
-        mTabbedPane.setTabComponentAt(Tab.THREADS.ordinal(),
+        WebScrollPane chatPane = createTablePane(chatList, "chatOverlayText");
+        mTabbedPane.addTab("", chatPane);
+        mTabbedPane.setTabComponentAt(Tab.CHATS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
         //String contactOverlayText = T/r.tr("No contacts to display. You have no friends ;(");

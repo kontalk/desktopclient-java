@@ -57,23 +57,23 @@ import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 
 /**
- * Pane that shows the currently selected thread.
+ * Pane that shows the currently selected chat.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ThreadView extends WebPanel implements Observer {
+final class ChatView extends WebPanel implements Observer {
 
     private final View mView;
 
     private final WebLabel mTitleLabel;
     private final WebLabel mSubLabel;
     private final WebScrollPane mScrollPane;
-    private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
+    private final Map<Integer, MessageList> mChatCache = new HashMap<>();
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
 
-    ThreadView(View view, Component sendTextField, Component sendButton) {
+    ChatView(View view, Component sendTextField, Component sendButton) {
         mView = view;
 
         WebPanel titlePanel = new WebPanel(false,
@@ -95,7 +95,7 @@ final class ThreadView extends WebPanel implements Observer {
         editButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                    ThreadView.this.showPopup(editButton);
+                    ChatView.this.showPopup(editButton);
             }
         });
         titlePanel.add(editButton, BorderLayout.EAST);
@@ -120,7 +120,7 @@ final class ThreadView extends WebPanel implements Observer {
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Optional<BufferedImage> optBG =
-                        ThreadView.this.getCurrentBackground().updateNowOrLater();
+                        ChatView.this.getCurrentBackground().updateNowOrLater();
                 // if there is something to draw, draw it now even if its old
                 if (optBG.isPresent())
                     g.drawImage(optBG.get(), 0, 0, this.getWidth(), this.getHeight(), null);
@@ -148,38 +148,38 @@ final class ThreadView extends WebPanel implements Observer {
         return Optional.of((MessageList) view);
     }
 
-    Optional<Chat> getCurrentThread() {
+    Optional<Chat> getCurrentChat() {
         Optional<MessageList> optview = this.getCurrentList();
         return optview.isPresent() ?
-                Optional.of(optview.get().getThread()) :
+                Optional.of(optview.get().getChat()) :
                 Optional.<Chat>empty();
     }
 
-    void filterCurrentThread(String searchText) {
+    void filterCurrentChat(String searchText) {
         Optional<MessageList> optList = this.getCurrentList();
         if (!optList.isPresent())
             return;
         optList.get().filterItems(searchText);
     }
 
-    void showThread(Chat thread) {
-        List<Contact> contact = new ArrayList<>(thread.getContacts());
+    void showChat(Chat chat) {
+        List<Contact> contact = new ArrayList<>(chat.getContacts());
         mTitleLabel.setText(contact.size() == 1 ? Utils.name(contact.get(0)) :
-                !thread.getSubject().isEmpty() ? thread.getSubject() :
+                !chat.getSubject().isEmpty() ? chat.getSubject() :
                 Tr.tr("Group Chat"));
         // TODO update
         mSubLabel.setText(contact.size() == 1 ?
                 Utils.mainStatus(contact.get(0)) :
-                Utils.contactNameList(thread.getContacts()));
-        if (!mThreadCache.containsKey(thread.getID())) {
-            MessageList newMessageList = new MessageList(mView, this, thread);
-            thread.addObserver(newMessageList);
-            mThreadCache.put(thread.getID(), newMessageList);
+                Utils.contactNameList(chat.getContacts()));
+        if (!mChatCache.containsKey(chat.getID())) {
+            MessageList newMessageList = new MessageList(mView, this, chat);
+            chat.addObserver(newMessageList);
+            mChatCache.put(chat.getID(), newMessageList);
         }
-        MessageList list = mThreadCache.get(thread.getID());
+        MessageList list = mChatCache.get(chat.getID());
         mScrollPane.getViewport().setView(list);
 
-        thread.setRead();
+        chat.setRead();
     }
 
     void setColor(Color color) {
@@ -229,22 +229,22 @@ final class ThreadView extends WebPanel implements Observer {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                ThreadView.this.updateOnEDT(arg);
+                ChatView.this.updateOnEDT(arg);
             }
         });
     }
 
     private void updateOnEDT(Object arg) {
         if (arg instanceof Chat) {
-            Chat thread = (Chat) arg;
-            if (!ChatList.getInstance().contains(thread.getID())) {
-                // thread was deleted
-                MessageList viewList = mThreadCache.get(thread.getID());
+            Chat chat = (Chat) arg;
+            if (!ChatList.getInstance().contains(chat.getID())) {
+                // chat was deleted
+                MessageList viewList = mChatCache.get(chat.getID());
                 if (viewList != null)
                     viewList.clearItems();
-                thread.deleteObserver(viewList);
-                mThreadCache.remove(thread.getID());
-                if(this.getCurrentThread().orElse(null) == thread) {
+                chat.deleteObserver(viewList);
+                mChatCache.remove(chat.getID());
+                if(this.getCurrentChat().orElse(null) == chat) {
                     mScrollPane.setViewportView(null);
                 }
             }
@@ -252,18 +252,18 @@ final class ThreadView extends WebPanel implements Observer {
     }
 
     private void showPopup(final WebToggleButton invoker) {
-        Optional<Chat> optThread = ThreadView.this.getCurrentThread();
-        if (!optThread.isPresent())
+        Optional<Chat> optChat = ChatView.this.getCurrentChat();
+        if (!optChat.isPresent())
             return;
         if (mPopup == null)
             mPopup = new ComponentUtils.ModalPopup(invoker);
 
         mPopup.removeAll();
-        mPopup.add(new ThreadDetails(mPopup, optThread.get()));
+        mPopup.add(new ChatDetails(mPopup, optChat.get()));
         mPopup.showPopup();
     }
 
-    /** A background image of thread view with efficient async reloading. */
+    /** A background image of chat view with efficient async reloading. */
     final class Background implements ImageObserver {
         private final Component mParent;
         // background image from resource or user selected
@@ -279,19 +279,19 @@ final class ThreadView extends WebPanel implements Observer {
             mCustomColor = color;
         }
 
-        /** Default, no thread specific settings. */
+        /** Default, no chat specific settings. */
         Background(Component parent) {
-            //mOrigin = View.getImage("thread_bg.png");
+            //mOrigin = View.getImage("chat_bg.png");
             this(parent, null, new Color(255, 255, 255, 255));
         }
 
-        /** Image set by user (global or only for thread). */
+        /** Image set by user (global or only for chat). */
         Background(Component parent, String imagePath) {
             // image loaded async!
             this(parent, Toolkit.getDefaultToolkit().createImage(imagePath), null);
         }
 
-        /** Thread specific color. */
+        /** Chat specific color. */
         Background(Component parent, Color bottomColor) {
             this(parent, null, bottomColor);
         }
@@ -352,7 +352,7 @@ final class ThreadView extends WebPanel implements Observer {
                         0, 0, mCustomColor,
                         width, 0, new Color(0, 0, 0, 0));
                 cachedG.setPaint(p2);
-                cachedG.fillRect(0, 0, width, ThreadView.this.getHeight());
+                cachedG.fillRect(0, 0, width, ChatView.this.getHeight());
             }
             if (scaledImage == null)
                 return;

@@ -43,20 +43,20 @@ import org.kontalk.model.Chat.KonChatState;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
-import org.kontalk.view.ThreadListView.ThreadItem;
+import org.kontalk.view.ChatListView.ChatItem;
 
 /**
- * Show a brief list of all threads.
+ * Show a brief list of all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ThreadListView extends Table<ThreadItem, Chat> {
+final class ChatListView extends Table<ChatItem, Chat> {
 
-    private final ChatList mThreadList;
+    private final ChatList mChatList;
     private final WebPopupMenu mPopupMenu;
 
-    ThreadListView(final View view, ChatList threadList) {
+    ChatListView(final View view, ChatList chatList) {
         super(view, true);
-        mThreadList = threadList;
+        mChatList = chatList;
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
@@ -68,7 +68,7 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
         deleteMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                ThreadListView.this.deleteSelectedThread();
+                ChatListView.this.deleteSelectedChat();
             }
         });
         mPopupMenu.add(deleteMenuItem);
@@ -76,22 +76,22 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
-            Chat lastThread = null;
+            Chat lastChat = null;
 
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                Optional<Chat> optThread = ThreadListView.this.getSelectedValue();
-                if (!optThread.isPresent())
+                Optional<Chat> optChat = ChatListView.this.getSelectedValue();
+                if (!optChat.isPresent())
                     return;
                 // if event is caused by filtering, dont do anything
-                if (lastThread == optThread.get())
+                if (lastChat == optChat.get())
                     return;
 
                 mView.clearSearch();
-                mView.showThread(optThread.get());
-                lastThread = optThread.get();
+                mView.showChat(optChat.get());
+                lastChat = optChat.get();
             }
         });
 
@@ -107,9 +107,9 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    int row = ThreadListView.this.rowAtPoint(e.getPoint());
-                    ThreadListView.this.setSelectedItem(row);
-                    ThreadListView.this.showPopupMenu(e);
+                    int row = ChatListView.this.rowAtPoint(e.getPoint());
+                    ChatListView.this.setSelectedItem(row);
+                    ChatListView.this.showPopupMenu(e);
                 }
             }
         });
@@ -119,15 +119,15 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        Set<ThreadItem> newItems = new HashSet<>();
-        Set<Chat> threads = mThreadList.getAll();
-        for (Chat thread: threads)
-            if (!this.containsValue(thread))
-                newItems.add(new ThreadItem(thread));
-        this.sync(threads, newItems);
+        Set<ChatItem> newItems = new HashSet<>();
+        Set<Chat> chats = mChatList.getAll();
+        for (Chat chat: chats)
+            if (!this.containsValue(chat))
+                newItems.add(new ChatItem(chat));
+        this.sync(chats, newItems);
     }
 
-    void selectLastThread() {
+    void selectLastChat() {
         int i = Config.getInstance().getInt(Config.VIEW_SELECTED_THREAD);
         if (i < 0) i = 0;
         this.setSelectedItem(i);
@@ -142,18 +142,18 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
            mPopupMenu.show(this, e.getX(), e.getY());
     }
 
-    private void deleteSelectedThread() {
-        ThreadItem t = this.getSelectedItem();
+    private void deleteSelectedChat() {
+        ChatItem t = this.getSelectedItem();
         if (t.mValue.getMessages().getAll().size() != 0) {
             String text = Tr.tr("Permanently delete all messages in this chat?");
             if (!Utils.confirmDeletion(this, text))
                 return;
         }
-        ThreadItem threadItem = this.getSelectedItem();
-        mView.getControl().deleteThread(threadItem.mValue);
+        ChatItem chatItem = this.getSelectedItem();
+        mView.getControl().deleteChat(chatItem.mValue);
     }
 
-    protected final class ThreadItem extends Table<ThreadItem, Chat>.TableItem {
+    protected final class ChatItem extends Table<ChatItem, Chat>.TableItem {
 
         private final WebLabel mNameLabel;
         private final WebLabel mSubjectLabel;
@@ -161,8 +161,8 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
         private final WebLabel mChatStateLabel;
         private Color mBackground;
 
-        ThreadItem(Chat thread) {
-            super(thread);
+        ChatItem(Chat chat) {
+            super(chat);
 
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
             this.setMargin(View.MARGIN_SMALL);
@@ -209,7 +209,7 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
         protected void updateOnEDT(Object arg) {
             this.updateView(arg);
             // needed for background repaint
-            ThreadListView.this.repaint();
+            ChatListView.this.repaint();
         }
 
         private void updateView(Object arg) {
@@ -238,7 +238,7 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
                 this.updateBG();
 
                 mStatusLabel.setText(lastActivity(mValue, true));
-                ThreadListView.this.updateSorting();
+                ChatListView.this.updateSorting();
             } else if (arg instanceof Boolean) {
                 this.updateBG();
             } else if (arg instanceof Timer) {
@@ -272,9 +272,9 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
 
         @Override
         protected boolean contains(String search) {
-            // always show entry for current thread
-            Optional<Chat> optThread = mView.getCurrentShownThread();
-            if (optThread.isPresent() && optThread.get() == mValue)
+            // always show entry for current chat
+            Optional<Chat> optChat = mView.getCurrentShownChat();
+            if (optChat.isPresent() && optChat.get() == mValue)
                 return true;
 
             for (Contact contact: mValue.getContacts()) {
@@ -298,8 +298,8 @@ final class ThreadListView extends Table<ThreadItem, Chat> {
         }
     }
 
-    private static String lastActivity(Chat thread, boolean pretty) {
-        SortedSet<KonMessage> messageSet = thread.getMessages().getAll();
+    private static String lastActivity(Chat chat, boolean pretty) {
+        SortedSet<KonMessage> messageSet = chat.getMessages().getAll();
         String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
                 pretty ? Utils.PRETTY_TIME.format(messageSet.last().getDate()) :
                 Utils.MID_DATE_FORMAT.format(messageSet.last().getDate());

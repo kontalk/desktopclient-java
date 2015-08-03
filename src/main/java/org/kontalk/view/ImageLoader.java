@@ -43,7 +43,7 @@ class ImageLoader {
     static void setImageIconAsync(WebLinkLabel view, String path) {
         AsyncLoader run = new AsyncLoader(view, path);
         // TODO all at once? queue not that good either
-        //new Thread(run).start();
+        //new Chat(run).start();
         run.run();
     }
 

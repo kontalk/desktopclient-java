@@ -72,11 +72,11 @@ import org.kontalk.model.MessageContent;
 import org.kontalk.model.Contact;
 import org.kontalk.system.Downloader;
 import org.kontalk.util.Tr;
-import org.kontalk.view.ThreadView.Background;
+import org.kontalk.view.ChatView.Background;
 
 
 /**
- * View all messages of one thread in a left/right MIM style list.
+ * View all messages of one chat in a left/right MIM style list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
@@ -90,14 +90,14 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
     private static final Icon CRYPT_ICON = Utils.getIcon("ic_msg_crypt.png");
     private static final Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
 
-    private final ThreadView mThreadView;
-    private final Chat mThread;
+    private final ChatView mChatView;
+    private final Chat mChat;
     private Optional<Background> mBackground = Optional.empty();
 
-    MessageList(View view, ThreadView threadView, Chat thread) {
+    MessageList(View view, ChatView chatView, Chat chat) {
         super(view, false);
-        mThreadView = threadView;
-        mThread = thread;
+        mChatView = chatView;
+        mChat = chat;
 
         // use custom editor (for mouse events)
         this.setDefaultEditor(Table.TableItem.class, new TableEditor());
@@ -126,15 +126,15 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             }
         });
 
-        this.setBackground(mThread.getViewSettings());
+        this.setBackground(mChat.getViewSettings());
 
         this.setVisible(false);
         this.updateOnEDT(null);
         this.setVisible(true);
     }
 
-    Chat getThread() {
-        return mThread;
+    Chat getChat() {
+        return mChat;
     }
 
     Optional<Background> getBG() {
@@ -154,9 +154,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         if (arg instanceof Chat.ViewSettings) {
             this.setBackground((Chat.ViewSettings) arg);
-            if (mThreadView.getCurrentThread().orElse(null) == mThread) {
-                //mThreadView.mScrollPane.getViewport().repaint();
-                mThreadView.repaint();
+            if (mChatView.getCurrentChat().orElse(null) == mChat) {
+                //mChatView.mScrollPane.getViewport().repaint();
+                mChatView.repaint();
             }
             return;
         }
@@ -165,33 +165,33 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             this.insertMessage((KonMessage) arg);
         } else {
             // check for new messages to add
-            if (this.getModel().getRowCount() < mThread.getMessages().getAll().size())
+            if (this.getModel().getRowCount() < mChat.getMessages().getAll().size())
                 this.insertMessages();
         }
 
-        if (mThreadView.getCurrentThread().orElse(null) == mThread) {
-            mThread.setRead();
+        if (mChatView.getCurrentChat().orElse(null) == mChat) {
+            mChat.setRead();
         }
     }
 
     private void insertMessages() {
         Set<MessageItem> newItems = new HashSet<>();
-        for (KonMessage message: mThread.getMessages().getAll()) {
+        for (KonMessage message: mChat.getMessages().getAll()) {
             if (!this.containsValue(message)) {
                 newItems.add(new MessageItem(message));
                 // trigger scrolling
-                mThreadView.setScrolling();
+                mChatView.setScrolling();
             }
         }
-        this.sync(mThread.getMessages().getAll(), newItems);
+        this.sync(mChat.getMessages().getAll(), newItems);
     }
 
     private void insertMessage(KonMessage message) {
         Set<MessageItem> newItems = new HashSet<>();
         newItems.add(new MessageItem(message));
-        this.sync(mThread.getMessages().getAll(), newItems);
+        this.sync(mChat.getMessages().getAll(), newItems);
         // trigger scrolling
-        mThreadView.setScrolling();
+        mChatView.setScrolling();
     }
 
     private void showPopupMenu(MouseEvent e) {
@@ -206,7 +206,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
     private void setBackground(Chat.ViewSettings s) {
         // simply overwrite
-        mBackground = mThreadView.createBG(s);
+        mBackground = mChatView.createBG(s);
     }
 
     /**

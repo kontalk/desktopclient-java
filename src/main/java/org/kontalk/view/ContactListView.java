@@ -71,7 +71,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
 
                 Contact selectedContact = optContact.get();
                 if (e.getClickCount() == 2) {
-                    mView.showThread(selectedContact);
+                    mView.showChat(selectedContact);
                 } else {
                     mView.showContactDetails(selectedContact);
                 }
@@ -221,7 +221,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
                 public void actionPerformed(ActionEvent event) {
                     Set<Contact> contact = new HashSet<>();
                     contact.add(mItem.mValue);
-                    ContactListView.this.mView.callCreateNewThread(contact);
+                    ContactListView.this.mView.callCreateNewChat(contact);
                 }
             });
             this.add(mNewMenuItem);
@@ -264,7 +264,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         void show(ContactItem item, Component invoker, int x, int y) {
             mItem = item;
 
-            // dont allow creation of more than one thread for a contact
+            // dont allow creation of more than one chat for a contact
             mNewMenuItem.setVisible(!ChatList.getInstance().contains(item.mValue));
 
             if (mItem.mValue.isBlocked()) {

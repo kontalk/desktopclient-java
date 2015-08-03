@@ -102,9 +102,9 @@ public final class View implements Observer {
 
     private final SearchPanel mSearchPanel;
     private final ContactListView mContactListView;
-    private final ThreadListView mThreadListView;
+    private final ChatListView mChatListView;
     private final Content mContent;
-    private final ThreadView mThreadView;
+    private final ChatView mChatView;
     private final WebTextArea mSendTextArea;
     private final WebButton mSendButton;
     private final WebStatusLabel mStatusBarLabel;
@@ -119,8 +119,8 @@ public final class View implements Observer {
 
         mContactListView = new ContactListView(this, ContactList.getInstance());
         ContactList.getInstance().addObserver(mContactListView);
-        mThreadListView = new ThreadListView(this, ChatList.getInstance());
-        ChatList.getInstance().addObserver(mThreadListView);
+        mChatListView = new ChatListView(this, ChatList.getInstance());
+        ChatList.getInstance().addObserver(mChatListView);
 
         // text area
         mSendTextArea = new WebTextArea();
@@ -159,17 +159,17 @@ public final class View implements Observer {
             }
         });
 
-        // thread view
-        mThreadView = new ThreadView(this, mSendTextArea, mSendButton);
-        ChatList.getInstance().addObserver(mThreadView);
+        // chat view
+        mChatView = new ChatView(this, mSendTextArea, mSendButton);
+        ChatList.getInstance().addObserver(mChatView);
 
         // content area
-        mContent = new Content(this, mThreadView);
+        mContent = new Content(this, mChatView);
 
         // search panel
         mSearchPanel = new SearchPanel(
-                new Table[]{mContactListView, mThreadListView},
-                mThreadView);
+                new Table[]{mContactListView, mChatListView},
+                mChatView);
 
         // status bar
         WebStatusBar statusBar = new WebStatusBar();
@@ -177,7 +177,7 @@ public final class View implements Observer {
         statusBar.add(mStatusBarLabel);
 
         // main frame
-        mMainFrame = new MainFrame(this, mContactListView, mThreadListView,
+        mMainFrame = new MainFrame(this, mContactListView, mChatListView,
                 mContent, mSearchPanel, statusBar);
         mMainFrame.setVisible(true);
 
@@ -233,7 +233,7 @@ public final class View implements Observer {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                View.this.mThreadListView.selectLastThread();
+                View.this.mChatListView.selectLastChat();
 
                 if (ChatList.getInstance().getAll().isEmpty())
                     mMainFrame.selectTab(MainFrame.Tab.CONTACT);
@@ -298,7 +298,7 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Connecting..."));
                 break;
             case CONNECTED:
-                mThreadView.setColor(Color.WHITE);
+                mChatView.setColor(Color.WHITE);
                 mStatusBarLabel.setText(Tr.tr("Connected"));
                 NotificationManager.hideAllNotifications();
                 break;
@@ -306,14 +306,14 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Disconnecting..."));
                 break;
             case DISCONNECTED:
-                mThreadView.setColor(Color.LIGHT_GRAY);
+                mChatView.setColor(Color.LIGHT_GRAY);
                 mStatusBarLabel.setText(Tr.tr("Not connected"));
                 //if (mTrayIcon != null)
                 //    trayIcon.setImage(updatedImage);
                 break;
             case SHUTTING_DOWN:
                 mMainFrame.save();
-                mThreadListView.save();
+                mChatListView.save();
                 mTrayManager.removeTray();
                 mMainFrame.setVisible(false);
                 mMainFrame.dispose();
@@ -322,7 +322,7 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Connecting failed"));
                 break;
             case ERROR:
-                mThreadView.setColor(Color.lightGray);
+                mChatView.setColor(Color.lightGray);
                 mStatusBarLabel.setText(Tr.tr("Connection error"));
                 break;
             }
@@ -403,7 +403,7 @@ public final class View implements Observer {
         errorText += "</html>";
 
         // TODO too intrusive for user, but use the explanation above for message view
-        //NotificationManager.showNotification(mThreadView, errorText);
+        //NotificationManager.showNotification(mChatView, errorText);
     }
 
     private void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {
@@ -463,41 +463,41 @@ public final class View implements Observer {
         mControl.shutDown();
     }
 
-    void callCreateNewThread(Set<Contact> contact) {
-        Chat thread = mControl.createNewThread(contact);
-        this.selectThread(thread);
+    void callCreateNewChat(Set<Contact> contact) {
+        Chat chat = mControl.createNewChat(contact);
+        this.selectChat(chat);
     }
 
     private void callSendText() {
-       Optional<Chat> optThread = mContent.getCurrentThread();
-       if (!optThread.isPresent())
-           // now current thread
+       Optional<Chat> optChat = mContent.getCurrentChat();
+       if (!optChat.isPresent())
+           // now current chat
            return;
 
-       mControl.sendText(optThread.get(), mSendTextArea.getText());
+       mControl.sendText(optChat.get(), mSendTextArea.getText());
        mSendTextArea.setText("");
     }
 
     /* view internal */
 
-    void showThread(Contact contact) {
-        Chat thread = ChatList.getInstance().get(contact);
-        this.selectThread(thread);
+    void showChat(Contact contact) {
+        Chat chat = ChatList.getInstance().get(contact);
+        this.selectChat(chat);
     }
 
-    private void selectThread(Chat thread) {
-        mMainFrame.selectTab(MainFrame.Tab.THREADS);
-        mThreadListView.setSelectedItem(thread);
+    private void selectChat(Chat chat) {
+        mMainFrame.selectTab(MainFrame.Tab.CHATS);
+        mChatListView.setSelectedItem(chat);
     }
 
     void showContactDetails(Contact contact) {
         mContent.showContact(contact);
     }
 
-    void showThread(Chat thread) {
-        if (mMainFrame.getCurrentTab() != MainFrame.Tab.THREADS)
+    void showChat(Chat chat) {
+        if (mMainFrame.getCurrentTab() != MainFrame.Tab.CHATS)
             return;
-        mContent.showThread(thread);
+        mContent.showChat(chat);
     }
 
     void clearSearch() {
@@ -505,10 +505,10 @@ public final class View implements Observer {
     }
 
     void tabPaneChanged(MainFrame.Tab tab) {
-        if (tab == MainFrame.Tab.THREADS) {
-            Optional<Chat> optThread = mThreadListView.getSelectedValue();
-            if (optThread.isPresent()) {
-                mContent.showThread(optThread.get());
+        if (tab == MainFrame.Tab.CHATS) {
+            Optional<Chat> optChat = mChatListView.getSelectedValue();
+            if (optChat.isPresent()) {
+                mContent.showChat(optChat.get());
                 return;
             }
         } else {
@@ -524,25 +524,25 @@ public final class View implements Observer {
     private void handleKeyTypeEvent(boolean empty) {
         mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
 
-        Optional<Chat> optThread = mContent.getCurrentThread();
-        if (!optThread.isPresent())
+        Optional<Chat> optChat = mContent.getCurrentChat();
+        if (!optChat.isPresent())
             return;
 
         // workaround: clearing the text area is not a key event
         if (!empty)
-            mControl.handleOwnChatStateEvent(optThread.get(), ChatState.composing);
+            mControl.handleOwnChatStateEvent(optChat.get(), ChatState.composing);
     }
 
-    Optional<Chat> getCurrentShownThread() {
-        return mContent.getCurrentThread();
+    Optional<Chat> getCurrentShownChat() {
+        return mContent.getCurrentChat();
     }
 
     boolean mainFrameIsFocused() {
         return mMainFrame.isFocused();
     }
 
-    void reloadThreadBG() {
-        mThreadView.loadDefaultBG();
+    void reloadChatBG() {
+        mChatView.loadDefaultBG();
     }
 
     void updateTray() {
