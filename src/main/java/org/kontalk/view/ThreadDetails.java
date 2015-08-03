@@ -41,7 +41,7 @@ import java.util.Optional;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.apache.commons.lang.StringUtils;
-import org.kontalk.model.KonThread;
+import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 
@@ -53,7 +53,7 @@ final class ThreadDetails extends WebPanel {
 
     private static final Color DEFAULT_BG = Color.WHITE;
 
-    private final KonThread mThread;
+    private final Chat mThread;
     private final WebTextField mSubjectField;
     private final WebRadioButton mColorOpt;
     private final WebButton mColor;
@@ -62,7 +62,7 @@ final class ThreadDetails extends WebPanel {
     // TODO group chat
     //WebCheckBoxList mParticipantsList;
 
-    ThreadDetails(final ComponentUtils.ModalPopup popup, KonThread thread) {
+    ThreadDetails(final ComponentUtils.ModalPopup popup, Chat thread) {
         mThread = thread;
 
         GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
@@ -199,13 +199,13 @@ final class ThreadDetails extends WebPanel {
 //        }
 //        mThread.setContact(threadContact);
 
-        KonThread.ViewSettings newSettings;
+        Chat.ViewSettings newSettings;
         if (mColorOpt.isSelected())
-            newSettings = new KonThread.ViewSettings(mColor.getBottomBgColor());
+            newSettings = new Chat.ViewSettings(mColor.getBottomBgColor());
         else if (mImgOpt.isSelected() && !mImgChooser.getSelectedFiles().isEmpty())
-            newSettings = new KonThread.ViewSettings(mImgChooser.getSelectedFiles().get(0).getAbsolutePath());
+            newSettings = new Chat.ViewSettings(mImgChooser.getSelectedFiles().get(0).getAbsolutePath());
         else
-            newSettings = new KonThread.ViewSettings();
+            newSettings = new Chat.ViewSettings();
 
         if (!newSettings.equals(mThread.getViewSettings())) {
              mThread.setViewSettings(newSettings);

@@ -36,7 +36,7 @@ import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
+import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.util.EncodingUtils;
 import org.sqlite.SQLiteConfig;
@@ -106,13 +106,13 @@ public final class Database {
             try (Statement stat = mConn.createStatement()) {
                 stat.executeUpdate(create + Contact.TABLE + " " + Contact.CREATE_TABLE);
                 stat.executeUpdate(create +
-                        KonThread.TABLE +
+                        Chat.TABLE +
                         " " +
-                        KonThread.CREATE_TABLE);
+                        Chat.CREATE_TABLE);
                 stat.executeUpdate(create +
-                        KonThread.TABLE_RECEIVER +
+                        Chat.TABLE_RECEIVER +
                         " " +
-                        KonThread.CREATE_TABLE_RECEIVER);
+                        Chat.CREATE_TABLE_RECEIVER);
                 stat.executeUpdate(create +
                         KonMessage.TABLE +
                         " " +
@@ -147,8 +147,8 @@ public final class Database {
             return;
 
         if (fromVersion < 1) {
-            mConn.createStatement().execute("ALTER TABLE "+KonThread.TABLE+
-                    " ADD COLUMN "+KonThread.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
+            mConn.createStatement().execute("ALTER TABLE "+Chat.TABLE+
+                    " ADD COLUMN "+Chat.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
         }
         if (fromVersion < 2) {
             mConn.createStatement().execute("ALTER TABLE "+KonMessage.TABLE+

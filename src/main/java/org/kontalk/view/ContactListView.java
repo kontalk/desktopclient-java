@@ -34,7 +34,7 @@ import java.util.Optional;
 import java.util.Set;
 import javax.swing.ListSelectionModel;
 import org.apache.commons.lang.StringEscapeUtils;
-import org.kontalk.model.ThreadList;
+import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
@@ -265,7 +265,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             mItem = item;
 
             // dont allow creation of more than one thread for a contact
-            mNewMenuItem.setVisible(!ThreadList.getInstance().contains(item.mValue));
+            mNewMenuItem.setVisible(!ChatList.getInstance().contains(item.mValue));
 
             if (mItem.mValue.isBlocked()) {
                 mBlockMenuItem.setVisible(false);

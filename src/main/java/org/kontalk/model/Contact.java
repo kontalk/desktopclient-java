@@ -153,7 +153,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
 
         mName = name;
         this.save();
-        // contact itself as argument for thread view items
+        // contact itself as argument for chat view items
         this.changed(this);
     }
 

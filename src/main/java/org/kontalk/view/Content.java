@@ -24,7 +24,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.GridBagLayout;
 import java.util.Optional;
-import org.kontalk.model.KonThread;
+import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 
 /**
@@ -43,13 +43,13 @@ public class Content extends WebPanel {
         this.show(mThreadView);
     }
 
-    Optional<KonThread> getCurrentThread() {
+    Optional<Chat> getCurrentThread() {
         if (!(mCurrent instanceof ThreadView))
             return Optional.empty();
         return mThreadView.getCurrentThread();
     }
 
-    void showThread(KonThread thread) {
+    void showThread(Chat thread) {
         mThreadView.showThread(thread);
         if (mCurrent != mThreadView)
             this.show(mThreadView);

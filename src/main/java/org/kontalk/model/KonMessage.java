@@ -67,7 +67,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     };
 
     public static final String TABLE = "messages";
-    public static final String COL_THREAD_ID = "thread_id";
+    public static final String COL_CHAT_ID = "thread_id";
     public static final String COL_DIR = "direction";
     public static final String COL_CONTACT_ID = "user_id";
     public static final String COL_JID = "jid";
@@ -82,7 +82,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String COL_SERV_DATE = "server_date";
     public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            COL_THREAD_ID + " INTEGER NOT NULL, " +
+            COL_CHAT_ID + " INTEGER NOT NULL, " +
             // enum, in- or outgoing
             COL_DIR + " INTEGER NOT NULL, " +
             // from or to contact
@@ -113,12 +113,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // if this combinations is equal we consider messages to be equal
             // (see .equals())
             "UNIQUE ("+COL_DIR+", "+COL_JID+", "+COL_XMPP_ID+", "+COL_DATE+"), " +
-            "FOREIGN KEY ("+COL_THREAD_ID+") REFERENCES "+KonThread.TABLE+" (_id), " +
+            "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id), " +
             "FOREIGN KEY ("+COL_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
     private int mID;
-    private final KonThread mThread;
+    private final Chat mChat;
     private final Direction mDir;
     private final Contact mContact;
 
@@ -139,7 +139,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     protected KonMessage(Builder builder) {
         mID = builder.mID;
-        mThread = builder.mThread;
+        mChat = builder.mChat;
         mDir = builder.mDir;
         // TODO group message stuff
         mContact = builder.mContact;
@@ -176,8 +176,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mID;
     }
 
-    public KonThread getThread() {
-        return mThread;
+    public Chat getChat() {
+        return mChat;
     }
 
     public Direction getDir() {
@@ -253,7 +253,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         Database db = Database.getInstance();
 
         List<Object> values = new LinkedList<>();
-        values.add(mThread.getID());
+        values.add(mChat.getID());
         values.add(mDir);
         values.add(mContact.getID());
         values.add(mJID);
@@ -285,7 +285,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     @Override
     public String toString() {
-        return "M:id="+mID+",thread="+mThread+",dir="+mDir+",mContact="+mContact
+        return "M:id="+mID+",chat="+mChat+",dir="+mDir+",mContact="+mContact
                 +",jid="+mJID+",xmppid="+mXMPPID
                 +",date="+mDate+",sdate="+mServerDate
                 +",recstat="+mReceiptStatus+",cont="+mContent
@@ -375,7 +375,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     static class Builder {
         private final int mID;
-        private final KonThread mThread;
+        private final Chat mChat;
         private final Direction mDir;
         private final Contact mContact;
         private final Date mDate;
@@ -393,12 +393,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         // used by subclasses and when loading from database
         Builder(int id,
-                KonThread thread,
+                Chat chat,
                 Direction dir,
                 Contact contact,
                 Date date) {
             mID = id;
-            mThread = thread;
+            mChat = chat;
             mDir = dir;
             mContact = contact;
             mDate = date;

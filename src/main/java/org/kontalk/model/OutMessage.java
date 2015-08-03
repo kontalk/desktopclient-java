@@ -61,8 +61,8 @@ public final class OutMessage extends KonMessage {
 
 public static class Builder extends KonMessage.Builder {
 
-        public Builder(KonThread thread, Contact contact, boolean encrypted) {
-            super(-1, thread, Direction.OUT, contact, new Date());
+        public Builder(Chat chat, Contact contact, boolean encrypted) {
+            super(-1, chat, Direction.OUT, contact, new Date());
 
             mJID = contact.getJID();
             mXMPPID = "Kon_" + StringUtils.randomString(8);

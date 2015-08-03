@@ -26,7 +26,7 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
-import org.kontalk.model.KonThread;
+import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 
 /**
@@ -38,14 +38,14 @@ final class ChatStateManager {
     private static final int COMPOSING_TO_PAUSED = 15; // seconds
 
     private final Client mClient;
-    private final Map<KonThread, MyChatState> mChatStateCache = new HashMap<>();
+    private final Map<Chat, MyChatState> mChatStateCache = new HashMap<>();
     private final Timer mTimer = new Timer();
 
     public ChatStateManager(Client client) {
         mClient = client;
     }
 
-    void handleOwnChatStateEvent(KonThread thread, ChatState state) {
+    void handleOwnChatStateEvent(Chat thread, ChatState state) {
         if (!mChatStateCache.containsKey(thread)) {
             if (state == ChatState.gone)
                 // weare and stay at the default state
@@ -62,11 +62,11 @@ final class ChatStateManager {
     }
 
     private class MyChatState {
-        private final KonThread mThread;
+        private final Chat mThread;
         private ChatState mCurrentState;
         private TimerTask mScheduledStateSet = null;
 
-        private MyChatState(KonThread thread) {
+        private MyChatState(Chat thread) {
             mThread = thread;
         }
 

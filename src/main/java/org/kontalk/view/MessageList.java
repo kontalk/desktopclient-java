@@ -67,7 +67,7 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
+import org.kontalk.model.Chat;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.Contact;
 import org.kontalk.system.Downloader;
@@ -91,10 +91,10 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
     private static final Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
 
     private final ThreadView mThreadView;
-    private final KonThread mThread;
+    private final Chat mThread;
     private Optional<Background> mBackground = Optional.empty();
 
-    MessageList(View view, ThreadView threadView, KonThread thread) {
+    MessageList(View view, ThreadView threadView, Chat thread) {
         super(view, false);
         mThreadView = threadView;
         mThread = thread;
@@ -133,7 +133,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         this.setVisible(true);
     }
 
-    KonThread getThread() {
+    Chat getThread() {
         return mThread;
     }
 
@@ -146,14 +146,14 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         if (arg instanceof Set ||
                 arg instanceof String ||
                 arg instanceof Boolean ||
-                arg instanceof KonThread.KonChatState) {
+                arg instanceof Chat.KonChatState) {
             // contacts, subject, read status or chat state changed, nothing
             // to do here
             return;
         }
 
-        if (arg instanceof KonThread.ViewSettings) {
-            this.setBackground((KonThread.ViewSettings) arg);
+        if (arg instanceof Chat.ViewSettings) {
+            this.setBackground((Chat.ViewSettings) arg);
             if (mThreadView.getCurrentThread().orElse(null) == mThread) {
                 //mThreadView.mScrollPane.getViewport().repaint();
                 mThreadView.repaint();
@@ -204,7 +204,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         popupMenu.show(this, e.getX(), e.getY());
     }
 
-    private void setBackground(KonThread.ViewSettings s) {
+    private void setBackground(Chat.ViewSettings s) {
         // simply overwrite
         mBackground = mThreadView.createBG(s);
     }

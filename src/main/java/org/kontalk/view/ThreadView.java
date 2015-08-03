@@ -50,8 +50,8 @@ import java.util.Optional;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
-import org.kontalk.model.KonThread;
-import org.kontalk.model.ThreadList;
+import org.kontalk.model.Chat;
+import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
@@ -148,11 +148,11 @@ final class ThreadView extends WebPanel implements Observer {
         return Optional.of((MessageList) view);
     }
 
-    Optional<KonThread> getCurrentThread() {
+    Optional<Chat> getCurrentThread() {
         Optional<MessageList> optview = this.getCurrentList();
         return optview.isPresent() ?
                 Optional.of(optview.get().getThread()) :
-                Optional.<KonThread>empty();
+                Optional.<Chat>empty();
     }
 
     void filterCurrentThread(String searchText) {
@@ -162,7 +162,7 @@ final class ThreadView extends WebPanel implements Observer {
         optList.get().filterItems(searchText);
     }
 
-    void showThread(KonThread thread) {
+    void showThread(Chat thread) {
         List<Contact> contact = new ArrayList<>(thread.getContacts());
         mTitleLabel.setText(contact.size() == 1 ? Utils.name(contact.get(0)) :
                 !thread.getSubject().isEmpty() ? thread.getSubject() :
@@ -204,7 +204,7 @@ final class ThreadView extends WebPanel implements Observer {
         return optBG.get();
     }
 
-    Optional<Background> createBG(KonThread.ViewSettings s){
+    Optional<Background> createBG(Chat.ViewSettings s){
         JViewport p = this.mScrollPane.getViewport();
         if (s.getBGColor().isPresent()) {
             Color c = s.getBGColor().get();
@@ -235,9 +235,9 @@ final class ThreadView extends WebPanel implements Observer {
     }
 
     private void updateOnEDT(Object arg) {
-        if (arg instanceof KonThread) {
-            KonThread thread = (KonThread) arg;
-            if (!ThreadList.getInstance().contains(thread.getID())) {
+        if (arg instanceof Chat) {
+            Chat thread = (Chat) arg;
+            if (!ChatList.getInstance().contains(thread.getID())) {
                 // thread was deleted
                 MessageList viewList = mThreadCache.get(thread.getID());
                 if (viewList != null)
@@ -252,7 +252,7 @@ final class ThreadView extends WebPanel implements Observer {
     }
 
     private void showPopup(final WebToggleButton invoker) {
-        Optional<KonThread> optThread = ThreadView.this.getCurrentThread();
+        Optional<Chat> optThread = ThreadView.this.getCurrentThread();
         if (!optThread.isPresent())
             return;
         if (mPopup == null)

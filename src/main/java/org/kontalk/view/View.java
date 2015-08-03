@@ -67,8 +67,8 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
-import org.kontalk.model.ThreadList;
+import org.kontalk.model.Chat;
+import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
@@ -119,8 +119,8 @@ public final class View implements Observer {
 
         mContactListView = new ContactListView(this, ContactList.getInstance());
         ContactList.getInstance().addObserver(mContactListView);
-        mThreadListView = new ThreadListView(this, ThreadList.getInstance());
-        ThreadList.getInstance().addObserver(mThreadListView);
+        mThreadListView = new ThreadListView(this, ChatList.getInstance());
+        ChatList.getInstance().addObserver(mThreadListView);
 
         // text area
         mSendTextArea = new WebTextArea();
@@ -161,7 +161,7 @@ public final class View implements Observer {
 
         // thread view
         mThreadView = new ThreadView(this, mSendTextArea, mSendButton);
-        ThreadList.getInstance().addObserver(mThreadView);
+        ChatList.getInstance().addObserver(mThreadView);
 
         // content area
         mContent = new Content(this, mThreadView);
@@ -183,7 +183,7 @@ public final class View implements Observer {
 
         // tray
         mTrayManager = new TrayManager(this, mMainFrame);
-        ThreadList.getInstance().addObserver(mTrayManager);
+        ChatList.getInstance().addObserver(mTrayManager);
 
         // hotkeys
         this.setHotkeys();
@@ -235,7 +235,7 @@ public final class View implements Observer {
             public void run() {
                 View.this.mThreadListView.selectLastThread();
 
-                if (ThreadList.getInstance().getAll().isEmpty())
+                if (ChatList.getInstance().getAll().isEmpty())
                     mMainFrame.selectTab(MainFrame.Tab.CONTACT);
             }
         });
@@ -464,12 +464,12 @@ public final class View implements Observer {
     }
 
     void callCreateNewThread(Set<Contact> contact) {
-        KonThread thread = mControl.createNewThread(contact);
+        Chat thread = mControl.createNewThread(contact);
         this.selectThread(thread);
     }
 
     private void callSendText() {
-       Optional<KonThread> optThread = mContent.getCurrentThread();
+       Optional<Chat> optThread = mContent.getCurrentThread();
        if (!optThread.isPresent())
            // now current thread
            return;
@@ -481,11 +481,11 @@ public final class View implements Observer {
     /* view internal */
 
     void showThread(Contact contact) {
-        KonThread thread = ThreadList.getInstance().get(contact);
+        Chat thread = ChatList.getInstance().get(contact);
         this.selectThread(thread);
     }
 
-    private void selectThread(KonThread thread) {
+    private void selectThread(Chat thread) {
         mMainFrame.selectTab(MainFrame.Tab.THREADS);
         mThreadListView.setSelectedItem(thread);
     }
@@ -494,7 +494,7 @@ public final class View implements Observer {
         mContent.showContact(contact);
     }
 
-    void showThread(KonThread thread) {
+    void showThread(Chat thread) {
         if (mMainFrame.getCurrentTab() != MainFrame.Tab.THREADS)
             return;
         mContent.showThread(thread);
@@ -506,7 +506,7 @@ public final class View implements Observer {
 
     void tabPaneChanged(MainFrame.Tab tab) {
         if (tab == MainFrame.Tab.THREADS) {
-            Optional<KonThread> optThread = mThreadListView.getSelectedValue();
+            Optional<Chat> optThread = mThreadListView.getSelectedValue();
             if (optThread.isPresent()) {
                 mContent.showThread(optThread.get());
                 return;
@@ -524,7 +524,7 @@ public final class View implements Observer {
     private void handleKeyTypeEvent(boolean empty) {
         mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
 
-        Optional<KonThread> optThread = mContent.getCurrentThread();
+        Optional<Chat> optThread = mContent.getCurrentThread();
         if (!optThread.isPresent())
             return;
 
@@ -533,7 +533,7 @@ public final class View implements Observer {
             mControl.handleOwnChatStateEvent(optThread.get(), ChatState.composing);
     }
 
-    Optional<KonThread> getCurrentShownThread() {
+    Optional<Chat> getCurrentShownThread() {
         return mContent.getCurrentThread();
     }
 

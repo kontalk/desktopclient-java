@@ -52,7 +52,7 @@ final class Notifier {
     }
 
     public void onNewMessage(InMessage newMessage) {
-        if (newMessage.getThread() == mView.getCurrentShownThread().orElse(null) &&
+        if (newMessage.getChat() == mView.getCurrentShownThread().orElse(null) &&
                 mView.mainFrameIsFocused())
             return;
         MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);

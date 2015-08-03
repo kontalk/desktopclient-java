@@ -38,9 +38,9 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.system.Config;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
-import org.kontalk.model.KonThread.KonChatState;
-import org.kontalk.model.ThreadList;
+import org.kontalk.model.Chat;
+import org.kontalk.model.Chat.KonChatState;
+import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ThreadListView.ThreadItem;
@@ -49,12 +49,12 @@ import org.kontalk.view.ThreadListView.ThreadItem;
  * Show a brief list of all threads.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ThreadListView extends Table<ThreadItem, KonThread> {
+final class ThreadListView extends Table<ThreadItem, Chat> {
 
-    private final ThreadList mThreadList;
+    private final ChatList mThreadList;
     private final WebPopupMenu mPopupMenu;
 
-    ThreadListView(final View view, ThreadList threadList) {
+    ThreadListView(final View view, ChatList threadList) {
         super(view, true);
         mThreadList = threadList;
 
@@ -76,13 +76,13 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
-            KonThread lastThread = null;
+            Chat lastThread = null;
 
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
-                Optional<KonThread> optThread = ThreadListView.this.getSelectedValue();
+                Optional<Chat> optThread = ThreadListView.this.getSelectedValue();
                 if (!optThread.isPresent())
                     return;
                 // if event is caused by filtering, dont do anything
@@ -120,8 +120,8 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
     @Override
     protected void updateOnEDT(Object arg) {
         Set<ThreadItem> newItems = new HashSet<>();
-        Set<KonThread> threads = mThreadList.getAll();
-        for (KonThread thread: threads)
+        Set<Chat> threads = mThreadList.getAll();
+        for (Chat thread: threads)
             if (!this.containsValue(thread))
                 newItems.add(new ThreadItem(thread));
         this.sync(threads, newItems);
@@ -153,7 +153,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         mView.getControl().deleteThread(threadItem.mValue);
     }
 
-    protected final class ThreadItem extends Table<ThreadItem, KonThread>.TableItem {
+    protected final class ThreadItem extends Table<ThreadItem, Chat>.TableItem {
 
         private final WebLabel mNameLabel;
         private final WebLabel mSubjectLabel;
@@ -161,7 +161,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         private final WebLabel mChatStateLabel;
         private Color mBackground;
 
-        ThreadItem(KonThread thread) {
+        ThreadItem(Chat thread) {
             super(thread);
 
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
@@ -245,7 +245,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
                 mStatusLabel.setText(lastActivity(mValue, true));
             }
 
-            if (arg instanceof KonThread.KonChatState) {
+            if (arg instanceof Chat.KonChatState) {
                 KonChatState state = (KonChatState) arg;
                 String stateText = null;
                 switch(state.getState()) {
@@ -273,7 +273,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         @Override
         protected boolean contains(String search) {
             // always show entry for current thread
-            Optional<KonThread> optThread = mView.getCurrentShownThread();
+            Optional<Chat> optThread = mView.getCurrentShownThread();
             if (optThread.isPresent() && optThread.get() == mValue)
                 return true;
 
@@ -298,7 +298,7 @@ final class ThreadListView extends Table<ThreadItem, KonThread> {
         }
     }
 
-    private static String lastActivity(KonThread thread, boolean pretty) {
+    private static String lastActivity(Chat thread, boolean pretty) {
         SortedSet<KonMessage> messageSet = thread.getMessages().getAll();
         String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
                 pretty ? Utils.PRETTY_TIME.format(messageSet.last().getDate()) :

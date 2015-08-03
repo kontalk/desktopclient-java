@@ -46,10 +46,10 @@ import org.kontalk.misc.KonException;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
+import org.kontalk.model.Chat;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
-import org.kontalk.model.ThreadList;
+import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.util.XMPPUtils;
@@ -131,7 +131,7 @@ public final class Control {
 
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (KonThread thread: ThreadList.getInstance().getAll())
+            for (Chat thread: ChatList.getInstance().getAll())
                 for (OutMessage m : thread.getMessages().getPending())
                     this.sendMessage(m);
 
@@ -178,7 +178,7 @@ public final class Control {
             return false;
         }
         Contact contact = optContact.get();
-        KonThread thread = getThread(ids.threadID, contact);
+        Chat thread = getThread(ids.threadID, contact);
         InMessage.Builder builder = new InMessage.Builder(thread, contact);
         builder.jid(ids.jid);
         builder.xmppID(ids.xmppID);
@@ -252,7 +252,7 @@ public final class Control {
             return;
         }
         Contact contact = optContact.get();
-        KonThread thread = getThread(xmppThreadID, contact);
+        Chat thread = getThread(xmppThreadID, contact);
         thread.setChatState(contact, chatState);
     }
 
@@ -417,7 +417,7 @@ public final class Control {
 
     private void sendMessage(OutMessage message) {
         mClient.sendMessage(message);
-        mChatStateManager.handleOwnChatStateEvent(message.getThread(), ChatState.active);
+        mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
     }
 
     private void sendKeyRequest(Contact contact) {
@@ -453,16 +453,16 @@ public final class Control {
         return new Control().mViewControl;
     }
 
-    private static KonThread getThread(String xmppThreadID, Contact contact) {
-        ThreadList threadList = ThreadList.getInstance();
-        Optional<KonThread> optThread = threadList.get(xmppThreadID);
+    private static Chat getThread(String xmppThreadID, Contact contact) {
+        ChatList threadList = ChatList.getInstance();
+        Optional<Chat> optThread = threadList.get(xmppThreadID);
         return optThread.orElse(threadList.get(contact));
     }
 
     private static Optional<OutMessage> getMessage(MessageIDs ids) {
         // get thread by thread ID
-        ThreadList tl = ThreadList.getInstance();
-        Optional<KonThread> optThread = tl.get(ids.threadID);
+        ChatList tl = ChatList.getInstance();
+        Optional<Chat> optThread = tl.get(ids.threadID);
         if (optThread.isPresent()) {
             return optThread.get().getMessages().getLast(ids.xmppID);
         }
@@ -476,7 +476,7 @@ public final class Control {
         }
 
         // fallback: search everywhere
-        for (KonThread thread: tl.getAll()) {
+        for (Chat thread: tl.getAll()) {
             Optional<OutMessage> optM = thread.getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
@@ -522,7 +522,7 @@ public final class Control {
             mCurrentStatus = Status.SHUTTING_DOWN;
             this.changed(new ViewEvent.StatusChanged());
             ContactList.getInstance().save();
-            ThreadList.getInstance().save();
+            ChatList.getInstance().save();
             try {
                 Database.getInstance().close();
             } catch (RuntimeException ex) {
@@ -603,15 +603,15 @@ public final class Control {
 
         /* threads */
 
-        public KonThread createNewThread(Set<Contact> contact) {
-            return ThreadList.getInstance().createNew(contact);
+        public Chat createNewThread(Set<Contact> contact) {
+            return ChatList.getInstance().createNew(contact);
         }
 
-        public void deleteThread(KonThread thread) {
-            ThreadList.getInstance().delete(thread.getID());
+        public void deleteThread(Chat thread) {
+            ChatList.getInstance().delete(thread.getID());
         }
 
-        public void handleOwnChatStateEvent(KonThread thread, ChatState state) {
+        public void handleOwnChatStateEvent(Chat thread, ChatState state) {
             mChatStateManager.handleOwnChatStateEvent(thread, state);
         }
 
@@ -621,7 +621,7 @@ public final class Control {
             Control.this.decryptAndDownload(message);
         }
 
-        public void sendText(KonThread thread, String text) {
+        public void sendText(Chat thread, String text) {
             // TODO no group chat support yet
             Set<Contact> contacts = thread.getContacts();
             for (Contact contact: contacts) {
@@ -668,7 +668,7 @@ public final class Control {
          * save and process the message.
          * @return the new created message
          */
-        private OutMessage newOutMessage(KonThread thread, Contact contact, String text, boolean encrypted) {
+        private OutMessage newOutMessage(Chat thread, Contact contact, String text, boolean encrypted) {
             MessageContent content = new MessageContent(text);
             OutMessage.Builder builder = new OutMessage.Builder(thread, contact, encrypted);
             builder.content(content);

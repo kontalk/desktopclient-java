@@ -34,21 +34,21 @@ import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
 
 /**
- * Messages of thread.
+ * Messages of chat.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class ThreadMessages {
-    private static final Logger LOGGER = Logger.getLogger(ThreadMessages.class.getName());
+public final class ChatMessages {
+    private static final Logger LOGGER = Logger.getLogger(ChatMessages.class.getName());
 
-    private final KonThread mThread;
+    private final Chat mChat;
     private final NavigableSet<KonMessage> mSet =
         Collections.synchronizedNavigableSet(new TreeSet<KonMessage>());
 
     private boolean mLoaded = false;
 
-    public ThreadMessages(KonThread thread) {
-        mThread = thread;
+    public ChatMessages(Chat chat) {
+        mChat = chat;
     }
 
     private void ensureLoaded() {
@@ -65,7 +65,7 @@ public final class ThreadMessages {
         KonMessage.Status[] statusValues = KonMessage.Status.values();
         Coder.Encryption[] encryptionValues = Coder.Encryption.values();
         Coder.Signing[] signingValues = Coder.Signing.values();
-        String where = KonMessage.COL_THREAD_ID + " == " + mThread.getID();
+        String where = KonMessage.COL_CHAT_ID + " == " + mChat.getID();
         try (ResultSet resultSet = db.execSelectWhereInsecure(KonMessage.TABLE,
                 where)) {
             while (resultSet.next()) {
@@ -103,7 +103,7 @@ public final class ThreadMessages {
                         Optional.<Date>empty() :
                         Optional.of(new Date(sDate));
 
-                KonMessage.Builder builder = new KonMessage.Builder(id, mThread,
+                KonMessage.Builder builder = new KonMessage.Builder(id, mChat,
                         dir, optContact.get(), date);
                 builder.jid(jid);
                 builder.xmppID(xmppID);
@@ -123,7 +123,7 @@ public final class ThreadMessages {
     }
 
     /**
-     * Add message to thread without notifying other components.
+     * Add message to chat without notifying other components.
      */
     boolean add(KonMessage message) {
         this.ensureLoaded();
@@ -134,7 +134,7 @@ public final class ThreadMessages {
     private boolean addSilent(KonMessage message) {
         // see KonMessage.equals()
         if (mSet.contains(message)) {
-            LOGGER.warning("message already in thread: " + message);
+            LOGGER.warning("message already in chat: " + message);
             return false;
         }
         boolean added = mSet.add(message);
@@ -148,7 +148,7 @@ public final class ThreadMessages {
     }
 
     /**
-     * Get all outgoing messages with status "PENDING" for this thread.
+     * Get all outgoing messages with status "PENDING" for this chat.
      */
     public SortedSet<OutMessage> getPending() {
         this.ensureLoaded();

@@ -33,33 +33,33 @@ import java.util.logging.Logger;
 import org.kontalk.system.Database;
 
 /**
- * The global list of all threads.
+ * The global list of all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class ThreadList extends Observable implements Observer {
-    private static final Logger LOGGER = Logger.getLogger(ThreadList.class.getName());
+public final class ChatList extends Observable implements Observer {
+    private static final Logger LOGGER = Logger.getLogger(ChatList.class.getName());
 
-    private static final ThreadList INSTANCE = new ThreadList();
+    private static final ChatList INSTANCE = new ChatList();
 
-    private final HashMap<Integer, KonThread> mMap = new HashMap<>();
+    private final HashMap<Integer, Chat> mMap = new HashMap<>();
 
     private boolean mUnread = false;
 
-    private ThreadList() {
+    private ChatList() {
     }
 
     public void load() {
         assert mMap.isEmpty();
 
-        HashMap<Integer, Set<Contact>> threadContactMapping = new HashMap<>();
+        HashMap<Integer, Set<Contact>> chatContactMapping = new HashMap<>();
         ContactList contactList = ContactList.getInstance();
         Database db = Database.getInstance();
-        try (ResultSet receiverRS = db.execSelectAll(KonThread.TABLE_RECEIVER);
-                ResultSet threadRS = db.execSelectAll(KonThread.TABLE)) {
-            // first, find contact for threads
+        try (ResultSet receiverRS = db.execSelectAll(Chat.TABLE_RECEIVER);
+                ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
+            // first, find contact for chats
             // TODO: rewrite
             while (receiverRS.next()) {
-                Integer threadID = receiverRS.getInt("thread_id");
+                Integer chatID = receiverRS.getInt("thread_id");
                 Integer contactID = receiverRS.getInt("user_id");
                 Optional<Contact> optContact = contactList.get(contactID);
                 if (!optContact.isPresent()) {
@@ -67,92 +67,92 @@ public final class ThreadList extends Observable implements Observer {
                     continue;
                 }
                 Contact contact = optContact.get();
-                if (threadContactMapping.containsKey(threadID)) {
-                    threadContactMapping.get(threadID).add(contact);
+                if (chatContactMapping.containsKey(chatID)) {
+                    chatContactMapping.get(chatID).add(contact);
                 } else {
                     Set<Contact> contactSet = new HashSet<>();
                     contactSet.add(contact);
-                    threadContactMapping.put(threadID, contactSet);
+                    chatContactMapping.put(chatID, contactSet);
                 }
             }
-            // now, create threads
-            while (threadRS.next()) {
-                int id = threadRS.getInt("_id");
-                String xmppThreadID = Database.getString(threadRS, "xmpp_id");
-                Set<Contact> contactSet = threadContactMapping.get(id);
+            // now, create chats
+            while (chatRS.next()) {
+                int id = chatRS.getInt("_id");
+                String xmppThreadID = Database.getString(chatRS, "xmpp_id");
+                Set<Contact> contactSet = chatContactMapping.get(id);
                 if (contactSet == null) {
-                    LOGGER.warning("no contacts found for thread");
+                    LOGGER.warning("no contacts found for chat");
                     contactSet = new HashSet<>();
                 }
-                String subject = Database.getString(threadRS,
-                        KonThread.COL_SUBJ);
-                boolean read = threadRS.getBoolean(KonThread.COL_READ);
-                String jsonViewSettings = Database.getString(threadRS,
-                        KonThread.COL_VIEW_SET);
+                String subject = Database.getString(chatRS,
+                        Chat.COL_SUBJ);
+                boolean read = chatRS.getBoolean(Chat.COL_READ);
+                String jsonViewSettings = Database.getString(chatRS,
+                        Chat.COL_VIEW_SET);
 
-                this.put(new KonThread(id, xmppThreadID, contactSet, subject, read,
+                this.put(new Chat(id, xmppThreadID, contactSet, subject, read,
                         jsonViewSettings));
                 if (!read)
                     mUnread = true;
             }
         } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't load threads from db", ex);
+            LOGGER.log(Level.WARNING, "can't load chats from db", ex);
         }
         this.changed(null);
     }
 
-    public synchronized SortedSet<KonThread> getAll() {
+    public synchronized SortedSet<Chat> getAll() {
         return new TreeSet<>(mMap.values());
     }
 
     public synchronized void save() {
-        for (KonThread thread: mMap.values()) {
-            thread.save();
+        for (Chat chat: mMap.values()) {
+            chat.save();
         }
     }
 
     /**
-     * Get a thread with only the contact as additional member.
-     * Creates a new thread if necessary.
+     * Get a chat with only the contact as additional member.
+     * Creates a new chat if necessary.
      */
-    public KonThread get(Contact contact) {
-        KonThread thread = this.getOrNull(contact);
-        if (thread != null)
-            return thread;
+    public Chat get(Contact contact) {
+        Chat chat = this.getOrNull(contact);
+        if (chat != null)
+            return chat;
 
         Set<Contact> contactSet = new HashSet<>();
         contactSet.add(contact);
         return this.createNew(contactSet);
     }
 
-    public KonThread createNew(Set<Contact> contact) {
-        KonThread newThread = new KonThread(contact);
-        this.put(newThread);
-        this.changed(newThread);
-        return newThread;
+    public Chat createNew(Set<Contact> contact) {
+        Chat newChat = new Chat(contact);
+        this.put(newChat);
+        this.changed(newChat);
+        return newChat;
     }
 
-    private void put(KonThread thread) {
+    private void put(Chat chat) {
         synchronized (this) {
-            mMap.put(thread.getID(), thread);
+            mMap.put(chat.getID(), chat);
         }
-        thread.addObserver(this);
+        chat.addObserver(this);
     }
 
-    public synchronized Optional<KonThread> get(int id) {
-        KonThread thread = mMap.get(id);
-        if (thread == null)
-            LOGGER.warning("can't find thread with id: "+id);
-        return Optional.ofNullable(thread);
+    public synchronized Optional<Chat> get(int id) {
+        Chat chat = mMap.get(id);
+        if (chat == null)
+            LOGGER.warning("can't find chat with id: "+id);
+        return Optional.ofNullable(chat);
     }
 
-    public synchronized Optional<KonThread> get(String xmppThreadID) {
+    public synchronized Optional<Chat> get(String xmppThreadID) {
         if (xmppThreadID == null || xmppThreadID.isEmpty()) {
             return Optional.empty();
         }
-        for (KonThread thread : mMap.values()) {
-            if (xmppThreadID.equals(thread.getXMPPID().orElse(null)))
-                return Optional.of(thread);
+        for (Chat chat : mMap.values()) {
+            if (xmppThreadID.equals(chat.getXMPPID().orElse(null)))
+                return Optional.of(chat);
         }
         return Optional.empty();
     }
@@ -166,28 +166,28 @@ public final class ThreadList extends Observable implements Observer {
     }
 
     public synchronized void delete(int id) {
-        KonThread thread = mMap.remove(id);
-        if (thread == null) {
-            LOGGER.warning("can't delete thread, not found. id: "+id);
+        Chat chat = mMap.remove(id);
+        if (chat == null) {
+            LOGGER.warning("can't delete chat, not found. id: "+id);
             return;
         }
-        thread.delete();
-        thread.deleteObservers();
-        this.changed(thread);
+        chat.delete();
+        chat.deleteObservers();
+        this.changed(chat);
     }
 
     /**
-     * Return if any thread is unread.
+     * Return if any chat is unread.
      */
     public boolean isUnread() {
         return mUnread;
     }
 
-    private synchronized KonThread getOrNull(Contact contact) {
-        for (KonThread thread : mMap.values()) {
-            Set<Contact> threadContact = thread.getContacts();
-            if (threadContact.size() == 1 && threadContact.contains(contact))
-                return thread;
+    private synchronized Chat getOrNull(Contact contact) {
+        for (Chat chat : mMap.values()) {
+            Set<Contact> chatContact = chat.getContacts();
+            if (chatContact.size() == 1 && chatContact.contains(contact))
+                return chat;
         }
         return null;
     }
@@ -197,13 +197,13 @@ public final class ThreadList extends Observable implements Observer {
         this.notifyObservers(arg);
     }
 
-    public static ThreadList getInstance() {
+    public static ChatList getInstance() {
         return INSTANCE;
     }
 
     @Override
     public void update(Observable o, Object arg) {
-        // only observing threads 'read' status
+        // only observing chats 'read' status
         if (!(arg instanceof Boolean))
             return;
 
@@ -218,8 +218,8 @@ public final class ThreadList extends Observable implements Observer {
         }
 
         synchronized (this) {
-            for (KonThread thread : mMap.values()) {
-                if (!thread.isRead()) {
+            for (Chat chat : mMap.values()) {
+                if (!chat.isRead()) {
                     return;
                 }
             }
