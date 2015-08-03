@@ -128,13 +128,13 @@ final class ChatListView extends Table<ChatItem, Chat> {
     }
 
     void selectLastChat() {
-        int i = Config.getInstance().getInt(Config.VIEW_SELECTED_THREAD);
+        int i = Config.getInstance().getInt(Config.VIEW_SELECTED_CHAT);
         if (i < 0) i = 0;
         this.setSelectedItem(i);
     }
 
     void save() {
-        Config.getInstance().setProperty(Config.VIEW_SELECTED_THREAD,
+        Config.getInstance().setProperty(Config.VIEW_SELECTED_CHAT,
                 this.getSelectedRow());
     }
 

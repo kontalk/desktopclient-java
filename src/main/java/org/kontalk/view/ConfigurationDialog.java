@@ -157,7 +157,7 @@ final class ConfigurationDialog extends WebDialog {
 
             mBGBox = new WebCheckBox(Tr.tr("Custom background:")+" ");
             mBGBox.setAnimated(false);
-            String bgPath = mConf.getString(Config.VIEW_THREAD_BG);
+            String bgPath = mConf.getString(Config.VIEW_CHAT_BG);
             mBGBox.setSelected(!bgPath.isEmpty());
             mBGBox.addItemListener(new ItemListener() {
                 @Override
@@ -187,9 +187,9 @@ final class ConfigurationDialog extends WebDialog {
             } else {
                 bgPath = "";
             }
-            String oldBGPath = mConf.getString(Config.VIEW_THREAD_BG);
+            String oldBGPath = mConf.getString(Config.VIEW_CHAT_BG);
             if (!bgPath.equals(oldBGPath)) {
-                mConf.setProperty(Config.VIEW_THREAD_BG, bgPath);
+                mConf.setProperty(Config.VIEW_CHAT_BG, bgPath);
                 mView.reloadChatBG();
             }
         }

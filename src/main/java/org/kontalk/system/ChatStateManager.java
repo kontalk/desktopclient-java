@@ -30,7 +30,7 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 
 /**
- * Manager handling own chat status for all threads.
+ * Manager handling own chat status for all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatStateManager {
@@ -45,15 +45,15 @@ final class ChatStateManager {
         mClient = client;
     }
 
-    void handleOwnChatStateEvent(Chat thread, ChatState state) {
-        if (!mChatStateCache.containsKey(thread)) {
+    void handleOwnChatStateEvent(Chat chat, ChatState state) {
+        if (!mChatStateCache.containsKey(chat)) {
             if (state == ChatState.gone)
                 // weare and stay at the default state
                 return;
-            mChatStateCache.put(thread, new MyChatState(thread));
+            mChatStateCache.put(chat, new MyChatState(chat));
         }
 
-        mChatStateCache.get(thread).handleState(state);
+        mChatStateCache.get(chat).handleState(state);
     }
 
     void imGone() {
@@ -62,12 +62,12 @@ final class ChatStateManager {
     }
 
     private class MyChatState {
-        private final Chat mThread;
+        private final Chat mChat;
         private ChatState mCurrentState;
         private TimerTask mScheduledStateSet = null;
 
-        private MyChatState(Chat thread) {
-            mThread = thread;
+        private MyChatState(Chat chat) {
+            mChat = chat;
         }
 
         private void handleState(ChatState state) {
@@ -96,7 +96,7 @@ final class ChatStateManager {
             // currently set states from XEP-0085: active, inactive, composing
             mCurrentState = state;
 
-            Set<Contact> contacts = mThread.getContacts();
+            Set<Contact> contacts = mChat.getContacts();
 
             if (contacts.size() > 1 || state == ChatState.active)
                 // don't send for groups
@@ -106,7 +106,7 @@ final class ChatStateManager {
             for (Contact contact : contacts)
                 if (!contact.isMe() && !contact.isBlocked())
                     mClient.sendChatState(contact.getJID(),
-                            mThread.getXMPPID(),
+                            mChat.getXMPPID(),
                             state);
         }
     }

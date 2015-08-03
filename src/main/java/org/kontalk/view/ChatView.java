@@ -187,7 +187,7 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void loadDefaultBG() {
-        String imagePath = Config.getInstance().getString(Config.VIEW_THREAD_BG);
+        String imagePath = Config.getInstance().getString(Config.VIEW_CHAT_BG);
         mDefaultBG = !imagePath.isEmpty() ?
                 new Background(mScrollPane.getViewport(), imagePath) :
                 new Background(mScrollPane.getViewport());

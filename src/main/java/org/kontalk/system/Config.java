@@ -49,8 +49,8 @@ public final class Config extends PropertiesConfiguration {
     public static final String ACC_JID = "account.jid";
     public static final String VIEW_FRAME_WIDTH = "view.frame.width";
     public static final String VIEW_FRAME_HEIGHT = "view.frame.height";
-    public static final String VIEW_SELECTED_THREAD = "view.thread";
-    public static final String VIEW_THREAD_BG = "view.thread_bg";
+    public static final String VIEW_SELECTED_CHAT = "view.thread";
+    public static final String VIEW_CHAT_BG = "view.thread_bg";
     public static final String NET_SEND_CHAT_STATE = "net.chatstate";
     public static final String NET_STATUS_LIST = "net.status_list";
     public static final String MAIN_CONNECT_STARTUP = "main.connect_startup";
@@ -89,8 +89,8 @@ public final class Config extends PropertiesConfiguration {
         map.put(ACC_JID, "");
         map.put(VIEW_FRAME_WIDTH, 600);
         map.put(VIEW_FRAME_HEIGHT, 650);
-        map.put(VIEW_SELECTED_THREAD, -1);
-        map.put(VIEW_THREAD_BG, "");
+        map.put(VIEW_SELECTED_CHAT, -1);
+        map.put(VIEW_CHAT_BG, "");
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_STATUS_LIST, new String[]{DEFAULT_XMPP_STATUS});
         map.put(MAIN_CONNECT_STARTUP, true);

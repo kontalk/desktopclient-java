@@ -77,18 +77,18 @@ public final class Control {
     }
 
     /**
-     * Message attributes to identify the thread for a message.
+     * Message attributes to identify the chat for a message.
      */
     public static class MessageIDs {
         public final String jid;
         public final String xmppID;
-        public final String threadID;
+        public final String xmppThreadID;
         //public final Optional<GroupID> groupID;
 
         private MessageIDs(String jid, String xmppID, String threadID) {
             this.jid = jid;
             this.xmppID = xmppID;
-            this.threadID = threadID;
+            this.xmppThreadID = threadID;
         }
 
         public static MessageIDs from(Message m) {
@@ -105,7 +105,7 @@ public final class Control {
 
         @Override
         public String toString() {
-            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+threadID;
+            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID;
         }
     }
 
@@ -131,8 +131,8 @@ public final class Control {
 
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (Chat thread: ChatList.getInstance().getAll())
-                for (OutMessage m : thread.getMessages().getPending())
+            for (Chat chat: ChatList.getInstance().getAll())
+                for (OutMessage m : chat.getMessages().getPending())
                     this.sendMessage(m);
 
             // send public key requests for Kontalk contacts with missing key
@@ -178,16 +178,16 @@ public final class Control {
             return false;
         }
         Contact contact = optContact.get();
-        Chat thread = getThread(ids.threadID, contact);
-        InMessage.Builder builder = new InMessage.Builder(thread, contact);
+        Chat chat = getChat(ids.xmppThreadID, contact);
+        InMessage.Builder builder = new InMessage.Builder(chat, contact);
         builder.jid(ids.jid);
         builder.xmppID(ids.xmppID);
         builder.serverDate(serverDate);
         builder.content(content);
         InMessage newMessage = builder.build();
-        boolean added = thread.addMessage(newMessage);
+        boolean added = chat.addMessage(newMessage);
         if (!added) {
-            LOGGER.info("message already in thread, dropping this one");
+            LOGGER.info("message already in chat, dropping this one");
             return true;
         }
         newMessage.save();
@@ -252,8 +252,8 @@ public final class Control {
             return;
         }
         Contact contact = optContact.get();
-        Chat thread = getThread(xmppThreadID, contact);
-        thread.setChatState(contact, chatState);
+        Chat chat = getChat(xmppThreadID, contact);
+        chat.setChatState(contact, chatState);
     }
 
     public void addContactFromRoster(String jid,
@@ -453,21 +453,21 @@ public final class Control {
         return new Control().mViewControl;
     }
 
-    private static Chat getThread(String xmppThreadID, Contact contact) {
-        ChatList threadList = ChatList.getInstance();
-        Optional<Chat> optThread = threadList.get(xmppThreadID);
-        return optThread.orElse(threadList.get(contact));
+    private static Chat getChat(String xmppThreadID, Contact contact) {
+        ChatList chatList = ChatList.getInstance();
+        Optional<Chat> optChat = chatList.get(xmppThreadID);
+        return optChat.orElse(chatList.get(contact));
     }
 
     private static Optional<OutMessage> getMessage(MessageIDs ids) {
-        // get thread by thread ID
+        // get chat by thread ID
         ChatList tl = ChatList.getInstance();
-        Optional<Chat> optThread = tl.get(ids.threadID);
-        if (optThread.isPresent()) {
-            return optThread.get().getMessages().getLast(ids.xmppID);
+        Optional<Chat> optChat = tl.get(ids.xmppThreadID);
+        if (optChat.isPresent()) {
+            return optChat.get().getMessages().getLast(ids.xmppID);
         }
 
-        // get thread by thread by jid
+        // get chat by jid
         Optional<Contact> optContact = ContactList.getInstance().get(ids.jid);
         if (optContact.isPresent() && tl.contains(optContact.get())) {
             Optional<OutMessage> optM = tl.get(optContact.get()).getMessages().getLast(ids.xmppID);
@@ -476,8 +476,8 @@ public final class Control {
         }
 
         // fallback: search everywhere
-        for (Chat thread: tl.getAll()) {
-            Optional<OutMessage> optM = thread.getMessages().getLast(ids.xmppID);
+        for (Chat chat: tl.getAll()) {
+            Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
         }
@@ -601,18 +601,18 @@ public final class Control {
             this.sendContactBlocking(contact, true);
         }
 
-        /* threads */
+        /* chats */
 
         public Chat createNewChat(Set<Contact> contact) {
             return ChatList.getInstance().createNew(contact);
         }
 
-        public void deleteChat(Chat thread) {
-            ChatList.getInstance().delete(thread.getID());
+        public void deleteChat(Chat chat) {
+            ChatList.getInstance().delete(chat.getID());
         }
 
-        public void handleOwnChatStateEvent(Chat thread, ChatState state) {
-            mChatStateManager.handleOwnChatStateEvent(thread, state);
+        public void handleOwnChatStateEvent(Chat chat, ChatState state) {
+            mChatStateManager.handleOwnChatStateEvent(chat, state);
         }
 
         /* messages */
@@ -621,14 +621,14 @@ public final class Control {
             Control.this.decryptAndDownload(message);
         }
 
-        public void sendText(Chat thread, String text) {
+        public void sendText(Chat chat, String text) {
             // TODO no group chat support yet
-            Set<Contact> contacts = thread.getContacts();
+            Set<Contact> contacts = chat.getContacts();
             for (Contact contact: contacts) {
                 if (contact.isDeleted())
                     continue;
                 OutMessage newMessage = this.newOutMessage(
-                        thread,
+                        chat,
                         contact,
                         text,
                         contact.getEncrypted());
@@ -668,14 +668,14 @@ public final class Control {
          * save and process the message.
          * @return the new created message
          */
-        private OutMessage newOutMessage(Chat thread, Contact contact, String text, boolean encrypted) {
+        private OutMessage newOutMessage(Chat chat, Contact contact, String text, boolean encrypted) {
             MessageContent content = new MessageContent(text);
-            OutMessage.Builder builder = new OutMessage.Builder(thread, contact, encrypted);
+            OutMessage.Builder builder = new OutMessage.Builder(chat, contact, encrypted);
             builder.content(content);
             OutMessage newMessage = builder.build();
-            boolean added = thread.addMessage(newMessage);
+            boolean added = chat.addMessage(newMessage);
             if (!added) {
-                LOGGER.warning("could not add outgoing message to thread");
+                LOGGER.warning("could not add outgoing message to chat");
             }
             return newMessage;
         }
