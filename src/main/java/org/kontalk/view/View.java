@@ -22,7 +22,6 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
-import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
@@ -30,15 +29,11 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextArea;
-import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.data.TooltipWay;
 import com.alee.managers.notification.NotificationIcon;
 import com.alee.managers.notification.NotificationListener;
 import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.notification.NotificationOption;
 import com.alee.managers.notification.WebNotificationPopup;
-import com.alee.managers.tooltip.TooltipManager;
 import java.awt.Color;
 import java.awt.event.*;
 import java.util.Observable;
@@ -54,13 +49,7 @@ import javax.swing.Icon;
 import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
-import javax.swing.event.DocumentEvent;
-
-import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.EventQueue;
-import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
@@ -105,8 +94,6 @@ public final class View implements Observer {
     private final ChatListView mChatListView;
     private final Content mContent;
     private final ChatView mChatView;
-    private final WebTextArea mSendTextArea;
-    private final WebButton mSendButton;
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
 
@@ -122,45 +109,8 @@ public final class View implements Observer {
         mChatListView = new ChatListView(this, ChatList.getInstance());
         ChatList.getInstance().addObserver(mChatListView);
 
-        // text area
-        mSendTextArea = new WebTextArea();
-        mSendTextArea.setMargin(View.MARGIN_SMALL);
-        mSendTextArea.setLineWrap(true);
-        mSendTextArea.setWrapStyleWord(true);
-        mSendTextArea.setFontSize(13);
-        mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
-            @Override
-            public void documentChanged(DocumentEvent e) {
-                View.this.handleKeyTypeEvent(e.getDocument().getLength() == 0);
-            }
-        });
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                mSendTextArea.requestFocusInWindow();
-            }
-        });
-
-        // send button
-        mSendButton = new WebButton(Tr.tr("Send"));
-        mSendButton.setMargin(MARGIN_SMALL);
-        mSendButton.setFontStyle(true, false);
-        // for showing the hotkey tooltip
-        TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
-        mSendButton.setEnabled(false);
-        mSendButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Component focusOwner = mMainFrame.getFocusOwner();
-                if (focusOwner != mSendTextArea && focusOwner != mSendButton)
-                    return;
-
-                View.this.callSendText();
-            }
-        });
-
         // chat view
-        mChatView = new ChatView(this, mSendTextArea, mSendButton);
+        mChatView = new ChatView(this);
         ChatList.getInstance().addObserver(mChatView);
 
         // content area
@@ -195,35 +145,8 @@ public final class View implements Observer {
     }
 
     void setHotkeys() {
-        final boolean enterSends = Config.getInstance().getBoolean(Config.MAIN_ENTER_SENDS);
-
-        for (KeyListener l : mSendTextArea.getKeyListeners())
-            mSendTextArea.removeKeyListener(l);
-        mSendTextArea.addKeyListener(new KeyListener() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
-                        e.getModifiersEx() == KeyEvent.CTRL_DOWN_MASK) {
-                    e.consume();
-                    mSendTextArea.append(System.getProperty("line.separator"));
-                }
-                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
-                        e.getModifiers() == 0) {
-                    // only ignore
-                    e.consume();
-                }
-            }
-            @Override
-            public void keyReleased(KeyEvent e) {
-            }
-            @Override
-            public void keyTyped(KeyEvent e) {
-            }
-        });
-
-        mSendButton.removeHotkeys();
-        HotkeyData sendHotkey = enterSends ? Hotkey.ENTER : Hotkey.CTRL_ENTER;
-        mSendButton.addHotkey(sendHotkey, TooltipWay.up);
+        boolean enterSends = Config.getInstance().getBoolean(Config.MAIN_ENTER_SENDS);
+        mChatView.setHotkeys(enterSends);
     }
 
     /**
@@ -468,16 +391,6 @@ public final class View implements Observer {
         this.selectChat(chat);
     }
 
-    private void callSendText() {
-       Optional<Chat> optChat = mContent.getCurrentChat();
-       if (!optChat.isPresent())
-           // now current chat
-           return;
-
-       mControl.sendText(optChat.get(), mSendTextArea.getText());
-       mSendTextArea.setText("");
-    }
-
     /* view internal */
 
     void showChat(Contact contact) {
@@ -519,18 +432,6 @@ public final class View implements Observer {
             }
         }
         mContent.showNothing();
-    }
-
-    private void handleKeyTypeEvent(boolean empty) {
-        mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
-
-        Optional<Chat> optChat = mContent.getCurrentChat();
-        if (!optChat.isPresent())
-            return;
-
-        // workaround: clearing the text area is not a key event
-        if (!empty)
-            mControl.handleOwnChatStateEvent(optChat.get(), ChatState.composing);
     }
 
     Optional<Chat> getCurrentShownChat() {

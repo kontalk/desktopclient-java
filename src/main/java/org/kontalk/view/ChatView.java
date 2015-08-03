@@ -19,16 +19,24 @@
 package org.kontalk.view;
 
 import com.alee.extended.panel.GroupPanel;
+import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.splitpane.WebSplitPane;
+import com.alee.laf.text.WebTextArea;
 import com.alee.laf.viewport.WebViewport;
+import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.hotkey.HotkeyData;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -38,6 +46,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 import java.util.ArrayList;
@@ -50,11 +60,14 @@ import java.util.Optional;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Chat;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
+import static org.kontalk.view.View.MARGIN_SMALL;
 
 /**
  * Pane that shows the currently selected chat.
@@ -67,13 +80,17 @@ final class ChatView extends WebPanel implements Observer {
     private final WebLabel mTitleLabel;
     private final WebLabel mSubLabel;
     private final WebScrollPane mScrollPane;
+    private final WebTextArea mSendTextArea;
+    private final WebButton mSendButton;
+
     private final Map<Integer, MessageList> mChatCache = new HashMap<>();
+
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
 
-    ChatView(View view, Component sendTextField, Component sendButton) {
+    ChatView(View view) {
         mView = view;
 
         WebPanel titlePanel = new WebPanel(false,
@@ -127,11 +144,48 @@ final class ChatView extends WebPanel implements Observer {
             }
         });
 
+        // text area
+        mSendTextArea = new WebTextArea();
+        mSendTextArea.setMargin(View.MARGIN_SMALL);
+        mSendTextArea.setLineWrap(true);
+        mSendTextArea.setWrapStyleWord(true);
+        mSendTextArea.setFontSize(13);
+        mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
+            @Override
+            public void documentChanged(DocumentEvent e) {
+                ChatView.this.handleKeyTypeEvent(e.getDocument().getLength() == 0);
+            }
+        });
+        EventQueue.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                mSendTextArea.requestFocusInWindow();
+            }
+        });
+
+        // send button
+        mSendButton = new WebButton(Tr.tr("Send"));
+        mSendButton.setMargin(2, MARGIN_SMALL, 2, MARGIN_SMALL);
+        mSendButton.setFontStyle(true, false);
+        // for showing the hotkey tooltip
+        TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
+        mSendButton.setEnabled(false);
+        mSendButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Component focusOwner = SwingUtilities.getWindowAncestor(ChatView.this).getFocusOwner();
+                if (focusOwner != mSendTextArea && focusOwner != mSendButton)
+                    return;
+
+                ChatView.this.sendText();
+            }
+        });
+
         WebPanel bottomPanel = new WebPanel();
-        WebScrollPane textFieldScrollPane = new ScrollPane(sendTextField);
-        bottomPanel.add(textFieldScrollPane, BorderLayout.CENTER);
-        bottomPanel.add(sendButton, BorderLayout.EAST);
         bottomPanel.setMinimumSize(new Dimension(0, 32));
+        bottomPanel.add(new ScrollPane(mSendTextArea), BorderLayout.CENTER);
+        bottomPanel.add(mSendButton, BorderLayout.EAST);
+
         WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT,
                 mScrollPane,
                 bottomPanel);
@@ -220,6 +274,37 @@ final class ChatView extends WebPanel implements Observer {
         mScrollDown = true;
     }
 
+    void setHotkeys(final boolean enterSends) {
+        for (KeyListener l : mSendTextArea.getKeyListeners())
+            mSendTextArea.removeKeyListener(l);
+
+        mSendTextArea.addKeyListener(new KeyListener() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
+                        e.getModifiersEx() == KeyEvent.CTRL_DOWN_MASK) {
+                    e.consume();
+                    mSendTextArea.append(System.getProperty("line.separator"));
+                }
+                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
+                        e.getModifiers() == 0) {
+                    // only ignore
+                    e.consume();
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {
+            }
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+        });
+
+        mSendButton.removeHotkeys();
+        HotkeyData sendHotkey = enterSends ? Hotkey.ENTER : Hotkey.CTRL_ENTER;
+        mSendButton.addHotkey(sendHotkey, TooltipWay.up);
+    }
+
     @Override
     public void update(Observable o, final Object arg) {
         if (SwingUtilities.isEventDispatchThread()) {
@@ -261,6 +346,28 @@ final class ChatView extends WebPanel implements Observer {
         mPopup.removeAll();
         mPopup.add(new ChatDetails(mPopup, optChat.get()));
         mPopup.showPopup();
+    }
+
+    private void handleKeyTypeEvent(boolean empty) {
+        mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
+
+        Optional<Chat> optChat = this.getCurrentChat();
+        if (!optChat.isPresent())
+            return;
+
+        // workaround: clearing the text area is not a key event
+        if (!empty)
+            mView.getControl().handleOwnChatStateEvent(optChat.get(), ChatState.composing);
+    }
+
+    private void sendText() {
+       Optional<Chat> optChat = this.getCurrentChat();
+       if (!optChat.isPresent())
+           // now current chat
+           return;
+
+       mView.getControl().sendText(optChat.get(), mSendTextArea.getText());
+       mSendTextArea.setText("");
     }
 
     /** A background image of chat view with efficient async reloading. */
