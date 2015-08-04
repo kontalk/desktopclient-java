@@ -20,10 +20,12 @@ package org.kontalk.util;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.PacketParserUtils;
 import org.jxmpp.util.XmppStringUtils;
@@ -65,7 +67,8 @@ public final class XMPPUtils {
     /**
      * Parses a &lt;xmpp&gt;-wrapped message stanza.
      */
-    public static Message parseMessageStanza(String data) throws Exception {
+    public static Message parseMessageStanza(String data)
+            throws XmlPullParserException, IOException, SmackException {
 
         XmlPullParser parser = getPullParser(data);
         boolean done = false, in_xmpp = false;

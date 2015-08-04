@@ -64,6 +64,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
 import org.kontalk.system.Downloader;
 import org.kontalk.client.KonMessageListener;
@@ -76,6 +77,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.system.AccountLoader;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.XMPPUtils;
+import org.xmlpull.v1.XmlPullParserException;
 
 /**
  * Static methods for decryption and encryption of a message.
@@ -168,8 +170,6 @@ public final class Coder {
             return Optional.empty();
         }
 
-        LOGGER.info("encrypting message...");
-
         // get keys
         KeysResult keys = getKeys(message.getContact());
         if (keys.myKey == null || keys.otherKey == null) {
@@ -192,71 +192,15 @@ public final class Coder {
             plainText = cpim.toString().getBytes();
         }
 
-        // setup data encryptor & generator
-        BcPGPDataEncryptorBuilder encryptor = new BcPGPDataEncryptorBuilder(PGPEncryptedData.AES_192);
-        encryptor.setWithIntegrityPacket(true);
-        encryptor.setSecureRandom(new SecureRandom());
-
-        // add public key recipients
-        PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
-        //for (PGPPublicKey rcpt : mRecipients)
-        encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(keys.otherKey.encryptKey));
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
         ByteArrayInputStream in = new ByteArrayInputStream(plainText);
-        try { // catch all io and pgp exceptions
-
-            OutputStream encryptedOut = encGen.open(out, new byte[BUFFER_SIZE]);
-
-            // setup compressed data generator
-            PGPCompressedDataGenerator compGen = new PGPCompressedDataGenerator(PGPCompressedData.ZIP);
-            OutputStream compressedOut = compGen.open(encryptedOut, new byte[BUFFER_SIZE]);
-
-            // setup signature generator
-            int algo = keys.myKey.getSigningAlgorithm();
-            PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
-                    new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA256));
-            sigGen.init(PGPSignature.BINARY_DOCUMENT, keys.myKey.getPrivateSigningKey());
-
-            PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
-            spGen.setSignerUserID(false, keys.myKey.getUserId());
-            sigGen.setUnhashedSubpackets(spGen.generate());
-
-            sigGen.generateOnePassVersion(false).encode(compressedOut);
-
-            // Initialize literal data generator
-            PGPLiteralDataGenerator literalGen = new PGPLiteralDataGenerator();
-            OutputStream literalOut = literalGen.open(
-                compressedOut,
-                PGPLiteralData.BINARY,
-                "",
-                new Date(),
-                new byte[BUFFER_SIZE]);
-
-            // read the "in" stream, compress, encrypt and write to the "out" stream
-            // this must be done if clear data is bigger than the buffer size
-            // but there are other ways to optimize...
-            byte[] buf = new byte[BUFFER_SIZE];
-            int len;
-            while ((len = in.read(buf)) > 0) {
-                literalOut.write(buf, 0, len);
-                sigGen.update(buf, 0, len);
-            }
-
-            in.close();
-            literalGen.close();
-
-            // generate the signature, compress, encrypt and write to the "out" stream
-            sigGen.generate().encode(compressedOut);
-            compGen.close();
-            encGen.close();
-        } catch (IOException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't encrypt message", ex);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        boolean succ = encryptAndSign(in, out, keys.myKey, keys.otherKey.encryptKey);
+        if (!succ) {
             message.setSecurityErrors(EnumSet.of(Error.UNKNOWN_ERROR));
             return Optional.empty();
         }
 
-        LOGGER.info("encryption successful");
+        LOGGER.info("message encryption successful");
         return Optional.of(out.toByteArray());
     }
 
@@ -271,7 +215,6 @@ public final class Coder {
             LOGGER.warning("message not encrypted");
             return;
         }
-        LOGGER.info("decrypting encrypted message...");
 
         // get keys
         KeysResult keys = getKeys(message.getContact());
@@ -313,10 +256,10 @@ public final class Coder {
 
         if (parsingResult != null && parsingResult.content != null) {
             // everything went better than expected
-            LOGGER.info("decryption successful");
+            LOGGER.info("message decryption successful");
             message.setDecryptedContent(parsingResult.content);
         } else {
-            LOGGER.warning("decryption failed");
+            LOGGER.warning("message decryption failed");
         }
     }
 
@@ -347,7 +290,7 @@ public final class Coder {
         File baseDir = Downloader.getInstance().getBaseDir();
         File inFile = new File(baseDir, attachment.getFileName());
 
-        InputStream encryptedStream;
+        FileInputStream encryptedStream;
         try {
             encryptedStream = new FileInputStream(inFile);
         } catch (FileNotFoundException ex) {
@@ -356,8 +299,6 @@ public final class Coder {
                     ex);
             return;
         }
-
-        LOGGER.info("decrypting encrypted attachment...");
 
         // get keys
         KeysResult keys = getKeys(message.getContact());
@@ -425,18 +366,93 @@ public final class Coder {
     }
 
     /**
-     * Decrypt, verify and write input stream to output stream.
-     * Output stream is closed.
+     * Encrypt, sign and write input stream data to output stream.
+     * Input and output stream are closed.
+     * @return true on success, else false
      */
-    private static DecryptionResult decryptAndVerify(InputStream encryptedStream,
-            OutputStream outStream,
+    private static boolean encryptAndSign(InputStream plainInput,
+            OutputStream encryptedOutput,
+            PersonalKey myKey,
+            PGPPublicKey encryptKey) {
+
+        // setup data encryptor & generator
+        BcPGPDataEncryptorBuilder encryptor = new BcPGPDataEncryptorBuilder(PGPEncryptedData.AES_192);
+        encryptor.setWithIntegrityPacket(true);
+        encryptor.setSecureRandom(new SecureRandom());
+
+        // add public key recipients
+        PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
+        //for (PGPPublicKey rcpt : mRecipients)
+        encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(encryptKey));
+
+        try { // catch all io and pgp exceptions
+            OutputStream encryptedOut = encGen.open(encryptedOutput, new byte[BUFFER_SIZE]);
+
+            // setup compressed data generator
+            PGPCompressedDataGenerator compGen = new PGPCompressedDataGenerator(PGPCompressedData.ZIP);
+            OutputStream compressedOut = compGen.open(encryptedOut, new byte[BUFFER_SIZE]);
+
+            // setup signature generator
+            int algo = myKey.getSigningAlgorithm();
+            PGPSignatureGenerator sigGen = new PGPSignatureGenerator(
+                    new BcPGPContentSignerBuilder(algo, HashAlgorithmTags.SHA256));
+            sigGen.init(PGPSignature.BINARY_DOCUMENT, myKey.getPrivateSigningKey());
+
+            PGPSignatureSubpacketGenerator spGen = new PGPSignatureSubpacketGenerator();
+            spGen.setSignerUserID(false, myKey.getUserId());
+            sigGen.setUnhashedSubpackets(spGen.generate());
+
+            sigGen.generateOnePassVersion(false).encode(compressedOut);
+
+            // Initialize literal data generator
+            PGPLiteralDataGenerator literalGen = new PGPLiteralDataGenerator();
+            OutputStream literalOut = literalGen.open(
+                compressedOut,
+                PGPLiteralData.BINARY,
+                "",
+                new Date(),
+                new byte[BUFFER_SIZE]);
+
+            // read the "in" stream, compress, encrypt and write to the "out" stream
+            // this must be done if clear data is bigger than the buffer size
+            // but there are other ways to optimize...
+            byte[] buf = new byte[BUFFER_SIZE];
+            int len;
+            while ((len = plainInput.read(buf)) > 0) {
+                literalOut.write(buf, 0, len);
+                sigGen.update(buf, 0, len);
+            }
+
+            plainInput.close();
+            literalGen.close();
+
+            // generate the signature, compress, encrypt and write to the "out" stream
+            sigGen.generate().encode(compressedOut);
+            compGen.close();
+            encGen.close();
+            encryptedOutput.close();
+        } catch (IOException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't encrypt data", ex);
+            return false;
+        }
+
+        // success!
+        return true;
+    }
+
+    /**
+     * Decrypt, verify and write input stream data to output stream.
+     * Input and output streams are closed.
+     */
+    private static DecryptionResult decryptAndVerify(InputStream encryptedInput,
+            OutputStream plainOutput,
             PersonalKey myKey,
             PGPPublicKey senderSigningKey) {
         // note: the signature is inside the encrypted data
 
         DecryptionResult result = new DecryptionResult();
 
-        PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedStream, PGPUtils.FP_CALC);
+        PGPObjectFactory pgpFactory = new PGPObjectFactory(encryptedInput, PGPUtils.FP_CALC);
 
         try { // catch all IO and PGP exceptions
 
@@ -527,11 +543,12 @@ public final class Coder {
             InputStream unc = ld.getInputStream();
             int ch;
             while ((ch = unc.read()) >= 0) {
-                outStream.write(ch);
+                plainOutput.write(ch);
                 if (ops != null)
                     ops.update((byte) ch);
             }
-            outStream.close();
+            plainOutput.close();
+            encryptedInput.close();
             result.decrypted = true;
 
             if (ops != null) {
@@ -587,6 +604,8 @@ public final class Coder {
 
     /**
      * Parse and verify CPIM ( https://tools.ietf.org/html/rfc3860 ).
+     *
+     * The decrypted content of a message is in CPIM format.
      */
     private static ParsingResult parseCPIM(
             String text,
@@ -628,18 +647,19 @@ public final class Coder {
         String content = cpimMessage.getBody().toString();
         MessageContent decryptedContent;
         if (XMPPUtils.XML_XMPP_TYPE.equalsIgnoreCase(mime)) {
-            LOGGER.info("CPIM body has XMPP XML format");
+            // XMPP XML format for advanced content (attachments)
             Message m;
             try {
                 m = XMPPUtils.parseMessageStanza(content);
-            } catch (Exception ex) {
+            } catch (XmlPullParserException | IOException | SmackException ex) {
                 LOGGER.log(Level.WARNING, "can't parse XMPP XML string", ex);
-                return null;
+                result.errors.add(Error.INVALID_DATA);
+                return result;
             }
             LOGGER.info("decrypted message content: "+m.toXML());
             decryptedContent = KonMessageListener.parseMessageContent(m);
         } else {
-            LOGGER.info("CPIM body MIME type: "+mime);
+            // text/plain MIME type for simple text messages
             decryptedContent = new MessageContent(content);
         }
 
