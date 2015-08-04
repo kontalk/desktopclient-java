@@ -548,26 +548,27 @@ public final class Coder {
                     ops.update((byte) ch);
             }
             plainOutput.close();
-            encryptedInput.close();
+
             result.decrypted = true;
 
             if (ops != null) {
                 result = verifySignature(result, pgpFact, ops);
             }
+            encryptedInput.close();
 
             // verify message integrity
             if (pbe.isIntegrityProtected()) {
                 if (!pbe.verify()) {
-                    LOGGER.warning("message integrity check failed");
+                    LOGGER.warning("integrity check failed");
                     result.errors.add(Error.INVALID_INTEGRITY);
                 }
             } else {
-                LOGGER.warning("message is not integrity protected");
+                LOGGER.warning("data is not integrity protected");
                 result.errors.add(Error.NO_INTEGRITY);
             }
 
         } catch (IOException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't decrypt message", ex);
+            LOGGER.log(Level.WARNING, "can't decrypt data", ex);
             result.errors.add(Error.UNKNOWN_ERROR);
         }
 
