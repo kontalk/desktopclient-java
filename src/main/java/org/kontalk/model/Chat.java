@@ -239,7 +239,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         db.execUpdate(TABLE, set, mID);
 
         // get receiver for this chat
-        Map<Integer, Integer> dbReceiver = this.loadReceiver();
+        Map<Integer, Integer> dbReceiver = loadReceiver(mID);
 
         // add missing contact
         for (Contact contact : mContactMap.keySet()) {
@@ -262,7 +262,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                 KonMessage.COL_CHAT_ID + " == " + mID);
 
         // delete receiver
-        Map<Integer, Integer> dbReceiver = this.loadReceiver();
+        Map<Integer, Integer> dbReceiver = loadReceiver(mID);
         for (int id : dbReceiver.values()) {
             boolean deleted = db.execDelete(TABLE_RECEIVER, id);
             if (!deleted) return;
@@ -270,28 +270,6 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
 
         // delete chat itself
         db.execDelete(TABLE, mID);
-    }
-
-    private Map<Integer, Integer> loadReceiver() {
-        Database db = Database.getInstance();
-        String where = "thread_id == " + mID;
-        Map<Integer, Integer> dbReceiver = new HashMap<>();
-        ResultSet resultSet;
-        try {
-            resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't get receiver from db", ex);
-            return dbReceiver;
-        }
-        try {
-            while (resultSet.next()) {
-                dbReceiver.put(resultSet.getInt("user_id"), resultSet.getInt("_id"));
-            }
-            resultSet.close();
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't get receiver", ex);
-        }
-        return dbReceiver;
     }
 
     private void insertReceiver(Contact contact) {
@@ -335,6 +313,29 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     @Override
     public int compareTo(Chat o) {
         return Integer.compare(this.mID, o.mID);
+    }
+
+    static Map<Integer, Integer> loadReceiver(int chatID) {
+        Database db = Database.getInstance();
+        String where = COL_REC_CHAT_ID + " == " + chatID;
+        Map<Integer, Integer> dbReceiver = new HashMap<>();
+        ResultSet resultSet;
+        try {
+            resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't get receiver from db", ex);
+            return dbReceiver;
+        }
+        try {
+            while (resultSet.next()) {
+                dbReceiver.put(resultSet.getInt(COL_REC_CONTACT_ID),
+                        resultSet.getInt("_id"));
+            }
+            resultSet.close();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't get receiver", ex);
+        }
+        return dbReceiver;
     }
 
     public class KonChatState {

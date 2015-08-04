@@ -22,6 +22,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -51,38 +52,22 @@ public final class ChatList extends Observable implements Observer {
     public void load() {
         assert mMap.isEmpty();
 
-        HashMap<Integer, Set<Contact>> chatContactMapping = new HashMap<>();
         ContactList contactList = ContactList.getInstance();
         Database db = Database.getInstance();
-        try (ResultSet receiverRS = db.execSelectAll(Chat.TABLE_RECEIVER);
-                ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
-            // first, find contact for chats
-            // TODO: rewrite
-            while (receiverRS.next()) {
-                Integer chatID = receiverRS.getInt("thread_id");
-                Integer contactID = receiverRS.getInt("user_id");
-                Optional<Contact> optContact = contactList.get(contactID);
-                if (!optContact.isPresent()) {
-                    LOGGER.warning("can't find contact");
-                    continue;
-                }
-                Contact contact = optContact.get();
-                if (chatContactMapping.containsKey(chatID)) {
-                    chatContactMapping.get(chatID).add(contact);
-                } else {
-                    Set<Contact> contactSet = new HashSet<>();
-                    contactSet.add(contact);
-                    chatContactMapping.put(chatID, contactSet);
-                }
-            }
+        try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
             // now, create chats
             while (chatRS.next()) {
                 int id = chatRS.getInt("_id");
                 String xmppThreadID = Database.getString(chatRS, "xmpp_id");
-                Set<Contact> contactSet = chatContactMapping.get(id);
-                if (contactSet == null) {
-                    LOGGER.warning("no contacts found for chat");
-                    contactSet = new HashSet<>();
+                // get contacts for chats
+                Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
+                Set<Contact> contacts = new HashSet<>();
+                for (int conID: dbReceiver.keySet()) {
+                    Optional<Contact> optCon = contactList.get(conID);
+                    if (optCon.isPresent())
+                        contacts.add(optCon.get());
+                    else
+                        LOGGER.warning("can't find contact");
                 }
                 String subject = Database.getString(chatRS,
                         Chat.COL_SUBJ);
@@ -90,7 +75,7 @@ public final class ChatList extends Observable implements Observer {
                 String jsonViewSettings = Database.getString(chatRS,
                         Chat.COL_VIEW_SET);
 
-                this.put(new Chat(id, xmppThreadID, contactSet, subject, read,
+                this.put(new Chat(id, xmppThreadID, contacts, subject, read,
                         jsonViewSettings));
                 if (!read)
                     mUnread = true;
