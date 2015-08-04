@@ -32,9 +32,13 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.OutMessage;
 
 /**
- * Downloader for attachments.
+ * Up- and download service for attachments.
+ *
+ * Also takes care of de- and encrypting attachments.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Downloader implements Runnable {
@@ -42,20 +46,41 @@ public class Downloader implements Runnable {
 
     private static Downloader INSTANCE = null;
 
-    private final LinkedBlockingQueue<InMessage> mQueue = new LinkedBlockingQueue<>();
+    private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
 
     private final File mBaseDir;
+
+    private static class Task {
+
+        private Task() {}
+
+        static final class UploadTask extends Task {
+            final OutMessage message;
+
+            public UploadTask(OutMessage message) {
+                this.message = message;
+            }
+        }
+
+        static final class DownloadTask extends Task {
+            final InMessage message;
+
+            public DownloadTask(InMessage message) {
+                this.message = message;
+            }
+        }
+    }
 
     private Downloader() {
         String dirPath = Kontalk.getConfigDir() + "/attachments";
         mBaseDir = new File(dirPath);
         boolean created = mBaseDir.mkdirs();
         if (created)
-            LOGGER.info("created download directory");
+            LOGGER.info("created attachment directory");
     }
 
     public void queueDownload(InMessage message) {
-        boolean added = mQueue.offer(message);
+        boolean added = mQueue.offer(new Task.DownloadTask(message));
         if (!added) {
             LOGGER.warning("can't add message to download-queue");
         }
@@ -63,6 +88,10 @@ public class Downloader implements Runnable {
 
     public File getBaseDir() {
         return mBaseDir;
+    }
+
+    private void uploadAsync(OutMessage message) {
+        // TODO
     }
 
     private void downloadAsync(final InMessage message) {
@@ -120,15 +149,19 @@ public class Downloader implements Runnable {
     @Override
     public void run() {
         while (true) {
-            InMessage m;
+            Task t;
             try {
                 // blocking
-                m = mQueue.take();
+                t = mQueue.take();
             } catch (InterruptedException ex) {
                 LOGGER.log(Level.WARNING, "interrupted while waiting ", ex);
                 return;
             }
-            this.downloadAsync(m);
+            if (t instanceof Task.UploadTask) {
+                this.uploadAsync(((Task.UploadTask) t).message);
+            } else if (t instanceof Task.DownloadTask) {
+                this.downloadAsync(((Task.DownloadTask) t).message);
+            }
         }
     }
 
