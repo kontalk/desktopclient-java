@@ -157,7 +157,7 @@ public final class AccountLoader {
     }
 
     private static boolean fileExists(String filename) {
-        return new File(Kontalk.getConfigDir(), filename).isFile();
+        return new File(Kontalk.getConfigDir().toString(), filename).isFile();
     }
 
     private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
@@ -186,7 +186,7 @@ public final class AccountLoader {
     }
 
     private static byte[] readFile(String filename) throws KonException {
-        String configDir = Kontalk.getConfigDir();
+        String configDir = Kontalk.getConfigDir().toString();
         byte[] bytes = null;
         try {
             bytes = Files.readAllBytes(new File(configDir, filename).toPath());
@@ -198,7 +198,7 @@ public final class AccountLoader {
     }
 
     private static void writeBytesToFile(byte[] bytes, String filename, boolean armored) throws KonException {
-        String configDir = Kontalk.getConfigDir();
+        String configDir = Kontalk.getConfigDir().toString();
         try {
             OutputStream outStream = new FileOutputStream(new File(configDir, filename));
             if (armored)

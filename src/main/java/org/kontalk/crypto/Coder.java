@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.text.ParseException;
 import java.util.Base64;
@@ -66,7 +67,6 @@ import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
-import org.kontalk.system.Downloader;
 import org.kontalk.client.KonMessageListener;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.InMessage;
@@ -269,7 +269,7 @@ public final class Coder {
      * saved to the message.
      * @param message
      */
-    public static void processAttachment(InMessage message) {
+    public static void processAttachment(InMessage message, Path baseDir) {
         if (!message.getContent().getAttachment().isPresent()) {
             LOGGER.warning("no attachment in message");
             return;
@@ -287,9 +287,7 @@ public final class Coder {
             return;
         }
 
-        File baseDir = Downloader.getInstance().getBaseDir();
-        File inFile = new File(baseDir, attachment.getFileName());
-
+        File inFile = baseDir.resolve(attachment.getFileName()).toFile();
         FileInputStream encryptedStream;
         try {
             encryptedStream = new FileInputStream(inFile);
@@ -310,7 +308,7 @@ public final class Coder {
         // open out stream
         String base = FilenameUtils.getBaseName(inFile.getName());
         String ext = FilenameUtils.getExtension(inFile.getName());
-        File outFile = new File(baseDir, base + "_dec." + ext);
+        File outFile = baseDir.resolve(base + "_dec." + ext).toFile();
         if (outFile.exists()) {
             LOGGER.warning("encrypted file already exists: "+outFile.getAbsolutePath());
             return;

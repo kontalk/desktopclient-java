@@ -41,7 +41,6 @@ import java.awt.event.MouseEvent;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
@@ -70,7 +69,7 @@ import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.Contact;
-import org.kontalk.system.Downloader;
+import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
 
@@ -490,15 +489,13 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             if (oldComp != null)
                 mContentPanel.remove(oldComp);
 
-            Optional<MessageContent.Attachment> optAttachment =
-                    mValue.getContent().getAttachment();
+            Optional<Attachment> optAttachment = mValue.getContent().getAttachment();
             if (!optAttachment.isPresent())
                 return;
 
-            MessageContent.Attachment att = optAttachment.get();
-            String base = Downloader.getInstance().getAttachmentDir();
+            Attachment att = optAttachment.get();
             String fName = att.getFileName();
-            Path path = Paths.get(base, fName);
+            Path path = mView.getControl().getAttachmentDir().resolve(fName);
 
             // rely on mime type in message
             if (!att.getFileName().isEmpty() &&

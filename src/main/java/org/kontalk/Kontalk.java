@@ -20,10 +20,10 @@ package org.kontalk;
 
 import org.kontalk.misc.KonException;
 import org.kontalk.system.Database;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.logging.FileHandler;
@@ -50,7 +50,7 @@ public final class Kontalk {
 
     public static final String VERSION = "3.0.2";
     public static final String RES_PATH = "res/";
-    private static final String CONFIG_DIR;
+    private static final Path CONFIG_DIR;
 
     private static ServerSocket RUN_LOCK;
 
@@ -68,19 +68,17 @@ public final class Kontalk {
 
         // use platform dependent configuration directory
         String homeDir = System.getProperty("user.home");
-        if (SystemUtils.IS_OS_WINDOWS) {
-            CONFIG_DIR = Paths.get(homeDir,"Kontalk").toString();
-        } else {
-            CONFIG_DIR = Paths.get(homeDir, ".kontalk").toString();
-        }
+        CONFIG_DIR = SystemUtils.IS_OS_WINDOWS ?
+                Paths.get(homeDir, "Kontalk") :
+                Paths.get(homeDir, ".kontalk");
 
         // create app directory
-        boolean created = new File(CONFIG_DIR).mkdirs();
+        boolean created = CONFIG_DIR.toFile().mkdirs();
         if (created)
             LOGGER.info("created configuration directory");
 
         // log to file
-        String logPath = Paths.get(CONFIG_DIR, "debug.log").toString();
+        String logPath = CONFIG_DIR.resolve("debug.log").toString();
         Handler fileHandler = null;
         try {
             fileHandler = new FileHandler(logPath, 1024*1000, 1, true);
@@ -117,7 +115,7 @@ public final class Kontalk {
     }
 
     public void start() {
-        Config.initialize(CONFIG_DIR + "/" + Config.CONF_NAME);
+        Config.initialize(CONFIG_DIR.resolve(Config.FILENAME));
 
         ViewControl control = Control.create();
 
@@ -129,7 +127,7 @@ public final class Kontalk {
         View view = optView.get();
 
         try {
-            Database.initialize(CONFIG_DIR + "/" + Database.DB_NAME);
+            Database.initialize(CONFIG_DIR.resolve(Database.FILENAME));
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
             control.shutDown();
@@ -153,7 +151,7 @@ public final class Kontalk {
         }
     }
 
-    public static String getConfigDir() {
+    public static Path getConfigDir() {
         return CONFIG_DIR;
     }
 

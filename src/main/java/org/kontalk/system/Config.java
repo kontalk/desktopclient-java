@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,7 +39,7 @@ public final class Config extends PropertiesConfiguration {
 
     private static Config INSTANCE = null;
 
-    public static final String CONF_NAME = "kontalk.properties";
+    public static final String FILENAME = "kontalk.properties";
     // all configuration property keys
     // disable network property for now -> same as server host
     //public static final String SERV_NET = "server.network";
@@ -65,19 +66,19 @@ public final class Config extends PropertiesConfiguration {
     private static final String DEFAULT_XMPP_STATUS =
             Tr.tr("Hey, I'm using Kontalk on my PC!");
 
-    private Config(String filePath) {
+    private Config(Path configFile) {
         super();
 
         // separate list elements by tab character
         this.setListDelimiter((char) 9);
 
         try {
-            this.load(filePath);
+            this.load(configFile.toString());
         } catch (ConfigurationException ex) {
             LOGGER.info("Configuration not found. Using default values");
         }
 
-        this.setFileName(filePath);
+        this.setFileName(configFile.toString());
 
         // init config / set default values for new properties
         Map<String, Object> map = new HashMap<>();
@@ -113,12 +114,12 @@ public final class Config extends PropertiesConfiguration {
         }
     }
 
-    public synchronized static void initialize(String filePath)  {
+    public synchronized static void initialize(Path configFile)  {
         if (INSTANCE != null) {
             LOGGER.warning("configuration already initialized");
             return;
         }
-        INSTANCE = new Config(filePath);
+        INSTANCE = new Config(configFile);
     }
 
     public synchronized static Config getInstance() {

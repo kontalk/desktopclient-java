@@ -19,6 +19,7 @@
 package org.kontalk.system;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.util.Optional;
@@ -26,7 +27,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
-import org.kontalk.Kontalk;
 import org.kontalk.client.DownloadClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
@@ -35,7 +35,7 @@ import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.OutMessage;
 
 /**
- * Up- and download service for attachments.
+ * Up- and download service for attachment files.
  *
  * Also takes care of de- and encrypting attachments.
  *
@@ -43,8 +43,6 @@ import org.kontalk.model.OutMessage;
  */
 public class Downloader implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(Downloader.class.getName());
-
-    private static Downloader INSTANCE = null;
 
     private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
 
@@ -71,9 +69,8 @@ public class Downloader implements Runnable {
         }
     }
 
-    private Downloader() {
-        String dirPath = Kontalk.getConfigDir() + "/attachments";
-        mBaseDir = new File(dirPath);
+    private Downloader(Path dirPath) {
+        mBaseDir = dirPath.toFile();
         boolean created = mBaseDir.mkdirs();
         if (created)
             LOGGER.info("created attachment directory");
@@ -138,12 +135,12 @@ public class Downloader implements Runnable {
 
         // decrypt file
         if (attachment.getCoderStatus().isEncrypted()) {
-            Coder.processAttachment(message);
+            Coder.processAttachment(message, mBaseDir.toPath());
         }
     }
 
-    public String getAttachmentDir() {
-        return mBaseDir.getAbsolutePath();
+    Path getAttachmentDir() {
+        return mBaseDir.toPath();
     }
 
     @Override
@@ -165,11 +162,11 @@ public class Downloader implements Runnable {
         }
     }
 
-    public static Downloader getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new Downloader();
-            new Thread(INSTANCE).start();
-        }
-        return INSTANCE;
+    static Downloader create(Path downloadDir) {
+        Downloader downloader = new Downloader(downloadDir);
+
+        new Thread(downloader).start();
+
+        return downloader;
     }
 }

@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -56,7 +57,7 @@ public final class Database {
 
     private static Database INSTANCE = null;
 
-    public static final String DB_NAME = "kontalk_db.sqlite";
+    public static final String FILENAME = "kontalk_db.sqlite";
 
     private static final int DB_VERSION = 2;
     private static final String SV = "schema_version";
@@ -64,7 +65,7 @@ public final class Database {
 
     private Connection mConn = null;
 
-    private Database(String path) throws KonException {
+    private Database(Path path) throws KonException {
         // load the sqlite-JDBC driver using the current class loader
         try {
             Class.forName("org.sqlite.JDBC");
@@ -77,7 +78,7 @@ public final class Database {
         SQLiteConfig config = new SQLiteConfig();
         config.enforceForeignKeys(true);
         try {
-          mConn = DriverManager.getConnection("jdbc:sqlite:" + path, config.toProperties());
+          mConn = DriverManager.getConnection("jdbc:sqlite:" + path.toString(), config.toProperties());
         } catch(SQLException ex) {
           // if the error message is "out of memory",
           // it probably means no database file is found
@@ -334,15 +335,14 @@ public final class Database {
         return s.isEmpty() ? null : s;
     }
 
-    public static void initialize(String path) throws KonException {
-        INSTANCE = new Database(path);
+    public static void initialize(Path dbFile) throws KonException {
+        INSTANCE = new Database(dbFile);
     }
 
     public static Database getInstance() {
-        if (INSTANCE == null) {
-            LOGGER.warning("database not initialized");
-            throw new RuntimeException();
-        }
+        if (INSTANCE == null)
+            throw new IllegalStateException("database not initialized");
+
         return INSTANCE;
     }
 }

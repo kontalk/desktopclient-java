@@ -18,6 +18,10 @@
 
 package org.kontalk.system;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
@@ -52,6 +56,7 @@ import org.kontalk.model.OutMessage;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
+import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.util.XMPPUtils;
 
 /**
@@ -111,6 +116,7 @@ public final class Control {
 
     private final Client mClient;
     private final ChatStateManager mChatStateManager;
+    private final Downloader mAttachmentManager;
 
     private final ViewControl mViewControl;
 
@@ -119,6 +125,8 @@ public final class Control {
     private Control() {
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
+        Path attachmentDir = Kontalk.getConfigDir().resolve("attachments");
+        mAttachmentManager = Downloader.create(attachmentDir);
 
         mViewControl = new ViewControl();
     }
@@ -443,8 +451,12 @@ public final class Control {
         }
 
         if (message.getContent().getAttachment().isPresent()) {
-            Downloader.getInstance().queueDownload(message);
+            this.download(message);
         }
+    }
+
+    private void download(InMessage message){
+        mAttachmentManager.queueDownload(message);
     }
 
     /* static */
@@ -558,6 +570,10 @@ public final class Control {
 
         public void sendStatusText() {
             mClient.sendInitialPresence();
+        }
+
+        public Path getAttachmentDir() {
+            return mAttachmentManager.getAttachmentDir();
         }
 
         /* contact */
@@ -678,6 +694,27 @@ public final class Control {
                 LOGGER.warning("could not add outgoing message to chat");
             }
             return newMessage;
+        }
+
+        private Attachment attachmentOrNull(Path path) {
+            File file = path.toFile();
+            if (!file.isFile() || !file.canRead()) {
+                LOGGER.warning("invalid attachment file: "+path);
+                return null;
+            }
+            String mimeType = null;
+            try {
+                mimeType = Files.probeContentType(path);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't get attachment mime type", ex);
+                return null;
+            }
+            long length = file.length();
+            if (length <= 0) {
+                LOGGER.warning("invalid attachment file size: "+length);
+                return null;
+            }
+            return new Attachment(path, mimeType, length);
         }
 
         private void changed(ViewEvent event) {
