@@ -367,8 +367,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             Object obj = JSONValue.parse(jsonContent);
             Map<?, ?> map = (Map) obj;
             if (map == null) return new ServerError();
-            String condition = EncodingUtils.getJSON(map, JSON_COND);
-            String text = EncodingUtils.getJSON(map, JSON_TEXT);
+            String condition = EncodingUtils.getJSONString(map, JSON_COND);
+            String text = EncodingUtils.getJSONString(map, JSON_TEXT);
             return new ServerError(condition, text);
         }
     }

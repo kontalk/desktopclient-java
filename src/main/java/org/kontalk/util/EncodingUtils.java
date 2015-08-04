@@ -76,7 +76,7 @@ public final class EncodingUtils {
             json.put(key, value);
     }
 
-    public static String getJSON(Map<?, ?> map, String key) {
+    public static String getJSONString(Map<?, ?> map, String key) {
         String value = (String) map.get(key);
         return value == null ? "" : value;
     }

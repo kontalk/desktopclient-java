@@ -22,6 +22,7 @@ import java.util.logging.Logger;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.URI;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -90,7 +91,7 @@ public class DownloadClient {
      * @return the absolute file path of the downloaded file, or an empty string
      * if the file could not be downloaded
      */
-    public String download(String url, File base) {
+    public String download(URI url, File base) {
         if (mHTTPClient == null) {
             mHTTPClient = createHTTPClient(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)

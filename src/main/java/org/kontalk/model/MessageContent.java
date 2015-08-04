@@ -18,6 +18,9 @@
 
 package org.kontalk.model;
 
+import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
@@ -50,10 +53,17 @@ public class MessageContent {
     private static final String JSON_ENC_CONTENT = "encrypted_content";
     private static final String JSON_DEC_CONTENT = "decrypted_content";
 
+    // used for decrypted content of incoming messages and as fallback
     public MessageContent(String plainText) {
-        this(plainText, Optional.<Attachment>empty(), "");
+        this(plainText, Optional.<Attachment>empty());
     }
 
+    // used for outgoing messages
+    public MessageContent(String plainText, Optional<Attachment> optAttachment) {
+        this(plainText, optAttachment, "");
+    }
+
+    // used for incoming messages
     public MessageContent(String plainText,
             Optional<Attachment> optAttachment,
             String encryptedContent) {
@@ -65,6 +75,7 @@ public class MessageContent {
         );
     }
 
+    // used when loading from db
     private MessageContent(String plainText,
             Optional<Attachment> optAttachment,
             String encryptedContent,
@@ -144,15 +155,13 @@ public class MessageContent {
         Object obj = JSONValue.parse(jsonContent);
         try {
             Map<?, ?> map = (Map) obj;
-            String plainText = (String) map.get(JSON_PLAIN_TEXT);
-            if (plainText == null) plainText = "";
+            String plainText = EncodingUtils.getJSONString(map, JSON_PLAIN_TEXT);
             String jsonAttachment = (String) map.get(JSON_ATTACHMENT);
             Optional<Attachment> optAttachment = jsonAttachment == null ?
                     Optional.<Attachment>empty() :
                     Attachment.fromJSONString(jsonAttachment);
 
-            String encryptedContent = (String) map.get(JSON_ENC_CONTENT);
-            if (encryptedContent == null) encryptedContent = "";
+            String encryptedContent = EncodingUtils.getJSONString(map, JSON_ENC_CONTENT);
             String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
             Optional<MessageContent> decryptedContent = jsonDecryptedContent == null ?
                     Optional.<MessageContent>empty() :
@@ -168,19 +177,8 @@ public class MessageContent {
     }
 
     public static class Attachment {
-        // URL to file, empty string by default
-        private final String mURL;
-        // MIME of file, empty string by default
-        private final String mMimeType;
-        // size of (decrypted) file, -1 by default
-        private final long mLength;
-        // file name of downloaded and encrypted file, empty string by default
-        private String mFileName;
-        // coder status of file encryption
-        private final CoderStatus mCoderStatus;
-        // progress downloaded of (encrypted) file in percent
-        private int mDownloadProgress = -1;
 
+        private static final String JSON_PATH = "path";
         private static final String JSON_URL = "url";
         private static final String JSON_MIME_TYPE = "mime_type";
         private static final String JSON_LENGTH = "length";
@@ -189,30 +187,44 @@ public class MessageContent {
         private static final String JSON_SIGNING = "signing";
         private static final String JSON_CODER_ERRORS = "coder_errors";
 
+        // path of file to upload (only for out message), empty by default
+        private final Path mPath;
+        // URL to file, empty string by default
+        private final URI mURL;
+        // MIME of file, empty string by default
+        private final String mMimeType;
+        // size of (decrypted) file in bytes, -1 by default
+        private final long mLength;
+        // file name of downloaded and encrypted file, empty string by default
+        private String mFileName;
+        // coder status of file encryption
+        private final CoderStatus mCoderStatus;
+        // progress downloaded of (encrypted) file in percent
+        private int mDownloadProgress = -1;
+
+        // used for outgoing attachments
+        public Attachment(Path path, String mimeType, long length) {
+            this(path, URI.create(""), mimeType, length, "",
+                    CoderStatus.createInsecure());
+        }
+
         // used for incoming attachments
-        public Attachment(String url,
-                String mimeType,
-                long length,
+        public Attachment(URI url, String mimeType, long length,
                 boolean encrypted) {
-            this(
-                    url,
-                    mimeType,
-                    length,
-                    "",
-                    new CoderStatus(
-                        encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT,
-                        encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT,
-                        EnumSet.noneOf(Coder.Error.class)
-                    )
+            this(Paths.get(""), url, mimeType, length, "",
+                    encrypted ? CoderStatus.createEncrypted() :
+                            CoderStatus.createInsecure()
             );
         }
 
         // used when loading from database.
-        private Attachment(String url,
+        private Attachment(Path path,
+                URI url,
                 String mimeType,
                 long length,
                 String fileName,
                 CoderStatus coderStatus)  {
+            mPath = path;
             mURL = url;
             mMimeType = mimeType;
             mLength = length;
@@ -220,7 +232,7 @@ public class MessageContent {
             mCoderStatus = coderStatus;
         }
 
-        public String getURL() {
+        public URI getURL() {
             return mURL;
         }
 
@@ -248,11 +260,11 @@ public class MessageContent {
             return mCoderStatus;
         }
 
-        /** Download progress in percent.<br>
-         * -1: no download/default<br>
-         *  0: download started...<br>
-         * 100: ...download finished<br>
-         * -2: unknown size<br>
+        /** Download progress in percent. <br>
+         * -1: no download/default <br>
+         *  0: download started... <br>
+         * 100: ...download finished <br>
+         * -2: unknown size <br>
          * -3: download aborted
          */
         public int getDownloadProgress() {
@@ -274,10 +286,10 @@ public class MessageContent {
         @SuppressWarnings("unchecked")
         private String toJSONString() {
             JSONObject json = new JSONObject();
-            json.put(JSON_URL, mURL);
-            json.put(JSON_MIME_TYPE, mMimeType);
+            EncodingUtils.putJSON(json, JSON_URL, mURL.toString());
+            EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
-            json.put(JSON_FILE_NAME, mFileName);
+            EncodingUtils.putJSON(json, JSON_FILE_NAME, mFileName);
             json.put(JSON_ENCRYPTION, mCoderStatus.getEncryption().ordinal());
             json.put(JSON_SIGNING, mCoderStatus.getSigning().ordinal());
             int errs = EncodingUtils.enumSetToInt(mCoderStatus.getErrors());
@@ -290,16 +302,15 @@ public class MessageContent {
             try {
                 Map<?, ?> map = (Map) obj;
 
-                String url = (String) map.get(JSON_URL);
-                assert url != null;
+                Path path = Paths.get(EncodingUtils.getJSONString(map, JSON_PATH));
 
-                String mimeType = (String) map.get(JSON_MIME_TYPE);
-                if (mimeType == null) mimeType = "";
+                URI url = URI.create(EncodingUtils.getJSONString(map, JSON_URL));
+
+                String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
 
                 long length = ((Number) map.get(JSON_LENGTH)).longValue();
 
-                String fileName = (String) map.get(JSON_FILE_NAME);
-                if (fileName == null) fileName = "";
+                String fileName = EncodingUtils.getJSONString(map, JSON_FILE_NAME);
 
                 Number enc = (Number) map.get(JSON_ENCRYPTION);
                 Coder.Encryption encryption = Coder.Encryption.values()[enc.intValue()];
@@ -310,10 +321,7 @@ public class MessageContent {
                 Number err = ((Number) map.get(JSON_CODER_ERRORS));
                 EnumSet<Coder.Error> errors = EncodingUtils.intToEnumSet(Coder.Error.class, err.intValue());
 
-                Attachment a = new Attachment(
-                        url,
-                        mimeType,
-                        length,
+                Attachment a = new Attachment(path, url, mimeType, length,
                         fileName,
                         new CoderStatus(encryption, signing, errors));
                 return Optional.of(a);

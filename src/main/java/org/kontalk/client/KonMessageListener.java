@@ -18,9 +18,12 @@
 
 package org.kontalk.client;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Base64;
 import java.util.Date;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.lang.StringUtils;
@@ -181,9 +184,15 @@ final public class KonMessageListener implements StanzaListener {
         Optional<Attachment> optAttachment = Optional.empty();
         ExtensionElement oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
         if (oobExt!= null && oobExt instanceof OutOfBandData) {
-            LOGGER.info("Parsing Out of Band Data");
             OutOfBandData oobData = (OutOfBandData) oobExt;
-            Attachment attachment = new MessageContent.Attachment(oobData.getUrl(),
+            URI url;
+            try {
+                url = new URI(oobData.getUrl());
+            } catch (URISyntaxException ex) {
+                LOGGER.log(Level.WARNING, "can't parse URL", ex);
+                url = URI.create("");
+            }
+            Attachment attachment = new MessageContent.Attachment(url,
                     oobData.getMime() != null ? oobData.getMime() : "",
                     oobData.getLength(),
                     oobData.isEncrypted());
