@@ -444,7 +444,7 @@ public final class Control {
      * Decrypt an incoming message and download attachment if present.
      */
     private void decryptAndDownload(InMessage message) {
-        Coder.processInMessage(message);
+        Coder.decryptMessage(message);
 
         if (!message.getCoderStatus().getErrors().isEmpty()) {
             this.handleSecurityErrors(message);

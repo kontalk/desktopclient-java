@@ -135,7 +135,7 @@ public class Downloader implements Runnable {
 
         // decrypt file
         if (attachment.getCoderStatus().isEncrypted()) {
-            Coder.processAttachment(message, mBaseDir.toPath());
+            Coder.decryptAttachment(message, mBaseDir.toPath());
         }
     }
 

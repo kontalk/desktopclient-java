@@ -110,4 +110,13 @@ public class CoderStatus {
         return new CoderStatus(Coder.Encryption.ENCRYPTED, Coder.Signing.UNKNOWN,
                 EnumSet.noneOf(Coder.Error.class));
     }
+
+    static CoderStatus createToEncrypt() {
+        return new CoderStatus(
+                // outgoing messages are never saved encrypted
+                Coder.Encryption.DECRYPTED,
+                // ignored: when encrypting we always sign too
+                Coder.Signing.SIGNED,
+                EnumSet.noneOf(Coder.Error.class));
+    }
 }

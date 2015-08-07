@@ -18,12 +18,11 @@
 
 package org.kontalk.model;
 
+import java.net.URI;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
-import org.kontalk.crypto.Coder;
 
 /**
  * Model for a XMPP message that we are sending.
@@ -59,6 +58,15 @@ public final class OutMessage extends KonMessage {
         this.setStatus(Status.ERROR);
     }
 
+    public void setAttachmentURL(URI url) {
+        MessageContent.Attachment attachment = this.getAttachment();
+        if (attachment == null)
+            return;
+
+        attachment.setURL(url);
+        this.save();
+    }
+
 public static class Builder extends KonMessage.Builder {
 
         public Builder(Chat chat, Contact contact, boolean encrypted) {
@@ -69,14 +77,9 @@ public static class Builder extends KonMessage.Builder {
             mServerDate = Optional.empty();
             mReceiptStatus = Status.PENDING;
 
-            mCoderStatus = new CoderStatus(
-                // outgoing messages are never saved encrypted
-                encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT,
-                // if we want encryption we also want signing, doesn't hurt
-                encrypted ? Coder.Signing.SIGNED : Coder.Signing.NOT,
-                // of course, no errors
-                EnumSet.noneOf(Coder.Error.class)
-            );
+            mCoderStatus = encrypted ?
+                CoderStatus.createToEncrypt() :
+                CoderStatus.createInsecure();
         }
 
         @Override

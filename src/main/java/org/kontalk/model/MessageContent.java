@@ -178,7 +178,6 @@ public class MessageContent {
 
     public static class Attachment {
 
-        private static final String JSON_PATH = "path";
         private static final String JSON_URL = "url";
         private static final String JSON_MIME_TYPE = "mime_type";
         private static final String JSON_LENGTH = "length";
@@ -187,16 +186,14 @@ public class MessageContent {
         private static final String JSON_SIGNING = "signing";
         private static final String JSON_CODER_ERRORS = "coder_errors";
 
-        // path of file to upload (only for out message), empty by default
-        private final Path mPath;
-        // URL to file, empty string by default
-        private final URI mURL;
+        // URL for file download, empty string by default
+        private URI mURL;
+        // file name of downloaded file or path to upload file, empty by default
+        private Path mFile;
         // MIME of file, empty string by default
         private final String mMimeType;
         // size of (decrypted) file in bytes, -1 by default
         private final long mLength;
-        // file name of downloaded and encrypted file, empty string by default
-        private String mFileName;
         // coder status of file encryption
         private final CoderStatus mCoderStatus;
         // progress downloaded of (encrypted) file in percent
@@ -204,56 +201,68 @@ public class MessageContent {
 
         // used for outgoing attachments
         public Attachment(Path path, String mimeType, long length) {
-            this(path, URI.create(""), mimeType, length, "",
+            this(URI.create(""), path, mimeType, length,
                     CoderStatus.createInsecure());
         }
 
         // used for incoming attachments
         public Attachment(URI url, String mimeType, long length,
                 boolean encrypted) {
-            this(Paths.get(""), url, mimeType, length, "",
+            this(url, Paths.get(""), mimeType, length,
                     encrypted ? CoderStatus.createEncrypted() :
                             CoderStatus.createInsecure()
             );
         }
 
         // used when loading from database.
-        private Attachment(Path path,
-                URI url,
-                String mimeType,
-                long length,
-                String fileName,
+        private Attachment(URI url, Path file,
+                String mimeType, long length,
                 CoderStatus coderStatus)  {
-            mPath = path;
             mURL = url;
+            mFile = file;
             mMimeType = mimeType;
             mLength = length;
-            mFileName = fileName;
             mCoderStatus = coderStatus;
+        }
+
+        public boolean hasURL() {
+            return !mURL.toString().isEmpty();
         }
 
         public URI getURL() {
             return mURL;
         }
 
+        public void setURL(URI url){
+            mURL = url;
+        }
+
         public String getMimeType() {
             return mMimeType;
         }
 
+        public long getLength() {
+            return mLength;
+        }
+
+        public boolean hasFile() {
+            return !mFile.toString().isEmpty();
+        }
+
        /**
-        * Return name of file or empty string if file wasn't downloaded yet.
+        * Return the filename (download) or path to the local file (upload).
         */
-        public String getFileName() {
-            return mFileName;
+        public Path getFile() {
+            return mFile;
         }
 
-        void setFileName(String fileName) {
-            mFileName = fileName;
+        void setFile(String fileName) {
+            mFile = Paths.get(fileName);
         }
 
-        void setDecryptedFilename(String fileName) {
+        void setDecryptedFile(String fileName) {
             mCoderStatus.setDecrypted();
-            mFileName = fileName;
+            mFile = Paths.get(fileName);
         }
 
         public CoderStatus getCoderStatus() {
@@ -278,8 +287,8 @@ public class MessageContent {
 
         @Override
         public String toString() {
-            return "ATT:url="+mURL+",mime="+mMimeType+",file="+mFileName
-                    +",status="+mCoderStatus;
+            return "{ATT:url="+mURL+",file="+mFile+",mime="+mMimeType
+                    +",status="+mCoderStatus+"}";
         }
 
         // using legacy lib, raw types extend Object
@@ -289,7 +298,7 @@ public class MessageContent {
             EncodingUtils.putJSON(json, JSON_URL, mURL.toString());
             EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
-            EncodingUtils.putJSON(json, JSON_FILE_NAME, mFileName);
+            EncodingUtils.putJSON(json, JSON_FILE_NAME, mFile.toString());
             json.put(JSON_ENCRYPTION, mCoderStatus.getEncryption().ordinal());
             json.put(JSON_SIGNING, mCoderStatus.getSigning().ordinal());
             int errs = EncodingUtils.enumSetToInt(mCoderStatus.getErrors());
@@ -302,15 +311,13 @@ public class MessageContent {
             try {
                 Map<?, ?> map = (Map) obj;
 
-                Path path = Paths.get(EncodingUtils.getJSONString(map, JSON_PATH));
-
                 URI url = URI.create(EncodingUtils.getJSONString(map, JSON_URL));
 
                 String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
 
                 long length = ((Number) map.get(JSON_LENGTH)).longValue();
 
-                String fileName = EncodingUtils.getJSONString(map, JSON_FILE_NAME);
+                Path file = Paths.get(EncodingUtils.getJSONString(map, JSON_FILE_NAME));
 
                 Number enc = (Number) map.get(JSON_ENCRYPTION);
                 Coder.Encryption encryption = Coder.Encryption.values()[enc.intValue()];
@@ -321,8 +328,7 @@ public class MessageContent {
                 Number err = ((Number) map.get(JSON_CODER_ERRORS));
                 EnumSet<Coder.Error> errors = EncodingUtils.intToEnumSet(Coder.Error.class, err.intValue());
 
-                Attachment a = new Attachment(path, url, mimeType, length,
-                        fileName,
+                Attachment a = new Attachment(url, file, mimeType, length,
                         new CoderStatus(encryption, signing, errors));
                 return Optional.of(a);
             } catch (NullPointerException | ClassCastException ex) {

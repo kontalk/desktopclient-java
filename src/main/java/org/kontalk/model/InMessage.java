@@ -20,7 +20,6 @@ package org.kontalk.model;
 
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.MessageContent.Attachment;
@@ -57,21 +56,12 @@ public final class InMessage extends KonMessage {
         if (attachment == null)
             return;
 
-        attachment.setFileName(fileName);
+        attachment.setFile(fileName);
         this.save();
         // only tell view if file not encrypted
         if (!attachment.getCoderStatus().isEncrypted())
             this.changed(attachment);
      }
-
-    public void setAttachmentErrors(EnumSet<Coder.Error> errors) {
-        Attachment attachment = this.getAttachment();
-        if (attachment == null)
-            return;
-
-        attachment.getCoderStatus().setSecurityErrors(errors);
-        this.save();
-    }
 
     public void setAttachmentSigning(Coder.Signing signing) {
         Attachment attachment = this.getAttachment();
@@ -97,18 +87,9 @@ public final class InMessage extends KonMessage {
         if (attachment == null)
             return;
 
-        attachment.setDecryptedFilename(filename);
+        attachment.setDecryptedFile(filename);
         this.save();
         this.changed(attachment);
-    }
-
-    private Attachment getAttachment() {
-        Optional<Attachment> optAttachment = this.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
-            LOGGER.warning("no attachment!?");
-            return null;
-        }
-        return optAttachment.get();
     }
 
     public static class Builder extends KonMessage.Builder {

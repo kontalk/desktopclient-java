@@ -54,6 +54,8 @@ import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.Contact;
+import org.kontalk.model.KonMessage;
+import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.system.Control;
 import org.kontalk.util.XMPPUtils;
 
@@ -221,19 +223,26 @@ public final class Client implements StanzaListener, Runnable {
             return;
         }
 
-        Message smackMessage = new Message(message.getJID(), Message.Type.chat);
-        smackMessage.setStanzaId(message.getXMPPID());
-        smackMessage.addExtension(new DeliveryReceiptRequest());
-        Config conf = Config.getInstance();
-        if (conf.getBoolean(Config.NET_SEND_CHAT_STATE))
-            smackMessage.addExtension(new ChatStateExtension(ChatState.active));
-
+        Message sendMessage;
         if (message.getCoderStatus().getEncryption() == Coder.Encryption.NOT &&
                 message.getCoderStatus().getSigning() == Coder.Signing.NOT) {
-            // TODO send more possible content
-            smackMessage.setBody(message.getContent().getPlainText());
+            // unencrypted
+            Message rawMessage = rawMessageOrNull(message, false);
+            if (rawMessage == null)
+                return;
+            sendMessage = rawMessage;
         } else {
-            Optional<byte[]> encrypted = Coder.processOutMessage(message);
+            // encrypted
+            sendMessage = new Message(message.getJID(), Message.Type.chat);
+            Optional<byte[]> encrypted;
+            if (message.getContent().getAttachment().isPresent()) {
+                Message rawMessage = rawMessageOrNull(message, true);
+                if (rawMessage == null)
+                    return;
+                encrypted = Coder.encryptStanza(message, rawMessage.toXML().toString());
+            } else {
+                encrypted = Coder.encryptMessage(message);
+            }
             // check also for security errors just to be sure
             if (!encrypted.isPresent() ||
                     !message.getCoderStatus().getErrors().isEmpty()) {
@@ -242,10 +251,37 @@ public final class Client implements StanzaListener, Runnable {
                 mControl.handleSecurityErrors(message);
                 return;
             }
-            smackMessage.addExtension(new E2EEncryption(encrypted.get()));
+            sendMessage.addExtension(new E2EEncryption(encrypted.get()));
         }
 
-        this.sendPacket(smackMessage);
+        sendMessage.setStanzaId(message.getXMPPID());
+
+        sendMessage.addExtension(new DeliveryReceiptRequest());
+
+        if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
+            sendMessage.addExtension(new ChatStateExtension(ChatState.active));
+
+        this.sendPacket(sendMessage);
+    }
+
+    private static Message rawMessageOrNull(KonMessage message, boolean encrypted) {
+        Message smackMessage = new Message(message.getJID(), Message.Type.chat);
+
+        smackMessage.setBody(message.getContent().getPlainText());
+
+        Optional<Attachment> optAtt = message.getContent().getAttachment();
+        if (optAtt.isPresent()) {
+            Attachment att = optAtt.get();
+            if (!att.hasURL()) {
+                LOGGER.warning("attachment not uploaded");
+                return null;
+            }
+
+            OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
+                    att.getMimeType(), att.getLength(), encrypted);
+            smackMessage.addExtension(oobData);
+        }
+        return smackMessage;
     }
 
     public void sendVCardRequest(String jid) {

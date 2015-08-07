@@ -212,6 +212,24 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mContent;
     }
 
+    public void setAttachmentErrors(EnumSet<Coder.Error> errors) {
+        MessageContent.Attachment attachment = this.getAttachment();
+        if (attachment == null)
+            return;
+
+        attachment.getCoderStatus().setSecurityErrors(errors);
+        this.save();
+    }
+
+    protected MessageContent.Attachment getAttachment() {
+        Optional<MessageContent.Attachment> optAttachment = this.getContent().getAttachment();
+        if (!optAttachment.isPresent()) {
+            LOGGER.warning("no attachment!?");
+            return null;
+        }
+        return optAttachment.get();
+    }
+
     public CoderStatus getCoderStatus() {
         return mCoderStatus;
     }

@@ -494,12 +494,11 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 return;
 
             Attachment att = optAttachment.get();
-            String fName = att.getFileName();
+            String fName = att.getFile().toString();
             Path path = mView.getControl().getAttachmentDir().resolve(fName);
 
             // rely on mime type in message
-            if (!att.getFileName().isEmpty() &&
-                    att.getMimeType().startsWith("image")) {
+            if (att.hasFile() && att.getMimeType().startsWith("image")) {
                 WebLinkLabel imageView = new WebLinkLabel();
                 imageView.setLink("", createLinkRunnable(path));
                 // file should be present and should be an image, show it
@@ -510,18 +509,19 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
             // show a link to the file
             WebLabel attLabel;
-            if (att.getFileName().isEmpty()) {
+            if (att.hasFile()) {
+                WebLinkLabel linkLabel = new WebLinkLabel();
+                linkLabel.setLink(fName, createLinkRunnable(path));
+                attLabel = linkLabel;
+            } else {
                 String statusText = Tr.tr("loading...");
                 switch (att.getDownloadProgress()) {
+                    case -1: statusText = Tr.tr("stalled"); break;
                     case 0:
                     case -2: statusText = Tr.tr("downloading..."); break;
                     case -3: statusText = Tr.tr("download failed"); break;
                 }
                 attLabel = new WebLabel(statusText);
-            } else {
-                WebLinkLabel linkLabel = new WebLinkLabel();
-                linkLabel.setLink(fName, createLinkRunnable(path));
-                attLabel = linkLabel;
             }
             WebLabel labelLabel = new WebLabel(Tr.tr("Attachment:")+" ");
             labelLabel.setItalicFont();
