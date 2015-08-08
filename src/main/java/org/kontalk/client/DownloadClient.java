@@ -20,9 +20,11 @@ package org.kontalk.client;
 
 import java.util.logging.Logger;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -38,49 +40,59 @@ import javax.net.ssl.SSLContext;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
+import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.kontalk.util.TrustUtils;
 
 /**
- *
+ * HTTP file transfer client.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class DownloadClient {
     private static final Logger LOGGER = Logger.getLogger(DownloadClient.class.getName());
 
-    /** Regex used to parse content-disposition headers */
+    /** Regex used to parse content-disposition headers for download. */
     private static final Pattern CONTENT_DISPOSITION_PATTERN = Pattern
             .compile("attachment;\\s*filename\\s*=\\s*\"([^\"]*)\"");
+
+    /** Message flags header for upload. */
+    private static final String HEADER_MESSAGE_FLAGS = "X-Message-Flags";
 
     private final PrivateKey mPrivateKey;
     private final X509Certificate mCertificate;
     private final boolean mValidateCertificate;
-    private final ProgressListener mListener;
 
     private HttpRequestBase mCurrentRequest;
-    private CloseableHttpClient mHTTPClient;
+    private CloseableHttpClient mHTTPClient = null;
+    private ProgressListener mCurrentListener = null;
 
     public DownloadClient(PrivateKey privateKey,
             X509Certificate bridgeCert,
-            boolean validateCertificate,
-            ProgressListener listener) {
+            boolean validateCertificate) {
         mPrivateKey = privateKey;
         mCertificate = bridgeCert;
         mValidateCertificate = validateCertificate;
-        mListener = listener;
     }
 
     // TODO unused
     public void abort() {
-        if (mCurrentRequest != null)
+        if (mCurrentRequest != null){
             mCurrentRequest.abort();
-        mListener.updateProgress(-3);
+            mCurrentRequest = null;
+        }
+        if (mCurrentListener != null) {
+            mCurrentListener.updateProgress(-3);
+            mCurrentListener = null;
+        }
     }
 
     /**
@@ -91,15 +103,16 @@ public class DownloadClient {
      * @return the absolute file path of the downloaded file, or an empty string
      * if the file could not be downloaded
      */
-    public String download(URI url, File base) {
+    public String download(URI url, File base, ProgressListener listener) {
         if (mHTTPClient == null) {
-            mHTTPClient = createHTTPClient(mPrivateKey, mCertificate, mValidateCertificate);
+            mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
                 return "";
         }
 
         LOGGER.info("downloading file from URL=" + url+ "...");
         mCurrentRequest = new HttpGet(url);
+        mCurrentListener = listener;
 
         // execute request
         CloseableHttpResponse response;
@@ -112,9 +125,8 @@ public class DownloadClient {
 
         try {
             int code = response.getStatusLine().getStatusCode();
-            // HTTP/1.1 200 OK -- other codes should throw Exceptions
-            if (code != 200) {
-                LOGGER.warning("invalid response code: " + code);
+            if (code != HttpStatus.SC_OK) {
+                LOGGER.warning("download, unexpected response code: " + code);
                 return "";
             }
 
@@ -145,13 +157,13 @@ public class DownloadClient {
                 }
             }
             final long fileSize = s;
-            mListener.updateProgress(s < 0 ? -2 : 0);
+            mCurrentListener.updateProgress(s < 0 ? -2 : 0);
 
             // TODO should check for content-disposition parsing here
             // and choose another filename if necessary
             HttpEntity entity = response.getEntity();
             if (entity == null) {
-                LOGGER.warning("no entity in response");
+                LOGGER.warning("no download response entity");
                 return "";
             }
 
@@ -168,7 +180,7 @@ public class DownloadClient {
                             return;
 
                         // inform listener
-                        mListener.updateProgress(
+                        mCurrentListener.updateProgress(
                                 (int) (this.getByteCount() /(fileSize * 1.0) * 100));
                     }
                 };
@@ -178,18 +190,98 @@ public class DownloadClient {
                 return "";
             }
 
-            LOGGER.info("... download successful!");
+            // release http connection resource
+            EntityUtils.consumeQuietly(entity);
+
+            // TODO
+            mCurrentRequest = null;
+            mCurrentListener = null;
+
             return destination.getAbsolutePath();
         } finally {
             try {
                 response.close();
             } catch (IOException ex) {
                 LOGGER.log(Level.WARNING, "can't close response", ex);
+                // TODO can't use this client anymore(?)
             }
         }
     }
 
-    private static CloseableHttpClient createHTTPClient(PrivateKey privateKey,
+    /**
+     * Upload a file.
+     * @param file file to download
+     * @param url the upload URL pointing to the upload service
+     * @param mime mime-type of file
+     * @param encrypted is the file encrypted?
+     * @return the URL the file can be downloaded with.
+     */
+    public URI upload(File file, URI url, String mime, boolean encrypted) {
+        if (mHTTPClient == null) {
+            mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
+            if (mHTTPClient == null)
+                return URI.create("");
+        }
+
+        // request type
+        HttpPost req = new HttpPost(url);
+        req.setHeader("Content-Type", mime);
+        if (encrypted)
+            req.addHeader(HEADER_MESSAGE_FLAGS, "encrypted");
+
+        // execute request
+        CloseableHttpResponse response;
+        try(FileInputStream in = new FileInputStream(file)) {
+            req.setEntity(new InputStreamEntity(in, file.length()));
+
+            mCurrentRequest = req;
+
+            //response = execute(currentRequest);
+            response = mHTTPClient.execute(mCurrentRequest);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't upload file", ex);
+            return URI.create("");
+        }
+
+        // get URL from response entity
+        String downloadURL;
+        try {
+            int code = response.getStatusLine().getStatusCode();
+            if (code != HttpStatus.SC_OK) {
+                LOGGER.warning("upload, unexpected response code: " + code);
+                return URI.create("");
+            }
+
+            HttpEntity entity = response.getEntity();
+            if (entity == null) {
+                LOGGER.warning("no upload response entity");
+                return URI.create("");
+            }
+
+            downloadURL = EntityUtils.toString(entity);
+
+            // release http connection resource
+            EntityUtils.consume(entity);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't get url from response", ex);
+            return URI.create("");
+        } finally {
+           try {
+                response.close();
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't close response", ex);
+            }
+        }
+
+        try {
+            return new URI(downloadURL);
+        } catch (URISyntaxException ex) {
+            LOGGER.log(Level.WARNING, "can't parse URI", ex);
+            return URI.create("");
+        }
+    }
+
+    private static CloseableHttpClient httpClientOrNull(PrivateKey privateKey,
             X509Certificate certificate,
             boolean validateCertificate) {
         //HttpClientBuilder clientBuilder = HttpClientBuilder.create();
@@ -211,17 +303,19 @@ public class DownloadClient {
             return null;
         }
 
-        RequestConfig.Builder rcBuilder = RequestConfig.custom();
-        // handle redirects :)
-        rcBuilder.setRedirectsEnabled(true);
-        // HttpClient bug caused by Lighttpd
-        rcBuilder.setExpectContinueEnabled(false);
-        clientBuilder.setDefaultRequestConfig(rcBuilder.build());
+        RequestConfig requestConfig = RequestConfig.custom()
+                // handle redirects :)
+                .setRedirectsEnabled(true)
+                // HttpClient bug caused by Lighttpd
+                .setExpectContinueEnabled(false)
+                .setConnectTimeout(10 * 1000)
+                .setSocketTimeout(10 * 1000)
+                .build();
+        clientBuilder.setDefaultRequestConfig(requestConfig);
 
         // create connection manager
         //ClientConnectionManager connMgr = new SingleClientConnManager(params, registry);
 
-        //return new DefaultHttpClient(connMgr, params);
         return clientBuilder.build();
     }
 

@@ -126,7 +126,7 @@ public final class Control {
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
         Path attachmentDir = Kontalk.getConfigDir().resolve("attachments");
-        mAttachmentManager = Downloader.create(attachmentDir);
+        mAttachmentManager = Downloader.create(this, attachmentDir);
 
         mViewControl = new ViewControl();
     }
@@ -398,6 +398,20 @@ public final class Control {
         contact.setBlocked(blocking);
     }
 
+    /* package */
+
+    void sendMessage(OutMessage message) {
+        if (message.getContent().getAttachment().isPresent() &&
+                !message.getContent().getAttachment().get().hasURL()) {
+            // continue later...
+            mAttachmentManager.queueUpload(message);
+            return;
+        }
+
+        mClient.sendMessage(message);
+        mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
+    }
+
     /* private */
 
     private Optional<Contact> createNewContact(String jid, String name, boolean encrypted) {
@@ -421,11 +435,6 @@ public final class Control {
             LOGGER.warning("can't add new contact to roster: "+newContact);
 
         return Optional.of(newContact);
-    }
-
-    private void sendMessage(OutMessage message) {
-        mClient.sendMessage(message);
-        mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
     }
 
     private void sendKeyRequest(Contact contact) {

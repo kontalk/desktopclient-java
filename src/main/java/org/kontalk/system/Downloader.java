@@ -19,6 +19,7 @@
 package org.kontalk.system;
 
 import java.io.File;
+import java.net.URI;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -29,6 +30,7 @@ import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
 import org.kontalk.client.DownloadClient;
 import org.kontalk.crypto.Coder;
+import org.kontalk.crypto.Coder.Encryption;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.MessageContent.Attachment;
@@ -44,8 +46,12 @@ import org.kontalk.model.OutMessage;
 public class Downloader implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(Downloader.class.getName());
 
+    // TODO get this from server
+    private static final String UPLOAD_URL = "https://beta.kontalk.net:5980/upload";
+
     private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
 
+    private final Control mControl;
     private final File mBaseDir;
 
     private static class Task {
@@ -69,7 +75,8 @@ public class Downloader implements Runnable {
         }
     }
 
-    private Downloader(Path dirPath) {
+    private Downloader(Control control, Path dirPath) {
+        mControl = control;
         mBaseDir = dirPath.toFile();
         boolean created = mBaseDir.mkdirs();
         if (created)
@@ -79,7 +86,14 @@ public class Downloader implements Runnable {
     public void queueDownload(InMessage message) {
         boolean added = mQueue.offer(new Task.DownloadTask(message));
         if (!added) {
-            LOGGER.warning("can't add message to download-queue");
+            LOGGER.warning("can't add download message to queue");
+        }
+    }
+
+    public void queueUpload(OutMessage message) {
+        boolean added = mQueue.offer(new Task.UploadTask(message));
+        if (!added) {
+            LOGGER.warning("can't add upload message to queue");
         }
     }
 
@@ -88,48 +102,76 @@ public class Downloader implements Runnable {
     }
 
     private void uploadAsync(OutMessage message) {
-        // TODO
+        Optional<Attachment> optAttachment = message.getContent().getAttachment();
+        if (!optAttachment.isPresent()) {
+            LOGGER.warning("no attachment in message to upload");
+            return;
+        }
+        Attachment attachment = optAttachment.get();
+
+        // if text will be encrypted, always encrypt attachment too
+        boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
+        File file;
+        if (encrypt){
+            Optional<File> optFile = Coder.encryptAttachment(message);
+            if (!optFile.isPresent())
+                return;
+            file = optFile.get();
+        } else
+            file = attachment.getFile().toFile();
+
+        DownloadClient client = createClientOrNull();
+        if (client == null)
+            return;
+
+        URI url = client.upload(file, URI.create(UPLOAD_URL),
+                // TODO this is correct, but the server can't handle the truth
+                /*encrypt ? "application/octet-stream" :*/ attachment.getMimeType(),
+                encrypt);
+
+        // delete temp file
+        if (encrypt)
+            file.delete();
+
+        if (url.toString().isEmpty())
+            // upload failed
+            return;
+
+        message.setAttachmentURL(url);
+
+        LOGGER.info("upload successful, URL="+url);
+
+        // make sure not to loop
+        if (attachment.hasURL())
+            mControl.sendMessage(message);
     }
 
     private void downloadAsync(final InMessage message) {
-        Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
-        if (!optKey.isPresent()) {
-            LOGGER.log(Level.WARNING, "personal key not loaded");
+        Optional<Attachment> optAttachment = message.getContent().getAttachment();
+        if (!optAttachment.isPresent()) {
+            LOGGER.warning("no attachment in message to download");
             return;
         }
-        PersonalKey key = optKey.get();
-        PrivateKey privateKey;
-        try {
-            privateKey = key.getBridgePrivateKey();
-        } catch (PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't get private bridge key", ex);
+        Attachment attachment = optAttachment.get();
+
+        DownloadClient client = createClientOrNull();
+        if (client == null)
             return;
-        }
-        X509Certificate bridgeCert = key.getBridgeCertificate();
-        boolean validateCertificate = Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION);
+
         DownloadClient.ProgressListener listener = new DownloadClient.ProgressListener() {
             @Override
             public void updateProgress(int p) {
                 message.setAttachmentDownloadProgress(p);
             }
         };
-        DownloadClient client = new DownloadClient(privateKey,
-                bridgeCert,
-                validateCertificate,
-                listener);
 
-        Optional<Attachment> optAttachment = message.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
-            LOGGER.warning("no attachment in message");
-            return;
-        }
-        Attachment attachment = optAttachment.get();
-
-        String path = client.download(attachment.getURL(), mBaseDir);
+        String path = client.download(attachment.getURL(), mBaseDir, listener);
         if (path.isEmpty()) {
-            // could not be downloaded
+            LOGGER.warning("download failed, URL="+attachment.getURL());
             return;
         }
+
+        LOGGER.info("download successful, saved to file: "+path);
 
         message.setAttachmentFileName(new File(path).getName());
 
@@ -162,11 +204,33 @@ public class Downloader implements Runnable {
         }
     }
 
-    static Downloader create(Path downloadDir) {
-        Downloader downloader = new Downloader(downloadDir);
+    static Downloader create(Control control, Path downloadDir) {
+        Downloader downloader = new Downloader(control, downloadDir);
 
         new Thread(downloader).start();
 
         return downloader;
+    }
+
+    private static DownloadClient createClientOrNull(){
+        Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
+        if (!optKey.isPresent()) {
+            LOGGER.log(Level.WARNING, "personal key not loaded");
+            return null;
+        }
+        PersonalKey key = optKey.get();
+        PrivateKey privateKey;
+        try {
+            privateKey = key.getBridgePrivateKey();
+        } catch (PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't get private bridge key", ex);
+            return null;
+        }
+        X509Certificate bridgeCert = key.getBridgeCertificate();
+        boolean validateCertificate = Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION);
+
+        return new DownloadClient(privateKey,
+                bridgeCert,
+                validateCertificate);
     }
 }
