@@ -88,7 +88,7 @@ public static class Builder extends KonMessage.Builder {
         public void xmppID(String xmppID) { throw new UnsupportedOperationException(); }
 
         @Override
-        public void serverDate(Optional<Date> date) { throw new UnsupportedOperationException(); }
+        public void serverDate(Date date) { throw new UnsupportedOperationException(); }
         @Override
         public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
 

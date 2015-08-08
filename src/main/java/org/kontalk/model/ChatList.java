@@ -136,7 +136,7 @@ public final class ChatList extends Observable implements Observer {
             return Optional.empty();
         }
         for (Chat chat : mMap.values()) {
-            if (xmppThreadID.equals(chat.getXMPPID().orElse(null)))
+            if (xmppThreadID.equals(chat.getXMPPID()))
                 return Optional.of(chat);
         }
         return Optional.empty();

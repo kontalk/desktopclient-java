@@ -41,7 +41,7 @@ public class MessageContent {
 
     // plain message text, empty string if not present
     private final String mPlainText;
-    // attachment a.k.a. file url in plaintext
+    // attachment (file url, path and metadata)
     private final Optional<Attachment> mOptAttachment;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
@@ -53,37 +53,34 @@ public class MessageContent {
     private static final String JSON_ENC_CONTENT = "encrypted_content";
     private static final String JSON_DEC_CONTENT = "decrypted_content";
 
-    // used for decrypted content of incoming messages and as fallback
+    // used for decrypted content of incoming messages, outgoing messages
+    // and as fallback
     public MessageContent(String plainText) {
-        this(plainText, Optional.<Attachment>empty());
+        this(plainText, "");
     }
 
-    // used for outgoing messages
-    public MessageContent(String plainText, Optional<Attachment> optAttachment) {
-        this(plainText, optAttachment, "");
+    public MessageContent(String plainText, Attachment attachment) {
+        this(plainText, attachment, "");
+    }
+
+    public MessageContent(String plainText, String encryptedContent) {
+        this(plainText, null, encryptedContent, null);
     }
 
     // used for incoming messages
     public MessageContent(String plainText,
-            Optional<Attachment> optAttachment,
+            Attachment attachment,
             String encryptedContent) {
-        this(
-                plainText,
-                optAttachment,
-                encryptedContent,
-                Optional.<MessageContent>empty()
-        );
+        this(plainText, attachment, encryptedContent, null);
     }
 
     // used when loading from db
-    private MessageContent(String plainText,
-            Optional<Attachment> optAttachment,
-            String encryptedContent,
-            Optional<MessageContent> optDecryptedContent) {
+    private MessageContent(String plainText, Attachment attachment,
+            String encryptedContent, MessageContent decryptedContent) {
         mPlainText = plainText;
-        mOptAttachment = optAttachment;
+        mOptAttachment = Optional.ofNullable(attachment);
         mEncryptedContent = encryptedContent;
-        mOptDecryptedContent = optDecryptedContent;
+        mOptDecryptedContent = Optional.of(decryptedContent);
     }
 
     /**
@@ -157,17 +154,17 @@ public class MessageContent {
             Map<?, ?> map = (Map) obj;
             String plainText = EncodingUtils.getJSONString(map, JSON_PLAIN_TEXT);
             String jsonAttachment = (String) map.get(JSON_ATTACHMENT);
-            Optional<Attachment> optAttachment = jsonAttachment == null ?
-                    Optional.<Attachment>empty() :
-                    Attachment.fromJSONString(jsonAttachment);
+            Attachment attachment = jsonAttachment == null ?
+                    null :
+                    Attachment.fromJSONStringOrNull(jsonAttachment);
 
             String encryptedContent = EncodingUtils.getJSONString(map, JSON_ENC_CONTENT);
             String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
-            Optional<MessageContent> decryptedContent = jsonDecryptedContent == null ?
-                    Optional.<MessageContent>empty() :
-                    Optional.of(fromJSONString(jsonDecryptedContent));
+            MessageContent decryptedContent = jsonDecryptedContent == null ?
+                    null :
+                    fromJSONString(jsonDecryptedContent);
             return new MessageContent(plainText,
-                    optAttachment,
+                    attachment,
                     encryptedContent,
                     decryptedContent);
         } catch(ClassCastException ex) {
@@ -306,7 +303,7 @@ public class MessageContent {
             return json.toJSONString();
         }
 
-        static Optional<Attachment> fromJSONString(String jsonAttachment) {
+        private static Attachment fromJSONStringOrNull(String jsonAttachment) {
             Object obj = JSONValue.parse(jsonAttachment);
             try {
                 Map<?, ?> map = (Map) obj;
@@ -328,12 +325,11 @@ public class MessageContent {
                 Number err = ((Number) map.get(JSON_CODER_ERRORS));
                 EnumSet<Coder.Error> errors = EncodingUtils.intToEnumSet(Coder.Error.class, err.intValue());
 
-                Attachment a = new Attachment(url, file, mimeType, length,
+                return new Attachment(url, file, mimeType, length,
                         new CoderStatus(encryption, signing, errors));
-                return Optional.of(a);
             } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON attachment", ex);
-                return Optional.empty();
+                return null;
             }
         }
     }

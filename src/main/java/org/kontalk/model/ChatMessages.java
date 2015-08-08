@@ -99,15 +99,14 @@ public final class ChatMessages {
                 KonMessage.ServerError serverError =
                         KonMessage.ServerError.fromJSON(jsonServerError);
                 long sDate = resultSet.getLong(KonMessage.COL_SERV_DATE);
-                Optional<Date> serverDate = sDate == 0 ?
-                        Optional.<Date>empty() :
-                        Optional.of(new Date(sDate));
+                Date serverDate = sDate == 0 ? null : new Date(sDate);
 
                 KonMessage.Builder builder = new KonMessage.Builder(id, mChat,
                         dir, optContact.get(), date);
                 builder.jid(jid);
                 builder.xmppID(xmppID);
-                builder.serverDate(serverDate);
+                if (serverDate != null)
+                    builder.serverDate(serverDate);
                 builder.receiptStatus(status);
                 builder.content(content);
                 builder.coderStatus(coderStatus);

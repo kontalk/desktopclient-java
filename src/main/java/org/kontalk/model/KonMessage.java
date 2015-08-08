@@ -403,7 +403,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         protected String mJID = null;
         protected String mXMPPID = null;
 
-        protected Optional<Date> mServerDate = null;
+        protected Optional<Date> mServerDate = Optional.empty();
         protected Status mReceiptStatus = null;
         protected MessageContent mContent = null;
 
@@ -425,7 +425,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         public void jid(String jid) { mJID = jid; }
         public void xmppID(String xmppID) { mXMPPID = xmppID; }
 
-        public void serverDate(Optional<Date> date) { mServerDate = date; }
+        public void serverDate(Date date) { mServerDate = Optional.of(date); }
         public void content(MessageContent content) { mContent = content; }
 
         void receiptStatus(Status status) { mReceiptStatus = status; }

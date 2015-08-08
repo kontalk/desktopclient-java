@@ -141,8 +141,8 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return mID;
     }
 
-    public Optional<String> getXMPPID() {
-        return mXMPPID.isEmpty() ? Optional.<String>empty() : Optional.of(mXMPPID);
+    public String getXMPPID() {
+        return mXMPPID;
     }
 
     public Set<Contact> getContacts() {

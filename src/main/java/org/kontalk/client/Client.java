@@ -335,13 +335,13 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(subscribeRequest);
     }
 
-    public void sendChatState(String jid, Optional<String> optThreadID, ChatState state) {
+    public void sendChatState(String jid, String threadID, ChatState state) {
         if (!Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
             return;
 
         Message message = new Message(jid, Message.Type.chat);
-        if (optThreadID.isPresent())
-            message.setThread(optThreadID.get());
+        if (!threadID.isEmpty())
+            message.setThread(threadID);
         message.addExtension(new ChatStateExtension(state));
 
         this.sendPacket(message);

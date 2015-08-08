@@ -190,7 +190,8 @@ public final class Control {
         InMessage.Builder builder = new InMessage.Builder(chat, contact);
         builder.jid(ids.jid);
         builder.xmppID(ids.xmppID);
-        builder.serverDate(serverDate);
+        if (serverDate.isPresent())
+            builder.serverDate(serverDate.get());
         builder.content(content);
         InMessage newMessage = builder.build();
         boolean added = chat.addMessage(newMessage);
@@ -360,7 +361,6 @@ public final class Control {
     }
 
     public void setKey(Contact contact, PGPCoderKey key) {
-
         contact.setKey(key.rawKey, key.fingerprint);
 
         // if not set, use uid in key for contact name

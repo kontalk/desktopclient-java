@@ -105,12 +105,12 @@ final public class KonMessageListener implements StanzaListener {
         if (delay == null) {
             delay = m.getExtension("x", "jabber:x:delay");
         }
-        Optional<Date> serverDate = Optional.empty();
+        Optional<Date> optServerDate = Optional.empty();
         if (delay != null && delay instanceof DelayInformation) {
                 Date date = ((DelayInformation) delay).getStamp();
                 if (date.after(new Date()))
                     LOGGER.warning("delay time is in future: "+date);
-                serverDate = Optional.of(date);
+                optServerDate = Optional.of(date);
         }
 
         // process possible chat state notification (XEP-0085)
@@ -119,7 +119,7 @@ final public class KonMessageListener implements StanzaListener {
             LOGGER.info("got chatstate: " + chatstate.getElementName());
             mControl.processChatState(m.getFrom(),
                     threadID,
-                    serverDate,
+                    optServerDate,
                     chatstate.getElementName());
             if (!chatstate.getElementName().equals(ChatState.active.name()))
                 // we assume there is no other content
@@ -155,7 +155,7 @@ final public class KonMessageListener implements StanzaListener {
         MessageIDs ids = MessageIDs.from(m);
 
         // add message
-        boolean success = mControl.newInMessage(ids, serverDate, content);
+        boolean success = mControl.newInMessage(ids, optServerDate, content);
 
         // on success, send a 'received' for a request (XEP-0184)
         DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);
@@ -181,7 +181,6 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         // Out of Band Data: a URI to a file
-        Optional<Attachment> optAttachment = Optional.empty();
         ExtensionElement oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
         if (oobExt!= null && oobExt instanceof OutOfBandData) {
             OutOfBandData oobData = (OutOfBandData) oobExt;
@@ -196,8 +195,9 @@ final public class KonMessageListener implements StanzaListener {
                     oobData.getMime() != null ? oobData.getMime() : "",
                     oobData.getLength(),
                     oobData.isEncrypted());
-            optAttachment = Optional.of(attachment);
+            return new MessageContent(plainText, attachment, encryptedContent);
+        } else {
+            return new MessageContent(plainText, encryptedContent);
         }
-        return new MessageContent(plainText, optAttachment, encryptedContent);
     }
 }
