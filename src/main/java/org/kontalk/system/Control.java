@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
@@ -646,19 +647,46 @@ public final class Control {
             Control.this.decryptAndDownload(message);
         }
 
+        public void downloadAgain(InMessage message) {
+            Control.this.download(message);
+        }
+
         public void sendText(Chat chat, String text) {
+            this.sendMessage(chat, text, Paths.get(""));
+        }
+
+        public void sendAttachment(Chat chat, Path file){
+            this.sendMessage(chat, "", file);
+        }
+
+        private void sendMessage(Chat chat, String text, Path file) {
             // TODO no group chat support yet
-            Set<Contact> contacts = chat.getContacts();
-            for (Contact contact: contacts) {
-                if (contact.isDeleted())
-                    continue;
-                OutMessage newMessage = this.newOutMessage(
-                        chat,
-                        contact,
-                        text,
-                        contact.getEncrypted());
-                Control.this.sendMessage(newMessage);
+            Contact contact = null;
+            for (Contact c: chat.getContacts()) {
+                if (!c.isDeleted()) {
+                    contact = c;
+                }
             }
+            //Contact = chat.getContacts().stream().filter(c -> !c.isDeleted()).findFirst().orElse(null);
+            if (contact == null) {
+                LOGGER.warning("can't send message, no (valid) contact");
+                return;
+            }
+
+            Attachment attachment = null;
+            if (!file.toString().isEmpty()) {
+                attachment = this.attachmentOrNull(file);
+                if (attachment == null)
+                    return;
+            }
+            MessageContent content =
+                    attachment == null ? new MessageContent(text) :
+                    new MessageContent(text, attachment);
+
+            OutMessage newMessage = this.newOutMessage(chat, contact, content,
+                    contact.getEncrypted());
+
+            Control.this.sendMessage(newMessage);
         }
 
         /* private */
@@ -693,8 +721,8 @@ public final class Control {
          * save and process the message.
          * @return the new created message
          */
-        private OutMessage newOutMessage(Chat chat, Contact contact, String text, boolean encrypted) {
-            MessageContent content = new MessageContent(text);
+        private OutMessage newOutMessage(Chat chat, Contact contact,
+                MessageContent content , boolean encrypted) {
             OutMessage.Builder builder = new OutMessage.Builder(chat, contact, encrypted);
             builder.content(content);
             OutMessage newMessage = builder.build();

@@ -80,7 +80,7 @@ public class MessageContent {
         mPlainText = plainText;
         mOptAttachment = Optional.ofNullable(attachment);
         mEncryptedContent = encryptedContent;
-        mOptDecryptedContent = Optional.of(decryptedContent);
+        mOptDecryptedContent = Optional.ofNullable(decryptedContent);
     }
 
     /**
