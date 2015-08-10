@@ -36,6 +36,8 @@ import java.util.Optional;
 import java.util.Set;
 import javax.swing.Box;
 import javax.swing.ListSelectionModel;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
@@ -64,19 +66,26 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         // right click popup menu
         mPopupMenu = new ContactPopupMenu();
 
-        // actions triggered by mouse events
-        this.addMouseListener(new MouseAdapter() {
+        // actions triggered by selection
+        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
-            public void mouseClicked(MouseEvent e) {
+            public void valueChanged(ListSelectionEvent e) {
                 Optional<Contact> optContact = ContactListView.this.getSelectedValue();
                 if (!optContact.isPresent())
                     return;
 
-                Contact selectedContact = optContact.get();
+                mView.showContactDetails(optContact.get());
+            }
+        });
+
+        // actions triggered by mouse events
+        this.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    mView.showChat(selectedContact);
-                } else {
-                    mView.showContactDetails(selectedContact);
+                    Optional<Contact> optContact = ContactListView.this.getSelectedValue();
+                    if (optContact.isPresent())
+                        mView.showChat(optContact.get());
                 }
             }
             @Override
