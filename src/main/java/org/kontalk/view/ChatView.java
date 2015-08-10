@@ -19,8 +19,10 @@
 package org.kontalk.view;
 
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
+import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
@@ -50,6 +52,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,6 +60,7 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
+import javax.swing.Box;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
@@ -82,6 +86,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebScrollPane mScrollPane;
     private final WebTextArea mSendTextArea;
     private final WebButton mSendButton;
+    private final WebFileChooser fileChooser;
 
     private final Map<Integer, MessageList> mChatCache = new HashMap<>();
 
@@ -102,7 +107,8 @@ final class ChatView extends WebPanel implements Observer {
         mSubLabel = new WebLabel();
         mSubLabel.setFontSize(11);
         mSubLabel.setForeground(Color.GRAY);
-        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel), BorderLayout.CENTER);
+        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel),
+                BorderLayout.CENTER);
 
         final WebToggleButton editButton = new WebToggleButton(
                 Utils.getIcon("ic_ui_menu.png"));
@@ -118,7 +124,8 @@ final class ChatView extends WebPanel implements Observer {
         titlePanel.add(editButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
-        mScrollPane = new ScrollPane(this);
+        mScrollPane = new ScrollPane(this)
+                .setShadeWidth(0);
         mScrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
@@ -163,11 +170,16 @@ final class ChatView extends WebPanel implements Observer {
             }
         });
 
+        WebPanel bottomPanel = new WebPanel();
+        bottomPanel.setMinimumSize(new Dimension(0, 64));
+
         // send button
-        mSendButton = new WebButton(Tr.tr("Send"));
-        mSendButton.setMargin(2, MARGIN_SMALL, 2, MARGIN_SMALL);
-        mSendButton.setFontStyle(true, false);
-        // for showing the hotkey tooltip
+        mSendButton = new WebButton(Tr.tr("Send"))
+                .setRound(0)
+                //.setShadeWidth(0)
+                .setBottomBgColor(titlePanel.getBackground())
+                .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL)
+                .setFontStyle(true, false);
         TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
         mSendButton.setEnabled(false);
         mSendButton.addActionListener(new ActionListener() {
@@ -176,15 +188,37 @@ final class ChatView extends WebPanel implements Observer {
                 Component focusOwner = SwingUtilities.getWindowAncestor(ChatView.this).getFocusOwner();
                 if (focusOwner != mSendTextArea && focusOwner != mSendButton)
                     return;
-
-                ChatView.this.sendText();
+                ChatView.this.sendMsg();
             }
         });
 
-        WebPanel bottomPanel = new WebPanel();
-        bottomPanel.setMinimumSize(new Dimension(0, 32));
-        bottomPanel.add(new ScrollPane(mSendTextArea), BorderLayout.CENTER);
-        bottomPanel.add(mSendButton, BorderLayout.EAST);
+        fileChooser = new WebFileChooser();
+        fileChooser.setMultiSelectionEnabled(false);
+//        mAttField.setPreferredWidth(150);
+        WebButton fileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
+                .setRound(0)
+                .setBottomBgColor(titlePanel.getBackground())
+                .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL);
+        TooltipManager.addTooltip(fileButton, Tr.tr("Send File"));
+        fileButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ChatView.this.showFileDialog();
+            }
+        });
+
+        WebPanel textBarPanel = new GroupPanel(GroupingType.fillMiddle, 0,
+                fileButton, Box.createGlue(), mSendButton)
+                .setUndecorated(false)
+                .setWebColoredBackground(false)
+                .setShadeWidth(0);
+        textBarPanel.setPaintBottom(false);
+        bottomPanel.add(textBarPanel, BorderLayout.NORTH);
+
+        bottomPanel.add(new ScrollPane(mSendTextArea)
+                .setShadeWidth(0)
+                .setRound(0),
+                BorderLayout.CENTER);
 
         WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT,
                 mScrollPane,
@@ -360,14 +394,33 @@ final class ChatView extends WebPanel implements Observer {
             mView.getControl().handleOwnChatStateEvent(optChat.get(), ChatState.composing);
     }
 
-    private void sendText() {
-       Optional<Chat> optChat = this.getCurrentChat();
-       if (!optChat.isPresent())
-           // now current chat
-           return;
+    private void sendMsg() {
+        Optional<Chat> optChat = this.getCurrentChat();
+        if (!optChat.isPresent())
+            // now current chat
+            return;
 
-       mView.getControl().sendText(optChat.get(), mSendTextArea.getText());
-       mSendTextArea.setText("");
+       //List<File> attachments = mAttField.getSelectedFiles();
+//       if (!attachments.isEmpty())
+//           mView.getControl().sendAttachment(optChat.get(), attachments.get(0).toPath());
+//       else
+        mView.getControl().sendText(optChat.get(), mSendTextArea.getText());
+
+        mSendTextArea.setText("");
+    }
+
+    private void showFileDialog() {
+        if (fileChooser.showOpenDialog(ChatView.this) != WebFileChooser.APPROVE_OPTION)
+            return;
+
+        File file = fileChooser.getSelectedFile();
+        fileChooser.setCurrentDirectory(file.toPath().getParent().toString());
+
+        Optional<Chat> optChat = this.getCurrentChat();
+        if (!optChat.isPresent())
+            return;
+
+        mView.getControl().sendAttachment(optChat.get(), file.toPath());
     }
 
     /** A background image of chat view with efficient async reloading. */
