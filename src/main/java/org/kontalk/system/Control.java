@@ -231,7 +231,7 @@ public final class Control {
         Optional<OutMessage> optMessage = getMessage(ids);
         if (!optMessage.isPresent())
             return ;
-        optMessage.get().setError(condition.toString(), errorText);
+        optMessage.get().setServerError(condition.toString(), errorText);
     }
 
     /**

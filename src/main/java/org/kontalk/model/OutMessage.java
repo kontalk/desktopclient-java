@@ -51,7 +51,7 @@ public final class OutMessage extends KonMessage {
         this.changed(mReceiptStatus);
     }
 
-    public void setError(String condition, String text) {
+    public void setServerError(String condition, String text) {
         if (mReceiptStatus != Status.SENT)
             LOGGER.warning("unexpected status of message with error: "+mReceiptStatus);
         mServerError = new KonMessage.ServerError(condition, text);

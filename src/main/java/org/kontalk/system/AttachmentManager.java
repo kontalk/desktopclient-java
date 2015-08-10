@@ -33,6 +33,7 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.InMessage;
+import org.kontalk.model.KonMessage;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.OutMessage;
 
@@ -125,7 +126,7 @@ class AttachmentManager implements Runnable {
             return;
 
         URI url = client.upload(file, URI.create(UPLOAD_URL),
-                // TODO this is correct, but the server can't handle the truth
+                // TODO this isn't correct, but the server can't handle the truth
                 /*encrypt ? "application/octet-stream" :*/ attachment.getMimeType(),
                 encrypt);
 
@@ -133,10 +134,12 @@ class AttachmentManager implements Runnable {
         if (encrypt)
             file.delete();
 
-        if (url.toString().isEmpty())
-            // upload failed
+        if (url.toString().isEmpty()) {
+            LOGGER.warning("upload failed, attachment: "+attachment);
+            message.setStatus(KonMessage.Status.ERROR);
             // TODO tell view
             return;
+        }
 
         message.setAttachmentURL(url);
 
