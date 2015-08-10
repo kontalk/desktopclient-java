@@ -85,6 +85,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 Optional<Chat> optChat = ChatListView.this.getSelectedValue();
                 if (!optChat.isPresent())
                     return;
+
                 // if event is caused by filtering, dont do anything
                 if (lastChat == optChat.get())
                     return;
@@ -178,14 +179,14 @@ final class ChatListView extends Table<ChatItem, Chat> {
             mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
             mStatusLabel.setFontSize(11);
-            this.add(mStatusLabel, BorderLayout.CENTER);
+            this.add(mStatusLabel, BorderLayout.EAST);
 
             mChatStateLabel = new WebLabel();
             mChatStateLabel.setForeground(View.GREEN);
             mChatStateLabel.setFontSize(13);
             mChatStateLabel.setBoldFont();
             //mChatStateLabel.setMargin(0, 5, 0, 5);
-            this.add(mChatStateLabel, BorderLayout.EAST);
+            this.add(mChatStateLabel, BorderLayout.WEST);
 
             this.updateView(null);
 
@@ -202,7 +203,9 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
         @Override
         protected String getTooltipText() {
-            return "<html><body>" + lastActivity(mValue, false) + "<br>" + "";
+            return "<html><body>" +
+                    Tr.tr("Last activity")+": " + lastActivity(mValue, false) + "<br>"
+                    + "";
         }
 
         @Override
@@ -303,7 +306,6 @@ final class ChatListView extends Table<ChatItem, Chat> {
         String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
                 pretty ? Utils.PRETTY_TIME.format(messageSet.last().getDate()) :
                 Utils.MID_DATE_FORMAT.format(messageSet.last().getDate());
-
-        return Tr.tr("Last activity")+": " + lastActivity;
+        return  lastActivity;
     }
 }
