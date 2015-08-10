@@ -223,7 +223,7 @@ final class ChatView extends WebPanel implements Observer {
                 Tr.tr("Group Chat"));
         // TODO update
         mSubLabel.setText(contact.size() == 1 ?
-                Utils.mainStatus(contact.get(0)) :
+                Utils.mainStatus(contact.get(0), true) :
                 Utils.contactNameList(chat.getContacts()));
         if (!mChatCache.containsKey(chat.getID())) {
             MessageList newMessageList = new MessageList(mView, this, chat);

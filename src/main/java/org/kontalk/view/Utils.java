@@ -73,8 +73,6 @@ final class Utils {
 
     static WebFileChooserField createImageChooser(boolean enabled, String path) {
         WebFileChooserField chooser = new WebFileChooserField();
-        chooser.setEnabled(enabled);
-        chooser.getChooseButton().setEnabled(enabled);
         if (!path.isEmpty())
             chooser.setSelectedFile(new File(path));
         chooser.setMultiSelectionEnabled(false);
@@ -262,21 +260,21 @@ final class Utils {
                 Tr.tr("<unknown>");
     }
 
-    static String mainStatus(Contact u) {
+    static String mainStatus(Contact u, boolean pre) {
         Contact.Subscription subStatus = u.getSubScription();
         return u.isMe() ? Tr.tr("Me myself") :
                     u.isBlocked() ? Tr.tr("Blocked") :
                     u.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
                     subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
                     subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    lastSeen(u, true);
+                    lastSeen(u, true, pre);
     }
 
-    static String lastSeen(Contact contact, boolean pretty) {
+    static String lastSeen(Contact contact, boolean pretty, boolean pre) {
         String lastSeen = !contact.getLastSeen().isPresent() ? Tr.tr("never") :
                 pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
                 Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get());
-        return Tr.tr("Last seen")+": " + lastSeen;
+        return pre ? Tr.tr("Last seen")+": " + lastSeen : lastSeen;
     }
 
     static boolean confirmDeletion(Component parent, String text) {

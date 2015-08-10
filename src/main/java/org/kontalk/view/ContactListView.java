@@ -18,6 +18,8 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
@@ -32,6 +34,7 @@ import java.util.HashSet;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
+import javax.swing.Box;
 import javax.swing.ListSelectionModel;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.ChatList;
@@ -132,7 +135,9 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             mStatusLabel = new WebLabel("foo");
             mStatusLabel.setForeground(Color.GRAY);
             mStatusLabel.setFontSize(11);
-            this.add(mStatusLabel, BorderLayout.SOUTH);
+            this.add(new GroupPanel(GroupingType.fillFirst,
+                    Box.createGlue(), mStatusLabel),
+                    BorderLayout.SOUTH);
 
             this.updateOnEDT(null);
         }
@@ -143,17 +148,14 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
                     //"<h3>Header</h3>" +
 
             if (mValue.getOnline() == Contact.Online.YES)
-                html += Tr.tr("Online")+"<br>";
-
+                html += Tr.tr("Online") + "<br>";
             if (!mValue.getStatus().isEmpty()) {
                 String status = StringEscapeUtils.escapeHtml(mValue.getStatus());
-                html += Tr.tr("Status")+": " + status + "<br>";
+                html += Tr.tr("Status") + ": " + status + "<br>";
             }
-
             if (mValue.getOnline() != Contact.Online.YES) {
-                html += Utils.lastSeen(mValue, false) + "<br>";
+                html += Utils.lastSeen(mValue, false, true) + "<br>";
             }
-
             if (mValue.isBlocked()) {
                 html += Tr.tr("Contact is blocked!") + "<br>";
             }
@@ -185,7 +187,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             }
 
             // status
-            mStatusLabel.setText(Utils.mainStatus(mValue));
+            mStatusLabel.setText(Utils.mainStatus(mValue, false));
 
             // online status
             Contact.Subscription subStatus = mValue.getSubScription();
