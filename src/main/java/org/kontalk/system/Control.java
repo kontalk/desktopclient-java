@@ -117,7 +117,7 @@ public final class Control {
 
     private final Client mClient;
     private final ChatStateManager mChatStateManager;
-    private final Downloader mAttachmentManager;
+    private final AttachmentManager mAttachmentManager;
 
     private final ViewControl mViewControl;
 
@@ -127,7 +127,7 @@ public final class Control {
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
         Path attachmentDir = Kontalk.getConfigDir().resolve("attachments");
-        mAttachmentManager = Downloader.create(this, attachmentDir);
+        mAttachmentManager = AttachmentManager.create(this, attachmentDir);
 
         mViewControl = new ViewControl();
     }
@@ -377,7 +377,7 @@ public final class Control {
         }
     }
 
-    public void setBlockedContact(List<String> jids) {
+    public void setBlockedContacts(List<String> jids) {
         for (String jid : jids) {
             if (XmppStringUtils.isFullJID(jid)) {
                 LOGGER.info("ignoring blocking of JID with resource");

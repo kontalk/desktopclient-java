@@ -43,8 +43,8 @@ import org.kontalk.model.OutMessage;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class Downloader implements Runnable {
-    private static final Logger LOGGER = Logger.getLogger(Downloader.class.getName());
+class AttachmentManager implements Runnable {
+    private static final Logger LOGGER = Logger.getLogger(AttachmentManager.class.getName());
 
     // TODO get this from server
     private static final String UPLOAD_URL = "https://beta.kontalk.net:5980/upload";
@@ -75,7 +75,7 @@ public class Downloader implements Runnable {
         }
     }
 
-    private Downloader(Control control, Path dirPath) {
+    private AttachmentManager(Control control, Path dirPath) {
         mControl = control;
         mBaseDir = dirPath.toFile();
         boolean created = mBaseDir.mkdirs();
@@ -83,21 +83,21 @@ public class Downloader implements Runnable {
             LOGGER.info("created attachment directory");
     }
 
-    public void queueDownload(InMessage message) {
-        boolean added = mQueue.offer(new Task.DownloadTask(message));
-        if (!added) {
-            LOGGER.warning("can't add download message to queue");
-        }
-    }
-
-    public void queueUpload(OutMessage message) {
+    void queueUpload(OutMessage message) {
         boolean added = mQueue.offer(new Task.UploadTask(message));
         if (!added) {
             LOGGER.warning("can't add upload message to queue");
         }
     }
 
-    public File getBaseDir() {
+    void queueDownload(InMessage message) {
+        boolean added = mQueue.offer(new Task.DownloadTask(message));
+        if (!added) {
+            LOGGER.warning("can't add download message to queue");
+        }
+    }
+
+    File getBaseDir() {
         return mBaseDir;
     }
 
@@ -135,6 +135,7 @@ public class Downloader implements Runnable {
 
         if (url.toString().isEmpty())
             // upload failed
+            // TODO tell view
             return;
 
         message.setAttachmentURL(url);
@@ -204,8 +205,8 @@ public class Downloader implements Runnable {
         }
     }
 
-    static Downloader create(Control control, Path downloadDir) {
-        Downloader downloader = new Downloader(control, downloadDir);
+    static AttachmentManager create(Control control, Path downloadDir) {
+        AttachmentManager downloader = new AttachmentManager(control, downloadDir);
 
         new Thread(downloader).start();
 
