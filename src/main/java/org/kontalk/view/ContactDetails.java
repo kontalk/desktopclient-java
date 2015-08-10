@@ -97,11 +97,10 @@ final class ContactDetails extends WebPanel implements Observer {
         mainPanel.add(mNameField);
 
         mainPanel.add(new WebLabel("Jabber ID:"));
-        final int length = 28;
-        final WebTextField jidField = new ComponentUtils.EditableTextField(length, this) {
+        final WebTextField jidField = new ComponentUtils.EditableTextField(20, this) {
             @Override
             protected String labelText() {
-                return Utils.jid(mContact.getJID(), length, false);
+                return Utils.jid(mContact.getJID(), 28, false);
             }
             @Override
             protected String editText() {

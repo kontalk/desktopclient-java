@@ -429,8 +429,8 @@ final class ComponentUtils {
 
     abstract static class EditableTextField extends WebTextField {
 
-        public EditableTextField(int width, final Component focusGainer) {
-            super(width, false);
+        public EditableTextField(int columns, final Component focusGainer) {
+            super(columns, false);
 
             this.setMinimumHeight(20);
             this.setHideInputPromptOnFocus(false);

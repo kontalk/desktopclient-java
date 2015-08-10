@@ -81,7 +81,7 @@ final class MainFrame extends WebFrame {
             Table<?, ?> contactList,
             Table<?, ?> chatList,
             Component content,
-            Component searchPanel,
+            WebPanel searchPanel,
             Component statusBar) {
         mView = view;
 
@@ -207,8 +207,6 @@ final class MainFrame extends WebFrame {
         this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
 
         // ...left...
-        WebPanel sidePanel = new WebPanel(false);
-        sidePanel.add(searchPanel, BorderLayout.NORTH);
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
         //String chatOverlayText =
         //        Tr.t/r("No chats to display. You can create a new chat from your contacts");
@@ -219,8 +217,8 @@ final class MainFrame extends WebFrame {
 
         //String contactOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
         WebScrollPane contactPane = createTablePane(contactList, "contactOverlayText");
-        mAddContactButton = new WebToggleButton(
-                Utils.getIcon("ic_ui_add.png"));
+        mAddContactButton = new WebToggleButton(Utils.getIcon("ic_ui_add.png"));
+        mAddContactButton.setShadeWidth(0).setRound(0);
         TooltipManager.addTooltip(mAddContactButton, Tr.tr("Add a new contact"));
         mAddContactButton.addActionListener(new ActionListener() {
             @Override
@@ -229,22 +227,24 @@ final class MainFrame extends WebFrame {
                     MainFrame.this.showAddContactPopup(mAddContactButton);
             }
         });
-        mTabbedPane.addTab("", new GroupPanel(GroupingType.fillFirst, false,
-                contactPane, mAddContactButton));
+        WebPanel contactPanel = new GroupPanel(GroupingType.fillFirst, false,
+                contactPane, mAddContactButton);
+        contactPanel.setPaintSides(false, false, false, false);
+        mTabbedPane.addTab("", contactPanel);
 
         mTabbedPane.setTabComponentAt(Tab.CONTACT.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         // setSize() does not work, whatever
-        mTabbedPane.setPreferredSize(new Dimension(270, -1));
+        mTabbedPane.setPreferredSize(new Dimension(240, -1));
         mTabbedPane.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
                 mView.tabPaneChanged(Tab.values()[mTabbedPane.getSelectedIndex()]);
             }
         });
-
-        sidePanel.add(mTabbedPane, BorderLayout.CENTER);
-        this.add(sidePanel, BorderLayout.WEST);
+        this.add(new GroupPanel(GroupingType.fillLast, false,
+                searchPanel, mTabbedPane),
+                BorderLayout.WEST);
 
         // ...right...
         this.add(content, BorderLayout.CENTER);
@@ -337,6 +337,7 @@ final class MainFrame extends WebFrame {
             String overlayText) {
 
         WebScrollPane scrollPane = new ScrollPane(table);
+        scrollPane.setDrawBorder(false);
         // overlay for empty list
         WebOverlay listOverlayPanel = new WebOverlay(scrollPane);
         listOverlayPanel.setOverlayMargin(20);
