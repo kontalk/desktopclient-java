@@ -57,8 +57,8 @@ import org.kontalk.util.TrustUtils;
  * HTTP file transfer client.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class DownloadClient {
-    private static final Logger LOGGER = Logger.getLogger(DownloadClient.class.getName());
+public class HTTPFileClient {
+    private static final Logger LOGGER = Logger.getLogger(HTTPFileClient.class.getName());
 
     /** Regex used to parse content-disposition headers for download. */
     private static final Pattern CONTENT_DISPOSITION_PATTERN = Pattern
@@ -75,7 +75,7 @@ public class DownloadClient {
     private CloseableHttpClient mHTTPClient = null;
     private ProgressListener mCurrentListener = null;
 
-    public DownloadClient(PrivateKey privateKey,
+    public HTTPFileClient(PrivateKey privateKey,
             X509Certificate bridgeCert,
             boolean validateCertificate) {
         mPrivateKey = privateKey;

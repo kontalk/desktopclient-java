@@ -28,7 +28,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
-import org.kontalk.client.DownloadClient;
+import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
 import org.kontalk.crypto.PersonalKey;
@@ -120,7 +120,7 @@ class AttachmentManager implements Runnable {
         } else
             file = attachment.getFile().toFile();
 
-        DownloadClient client = createClientOrNull();
+        HTTPFileClient client = createClientOrNull();
         if (client == null)
             return;
 
@@ -155,11 +155,11 @@ class AttachmentManager implements Runnable {
         }
         Attachment attachment = optAttachment.get();
 
-        DownloadClient client = createClientOrNull();
+        HTTPFileClient client = createClientOrNull();
         if (client == null)
             return;
 
-        DownloadClient.ProgressListener listener = new DownloadClient.ProgressListener() {
+        HTTPFileClient.ProgressListener listener = new HTTPFileClient.ProgressListener() {
             @Override
             public void updateProgress(int p) {
                 message.setAttachmentDownloadProgress(p);
@@ -213,7 +213,7 @@ class AttachmentManager implements Runnable {
         return downloader;
     }
 
-    private static DownloadClient createClientOrNull(){
+    private static HTTPFileClient createClientOrNull(){
         Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
         if (!optKey.isPresent()) {
             LOGGER.log(Level.WARNING, "personal key not loaded");
@@ -230,7 +230,7 @@ class AttachmentManager implements Runnable {
         X509Certificate bridgeCert = key.getBridgeCertificate();
         boolean validateCertificate = Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION);
 
-        return new DownloadClient(privateKey,
+        return new HTTPFileClient(privateKey,
                 bridgeCert,
                 validateCertificate);
     }
