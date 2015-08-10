@@ -105,6 +105,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         //this.setAutoscrolls(true);
         this.setOpaque(false);
 
+        // hide grid
+        this.setShowGrid(false);
+
         // disable selection
         this.setSelectionModel(new UnselectableListModel());
 

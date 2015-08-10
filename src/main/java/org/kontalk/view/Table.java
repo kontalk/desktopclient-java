@@ -24,6 +24,7 @@ import com.alee.laf.table.renderers.WebTableCellRenderer;
 import com.alee.managers.language.data.TooltipWay;
 import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.WebCustomTooltip;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Point;
 import java.awt.Rectangle;
@@ -113,8 +114,9 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
         // hide header
         this.setTableHeader(null);
 
-        // hide grid
-        this.setShowGrid(false);
+        // grid
+        this.setGridColor(Color.LIGHT_GRAY);
+        this.setShowVerticalLines(false);
 
         // use custom renderer
         this.setDefaultRenderer(TableItem.class, new TableRenderer());
