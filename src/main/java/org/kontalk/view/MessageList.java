@@ -531,22 +531,33 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         private WebPopupMenu getPopupMenu() {
             WebPopupMenu popupMenu = new WebPopupMenu();
-            if (mValue.getCoderStatus().isEncrypted()) {
-                WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
-                decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
-                decryptMenuItem.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent event) {
-                        KonMessage m = MessageItem.this.mValue;
-                        if (!(m instanceof InMessage)) {
-                            LOGGER.warning("decrypted message not incoming message");
-                            return;
+            final KonMessage m = MessageItem.this.mValue;
+            if (m instanceof InMessage) {
+                if (m.getCoderStatus().isEncrypted()) {
+                    WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
+                    decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
+                    decryptMenuItem.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent event) {
+                            mView.getControl().decryptAgain((InMessage) m);
                         }
-                        mView.getControl().decryptAgain((InMessage) m);
-                    }
-                });
-                popupMenu.add(decryptMenuItem);
+                    });
+                    popupMenu.add(decryptMenuItem);
+                }
+                Optional<Attachment> optAtt = m.getContent().getAttachment();
+                if (optAtt.isPresent() && !optAtt.get().hasFile()) {
+                    WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
+                    attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
+                    attMenuItem.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent event) {
+                            mView.getControl().downloadAgain((InMessage) m);
+                        }
+                    });
+                    popupMenu.add(attMenuItem);
+                }
             }
+
             WebMenuItem cItem = Utils.createCopyMenuItem(
                     this.toCopyString(),
                     Tr.tr("Copy message content"));
