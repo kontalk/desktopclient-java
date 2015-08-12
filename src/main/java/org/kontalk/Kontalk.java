@@ -26,6 +26,7 @@ import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -55,48 +56,11 @@ public final class Kontalk {
     private static ServerSocket RUN_LOCK;
 
     static {
-        // initialize translation
-        Tr.init();
-
-        // check java version
-        String jVersion = System.getProperty("java.version");
-        if (jVersion.startsWith("1.7")) {
-            View.showWrongJavaVersionDialog();
-            LOGGER.severe("java too old: "+jVersion);
-            System.exit(-3);
-        }
-
         // use platform dependent configuration directory
         String homeDir = System.getProperty("user.home");
         CONFIG_DIR = SystemUtils.IS_OS_WINDOWS ?
                 Paths.get(homeDir, "Kontalk") :
                 Paths.get(homeDir, ".kontalk");
-
-        // create app directory
-        boolean created = CONFIG_DIR.toFile().mkdirs();
-        if (created)
-            LOGGER.info("created configuration directory");
-
-        // log to file
-        String logPath = CONFIG_DIR.resolve("debug.log").toString();
-        Handler fileHandler = null;
-        try {
-            fileHandler = new FileHandler(logPath, 1024*1000, 1, true);
-        } catch (IOException | SecurityException ex) {
-            LOGGER.log(Level.WARNING, "can't log to file", ex);
-        }
-        if (fileHandler != null) {
-            fileHandler.setFormatter(new SimpleFormatter());
-            Logger.getLogger("").addHandler(fileHandler);
-        }
-
-        LOGGER.info("--START, version: "+VERSION+"--");
-
-        // fix crypto restriction
-        CryptoUtils.removeCryptographyRestrictions();
-
-        // register provider
-        PGPUtils.registerProvider();
     }
 
     private Kontalk(String[] args) {
@@ -111,7 +75,49 @@ public final class Kontalk {
             LOGGER.log(Level.WARNING, "can't create socket", ex);
         }
 
-        this.parseArgs(args);
+        // initialize translation
+        Tr.init();
+
+        // check java version
+        String jVersion = System.getProperty("java.version");
+        if (jVersion.startsWith("1.7")) {
+            View.showWrongJavaVersionDialog();
+            LOGGER.severe("java too old: "+jVersion);
+            System.exit(-3);
+        }
+
+        // create app directory
+        boolean created = CONFIG_DIR.toFile().mkdirs();
+        if (created)
+            LOGGER.info("created configuration directory");
+
+        // logging
+        Logger logger = Logger.getLogger("");
+        logger.setLevel(Level.CONFIG);
+        for (Handler h : logger.getHandlers()) {
+            if (h instanceof ConsoleHandler)
+                h.setLevel(Level.CONFIG);
+        }
+        String logPath = CONFIG_DIR.resolve("debug.log").toString();
+        Handler fileHandler = null;
+        try {
+            fileHandler = new FileHandler(logPath, 1024*1000, 1, true);
+        } catch (IOException | SecurityException ex) {
+            LOGGER.log(Level.WARNING, "can't log to file", ex);
+        }
+        if (fileHandler != null) {
+            fileHandler.setLevel(Level.INFO);
+            fileHandler.setFormatter(new SimpleFormatter());
+            logger.addHandler(fileHandler);
+        }
+
+        LOGGER.info("--START, version: "+VERSION+"--");
+
+        // fix crypto restriction
+        CryptoUtils.removeCryptographyRestrictions();
+
+        // register provider
+        PGPUtils.registerProvider();
     }
 
     public void start() {
@@ -141,14 +147,6 @@ public final class Kontalk {
         view.init();
 
         control.launch();
-    }
-
-    // parse optional arguments
-    private void parseArgs(String[] args) {
-        if (args.length != 0) {
-            String className = this.getClass().getEnclosingClass().getName();
-            LOGGER.log(Level.WARNING, "Usage: java {0} ", className);
-        }
     }
 
     public static Path getConfigDir() {
