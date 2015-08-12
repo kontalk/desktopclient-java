@@ -158,11 +158,10 @@ public final class Client implements StanzaListener, Runnable {
         // TODO unsure if everything is thread-safe
         synchronized (this) {
             // connect
-            LOGGER.info("connecting to "+mConn.getDestination()+" ...");
             try {
                 mConn.connect();
             } catch (XMPPException | SmackException | IOException ex) {
-                LOGGER.log(Level.WARNING, "can't connect", ex);
+                LOGGER.log(Level.WARNING, "can't connect to "+mConn.getServer(), ex);
                 mControl.setStatus(Control.Status.FAILED);
                 mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
                 return;
@@ -172,7 +171,7 @@ public final class Client implements StanzaListener, Runnable {
             try {
                 mConn.login();
             } catch (XMPPException | SmackException | IOException ex) {
-                LOGGER.log(Level.WARNING, "can't login", ex);
+                LOGGER.log(Level.WARNING, "can't login on "+mConn.getServer(), ex);
                 mConn.disconnect();
                 mControl.setStatus(Control.Status.FAILED);
                 mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
@@ -208,6 +207,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendMessage(OutMessage message) {
+        LOGGER.info("to "+message.getJID());
         // check for correct receipt status and reset it
         Status status = message.getReceiptStatus();
         assert status == Status.PENDING || status == Status.ERROR;
@@ -284,6 +284,7 @@ public final class Client implements StanzaListener, Runnable {
         return smackMessage;
     }
 
+    // TODO unused
     public void sendVCardRequest(String jid) {
         VCard4 vcard = new VCard4();
         vcard.setType(IQ.Type.get);
@@ -292,6 +293,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendPublicKeyRequest(String jid) {
+        LOGGER.info("to "+jid);
         PublicKeyPublish publicKeyRequest = new PublicKeyPublish();
         publicKeyRequest.setTo(jid);
         this.sendPacket(publicKeyRequest);
@@ -302,10 +304,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendBlockingCommand(String jid, boolean blocking) {
-        if (!this.isConnected()) {
-            LOGGER.warning("not sending blocking command, not connected");
-            return;
-        }
+        LOGGER.info("jid: "+jid+" blocking="+blocking);
 
         String command = blocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
         BlockingCommand blockingCommand = new BlockingCommand(command, jid);
@@ -330,6 +329,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendPresenceSubscriptionRequest(String jid) {
+        LOGGER.info("to "+jid);
         Presence subscribeRequest = new Presence(Presence.Type.subscribe);
         subscribeRequest.setTo(jid);
         this.sendPacket(subscribeRequest);
@@ -353,12 +353,12 @@ public final class Client implements StanzaListener, Runnable {
         } catch (SmackException.NotConnectedException ex) {
             LOGGER.info("can't send packet, not connected.");
         }
-        LOGGER.info("sent packet: "+p.toXML());
+        LOGGER.config("XML: "+p.toXML());
     }
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.info("got packet (unhandled): "+packet.toXML());
+        LOGGER.config("unhandled: "+packet.toXML());
     }
 
     public boolean addToRoster(Contact contact) {
@@ -386,7 +386,7 @@ public final class Client implements StanzaListener, Runnable {
 
     public boolean removeFromRoster(Contact contact) {
         if (!this.isConnected()) {
-            LOGGER.info("can't remove contact from roster, not connected");
+            LOGGER.info("not connected");
             return false;
         }
         Roster roster = Roster.getInstanceFor(mConn);

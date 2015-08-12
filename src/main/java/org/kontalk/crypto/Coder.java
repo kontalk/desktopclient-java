@@ -650,7 +650,7 @@ public final class Coder {
                 result.errors.add(Error.INVALID_DATA);
                 return result;
             }
-            LOGGER.info("decrypted message content: "+m.toXML());
+            LOGGER.config("decrypted XML: "+m.toXML());
             decryptedContent = KonMessageListener.parseMessageContent(m);
         } else {
             // text/plain MIME type for simple text messages

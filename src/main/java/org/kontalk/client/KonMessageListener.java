@@ -87,7 +87,7 @@ final public class KonMessageListener implements StanzaListener {
     }
 
     private void processChatMessage(Message m) {
-        LOGGER.info("got message: "+StringUtils.abbreviate(m.toXML().toString(), 300));
+        LOGGER.config("got message: "+m.toXML().toString());
         // note: thread and subject are null if message comes from the Kontalk
         // Android client
 
@@ -116,7 +116,7 @@ final public class KonMessageListener implements StanzaListener {
         // process possible chat state notification (XEP-0085)
         ExtensionElement chatstate = m.getExtension(ChatStateExtension.NAMESPACE);
         if (chatstate != null) {
-            LOGGER.info("got chatstate: " + chatstate.getElementName());
+            LOGGER.config("got chatstate: " + chatstate.getElementName());
             mControl.processChatState(m.getFrom(),
                     threadID,
                     optServerDate,
@@ -153,6 +153,7 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         MessageIDs ids = MessageIDs.from(m);
+        LOGGER.info("new incoming message, "+ids);
 
         // add message
         boolean success = mControl.newInMessage(ids, optServerDate, content);

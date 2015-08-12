@@ -53,7 +53,7 @@ public class PresenceListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.info("got presence packet: "+packet.toXML());
+        LOGGER.config("got presence packet: "+packet.toXML());
 
         Presence presence = (Presence) packet;
 

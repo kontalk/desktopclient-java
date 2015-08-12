@@ -135,7 +135,7 @@ public final class Database {
             LOGGER.log(Level.WARNING, "can't get db version", ex);
             return;
         }
-        LOGGER.info("database version: "+version);
+        LOGGER.info("version: "+version);
         try {
             this.update(version);
         } catch (SQLException ex) {

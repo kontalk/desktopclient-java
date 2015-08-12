@@ -128,13 +128,13 @@ public final class PersonalKey {
         }
         // legacy: auth key is actually signing key
         if (signKey == null && authKey != null && authKey.isSigningKey()) {
-            LOGGER.info("loading legacy key");
+            LOGGER.info("legacy key");
             signKey = authKey;
         }
 
         if (authKey == null || signKey == null || encrKey == null)
             throw new KonException(KonException.Error.LOAD_KEY,
-                    new PGPException("could not found all keys in key data"));
+                    new PGPException("could not find all keys in key data"));
 
         // decrypt private
         PGPDigestCalculatorProvider calcProv = new JcaPGPDigestCalculatorProviderBuilder().build();

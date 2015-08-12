@@ -41,10 +41,11 @@ public class CryptoUtils {
     public static void removeCryptographyRestrictions() {
         try {
             if (Cipher.getMaxAllowedKeyLength("RC5") >= 256) {
-                LOGGER.info("cryptography restrictions removal not needed");
+                LOGGER.config("removal not needed");
                 return;
-            }   } catch (NoSuchAlgorithmException ex) {
-            LOGGER.log(Level.WARNING, "can't check for crypto restriction", ex);
+            }
+        } catch (NoSuchAlgorithmException ex) {
+            LOGGER.log(Level.WARNING, "can't check for restriction", ex);
         }
 
         try {

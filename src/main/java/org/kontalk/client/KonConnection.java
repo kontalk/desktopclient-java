@@ -127,7 +127,7 @@ public final class KonConnection extends XMPPTCPConnection {
         super.disconnect();
     }
 
-    public String getDestination() {
+    String getServer() {
         return this.getConfiguration().getServiceName();
     }
 }
