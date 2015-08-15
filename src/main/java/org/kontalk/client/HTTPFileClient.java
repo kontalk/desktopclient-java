@@ -25,6 +25,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
@@ -38,6 +40,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.SSLContext;
 import org.apache.commons.io.output.CountingOutputStream;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
@@ -51,6 +54,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.TrustUtils;
 
 /**
@@ -100,14 +104,14 @@ public class HTTPFileClient {
      * determining the file name from the Content-Disposition header.
      * @param url URL of file
      * @param base base directory in which the download is saved
-     * @return the absolute file path of the downloaded file, or an empty string
-     * if the file could not be downloaded
+     * @return the absolute path of the downloaded file, empty if the file could
+     * not be downloaded
      */
-    public String download(URI url, File base, ProgressListener listener) {
+    public Path download(URI url, File base, ProgressListener listener) {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
-                return "";
+                return Paths.get("");
         }
 
         LOGGER.info("downloading file from URL=" + url+ "...");
@@ -120,28 +124,44 @@ public class HTTPFileClient {
             response = mHTTPClient.execute(mCurrentRequest);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't execute request", ex);
-            return "";
+            return Paths.get("");
         }
 
         try {
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
                 LOGGER.warning("download, unexpected response code: " + code);
-                return "";
+                return Paths.get("");
+            }
+
+            HttpEntity entity = response.getEntity();
+            if (entity == null) {
+                LOGGER.warning("no download response entity");
+                return Paths.get("");
             }
 
             // get filename
+            String filename = "";
             Header dispHeader = response.getFirstHeader("Content-Disposition");
             if (dispHeader == null) {
                 LOGGER.warning("no content header");
-                return "";
+            } else {
+                filename = parseContentDisposition(dispHeader.getValue());
+                // never trust incoming data
+                filename = Paths.get(filename).getFileName().toString();
+                if (filename.isEmpty()) {
+                    LOGGER.warning("can't parse filename in content: "+dispHeader.getValue());
+                }
             }
-            String filename = parseContentDisposition(dispHeader.getValue());
-            // never trust incoming data
-            filename = filename != null ? new File(filename).getName() : "";
             if (filename.isEmpty()) {
-                LOGGER.warning("no filename in content: "+dispHeader.getValue());
-                return "";
+                // fallback
+                String type = StringUtils.defaultString(entity.getContentType().getValue());
+                String ext = StringUtils.defaultIfEmpty(
+                        AttachmentManager.getExtensionForMIME(type),
+                        ".data");
+                filename = "att_" +
+                        org.jivesoftware.smack.util.StringUtils.randomString(4) +
+                        ext;
             }
 
             // get file size
@@ -159,18 +179,10 @@ public class HTTPFileClient {
             final long fileSize = s;
             mCurrentListener.updateProgress(s < 0 ? -2 : 0);
 
-            // TODO should check for content-disposition parsing here
-            // and choose another filename if necessary
-            HttpEntity entity = response.getEntity();
-            if (entity == null) {
-                LOGGER.warning("no download response entity");
-                return "";
-            }
-
             File destination = new File(base, filename);
             if (destination.exists()) {
                 LOGGER.warning("file already exists: "+destination.getAbsolutePath());
-                return "";
+                return Paths.get("");
             }
             try (FileOutputStream out = new FileOutputStream(destination)){
                 CountingOutputStream cOut = new CountingOutputStream(out) {
@@ -187,7 +199,7 @@ public class HTTPFileClient {
                 entity.writeTo(cOut);
             } catch (IOException ex) {
                 LOGGER.log(Level.WARNING, "can't download file", ex);
-                return "";
+                return Paths.get("");
             }
 
             // release http connection resource
@@ -197,7 +209,7 @@ public class HTTPFileClient {
             mCurrentRequest = null;
             mCurrentListener = null;
 
-            return destination.getAbsolutePath();
+            return Paths.get(destination.getAbsolutePath());
         } finally {
             try {
                 response.close();
@@ -326,13 +338,10 @@ public class HTTPFileClient {
      * downloaded to the file system. We only support the attachment type.
      */
     private static String parseContentDisposition(String contentDisposition) {
-        if (contentDisposition == null)
-            return null;
-
         Matcher m = CONTENT_DISPOSITION_PATTERN.matcher(contentDisposition);
         if (m.find())
-            return m.group(1);
-        else return null;
+            return StringUtils.defaultString(m.group(1));
+        return "";
     }
 
     public interface ProgressListener {

@@ -18,9 +18,6 @@
 
 package org.kontalk.system;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
@@ -675,7 +672,7 @@ public final class Control {
 
             Attachment attachment = null;
             if (!file.toString().isEmpty()) {
-                attachment = this.attachmentOrNull(file);
+                attachment = AttachmentManager.attachmentOrNull(file);
                 if (attachment == null)
                     return;
             }
@@ -731,27 +728,6 @@ public final class Control {
                 LOGGER.warning("could not add outgoing message to chat");
             }
             return newMessage;
-        }
-
-        private Attachment attachmentOrNull(Path path) {
-            File file = path.toFile();
-            if (!file.isFile() || !file.canRead()) {
-                LOGGER.warning("invalid attachment file: "+path);
-                return null;
-            }
-            String mimeType = null;
-            try {
-                mimeType = Files.probeContentType(path);
-            } catch (IOException ex) {
-                LOGGER.log(Level.WARNING, "can't get attachment mime type", ex);
-                return null;
-            }
-            long length = file.length();
-            if (length <= 0) {
-                LOGGER.warning("invalid attachment file size: "+length);
-                return null;
-            }
-            return new Attachment(path, mimeType, length);
         }
 
         private void changed(ViewEvent event) {

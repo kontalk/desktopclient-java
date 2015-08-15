@@ -19,14 +19,21 @@
 package org.kontalk.system;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.tika.mime.MimeType;
+import org.apache.tika.mime.MimeTypeException;
+import org.apache.tika.mime.MimeTypes;
 import org.bouncycastle.openpgp.PGPException;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
@@ -44,8 +51,21 @@ import org.kontalk.model.OutMessage;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-class AttachmentManager implements Runnable {
+public class AttachmentManager implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(AttachmentManager.class.getName());
+
+    // Server and Android client do not want other types
+    public static final List<String> SUPPORTED_MIME_TYPES = Arrays.asList(
+            "text/plain",
+            "text/x-vcard",
+            "text/vcard",
+            "image/gif",
+            "image/png",
+            "image/jpeg",
+            "image/jpg",
+            "audio/3gpp",
+            "audio/mpeg3",
+            "audio/wav");
 
     // TODO get this from server
     private static final String UPLOAD_URL = "https://beta.kontalk.net:5980/upload";
@@ -126,7 +146,7 @@ class AttachmentManager implements Runnable {
             return;
 
         URI url = client.upload(file, URI.create(UPLOAD_URL),
-                // TODO this isn't correct, but the server can't handle the truth
+                // this isn't correct, but the server can't handle the truth
                 /*encrypt ? "application/octet-stream" :*/ attachment.getMimeType(),
                 encrypt);
 
@@ -169,15 +189,15 @@ class AttachmentManager implements Runnable {
             }
         };
 
-        String path = client.download(attachment.getURL(), mBaseDir, listener);
-        if (path.isEmpty()) {
+        Path path = client.download(attachment.getURL(), mBaseDir, listener);
+        if (path.toString().isEmpty()) {
             LOGGER.warning("download failed, URL="+attachment.getURL());
             return;
         }
 
         LOGGER.info("download successful, saved to file: "+path);
 
-        message.setAttachmentFileName(new File(path).getName());
+        message.setAttachmentFileName(path.getFileName().toString());
 
         // decrypt file
         if (attachment.getCoderStatus().isEncrypted()) {
@@ -208,12 +228,47 @@ class AttachmentManager implements Runnable {
         }
     }
 
+    public static String getExtensionForMIME(String mimeType){
+        MimeType mime;
+        try {
+            mime = MimeTypes.getDefaultMimeTypes().forName(mimeType);
+        } catch (MimeTypeException ex) {
+            LOGGER.log(Level.WARNING, "can't find mimetype", ex);
+            return "";
+        }
+        return mime.getExtension();
+    }
+
     static AttachmentManager create(Control control, Path downloadDir) {
         AttachmentManager downloader = new AttachmentManager(control, downloadDir);
 
         new Thread(downloader).start();
 
         return downloader;
+    }
+
+    /**
+     * Create a new attachment for a given file denoted by its path.
+     */
+    static Attachment attachmentOrNull(Path path) {
+        File file = path.toFile();
+        if (!file.isFile() || !file.canRead()) {
+            LOGGER.warning("invalid attachment file: "+path);
+            return null;
+        }
+        String mimeType = null;
+        try {
+            mimeType = Files.probeContentType(path);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't get attachment mime type", ex);
+            return null;
+        }
+        long length = file.length();
+        if (length <= 0) {
+            LOGGER.warning("invalid attachment file size: "+length);
+            return null;
+        }
+        return new Attachment(path, mimeType, length);
     }
 
     private static HTTPFileClient createClientOrNull(){
