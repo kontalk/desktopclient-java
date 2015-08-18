@@ -286,13 +286,13 @@ public final class Coder {
         EnumSet<Coder.Error> allErrors = decResult.errors;
         message.setSigning(decResult.signing);
 
-        // parse encrypted CPIM content
+        // parse decrypted CPIM content
         String myUID = keys.myKey.getUserId();
         String senderUID = keys.otherKey.userID;
-        String encrText = EncodingUtils.getString(
+        String decrText = EncodingUtils.getString(
                 plainOut.toByteArray(),
                 CPIMMessage.CHARSET);
-        ParsingResult parsingResult = parseCPIM(encrText, myUID, senderUID);
+        ParsingResult parsingResult = parseCPIM(decrText, myUID, senderUID);
         allErrors.addAll(parsingResult.errors);
 
         // set errors
@@ -601,16 +601,14 @@ public final class Coder {
      *
      * The decrypted content of a message is in CPIM format.
      */
-    private static ParsingResult parseCPIM(
-            String text,
-            String myUid,
-            String senderKeyUID) {
+    private static ParsingResult parseCPIM(String cpim,
+            String myUid, String senderKeyUID) {
 
         ParsingResult result = new ParsingResult();
 
         CPIMMessage cpimMessage;
         try {
-            cpimMessage = CPIMMessage.parse(text);
+            cpimMessage = CPIMMessage.parse(cpim);
         } catch (ParseException ex) {
             LOGGER.log(Level.WARNING, "can't find valid CPIM data", ex);
             result.errors.add(Error.INVALID_DATA);
