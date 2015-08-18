@@ -31,10 +31,13 @@ import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
 import org.bouncycastle.openpgp.PGPException;
+import org.kontalk.Kontalk;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
@@ -42,6 +45,7 @@ import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.model.OutMessage;
 
 /**
@@ -53,6 +57,9 @@ import org.kontalk.model.OutMessage;
  */
 public class AttachmentManager implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(AttachmentManager.class.getName());
+
+    private static final String ATT_DIRNAME = "attachments";
+    public static final Path PREVIEW_DIR = Kontalk.getAppDir().resolve("preview");
 
     // Server and Android client do not want other types
     public static final List<String> SUPPORTED_MIME_TYPES = Arrays.asList(
@@ -73,7 +80,7 @@ public class AttachmentManager implements Runnable {
     private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
 
     private final Control mControl;
-    private final File mBaseDir;
+    private final File mAttachmentDir;
 
     private static class Task {
 
@@ -96,12 +103,15 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    private AttachmentManager(Control control, Path dirPath) {
+    private AttachmentManager(Control control) {
         mControl = control;
-        mBaseDir = dirPath.toFile();
-        boolean created = mBaseDir.mkdirs();
-        if (created)
+        mAttachmentDir = Kontalk.getAppDir().resolve(ATT_DIRNAME).toFile();
+        if (mAttachmentDir.mkdir())
             LOGGER.info("created attachment directory");
+
+        // assumed to be done before static preview method is called
+        if (PREVIEW_DIR.toFile().mkdir())
+            LOGGER.info("created preview directory");
     }
 
     void queueUpload(OutMessage message) {
@@ -119,7 +129,7 @@ public class AttachmentManager implements Runnable {
     }
 
     File getBaseDir() {
-        return mBaseDir;
+        return mAttachmentDir;
     }
 
     private void uploadAsync(OutMessage message) {
@@ -189,7 +199,7 @@ public class AttachmentManager implements Runnable {
             }
         };
 
-        Path path = client.download(attachment.getURL(), mBaseDir, listener);
+        Path path = client.download(attachment.getURL(), mAttachmentDir, listener);
         if (path.toString().isEmpty()) {
             LOGGER.warning("download failed, URL="+attachment.getURL());
             return;
@@ -201,12 +211,12 @@ public class AttachmentManager implements Runnable {
 
         // decrypt file
         if (attachment.getCoderStatus().isEncrypted()) {
-            Coder.decryptAttachment(message, mBaseDir.toPath());
+            Coder.decryptAttachment(message, mAttachmentDir.toPath());
         }
     }
 
     Path getAttachmentDir() {
-        return mBaseDir.toPath();
+        return mAttachmentDir.toPath();
     }
 
     @Override
@@ -228,19 +238,42 @@ public class AttachmentManager implements Runnable {
         }
     }
 
+    public static void savePreview(InMessage message) {
+        Optional<Preview> optPreview = message.getContent().getPreview();
+        if (!optPreview.isPresent()) {
+            LOGGER.warning("no preview for message: "+message);
+            return;
+        }
+        Preview preview = optPreview.get();
+        String id = Integer.toString(message.getID());
+        String dotExt = getExtensionForMIME(preview.getMimeType());
+        File newFile = PREVIEW_DIR.resolve(id + "_bob" + dotExt).toFile();
+        try {
+            FileUtils.writeByteArrayToFile(newFile, preview.getData());
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't save preview file", ex);
+            return;
+        }
+
+        LOGGER.info("saved preview to file: "+newFile);
+        message.setPreviewFilename(newFile.getName());
+    }
+
     public static String getExtensionForMIME(String mimeType){
-        MimeType mime;
+        MimeType mime = null;
         try {
             mime = MimeTypes.getDefaultMimeTypes().forName(mimeType);
         } catch (MimeTypeException ex) {
             LOGGER.log(Level.WARNING, "can't find mimetype", ex);
-            return "";
         }
-        return mime.getExtension();
+        return StringUtils.defaultIfEmpty(
+                mime != null ?
+                mime.getExtension() : "",
+                ".dat");
     }
 
-    static AttachmentManager create(Control control, Path downloadDir) {
-        AttachmentManager downloader = new AttachmentManager(control, downloadDir);
+    static AttachmentManager create(Control control) {
+        AttachmentManager downloader = new AttachmentManager(control);
 
         new Thread(downloader).start();
 

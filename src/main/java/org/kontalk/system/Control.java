@@ -123,8 +123,7 @@ public final class Control {
     private Control() {
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
-        Path attachmentDir = Kontalk.getConfigDir().resolve("attachments");
-        mAttachmentManager = AttachmentManager.create(this, attachmentDir);
+        mAttachmentManager = AttachmentManager.create(this);
 
         mViewControl = new ViewControl();
     }
@@ -455,6 +454,10 @@ public final class Control {
 
         if (!message.getCoderStatus().getErrors().isEmpty()) {
             this.handleSecurityErrors(message);
+        }
+
+        if (message.getContent().getPreview().isPresent()) {
+            AttachmentManager.savePreview(message);
         }
 
         if (message.getContent().getAttachment().isPresent()) {

@@ -156,9 +156,7 @@ public class HTTPFileClient {
             if (filename.isEmpty()) {
                 // fallback
                 String type = StringUtils.defaultString(entity.getContentType().getValue());
-                String ext = StringUtils.defaultIfEmpty(
-                        AttachmentManager.getExtensionForMIME(type),
-                        ".data");
+                String ext = AttachmentManager.getExtensionForMIME(type);
                 filename = "att_" +
                         org.jivesoftware.smack.util.StringUtils.randomString(4) +
                         ext;
