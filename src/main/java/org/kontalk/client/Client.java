@@ -131,7 +131,7 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-        mConn.addAsyncStanzaListener(new PresenceListener(this, Roster.getInstanceFor(mConn), mControl), presenceFilter);
+        mConn.addAsyncStanzaListener(new PresenceListener(Roster.getInstanceFor(mConn), mControl), presenceFilter);
 
          // fallback listener
         mConn.addAsyncStanzaListener(this,
