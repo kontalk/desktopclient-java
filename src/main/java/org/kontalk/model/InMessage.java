@@ -20,9 +20,11 @@ package org.kontalk.model;
 
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.Preview;
 
 /**
  * Model for a XMPP message that was sent to us.
@@ -90,6 +92,17 @@ public final class InMessage extends KonMessage {
         attachment.setDecryptedFile(filename);
         this.save();
         this.changed(attachment);
+    }
+
+    public void setPreviewFilename(String filename) {
+        Optional<Preview> optPreview = this.getContent().getPreview();
+        if (!optPreview.isPresent()) {
+            LOGGER.warning("no preview !?");
+            return;
+        }
+        optPreview.get().setFilename(filename);
+        this.save();
+        this.changed(optPreview.get());
     }
 
     public static class Builder extends KonMessage.Builder {

@@ -254,7 +254,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_REC_STAT, mReceiptStatus);
-        set.put(COL_CONTENT, mContent.toJSONString());
+        set.put(COL_CONTENT, mContent.toJSON());
         set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
         set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
         set.put(COL_COD_ERR, mCoderStatus.getErrors());
@@ -280,7 +280,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         values.add(mReceiptStatus);
         // i simply don't like to save all possible content explicitly in the
         // database, so we use JSON here
-        values.add(mContent.toJSONString());
+        values.add(mContent.toJSON());
         values.add(mCoderStatus.getEncryption());
         values.add(mCoderStatus.getSigning());
         values.add(mCoderStatus.getErrors());

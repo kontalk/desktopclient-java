@@ -41,45 +41,45 @@ public class MessageContent {
 
     // plain message text, empty string if not present
     private final String mPlainText;
-    // attachment (file url, path and metadata)
-    private final Optional<Attachment> mOptAttachment;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
+    // attachment (file url, path and metadata)
+    private final Optional<Attachment> mOptAttachment;
+    // small preview file of attachment
+    private Optional<Preview> mOptPreview;
     // decrypted message content
     private Optional<MessageContent> mOptDecryptedContent;
 
     private static final String JSON_PLAIN_TEXT = "plain_text";
     private static final String JSON_ATTACHMENT = "attachment";
+    private static final String JSON_PREVIEW = "preview";
     private static final String JSON_ENC_CONTENT = "encrypted_content";
     private static final String JSON_DEC_CONTENT = "decrypted_content";
 
     // used for decrypted content of incoming messages, outgoing messages
     // and as fallback
     public MessageContent(String plainText) {
-        this(plainText, "");
+        this(plainText, "", null, null);
     }
 
+    // used for outgoing messages
     public MessageContent(String plainText, Attachment attachment) {
-        this(plainText, attachment, "");
-    }
-
-    public MessageContent(String plainText, String encryptedContent) {
-        this(plainText, null, encryptedContent, null);
+        this(plainText, "", attachment, null);
     }
 
     // used for incoming messages
-    public MessageContent(String plainText,
-            Attachment attachment,
-            String encryptedContent) {
-        this(plainText, attachment, encryptedContent, null);
+    public MessageContent(String plainText, String encrypted,
+            Attachment attachment, Preview preview) {
+        this(plainText, encrypted, attachment, preview, null);
     }
 
     // used when loading from db
-    private MessageContent(String plainText, Attachment attachment,
-            String encryptedContent, MessageContent decryptedContent) {
+    private MessageContent(String plainText, String encrypted,
+            Attachment attachment, Preview preview, MessageContent decryptedContent) {
         mPlainText = plainText;
+        mEncryptedContent = encrypted;
         mOptAttachment = Optional.ofNullable(attachment);
-        mEncryptedContent = encryptedContent;
+        mOptPreview = Optional.ofNullable(preview);
         mOptDecryptedContent = Optional.ofNullable(decryptedContent);
     }
 
@@ -100,10 +100,9 @@ public class MessageContent {
     }
 
     public Optional<Attachment> getAttachment() {
-        if (mOptDecryptedContent.isPresent()) {
-            if (mOptDecryptedContent.get().getAttachment().isPresent()) {
-                return mOptDecryptedContent.get().getAttachment();
-            }
+        if (mOptDecryptedContent.isPresent() &&
+                mOptDecryptedContent.get().getAttachment().isPresent()) {
+            return mOptDecryptedContent.get().getAttachment();
         }
         return mOptAttachment;
     }
@@ -119,32 +118,45 @@ public class MessageContent {
         mEncryptedContent = "";
     }
 
+    public Optional<Preview> getPreview() {
+        if (mOptDecryptedContent.isPresent() &&
+                mOptDecryptedContent.get().getPreview().isPresent()) {
+            return mOptDecryptedContent.get().getPreview();
+        }
+        return mOptPreview;
+    }
+
     /**
      * Return if there is no content in this message.
      * @return true if there is no content at all, false otherwise
      */
     public boolean isEmpty() {
         return mPlainText.isEmpty() &&
+                mEncryptedContent.isEmpty() &&
                 !mOptAttachment.isPresent() &&
-                mEncryptedContent.isEmpty();
+                !mOptPreview.isPresent() &&
+                !mOptDecryptedContent.isPresent();
     }
 
     @Override
     public String toString() {
-        return "CONT:plain="+mPlainText+",att="+mOptAttachment
-                +",encr="+mEncryptedContent+",decr="+mOptDecryptedContent;
+        return "CONT:plain="+mPlainText+",encr="+mEncryptedContent
+                +",att="+mOptAttachment+",decr="+mOptDecryptedContent;
     }
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    String toJSONString() {
+    String toJSON() {
         JSONObject json = new JSONObject();
         EncodingUtils.putJSON(json, JSON_PLAIN_TEXT, mPlainText);
         if (mOptAttachment.isPresent())
             json.put(JSON_ATTACHMENT, mOptAttachment.get().toJSONString());
         EncodingUtils.putJSON(json, JSON_ENC_CONTENT, mEncryptedContent);
         if (mOptDecryptedContent.isPresent())
-            json.put(JSON_DEC_CONTENT, mOptDecryptedContent.get().toJSONString());
+            json.put(JSON_DEC_CONTENT, mOptDecryptedContent.get().toJSON());
+        if (mOptPreview.isPresent()){
+            json.put(JSON_PREVIEW, mOptPreview.get().toJSON());
+        }
         return json.toJSONString();
     }
 
@@ -156,16 +168,17 @@ public class MessageContent {
             String jsonAttachment = (String) map.get(JSON_ATTACHMENT);
             Attachment attachment = jsonAttachment == null ?
                     null :
-                    Attachment.fromJSONStringOrNull(jsonAttachment);
+                    Attachment.fromJSONOrNull(jsonAttachment);
 
-            String encryptedContent = EncodingUtils.getJSONString(map, JSON_ENC_CONTENT);
+            String encrypted = EncodingUtils.getJSONString(map, JSON_ENC_CONTENT);
             String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
             MessageContent decryptedContent = jsonDecryptedContent == null ?
                     null :
                     fromJSONString(jsonDecryptedContent);
             return new MessageContent(plainText,
+                    encrypted,
                     attachment,
-                    encryptedContent,
+                    null,
                     decryptedContent);
         } catch(ClassCastException ex) {
             LOGGER.log(Level.WARNING, "can't parse JSON message content", ex);
@@ -303,7 +316,7 @@ public class MessageContent {
             return json.toJSONString();
         }
 
-        private static Attachment fromJSONStringOrNull(String jsonAttachment) {
+        private static Attachment fromJSONOrNull(String jsonAttachment) {
             Object obj = JSONValue.parse(jsonAttachment);
             try {
                 Map<?, ?> map = (Map) obj;
@@ -331,6 +344,55 @@ public class MessageContent {
                 LOGGER.log(Level.WARNING, "can't parse JSON attachment", ex);
                 return null;
             }
+        }
+    }
+
+    public static class Preview {
+
+        private static final String JSON_MIME_TYPE = "mime_type";
+        private static final String JSON_FILENAME= "filename";
+
+        private byte[] mData;
+        private final String mMimeType;
+        private String mFilename = "";
+
+        public Preview(byte[] data, String mimeType) {
+            mData = data;
+            mMimeType = mimeType;
+        }
+
+        public byte[] getData() {
+            return mData;
+        }
+
+        public String getMimeType() {
+            return mMimeType;
+        }
+
+        public String getFilename() {
+            return mFilename;
+        }
+
+        void setFilename(String filename) {
+            mFilename = filename;
+        }
+
+        public void save(int messageID) {
+            Integer.toString(messageID);
+        }
+
+        // using legacy lib, raw types extend Object
+        @SuppressWarnings("unchecked")
+        private String toJSON() {
+            JSONObject json = new JSONObject();
+            EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
+            EncodingUtils.putJSON(json, JSON_FILENAME, mFilename);
+            return json.toJSONString();
+        }
+
+        @Override
+        public String toString() {
+            return "{PRE:fn="+mFilename+",mime="+mMimeType+"}";
         }
     }
 }

@@ -41,6 +41,7 @@ import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.MessageIDs;
 
@@ -60,9 +61,9 @@ final public class KonMessageListener implements StanzaListener {
         mClient = client;
         mControl = control;
 
-        ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
-        //ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
+        ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
+        ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
     }
 
     @Override
@@ -106,7 +107,7 @@ final public class KonMessageListener implements StanzaListener {
             delay = m.getExtension("x", "jabber:x:delay");
         }
         Optional<Date> optServerDate = Optional.empty();
-        if (delay != null && delay instanceof DelayInformation) {
+        if (delay instanceof DelayInformation) {
                 Date date = ((DelayInformation) delay).getStamp();
                 if (date.after(new Date()))
                     LOGGER.warning("delay time is in future: "+date);
@@ -172,18 +173,35 @@ final public class KonMessageListener implements StanzaListener {
         String plainText = m.getBody() != null ? m.getBody() : "";
 
         // encryption extension (RFC 3923), decrypted later
-        String encryptedContent = "";
+        String encrypted = "";
         ExtensionElement encryptionExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
-        if (encryptionExt != null && encryptionExt instanceof E2EEncryption) {
+        if (encryptionExt instanceof E2EEncryption) {
             if (m.getBody() != null)
-                LOGGER.info("message contains encryption and body (ignoring body): "+m.getBody());
+                LOGGER.config("message contains encryption and body (ignoring body): "+m.getBody());
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
-            encryptedContent = Base64.getEncoder().encodeToString(encryption.getData());
+            encrypted = Base64.getEncoder().encodeToString(encryption.getData());
         }
 
+        // Bits of Binary: preview for file attachment
+        Preview preview = null;
+        ExtensionElement bobExt = m.getExtension(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE);
+        if (bobExt instanceof BitsOfBinary) {
+            BitsOfBinary bob = (BitsOfBinary) bobExt;
+            String mime = StringUtils.defaultString(bob.getType());
+            byte[] bits = bob.getContents();
+            if (bits == null)
+                bits = new byte[0];
+            if (mime.isEmpty() || bits.length <= 0)
+                LOGGER.warning("invalid BOB data, XML: "+bob.toXML());
+            else
+                preview = new Preview(bits, mime);
+        }
+        System.out.println("preview: "+preview);
+
         // Out of Band Data: a URI to a file
+        Attachment attachment = null;
         ExtensionElement oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
-        if (oobExt!= null && oobExt instanceof OutOfBandData) {
+        if (oobExt instanceof OutOfBandData) {
             OutOfBandData oobData = (OutOfBandData) oobExt;
             URI url;
             try {
@@ -192,13 +210,12 @@ final public class KonMessageListener implements StanzaListener {
                 LOGGER.log(Level.WARNING, "can't parse URL", ex);
                 url = URI.create("");
             }
-            Attachment attachment = new MessageContent.Attachment(url,
+            attachment = new MessageContent.Attachment(url,
                     oobData.getMime() != null ? oobData.getMime() : "",
                     oobData.getLength(),
                     oobData.isEncrypted());
-            return new MessageContent(plainText, attachment, encryptedContent);
-        } else {
-            return new MessageContent(plainText, encryptedContent);
         }
+
+        return new MessageContent(plainText, encrypted, attachment, preview);
     }
 }
