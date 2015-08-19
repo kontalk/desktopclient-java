@@ -21,7 +21,6 @@ package org.kontalk.util;
 import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.Kontalk;
 
 /**
  *
@@ -34,7 +33,7 @@ public class MediaUtils {
 
     public enum Sound{NOTIFICATION}
 
-    private MediaUtils() { throw new AssertionError(); }
+    private MediaUtils() {}
 
     public static void playSound(Sound sound) {
         switch (sound) {
@@ -49,7 +48,7 @@ public class MediaUtils {
 
         try {
             // path must be relative to classpath for some reason
-            mAudioClip = new OggClip(Kontalk.RES_PATH + fileName);
+            mAudioClip = new OggClip(fileName);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't create clip", ex);
             return;

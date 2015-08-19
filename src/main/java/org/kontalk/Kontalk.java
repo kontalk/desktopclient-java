@@ -50,7 +50,6 @@ public final class Kontalk {
     private static final Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
     public static final String VERSION = "3.0.2";
-    public static final String RES_PATH = "res/";
     private static final Path APP_DIR;
 
     private static ServerSocket RUN_LOCK;
@@ -168,7 +167,6 @@ public final class Kontalk {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-
         LOGGER.setLevel(Level.ALL);
 
         Kontalk app = new Kontalk();

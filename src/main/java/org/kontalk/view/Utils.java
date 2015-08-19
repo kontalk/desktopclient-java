@@ -51,7 +51,6 @@ import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
@@ -227,7 +226,7 @@ final class Utils {
     }
 
     static Image getImage(String fileName) {
-        URL imageUrl = ClassLoader.getSystemResource(Kontalk.RES_PATH + fileName);
+        URL imageUrl = ClassLoader.getSystemResource(fileName);
         if (imageUrl == null) {
             LOGGER.warning("can't find icon image resource");
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
