@@ -30,7 +30,6 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.text.ParseException;
-import java.util.Base64;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -271,7 +270,7 @@ public final class Coder {
         if (encryptedContent.isEmpty()) {
             LOGGER.warning("no encrypted data in encrypted message");
         }
-        byte[] encryptedData = Base64.getDecoder().decode(encryptedContent);
+        byte[] encryptedData = org.kontalk.util.EncodingUtils.base64ToBytes(encryptedContent);
 
         InputStream encryptedIn = new ByteArrayInputStream(encryptedData);
         ByteArrayOutputStream plainOut = new ByteArrayOutputStream();

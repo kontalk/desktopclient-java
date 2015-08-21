@@ -18,7 +18,6 @@
 
 package org.kontalk.model;
 
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -32,6 +31,7 @@ import org.jivesoftware.smack.packet.Presence;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.system.Database;
+import org.kontalk.util.EncodingUtils;
 
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
@@ -204,7 +204,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
     }
 
     public byte[] getKey() {
-        return Base64.getDecoder().decode(mKey);
+        return EncodingUtils.base64ToBytes(mKey);
     }
 
     public boolean hasKey() {
@@ -219,7 +219,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
         if (!mKey.isEmpty())
             LOGGER.info("overwriting public key of contact: "+this);
 
-        mKey = Base64.getEncoder().encodeToString(rawKey);
+        mKey = EncodingUtils.bytesToBase64(rawKey);
         mFingerprint = fingerprint;
         this.save();
         this.changed(null);

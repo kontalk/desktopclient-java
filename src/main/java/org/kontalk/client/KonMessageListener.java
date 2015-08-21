@@ -20,7 +20,6 @@ package org.kontalk.client;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Base64;
 import java.util.Date;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -44,6 +43,7 @@ import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.MessageIDs;
+import org.kontalk.util.EncodingUtils;
 
 /**
  * Listen and handle all incoming XMPP message packets.
@@ -179,7 +179,7 @@ final public class KonMessageListener implements StanzaListener {
             if (m.getBody() != null)
                 LOGGER.config("message contains encryption and body (ignoring body): "+m.getBody());
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
-            encrypted = Base64.getEncoder().encodeToString(encryption.getData());
+            encrypted = EncodingUtils.bytesToBase64(encryption.getData());
         }
 
         // Bits of Binary: preview for file attachment
@@ -196,7 +196,6 @@ final public class KonMessageListener implements StanzaListener {
             else
                 preview = new Preview(bits, mime);
         }
-        System.out.println("preview: "+preview);
 
         // Out of Band Data: a URI to a file
         Attachment attachment = null;
