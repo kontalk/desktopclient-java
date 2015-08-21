@@ -33,6 +33,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -241,6 +242,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     public ServerError getServerError() {
         return mServerError;
+    }
+
+    public void setPreview(Preview preview) {
+        mContent.setPreview(preview);
+        this.save();
+        this.changed(preview);
     }
 
     /**

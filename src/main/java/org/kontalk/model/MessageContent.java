@@ -126,6 +126,14 @@ public class MessageContent {
         return mOptPreview;
     }
 
+    void setPreview(Preview preview) {
+        if (mOptPreview.isPresent()) {
+            LOGGER.warning("preview already present, not overwriting");
+            return;
+        }
+        mOptPreview = Optional.of(preview);
+    }
+
     /**
      * Return if there is no content in this message.
      * @return true if there is no content at all, false otherwise
@@ -352,13 +360,21 @@ public class MessageContent {
         private static final String JSON_MIME_TYPE = "mime_type";
         private static final String JSON_FILENAME= "filename";
 
-        private byte[] mData;
+        private final byte[] mData;
         private final String mMimeType;
         private String mFilename = "";
 
+        // used for incoming
         public Preview(byte[] data, String mimeType) {
             mData = data;
             mMimeType = mimeType;
+        }
+
+        // used for outgoing / self created
+        public Preview(byte[] data, String filename, String mimeType) {
+            mData = data;
+            mMimeType = mimeType;
+            mFilename = filename;
         }
 
         public byte[] getData() {
