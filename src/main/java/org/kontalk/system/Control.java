@@ -730,6 +730,8 @@ public final class Control {
             OutMessage.Builder builder = new OutMessage.Builder(chat, contact, encrypted);
             builder.content(content);
             OutMessage newMessage = builder.build();
+            if (newMessage.getContent().getAttachment().isPresent())
+                mAttachmentManager.createImagePreview(newMessage);
             boolean added = chat.addMessage(newMessage);
             if (!added) {
                 LOGGER.warning("could not add outgoing message to chat");

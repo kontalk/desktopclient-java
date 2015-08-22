@@ -19,6 +19,8 @@
 package org.kontalk.system;
 
 import java.awt.Dimension;
+import java.awt.Image;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -204,7 +206,7 @@ public class AttachmentManager implements Runnable {
             return;
         }
 
-        LOGGER.info("download successful, saved to file: "+path);
+        LOGGER.info("successful, saved to file: "+path);
 
         message.setAttachmentFileName(path.getFileName().toString());
 
@@ -212,6 +214,10 @@ public class AttachmentManager implements Runnable {
         if (attachment.getCoderStatus().isEncrypted()) {
             Coder.decryptAttachment(message, mAttachmentDir);
         }
+
+        // create preview if not in message
+        if (!message.getContent().getPreview().isPresent())
+            this.createImagePreview(message);
     }
 
     public void savePreview(InMessage message) {
@@ -227,6 +233,46 @@ public class AttachmentManager implements Runnable {
         this.writePreview(preview, filename);
 
         message.setPreviewFilename(filename);
+    }
+
+    boolean createImagePreview(KonMessage message) {
+        Optional<Attachment> optAtt = message.getContent().getAttachment();
+        if (!optAtt.isPresent()) {
+            LOGGER.warning("no attachment in message: "+message);
+            return false;
+        }
+        Attachment att = optAtt.get();
+        Path path = filePath(att);
+
+        if (!isImage(att.getMimeType()))
+            return false;
+
+        BufferedImage image = MediaUtils.readImage(path.toString());
+        if (image.getWidth() <= THUMBNAIL_DIM.width
+                && image.getHeight() <= THUMBNAIL_DIM.height)
+            return false;
+
+        Image thumb = MediaUtils.scale(image,
+                THUMBNAIL_DIM.width ,
+                THUMBNAIL_DIM.height,
+                false);
+
+        String format = MediaUtils.extensionForMIME(THUMBNAIL_MIME).substring(1);
+
+        byte[] bytes = MediaUtils.imageToByteArray(thumb, format);
+        if (bytes.length <= 0)
+            return false;
+
+        String id = Integer.toString(message.getID());
+        String filename = id + "_bob_." + format;
+        Preview preview = new Preview(bytes, filename, THUMBNAIL_MIME);
+        LOGGER.info("created: "+preview);
+
+        this.writePreview(preview, filename);
+
+        message.setPreview(preview);
+
+        return true;
     }
 
     Path filePath(Attachment attachment) {
