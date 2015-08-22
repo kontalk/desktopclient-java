@@ -41,6 +41,7 @@ import org.kontalk.crypto.Coder.Encryption;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
+import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.model.OutMessage;
@@ -235,6 +236,19 @@ public class AttachmentManager implements Runnable {
         return path.isAbsolute() ? path : mAttachmentDir.resolve(path);
     }
 
+    Optional<Path> imagePreviewPath(KonMessage message) {
+        Optional<MessageContent.Preview> optPreview = message.getContent().getPreview();
+        if (!optPreview.isPresent())
+            return Optional.empty();
+
+        MessageContent.Preview preview = optPreview.get();
+        String fn = preview.getFilename();
+        if (fn.isEmpty() || !isImage(preview.getMimeType()))
+            return Optional.empty();
+
+        return Optional.of(mPreviewDir.resolve(fn));
+    }
+
     private void writePreview(Preview preview, String filename) {
         File newFile = mPreviewDir.resolve(filename).toFile();
         try {
@@ -264,6 +278,10 @@ public class AttachmentManager implements Runnable {
                 this.downloadAsync(((Task.DownloadTask) t).message);
             }
         }
+    }
+
+    public static boolean isImage(String mimeType) {
+        return mimeType.startsWith("image");
     }
 
     static AttachmentManager create(Path baseDir, Control control) {

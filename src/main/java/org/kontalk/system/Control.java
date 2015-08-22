@@ -586,6 +586,10 @@ public final class Control {
             return mAttachmentManager.filePath(attachment);
         }
 
+        public Optional<Path> getImagePath(KonMessage message) {
+            return mAttachmentManager.imagePreviewPath(message);
+        }
+
         /* contact */
 
         public Optional<Contact> createContact(String jid, String name, boolean encrypted) {
