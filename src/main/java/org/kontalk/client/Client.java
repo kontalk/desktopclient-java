@@ -56,7 +56,9 @@ import org.kontalk.model.OutMessage;
 import org.kontalk.model.Contact;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.system.Control;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
 
 /**
@@ -280,6 +282,14 @@ public final class Client implements StanzaListener, Runnable {
             OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
                     att.getMimeType(), att.getLength(), encrypted);
             smackMessage.addExtension(oobData);
+
+            Optional<Preview> optPreview = message.getContent().getPreview();
+            if (optPreview.isPresent()) {
+                Preview preview = optPreview.get();
+                String data = EncodingUtils.bytesToBase64(preview.getData());
+                BitsOfBinary bob = new BitsOfBinary(preview.getMimeType(), data);
+                smackMessage.addExtension(bob);
+            }
         }
         return smackMessage;
     }
