@@ -33,6 +33,8 @@ import com.alee.managers.hotkey.Hotkey;
 import com.alee.managers.hotkey.HotkeyData;
 import com.alee.managers.language.data.TooltipWay;
 import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.filefilter.AllFilesFilter;
+import com.alee.utils.filefilter.CustomFileFilter;
 import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -61,14 +63,18 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import javax.swing.Box;
+import javax.swing.JFileChooser;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
+import org.apache.commons.io.FileUtils;
+import org.apache.tika.Tika;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Chat;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Config;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
@@ -79,6 +85,9 @@ import static org.kontalk.view.View.MARGIN_SMALL;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatView extends WebPanel implements Observer {
+
+    private static final int MAX_ATT_SIZE = 10 * 1024 * 1024;
+    private static final Tika TIKA_INSTANCE = new Tika();
 
     private final View mView;
 
@@ -192,15 +201,26 @@ final class ChatView extends WebPanel implements Observer {
                 ChatView.this.sendMsg();
             }
         });
-
         fileChooser = new WebFileChooser();
         fileChooser.setMultiSelectionEnabled(false);
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooser.setFileFilter(new CustomFileFilter(AllFilesFilter.ICON,
+                Tr.tr("Supported files")) {
+            @Override
+            public boolean accept(File file) {
+                return file.length() <= MAX_ATT_SIZE &&
+                        AttachmentManager.SUPPORTED_MIME_TYPES.contains(
+                                TIKA_INSTANCE.detect(file.getName()));
+            }
+        });
 //        mAttField.setPreferredWidth(150);
         WebButton fileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
                 .setRound(0)
                 .setBottomBgColor(titlePanel.getBackground())
                 .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL);
-        TooltipManager.addTooltip(fileButton, Tr.tr("Send File"));
+        TooltipManager.addTooltip(fileButton,
+                Tr.tr("Send File - max. size:") + " " +
+                        FileUtils.byteCountToDisplaySize(MAX_ATT_SIZE));
         fileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
