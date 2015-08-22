@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import java.awt.Dimension;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -61,7 +62,10 @@ public class AttachmentManager implements Runnable {
     private static final String ATT_DIRNAME = "attachments";
     public static final Path PREVIEW_DIR = Kontalk.getAppDir().resolve("preview");
 
-    // Server and Android client do not want other types
+    public static final Dimension THUMBNAIL_DIM = new Dimension(300, 200);
+    public static final String THUMBNAIL_MIME = "image/jpeg";
+
+    // server and Android client do not want other types
     public static final List<String> SUPPORTED_MIME_TYPES = Arrays.asList(
             "text/plain",
             "text/x-vcard",

@@ -70,6 +70,7 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.system.Config;
+import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import static org.kontalk.view.View.MARGIN_SMALL;
 
@@ -488,7 +489,7 @@ final class ChatView extends WebPanel implements Observer {
                 this.updateCachedBG(null);
                 return true;
             }
-            Image scaledImage = ImageLoader.scale(mOrigin,
+            Image scaledImage = MediaUtils.scale(mOrigin,
                     mParent.getWidth(),
                     mParent.getHeight(),
                     true);
