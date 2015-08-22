@@ -498,7 +498,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
             Attachment att = optAttachment.get();
             String fName = att.getFile().toString();
-            Path path = mView.getControl().getAttachmentDir().resolve(fName);
+            Path path = mView.getControl().getFilePath(att);
 
             // rely on mime type in message
             if (att.hasFile() && att.getMimeType().startsWith("image")) {

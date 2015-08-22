@@ -54,7 +54,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.kontalk.system.AttachmentManager;
+import org.kontalk.util.MediaUtils;
 import org.kontalk.util.TrustUtils;
 
 /**
@@ -107,14 +107,14 @@ public class HTTPFileClient {
      * @return the absolute path of the downloaded file, empty if the file could
      * not be downloaded
      */
-    public Path download(URI url, File base, ProgressListener listener) {
+    public Path download(URI url, Path base, ProgressListener listener) {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
                 return Paths.get("");
         }
 
-        LOGGER.info("downloading file from URL=" + url+ "...");
+        LOGGER.info("from URL=" + url+ "...");
         mCurrentRequest = new HttpGet(url);
         mCurrentListener = listener;
 
@@ -130,7 +130,7 @@ public class HTTPFileClient {
         try {
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
-                LOGGER.warning("download, unexpected response code: " + code);
+                LOGGER.warning("unexpected response code: " + code);
                 return Paths.get("");
             }
 
@@ -156,7 +156,7 @@ public class HTTPFileClient {
             if (filename.isEmpty()) {
                 // fallback
                 String type = StringUtils.defaultString(entity.getContentType().getValue());
-                String ext = AttachmentManager.getExtensionForMIME(type);
+                String ext = MediaUtils.extensionForMIME(type);
                 filename = "att_" +
                         org.jivesoftware.smack.util.StringUtils.randomString(4) +
                         ext;
@@ -177,7 +177,7 @@ public class HTTPFileClient {
             final long fileSize = s;
             mCurrentListener.updateProgress(s < 0 ? -2 : 0);
 
-            File destination = new File(base, filename);
+            File destination = new File(base.toString(), filename);
             if (destination.exists()) {
                 LOGGER.warning("file already exists: "+destination.getAbsolutePath());
                 return Paths.get("");
@@ -258,7 +258,7 @@ public class HTTPFileClient {
         try {
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
-                LOGGER.warning("upload, unexpected response code: " + code);
+                LOGGER.warning("unexpected response code: " + code);
                 return URI.create("");
             }
 

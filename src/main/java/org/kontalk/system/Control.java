@@ -120,10 +120,10 @@ public final class Control {
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
-    private Control() {
+    private Control(Path appDir) {
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
-        mAttachmentManager = AttachmentManager.create(this);
+        mAttachmentManager = AttachmentManager.create(appDir, this);
 
         mViewControl = new ViewControl();
     }
@@ -457,7 +457,7 @@ public final class Control {
         }
 
         if (message.getContent().getPreview().isPresent()) {
-            AttachmentManager.savePreview(message);
+            mAttachmentManager.savePreview(message);
         }
 
         if (message.getContent().getAttachment().isPresent()) {
@@ -471,8 +471,8 @@ public final class Control {
 
     /* static */
 
-    public static ViewControl create() {
-        return new Control().mViewControl;
+    public static ViewControl create(Path appDir) {
+        return new Control(appDir).mViewControl;
     }
 
     private static Chat getChat(String xmppThreadID, Contact contact) {
@@ -529,7 +529,7 @@ public final class Control {
             new Thread(mClient).start();
 
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-            if (!AccountLoader.getInstance().isPresent()) {
+            if (!AccountLoader.getInstance().accountIsPresent()) {
                 this.changed(new ViewEvent.MissingAccount(connect));
                 return;
             }
@@ -582,8 +582,8 @@ public final class Control {
             mClient.sendInitialPresence();
         }
 
-        public Path getAttachmentDir() {
-            return mAttachmentManager.getAttachmentDir();
+        public Path getFilePath(Attachment attachment) {
+            return mAttachmentManager.filePath(attachment);
         }
 
         /* contact */

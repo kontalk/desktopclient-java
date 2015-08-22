@@ -27,6 +27,10 @@ import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
+import org.apache.commons.lang.StringUtils;
+import org.apache.tika.mime.MimeType;
+import org.apache.tika.mime.MimeTypeException;
+import org.apache.tika.mime.MimeTypes;
 
 /**
  *
@@ -36,6 +40,17 @@ public class MediaUtils {
     private static final Logger LOGGER = Logger.getLogger(MediaUtils.class.getName());
 
     private static OggClip mAudioClip = null;
+
+    /* contains dot! */
+    public static String extensionForMIME(String mimeType) {
+        MimeType mime = null;
+        try {
+            mime = MimeTypes.getDefaultMimeTypes().forName(mimeType);
+        } catch (MimeTypeException ex) {
+            LOGGER.log(Level.WARNING, "can't find mimetype", ex);
+        }
+        return StringUtils.defaultIfEmpty(mime != null ? mime.getExtension() : "", ".dat");
+    }
 
     public enum Sound{NOTIFICATION}
 
