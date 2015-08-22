@@ -38,7 +38,6 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Date;
@@ -225,6 +224,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         private WebLabel mStatusIconLabel;
         private int mPreferredTextWidth;
         private boolean mCreated = false;
+        private String mImagePath = "";
 
         MessageItem(KonMessage message) {
             super(message);
@@ -344,7 +344,8 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             if (arg == null || arg instanceof KonMessage.Status)
                 this.updateStatus();
 
-            if (arg == null || arg instanceof MessageContent.Attachment)
+            if (arg == null || arg instanceof MessageContent.Attachment ||
+                    arg instanceof MessageContent.Preview)
                 this.updateAttachment();
 
             // changes are not instantly painted
@@ -498,25 +499,38 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
             Attachment att = optAttachment.get();
             String fName = att.getFile().toString();
-            Path path = mView.getControl().getFilePath(att);
 
-            // rely on mime type in message
-            if (att.hasFile() && att.getMimeType().startsWith("image")) {
-                WebLinkLabel imageView = new WebLinkLabel();
-                imageView.setLink("", createLinkRunnable(path));
-                // file should be present and should be an image, show it
-                ImageLoader.setImageIconAsync(imageView, path.toString());
-                mContentPanel.add(imageView, BorderLayout.SOUTH);
-                return;
+            WebLinkLabel attLabel = new WebLinkLabel();
+
+            // path to file
+            Path linkPath = mView.getControl().getFilePath(att);
+
+            // image preview
+            if (mImagePath.isEmpty()) {
+                Optional<Path> optImagePath = mView.getControl().getImagePath(mValue);
+                mImagePath = optImagePath.isPresent() ? optImagePath.get().toString() : "";
+
+                if (!mImagePath.isEmpty()) {
+                    // file should be present and should be an image, show it
+                    ImageLoader.setImageIconAsync(attLabel, mImagePath);
+                }
             }
 
             // show a link to the file
-            WebLabel attLabel;
-            if (att.hasFile()) {
-                WebLinkLabel linkLabel = new WebLinkLabel();
-                linkLabel.setLink(fName, createLinkRunnable(path));
-                attLabel = linkLabel;
-            } else {
+            if (!linkPath.toString().isEmpty()) {
+                attLabel.setLink(mImagePath.isEmpty() ?
+                        linkPath.getFileName().toString() :
+                        "",
+                        createLinkRunnable(linkPath));
+            }
+
+            WebPanel attPanel = new GroupPanel(View.GAP_SMALL, false);
+            if (mImagePath.isEmpty())
+                attPanel.add(new WebLabel(Tr.tr("Attachment:")).setItalicFont());
+
+            attPanel.add(attLabel);
+
+            if (mImagePath.isEmpty()) {
                 String statusText = Tr.tr("loading...");
                 switch (att.getDownloadProgress()) {
                     case -1: statusText = Tr.tr("stalled"); break;
@@ -524,12 +538,10 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                     case -2: statusText = Tr.tr("downloading..."); break;
                     case -3: statusText = Tr.tr("download failed"); break;
                 }
-                attLabel = new WebLabel(statusText);
+                attPanel.add(new WebLabel(statusText));
             }
-            WebLabel labelLabel = new WebLabel(Tr.tr("Attachment:")+" ");
-            labelLabel.setItalicFont();
-            GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
-            mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
+
+            mContentPanel.add(attPanel, BorderLayout.SOUTH);
         }
 
         private WebPopupMenu getPopupMenu() {
@@ -548,7 +560,8 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                     popupMenu.add(decryptMenuItem);
                 }
                 Optional<Attachment> optAtt = m.getContent().getAttachment();
-                if (optAtt.isPresent() && !optAtt.get().hasFile()) {
+                if (optAtt.isPresent() &&
+                        optAtt.get().getFile().toString().isEmpty()) {
                     WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
                     attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
                     attMenuItem.addActionListener(new ActionListener() {
@@ -631,7 +644,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             public void run () {
                 Desktop dt = Desktop.getDesktop();
                 try {
-                    dt.open(new File(path.toString()));
+                    dt.open(path.toFile());
                 } catch (IOException ex) {
                     LOGGER.log(Level.WARNING, "can't open attachment", ex);
                 }
