@@ -51,9 +51,9 @@ public class MessageContent {
     private Optional<MessageContent> mOptDecryptedContent;
 
     private static final String JSON_PLAIN_TEXT = "plain_text";
+    private static final String JSON_ENC_CONTENT = "encrypted_content";
     private static final String JSON_ATTACHMENT = "attachment";
     private static final String JSON_PREVIEW = "preview";
-    private static final String JSON_ENC_CONTENT = "encrypted_content";
     private static final String JSON_DEC_CONTENT = "decrypted_content";
 
     // used for decrypted content of incoming messages, outgoing messages
@@ -172,21 +172,26 @@ public class MessageContent {
         Object obj = JSONValue.parse(jsonContent);
         try {
             Map<?, ?> map = (Map) obj;
+
             String plainText = EncodingUtils.getJSONString(map, JSON_PLAIN_TEXT);
-            String jsonAttachment = (String) map.get(JSON_ATTACHMENT);
-            Attachment attachment = jsonAttachment == null ?
-                    null :
-                    Attachment.fromJSONOrNull(jsonAttachment);
 
             String encrypted = EncodingUtils.getJSONString(map, JSON_ENC_CONTENT);
+
+            String att = (String) map.get(JSON_ATTACHMENT);
+            Attachment attachment = att == null ? null : Attachment.fromJSONOrNull(att);
+
+            String pre = (String) map.get(JSON_PREVIEW);
+            Preview preview = pre == null ? null : Preview.fromJSONOrNull(pre);
+
             String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
             MessageContent decryptedContent = jsonDecryptedContent == null ?
                     null :
                     fromJSONString(jsonDecryptedContent);
+
             return new MessageContent(plainText,
                     encrypted,
                     attachment,
-                    null,
+                    preview,
                     decryptedContent);
         } catch(ClassCastException ex) {
             LOGGER.log(Level.WARNING, "can't parse JSON message content", ex);
@@ -199,7 +204,7 @@ public class MessageContent {
         private static final String JSON_URL = "url";
         private static final String JSON_MIME_TYPE = "mime_type";
         private static final String JSON_LENGTH = "length";
-        private static final String JSON_FILE_NAME = "file_name";
+        private static final String JSON_FILENAME = "file_name";
         private static final String JSON_ENCRYPTION = "encryption";
         private static final String JSON_SIGNING = "signing";
         private static final String JSON_CODER_ERRORS = "coder_errors";
@@ -316,7 +321,7 @@ public class MessageContent {
             EncodingUtils.putJSON(json, JSON_URL, mURL.toString());
             EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
-            EncodingUtils.putJSON(json, JSON_FILE_NAME, mFile.toString());
+            EncodingUtils.putJSON(json, JSON_FILENAME, mFile.toString());
             json.put(JSON_ENCRYPTION, mCoderStatus.getEncryption().ordinal());
             json.put(JSON_SIGNING, mCoderStatus.getSigning().ordinal());
             int errs = EncodingUtils.enumSetToInt(mCoderStatus.getErrors());
@@ -324,8 +329,8 @@ public class MessageContent {
             return json.toJSONString();
         }
 
-        private static Attachment fromJSONOrNull(String jsonAttachment) {
-            Object obj = JSONValue.parse(jsonAttachment);
+        private static Attachment fromJSONOrNull(String json) {
+            Object obj = JSONValue.parse(json);
             try {
                 Map<?, ?> map = (Map) obj;
 
@@ -335,7 +340,7 @@ public class MessageContent {
 
                 long length = ((Number) map.get(JSON_LENGTH)).longValue();
 
-                Path file = Paths.get(EncodingUtils.getJSONString(map, JSON_FILE_NAME));
+                Path file = Paths.get(EncodingUtils.getJSONString(map, JSON_FILENAME));
 
                 Number enc = (Number) map.get(JSON_ENCRYPTION);
                 Coder.Encryption encryption = Coder.Encryption.values()[enc.intValue()];
@@ -348,7 +353,7 @@ public class MessageContent {
 
                 return new Attachment(url, file, mimeType, length,
                         new CoderStatus(encryption, signing, errors));
-            } catch (NullPointerException | ClassCastException ex) {
+            } catch (ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON attachment", ex);
                 return null;
             }
@@ -357,12 +362,12 @@ public class MessageContent {
 
     public static class Preview {
 
-        private static final String JSON_MIME_TYPE = "mime_type";
         private static final String JSON_FILENAME= "filename";
+        private static final String JSON_MIME_TYPE = "mime_type";
 
         private final byte[] mData;
-        private final String mMimeType;
         private String mFilename = "";
+        private final String mMimeType;
 
         // used for incoming
         public Preview(byte[] data, String mimeType) {
@@ -373,16 +378,18 @@ public class MessageContent {
         // used for outgoing / self created
         public Preview(byte[] data, String filename, String mimeType) {
             mData = data;
-            mMimeType = mimeType;
             mFilename = filename;
+            mMimeType = mimeType;
+        }
+
+        private Preview(String filename, String mimeType) {
+            mData = new byte[0];
+            mFilename = filename;
+            mMimeType = mimeType;
         }
 
         public byte[] getData() {
             return mData;
-        }
-
-        public String getMimeType() {
-            return mMimeType;
         }
 
         public String getFilename() {
@@ -391,6 +398,10 @@ public class MessageContent {
 
         void setFilename(String filename) {
             mFilename = filename;
+        }
+
+        public String getMimeType() {
+            return mMimeType;
         }
 
         public void save(int messageID) {
@@ -404,6 +415,19 @@ public class MessageContent {
             EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
             EncodingUtils.putJSON(json, JSON_FILENAME, mFilename);
             return json.toJSONString();
+        }
+
+        private static Preview fromJSONOrNull(String json) {
+            Object obj = JSONValue.parse(json);
+            try {
+                Map<?, ?> map = (Map) obj;
+                String filename = EncodingUtils.getJSONString(map, JSON_FILENAME);
+                String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
+                return new Preview(filename, mimeType);
+            }  catch (NullPointerException | ClassCastException ex) {
+                LOGGER.log(Level.WARNING, "can't parse JSON preview", ex);
+                return null;
+            }
         }
 
         @Override
