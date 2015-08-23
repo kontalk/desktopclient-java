@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.layout.FormLayout;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
@@ -53,6 +54,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -542,6 +544,41 @@ final class ComponentUtils {
                     popupLayer.revalidate();
                 }
             });
+        }
+    }
+
+    static class AttachmentPanel extends GroupPanel {
+
+        private final WebLabel mStatus;
+        private final WebLinkLabel mAttLabel;
+        private String mImagePath = "";
+
+        AttachmentPanel() {
+           super(View.GAP_SMALL, false);
+
+           mStatus = new WebLabel().setItalicFont();
+           this.add(mStatus);
+
+           mAttLabel = new WebLinkLabel();
+           this.add(mAttLabel);
+        }
+
+        void setImage(String path) {
+            if (path.equals(mImagePath))
+                return;
+
+            mImagePath = path;
+            // file should be present and should be an image, show it
+            ImageLoader.setImageIconAsync(mAttLabel, mImagePath);
+        }
+
+        void setStatus(String text) {
+            mStatus.setText(Tr.tr("Attachment:") + " " + text);
+        }
+
+        void setLink(String text, Path linkPath) {
+            mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
+            mStatus.setText("");
         }
     }
 }

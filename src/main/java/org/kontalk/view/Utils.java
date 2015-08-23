@@ -26,6 +26,7 @@ import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.utils.filefilter.ImageFilesFilter;
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -38,11 +39,13 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
 import javax.swing.Icon;
@@ -130,6 +133,20 @@ final class Utils {
         area.setOpaque(false);
         area.setFontSizeAndStyle(13, true, false);
         return area;
+    }
+
+    static Runnable createLinkRunnable(final Path path) {
+        return new Runnable () {
+            @Override
+            public void run () {
+                Desktop dt = Desktop.getDesktop();
+                try {
+                    dt.open(path.toFile());
+                } catch (IOException ex) {
+                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
+                }
+            }
+        };
     }
 
     static String getErrorText(KonException ex) {

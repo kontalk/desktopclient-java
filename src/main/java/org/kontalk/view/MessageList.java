@@ -18,8 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.label.WebLinkLabel;
-import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.UnselectableListModel;
 import com.alee.laf.menu.WebMenuItem;
@@ -31,14 +29,12 @@ import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Date;
 import java.util.HashSet;
@@ -71,6 +67,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
+import org.kontalk.view.ComponentUtils.AttachmentPanel;
 
 
 /**
@@ -222,9 +219,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         private WebTextPane mTextPane;
         private WebPanel mStatusPanel;
         private WebLabel mStatusIconLabel;
+        private AttachmentPanel mAttPanel = null;
         private int mPreferredTextWidth;
         private boolean mCreated = false;
-        private String mImagePath = "";
 
         MessageItem(KonMessage message) {
             super(message);
@@ -487,50 +484,30 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         // attachment / image, note: loading many images is very slow
         private void updateAttachment() {
-            // remove possible old component (replacing does not work right)
-            BorderLayout layout = (BorderLayout) mContentPanel.getLayout();
-            Component oldComp = layout.getLayoutComponent(BorderLayout.SOUTH);
-            if (oldComp != null)
-                mContentPanel.remove(oldComp);
-
             Optional<Attachment> optAttachment = mValue.getContent().getAttachment();
             if (!optAttachment.isPresent())
                 return;
-
             Attachment att = optAttachment.get();
-            String fName = att.getFile().toString();
 
-            WebLinkLabel attLabel = new WebLinkLabel();
-
-            // path to file
-            Path linkPath = mView.getControl().getFilePath(att);
-
-            // image preview
-            if (mImagePath.isEmpty()) {
-                Optional<Path> optImagePath = mView.getControl().getImagePath(mValue);
-                mImagePath = optImagePath.isPresent() ? optImagePath.get().toString() : "";
-
-                if (!mImagePath.isEmpty()) {
-                    // file should be present and should be an image, show it
-                    ImageLoader.setImageIconAsync(attLabel, mImagePath);
-                }
+            if (mAttPanel == null) {
+                mAttPanel = new AttachmentPanel();
+                mContentPanel.add(mAttPanel, BorderLayout.SOUTH);
             }
 
-            // show a link to the file
+            // image thumbnail preview
+            Optional<Path> optImagePath = mView.getControl().getImagePath(mValue);
+            String imagePath = optImagePath.isPresent() ? optImagePath.get().toString() : "";
+            mAttPanel.setImage(imagePath);
+
+            // link to the file
+            Path linkPath = mView.getControl().getFilePath(att);
             if (!linkPath.toString().isEmpty()) {
-                attLabel.setLink(mImagePath.isEmpty() ?
+                mAttPanel.setLink(imagePath.isEmpty() ?
                         linkPath.getFileName().toString() :
                         "",
-                        createLinkRunnable(linkPath));
-            }
-
-            WebPanel attPanel = new GroupPanel(View.GAP_SMALL, false);
-            if (mImagePath.isEmpty())
-                attPanel.add(new WebLabel(Tr.tr("Attachment:")).setItalicFont());
-
-            attPanel.add(attLabel);
-
-            if (mImagePath.isEmpty()) {
+                        linkPath);
+            } else {
+                // status text
                 String statusText = Tr.tr("loading...");
                 switch (att.getDownloadProgress()) {
                     case -1: statusText = Tr.tr("stalled"); break;
@@ -538,10 +515,8 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                     case -2: statusText = Tr.tr("downloading..."); break;
                     case -3: statusText = Tr.tr("download failed"); break;
                 }
-                attPanel.add(new WebLabel(statusText));
+                mAttPanel.setStatus(statusText);
             }
-
-            mContentPanel.add(attPanel, BorderLayout.SOUTH);
         }
 
         private WebPopupMenu getPopupMenu() {
@@ -636,20 +611,6 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 from = from.substring(0, 8) + "...";
         }
         return from;
-    }
-
-    private static Runnable createLinkRunnable(final Path path) {
-        return new Runnable () {
-            @Override
-            public void run () {
-                Desktop dt = Desktop.getDesktop();
-                try {
-                    dt.open(path.toFile());
-                } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
-                }
-            }
-        };
     }
 
     private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();
