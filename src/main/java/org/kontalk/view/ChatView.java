@@ -86,7 +86,6 @@ import static org.kontalk.view.View.MARGIN_SMALL;
  */
 final class ChatView extends WebPanel implements Observer {
 
-    private static final int MAX_ATT_SIZE = 10 * 1024 * 1024;
     private static final Tika TIKA_INSTANCE = new Tika();
 
     private final View mView;
@@ -208,7 +207,7 @@ final class ChatView extends WebPanel implements Observer {
                 Tr.tr("Supported files")) {
             @Override
             public boolean accept(File file) {
-                return file.length() <= MAX_ATT_SIZE &&
+                return file.length() <= AttachmentManager.MAX_ATT_SIZE &&
                         AttachmentManager.SUPPORTED_MIME_TYPES.contains(
                                 TIKA_INSTANCE.detect(file.getName()));
             }
@@ -220,7 +219,7 @@ final class ChatView extends WebPanel implements Observer {
                 .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL);
         TooltipManager.addTooltip(fileButton,
                 Tr.tr("Send File - max. size:") + " " +
-                        FileUtils.byteCountToDisplaySize(MAX_ATT_SIZE));
+                        FileUtils.byteCountToDisplaySize(AttachmentManager.MAX_ATT_SIZE));
         fileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {

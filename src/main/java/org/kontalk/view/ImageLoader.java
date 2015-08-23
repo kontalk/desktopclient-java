@@ -22,7 +22,6 @@ import com.alee.extended.label.WebLinkLabel;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
-import java.util.logging.Logger;
 import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
 import org.kontalk.system.AttachmentManager;
@@ -33,7 +32,6 @@ import org.kontalk.util.MediaUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 class ImageLoader {
-    private static final Logger LOGGER = Logger.getLogger(ImageLoader.class.getName());
 
     private ImageLoader() {}
 
@@ -50,7 +48,7 @@ class ImageLoader {
         private final WebLinkLabel view;
         private final String path;
 
-        public AsyncLoader(WebLinkLabel view, String path) {
+        AsyncLoader(WebLinkLabel view, String path) {
             this.view = view;
             this.path = path;
         }

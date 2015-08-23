@@ -21,6 +21,7 @@ package org.kontalk.util;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.Map;
+import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONObject;
 
 public final class EncodingUtils {
@@ -78,8 +79,7 @@ public final class EncodingUtils {
     }
 
     public static String getJSONString(Map<?, ?> map, String key) {
-        String value = (String) map.get(key);
-        return value == null ? "" : value;
+        return StringUtils.defaultString((String) map.get(key));
     }
 
     public static byte[] base64ToBytes(String base64) {

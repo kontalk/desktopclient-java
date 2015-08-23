@@ -68,7 +68,6 @@ final class LinkUtils {
         // style for all links in a document
         Style urlStyle = doc.addStyle(null, DEFAULT_STYLE);
         StyleConstants.setForeground(urlStyle, Color.BLUE);
-        StyleConstants.setUnderline(urlStyle, true);
         // only for identifying URLs
         urlStyle.addAttribute(URL_ATT_NAME, new Object());
         try {

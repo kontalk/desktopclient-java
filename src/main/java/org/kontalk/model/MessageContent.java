@@ -268,10 +268,6 @@ public class MessageContent {
             return mLength;
         }
 
-        public boolean hasFile() {
-            return !mFile.toString().isEmpty();
-        }
-
        /**
         * Return the filename (download) or path to the local file (upload).
         */

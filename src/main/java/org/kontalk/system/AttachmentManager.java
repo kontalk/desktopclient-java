@@ -64,6 +64,7 @@ public class AttachmentManager implements Runnable {
 
     public static final Dimension THUMBNAIL_DIM = new Dimension(300, 200);
     public static final String THUMBNAIL_MIME = "image/jpeg";
+    public static final int MAX_ATT_SIZE = 10 * 1024 * 1024;
 
     // server and Android client do not want other types
     public static final List<String> SUPPORTED_MIME_TYPES = Arrays.asList(
@@ -80,7 +81,7 @@ public class AttachmentManager implements Runnable {
 
     // TODO get this from server
     private static final String UPLOAD_URL = "https://beta.kontalk.net:5980/upload";
-
+    
     private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
 
     private final Control mControl;

@@ -560,11 +560,11 @@ public final class Control {
         }
 
         public void connect(char[] password) {
-            Optional<PersonalKey> optKey = this.loadKey(password);
-            if (!optKey.isPresent())
+            PersonalKey key = this.keyOrNull(password);
+            if (key == null)
                 return;
 
-            mClient.connect(optKey.get());
+            mClient.connect(key);
         }
 
         public void disconnect() {
@@ -695,29 +695,28 @@ public final class Control {
 
         /* private */
 
-        private Optional<PersonalKey> loadKey(char[] password) {
+        private PersonalKey keyOrNull(char[] password) {
             AccountLoader account = AccountLoader.getInstance();
             Optional<PersonalKey> optKey = account.getPersonalKey();
             if (optKey.isPresent())
-                return optKey;
+                return optKey.get();
 
             if (password.length == 0) {
                 if (account.isPasswordProtected()) {
                     this.changed(new ViewEvent.PasswordSet());
-                    return Optional.empty();
+                    return null;
                 }
 
                 password = Config.getInstance().getString(Config.ACC_PASS).toCharArray();
             }
 
             try {
-                optKey = Optional.of(account.load(password));
+                return account.load(password);
             } catch (KonException ex) {
                 // something wrong with the account, tell view
                 Control.this.handleException(ex);
-                return Optional.empty();
+                return null;
             }
-            return optKey;
         }
 
         /**
