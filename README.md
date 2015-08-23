@@ -1,58 +1,35 @@
 kontalk-java-client
 ===================
 
-A platform independent Java client for Kontalk (http://www.kontalk.org).
+A platform independent Java client for Kontalk (http://www.kontalk.org). Includes connectivity to the Jabber network!
 
-This desktop client uses your existing Android Kontalk account (for the new Tigase server).
-The Android client version 3.0 is required to export your account-key which
-is needed by the desktop client.
+The desktop client uses your existing Kontalk account from the [Android client](https://github.com/kontalk/androidclient/blob/master/README.md#kontalk-official-android-client). Instructions for exporting the key [here](https://github.com/kontalk/androidclient/wiki/Export-personal-key-to-another-device).
 
-FAQ: Some questions are answered [here](https://github.com/kontalk/desktopclient-java/wiki) 
+**FAQ:** Common questions are answered [HERE!](https://github.com/kontalk/desktopclient-java/wiki)
 
-You can get the Android-App v3.0Beta4 (or newer) from
-- [F-Droid](https://f-droid.org/repository/browse/?fdid=org.kontalk)
-- or the latest release [here](https://github.com/kontalk/androidclient/releases)
+## Software Dependencies
 
-## Current key features:
+- Java 8
+
+## Key Features
 
 - connecting to Kontalk server with an already existing Kontalk account
 - automatically adding XMPP roster entries from server
-- automatically requesting/adding public keys for known user
-- sending/receiving (un-/)encrypted text messages from/to Kontalk server
-- sending/requesting server receipts according to Kontalk XMPP extension
+- manually adding arbitrary Kontalk or Jabber user
+- automatically requesting/adding public keys for other Kontalk user
+- sending/receiving (encrypted) text messages from/to Kontalk user
+- sending/receiving (plain) text messages from/to arbitrary Jabber/XMPP user (clients like [Pidgin](https://pidgin.im/) or [Conversations](https://github.com/siacs/Conversations))
+- sending/requesting server receipts according to XMPP extension
 - ability to block all messages for specific user
 - receiving files send from the Android client
 
 **Note: private key and messages are saved unencrypted and can be read by other
 applications on your computer!**
 
-## Software Dependencies
+## Support us
 
-- Java 8 / JDK 8
+* If you are missing a feature or found a bug [report it!](https://github.com/kontalk/desktopclient-java/issues)
 
-## For building
+* Help us with [translations](https://translate.kontalk.org) to spread Kontalk around the world!
 
-- [Gradle](http://gradle.org) (wrapper included in project)
-
-## Run the desktop client from source
-
-See [here](https://github.com/kontalk/desktopclient-java/wiki#how-can-i-compile-the-code).
-
-## Included dependencies
-
-### as GIT submodule:
-
--  Kontalk-common-java classes (https://github.com/kontalk/client-common-java)
-
-### as Maven dependencies:
-
-- Smack (https://igniterealtime.org/projects/smack/index.jsp)
-- WebLaF (http://weblookandfeel.com)
-- Bouncy Castle (provider and PGP) (https://www.bouncycastle.org/java.html)
-- Apache Commons (configuration, lang and logging) (http://commons.apache.org) 
-- SQLite JDBC (https://bitbucket.org/xerial/sqlite-jdbc)
-- and more...
-
-### as Jar files
- 
-- easyogg
+* Code contributions / pull requests are welcome!
