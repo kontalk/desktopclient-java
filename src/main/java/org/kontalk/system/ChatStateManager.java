@@ -26,11 +26,11 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
-import org.kontalk.model.KonThread;
-import org.kontalk.model.User;
+import org.kontalk.model.Chat;
+import org.kontalk.model.Contact;
 
 /**
- * Manager handling own chat status for all threads.
+ * Manager handling own chat status for all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatStateManager {
@@ -38,22 +38,22 @@ final class ChatStateManager {
     private static final int COMPOSING_TO_PAUSED = 15; // seconds
 
     private final Client mClient;
-    private final Map<KonThread, MyChatState> mChatStateCache = new HashMap<>();
+    private final Map<Chat, MyChatState> mChatStateCache = new HashMap<>();
     private final Timer mTimer = new Timer();
 
     public ChatStateManager(Client client) {
         mClient = client;
     }
 
-    void handleOwnChatStateEvent(KonThread thread, ChatState state) {
-        if (!mChatStateCache.containsKey(thread)) {
+    void handleOwnChatStateEvent(Chat chat, ChatState state) {
+        if (!mChatStateCache.containsKey(chat)) {
             if (state == ChatState.gone)
                 // weare and stay at the default state
                 return;
-            mChatStateCache.put(thread, new MyChatState(thread));
+            mChatStateCache.put(chat, new MyChatState(chat));
         }
 
-        mChatStateCache.get(thread).handleState(state);
+        mChatStateCache.get(chat).handleState(state);
     }
 
     void imGone() {
@@ -62,12 +62,12 @@ final class ChatStateManager {
     }
 
     private class MyChatState {
-        private final KonThread mThread;
+        private final Chat mChat;
         private ChatState mCurrentState;
         private TimerTask mScheduledStateSet = null;
 
-        private MyChatState(KonThread thread) {
-            mThread = thread;
+        private MyChatState(Chat chat) {
+            mChat = chat;
         }
 
         private void handleState(ChatState state) {
@@ -96,17 +96,17 @@ final class ChatStateManager {
             // currently set states from XEP-0085: active, inactive, composing
             mCurrentState = state;
 
-            Set<User> user = mThread.getUser();
+            Set<Contact> contacts = mChat.getContacts();
 
-            if (user.size() > 1 || state == ChatState.active)
+            if (contacts.size() > 1 || state == ChatState.active)
                 // don't send for groups
                 // 'active' is send inside a message
                 return;
 
-            for (User oneUser : user)
-                if (!oneUser.isMe() && !oneUser.isBlocked())
-                    mClient.sendChatState(oneUser.getJID(),
-                            mThread.getXMPPID(),
+            for (Contact contact : contacts)
+                if (!contact.isMe() && !contact.isBlocked())
+                    mClient.sendChatState(contact.getJID(),
+                            mChat.getXMPPID(),
                             state);
         }
     }

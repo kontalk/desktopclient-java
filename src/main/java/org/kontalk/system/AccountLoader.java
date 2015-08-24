@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateException;
 import java.util.Optional;
@@ -37,7 +38,6 @@ import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.misc.KonException;
-import org.kontalk.Kontalk;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 
@@ -49,11 +49,13 @@ public final class AccountLoader {
 
     private static AccountLoader INSTANCE = null;
 
+    private final Path mKeyDir;
     private final Config mConf;
 
     private PersonalKey mKey = null;
 
-    private AccountLoader(Config config) {
+    private AccountLoader(Path keyDir, Config config) {
+        mKeyDir = keyDir;
         mConf = config;
     }
 
@@ -63,8 +65,8 @@ public final class AccountLoader {
 
     PersonalKey load(char[] password) throws KonException {
         // read key files
-        byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
-        byte[] bridgeCertData = readFile(BRIDGE_CERT_FILENAME);
+        byte[] privateKeyData = this.readArmoredFile(PRIVATE_KEY_FILENAME);
+        byte[] bridgeCertData = this.readFile(BRIDGE_CERT_FILENAME);
 
         // load key
         try {
@@ -106,7 +108,7 @@ public final class AccountLoader {
         }
 
         // key seems valid. Copy to config dir
-        writeBytesToFile(bridgeCertData, BRIDGE_CERT_FILENAME, false);
+        this.writeBytesToFile(bridgeCertData, BRIDGE_CERT_FILENAME, false);
         this.writePrivateKey(encodedPrivateKey, password, new char[0]);
 
         // success! use the new key
@@ -114,7 +116,7 @@ public final class AccountLoader {
     }
 
     public void setPassword(char[] oldPassword, char[] newPassword) throws KonException {
-        byte[] privateKeyData = readArmoredFile(PRIVATE_KEY_FILENAME);
+        byte[] privateKeyData = this.readArmoredFile(PRIVATE_KEY_FILENAME);
         this.writePrivateKey(privateKeyData, oldPassword, newPassword);
     }
 
@@ -139,16 +141,16 @@ public final class AccountLoader {
             LOGGER.log(Level.WARNING, "can't change password", ex);
             throw new KonException(KonException.Error.CHANGE_PASS, ex);
         }
-        writeBytesToFile(privateKeyData, PRIVATE_KEY_FILENAME, true);
+        this.writeBytesToFile(privateKeyData, PRIVATE_KEY_FILENAME, true);
 
         // new saved password
         String savedPass = unset ? new String(newPassword) : "";
         mConf.setProperty(Config.ACC_PASS, savedPass);
     }
 
-    boolean isPresent() {
-        return fileExists(PRIVATE_KEY_FILENAME) &&
-                fileExists(BRIDGE_CERT_FILENAME);
+    boolean accountIsPresent() {
+        return this.fileExists(PRIVATE_KEY_FILENAME) &&
+                this.fileExists(BRIDGE_CERT_FILENAME);
     }
 
     public boolean isPasswordProtected() {
@@ -156,8 +158,41 @@ public final class AccountLoader {
         return mConf.getString(Config.ACC_PASS).isEmpty();
     }
 
-    private static boolean fileExists(String filename) {
-        return new File(Kontalk.getConfigDir(), filename).isFile();
+    private byte[] readArmoredFile(String filename) throws KonException {
+        try {
+            return disarm(this.readFile(filename));
+        } catch (IOException ex) {
+             LOGGER.warning("can't read armored key file: "+ex.getLocalizedMessage());
+            throw new KonException(KonException.Error.READ_FILE, ex);
+        }
+    }
+
+    private byte[] readFile(String filename) throws KonException {
+        byte[] bytes = null;
+        try {
+            bytes = Files.readAllBytes(new File(mKeyDir.toString(), filename).toPath());
+        } catch (IOException ex) {
+            LOGGER.warning("can't read key file: "+ex.getLocalizedMessage());
+            throw new KonException(KonException.Error.READ_FILE, ex);
+        }
+        return bytes;
+    }
+
+    private void writeBytesToFile(byte[] bytes, String filename, boolean armored) throws KonException {
+        try {
+            OutputStream outStream = new FileOutputStream(new File(mKeyDir.toString(), filename));
+            if (armored)
+                outStream = new ArmoredOutputStream(outStream);
+            outStream.write(bytes);
+            outStream.close();
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't write key file", ex);
+            throw new KonException(KonException.Error.WRITE_FILE, ex);
+        }
+    }
+
+    private boolean fileExists(String filename) {
+        return new File(mKeyDir.toString(), filename).isFile();
     }
 
     private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
@@ -172,48 +207,21 @@ public final class AccountLoader {
         return bytes;
     }
 
-    private static byte[] readArmoredFile(String filename) throws KonException {
-        try {
-            return disarm(readFile(filename));
-        } catch (IOException ex) {
-             LOGGER.warning("can't read armored key file: "+ex.getLocalizedMessage());
-            throw new KonException(KonException.Error.READ_FILE, ex);
-        }
-    }
-
     private static byte[] disarm(byte[] key) throws IOException {
         return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
     }
 
-    private static byte[] readFile(String filename) throws KonException {
-        String configDir = Kontalk.getConfigDir();
-        byte[] bytes = null;
-        try {
-            bytes = Files.readAllBytes(new File(configDir, filename).toPath());
-        } catch (IOException ex) {
-            LOGGER.warning("can't read key file: "+ex.getLocalizedMessage());
-            throw new KonException(KonException.Error.READ_FILE, ex);
+    public synchronized static void initialize(Path keyDir)  {
+        if (INSTANCE != null) {
+            LOGGER.warning("account loader already initialized");
+            return;
         }
-        return bytes;
-    }
-
-    private static void writeBytesToFile(byte[] bytes, String filename, boolean armored) throws KonException {
-        String configDir = Kontalk.getConfigDir();
-        try {
-            OutputStream outStream = new FileOutputStream(new File(configDir, filename));
-            if (armored)
-                outStream = new ArmoredOutputStream(outStream);
-            outStream.write(bytes);
-            outStream.close();
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't write key file", ex);
-            throw new KonException(KonException.Error.WRITE_FILE, ex);
-        }
+        INSTANCE = new AccountLoader(keyDir, Config.getInstance());
     }
 
     public synchronized static AccountLoader getInstance() {
         if (INSTANCE == null)
-            INSTANCE = new AccountLoader(Config.getInstance());
+            throw new IllegalStateException("account loader not initialized");
         return INSTANCE;
     }
 }

@@ -19,16 +19,28 @@
 package org.kontalk.view;
 
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
+import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
+import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.splitpane.WebSplitPane;
+import com.alee.laf.text.WebTextArea;
 import com.alee.laf.viewport.WebViewport;
+import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.hotkey.HotkeyData;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.filefilter.AllFilesFilter;
+import com.alee.utils.filefilter.CustomFileFilter;
+import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -38,8 +50,11 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,33 +62,49 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
+import javax.swing.Box;
+import javax.swing.JFileChooser;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
-import org.kontalk.model.KonThread;
-import org.kontalk.model.ThreadList;
-import org.kontalk.model.User;
+import javax.swing.event.DocumentEvent;
+import org.apache.commons.io.FileUtils;
+import org.apache.tika.Tika;
+import org.jivesoftware.smackx.chatstates.ChatState;
+import org.kontalk.model.Chat;
+import org.kontalk.model.ChatList;
+import org.kontalk.model.Contact;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Config;
+import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
+import static org.kontalk.view.View.MARGIN_SMALL;
 
 /**
- * Pane that shows the currently selected thread.
+ * Pane that shows the currently selected chat.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ThreadView extends WebPanel implements Observer {
+final class ChatView extends WebPanel implements Observer {
+
+    private static final Tika TIKA_INSTANCE = new Tika();
 
     private final View mView;
 
     private final WebLabel mTitleLabel;
     private final WebLabel mSubLabel;
     private final WebScrollPane mScrollPane;
-    private final Map<Integer, MessageList> mThreadCache = new HashMap<>();
+    private final WebTextArea mSendTextArea;
+    private final WebButton mSendButton;
+    private final WebFileChooser fileChooser;
+
+    private final Map<Integer, MessageList> mChatCache = new HashMap<>();
+
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
 
-    ThreadView(View view, Component sendTextField, Component sendButton) {
+    ChatView(View view) {
         mView = view;
 
         WebPanel titlePanel = new WebPanel(false,
@@ -85,7 +116,8 @@ final class ThreadView extends WebPanel implements Observer {
         mSubLabel = new WebLabel();
         mSubLabel.setFontSize(11);
         mSubLabel.setForeground(Color.GRAY);
-        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel), BorderLayout.CENTER);
+        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel),
+                BorderLayout.CENTER);
 
         final WebToggleButton editButton = new WebToggleButton(
                 Utils.getIcon("ic_ui_menu.png"));
@@ -95,13 +127,14 @@ final class ThreadView extends WebPanel implements Observer {
         editButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                    ThreadView.this.showPopup(editButton);
+                    ChatView.this.showPopup(editButton);
             }
         });
         titlePanel.add(editButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
-        mScrollPane = new ScrollPane(this);
+        mScrollPane = new ScrollPane(this)
+                .setShadeWidth(0);
         mScrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
@@ -120,18 +153,93 @@ final class ThreadView extends WebPanel implements Observer {
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Optional<BufferedImage> optBG =
-                        ThreadView.this.getCurrentBackground().updateNowOrLater();
+                        ChatView.this.getCurrentBackground().updateNowOrLater();
                 // if there is something to draw, draw it now even if its old
                 if (optBG.isPresent())
                     g.drawImage(optBG.get(), 0, 0, this.getWidth(), this.getHeight(), null);
             }
         });
 
+        // text area
+        mSendTextArea = new WebTextArea();
+        mSendTextArea.setMargin(View.MARGIN_SMALL);
+        mSendTextArea.setLineWrap(true);
+        mSendTextArea.setWrapStyleWord(true);
+        mSendTextArea.setFontSize(13);
+        mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
+            @Override
+            public void documentChanged(DocumentEvent e) {
+                ChatView.this.handleKeyTypeEvent(e.getDocument().getLength() == 0);
+            }
+        });
+        EventQueue.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                mSendTextArea.requestFocusInWindow();
+            }
+        });
+
         WebPanel bottomPanel = new WebPanel();
-        WebScrollPane textFieldScrollPane = new ScrollPane(sendTextField);
-        bottomPanel.add(textFieldScrollPane, BorderLayout.CENTER);
-        bottomPanel.add(sendButton, BorderLayout.EAST);
-        bottomPanel.setMinimumSize(new Dimension(0, 32));
+        bottomPanel.setMinimumSize(new Dimension(0, 64));
+
+        // send button
+        mSendButton = new WebButton(Tr.tr("Send"))
+                .setRound(0)
+                //.setShadeWidth(0)
+                .setBottomBgColor(titlePanel.getBackground())
+                .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL)
+                .setFontStyle(true, false);
+        TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
+        mSendButton.setEnabled(false);
+        mSendButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Component focusOwner = SwingUtilities.getWindowAncestor(ChatView.this).getFocusOwner();
+                if (focusOwner != mSendTextArea && focusOwner != mSendButton)
+                    return;
+                ChatView.this.sendMsg();
+            }
+        });
+        fileChooser = new WebFileChooser();
+        fileChooser.setMultiSelectionEnabled(false);
+        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        fileChooser.setFileFilter(new CustomFileFilter(AllFilesFilter.ICON,
+                Tr.tr("Supported files")) {
+            @Override
+            public boolean accept(File file) {
+                return file.length() <= AttachmentManager.MAX_ATT_SIZE &&
+                        AttachmentManager.SUPPORTED_MIME_TYPES.contains(
+                                TIKA_INSTANCE.detect(file.getName()));
+            }
+        });
+//        mAttField.setPreferredWidth(150);
+        WebButton fileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
+                .setRound(0)
+                .setBottomBgColor(titlePanel.getBackground())
+                .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL);
+        TooltipManager.addTooltip(fileButton,
+                Tr.tr("Send File - max. size:") + " " +
+                        FileUtils.byteCountToDisplaySize(AttachmentManager.MAX_ATT_SIZE));
+        fileButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ChatView.this.showFileDialog();
+            }
+        });
+
+        WebPanel textBarPanel = new GroupPanel(GroupingType.fillMiddle, 0,
+                fileButton, Box.createGlue(), mSendButton)
+                .setUndecorated(false)
+                .setWebColoredBackground(false)
+                .setShadeWidth(0);
+        textBarPanel.setPaintBottom(false);
+        bottomPanel.add(textBarPanel, BorderLayout.NORTH);
+
+        bottomPanel.add(new ScrollPane(mSendTextArea)
+                .setShadeWidth(0)
+                .setRound(0),
+                BorderLayout.CENTER);
+
         WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT,
                 mScrollPane,
                 bottomPanel);
@@ -148,38 +256,38 @@ final class ThreadView extends WebPanel implements Observer {
         return Optional.of((MessageList) view);
     }
 
-    Optional<KonThread> getCurrentThread() {
+    Optional<Chat> getCurrentChat() {
         Optional<MessageList> optview = this.getCurrentList();
         return optview.isPresent() ?
-                Optional.of(optview.get().getThread()) :
-                Optional.<KonThread>empty();
+                Optional.of(optview.get().getChat()) :
+                Optional.<Chat>empty();
     }
 
-    void filterCurrentThread(String searchText) {
+    void filterCurrentChat(String searchText) {
         Optional<MessageList> optList = this.getCurrentList();
         if (!optList.isPresent())
             return;
         optList.get().filterItems(searchText);
     }
 
-    void showThread(KonThread thread) {
-        List<User> user = new ArrayList<>(thread.getUser());
-        mTitleLabel.setText(user.size() == 1 ? Utils.name(user.get(0)) :
-                !thread.getSubject().isEmpty() ? thread.getSubject() :
+    void showChat(Chat chat) {
+        List<Contact> contact = new ArrayList<>(chat.getContacts());
+        mTitleLabel.setText(contact.size() == 1 ? Utils.name(contact.get(0)) :
+                !chat.getSubject().isEmpty() ? chat.getSubject() :
                 Tr.tr("Group Chat"));
         // TODO update
-        mSubLabel.setText(user.size() == 1 ?
-                Utils.mainStatus(user.get(0)) :
-                Utils.userNameList(thread.getUser()));
-        if (!mThreadCache.containsKey(thread.getID())) {
-            MessageList newMessageList = new MessageList(mView, this, thread);
-            thread.addObserver(newMessageList);
-            mThreadCache.put(thread.getID(), newMessageList);
+        mSubLabel.setText(contact.size() == 1 ?
+                Utils.mainStatus(contact.get(0), true) :
+                Utils.contactNameList(chat.getContacts()));
+        if (!mChatCache.containsKey(chat.getID())) {
+            MessageList newMessageList = new MessageList(mView, this, chat);
+            chat.addObserver(newMessageList);
+            mChatCache.put(chat.getID(), newMessageList);
         }
-        MessageList list = mThreadCache.get(thread.getID());
+        MessageList list = mChatCache.get(chat.getID());
         mScrollPane.getViewport().setView(list);
 
-        thread.setRead();
+        chat.setRead();
     }
 
     void setColor(Color color) {
@@ -187,7 +295,7 @@ final class ThreadView extends WebPanel implements Observer {
     }
 
     void loadDefaultBG() {
-        String imagePath = Config.getInstance().getString(Config.VIEW_THREAD_BG);
+        String imagePath = Config.getInstance().getString(Config.VIEW_CHAT_BG);
         mDefaultBG = !imagePath.isEmpty() ?
                 new Background(mScrollPane.getViewport(), imagePath) :
                 new Background(mScrollPane.getViewport());
@@ -204,7 +312,7 @@ final class ThreadView extends WebPanel implements Observer {
         return optBG.get();
     }
 
-    Optional<Background> createBG(KonThread.ViewSettings s){
+    Optional<Background> createBG(Chat.ViewSettings s){
         JViewport p = this.mScrollPane.getViewport();
         if (s.getBGColor().isPresent()) {
             Color c = s.getBGColor().get();
@@ -220,6 +328,37 @@ final class ThreadView extends WebPanel implements Observer {
         mScrollDown = true;
     }
 
+    void setHotkeys(final boolean enterSends) {
+        for (KeyListener l : mSendTextArea.getKeyListeners())
+            mSendTextArea.removeKeyListener(l);
+
+        mSendTextArea.addKeyListener(new KeyListener() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
+                        e.getModifiersEx() == KeyEvent.CTRL_DOWN_MASK) {
+                    e.consume();
+                    mSendTextArea.append(System.getProperty("line.separator"));
+                }
+                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
+                        e.getModifiers() == 0) {
+                    // only ignore
+                    e.consume();
+                }
+            }
+            @Override
+            public void keyReleased(KeyEvent e) {
+            }
+            @Override
+            public void keyTyped(KeyEvent e) {
+            }
+        });
+
+        mSendButton.removeHotkeys();
+        HotkeyData sendHotkey = enterSends ? Hotkey.ENTER : Hotkey.CTRL_ENTER;
+        mSendButton.addHotkey(sendHotkey, TooltipWay.up);
+    }
+
     @Override
     public void update(Observable o, final Object arg) {
         if (SwingUtilities.isEventDispatchThread()) {
@@ -229,22 +368,22 @@ final class ThreadView extends WebPanel implements Observer {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                ThreadView.this.updateOnEDT(arg);
+                ChatView.this.updateOnEDT(arg);
             }
         });
     }
 
     private void updateOnEDT(Object arg) {
-        if (arg instanceof KonThread) {
-            KonThread thread = (KonThread) arg;
-            if (!ThreadList.getInstance().contains(thread.getID())) {
-                // thread was deleted
-                MessageList viewList = mThreadCache.get(thread.getID());
+        if (arg instanceof Chat) {
+            Chat chat = (Chat) arg;
+            if (!ChatList.getInstance().contains(chat.getID())) {
+                // chat was deleted
+                MessageList viewList = mChatCache.get(chat.getID());
                 if (viewList != null)
                     viewList.clearItems();
-                thread.deleteObserver(viewList);
-                mThreadCache.remove(thread.getID());
-                if(this.getCurrentThread().orElse(null) == thread) {
+                chat.deleteObserver(viewList);
+                mChatCache.remove(chat.getID());
+                if(this.getCurrentChat().orElse(null) == chat) {
                     mScrollPane.setViewportView(null);
                 }
             }
@@ -252,18 +391,59 @@ final class ThreadView extends WebPanel implements Observer {
     }
 
     private void showPopup(final WebToggleButton invoker) {
-        Optional<KonThread> optThread = ThreadView.this.getCurrentThread();
-        if (!optThread.isPresent())
+        Optional<Chat> optChat = ChatView.this.getCurrentChat();
+        if (!optChat.isPresent())
             return;
         if (mPopup == null)
             mPopup = new ComponentUtils.ModalPopup(invoker);
 
         mPopup.removeAll();
-        mPopup.add(new ThreadDetails(mPopup, optThread.get()));
+        mPopup.add(new ChatDetails(mPopup, optChat.get()));
         mPopup.showPopup();
     }
 
-    /** A background image of thread view with efficient async reloading. */
+    private void handleKeyTypeEvent(boolean empty) {
+        mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
+
+        Optional<Chat> optChat = this.getCurrentChat();
+        if (!optChat.isPresent())
+            return;
+
+        // workaround: clearing the text area is not a key event
+        if (!empty)
+            mView.getControl().handleOwnChatStateEvent(optChat.get(), ChatState.composing);
+    }
+
+    private void sendMsg() {
+        Optional<Chat> optChat = this.getCurrentChat();
+        if (!optChat.isPresent())
+            // now current chat
+            return;
+
+       //List<File> attachments = mAttField.getSelectedFiles();
+//       if (!attachments.isEmpty())
+//           mView.getControl().sendAttachment(optChat.get(), attachments.get(0).toPath());
+//       else
+        mView.getControl().sendText(optChat.get(), mSendTextArea.getText());
+
+        mSendTextArea.setText("");
+    }
+
+    private void showFileDialog() {
+        if (fileChooser.showOpenDialog(ChatView.this) != WebFileChooser.APPROVE_OPTION)
+            return;
+
+        File file = fileChooser.getSelectedFile();
+        fileChooser.setCurrentDirectory(file.toPath().getParent().toString());
+
+        Optional<Chat> optChat = this.getCurrentChat();
+        if (!optChat.isPresent())
+            return;
+
+        mView.getControl().sendAttachment(optChat.get(), file.toPath());
+    }
+
+    /** A background image of chat view with efficient async reloading. */
     final class Background implements ImageObserver {
         private final Component mParent;
         // background image from resource or user selected
@@ -279,19 +459,19 @@ final class ThreadView extends WebPanel implements Observer {
             mCustomColor = color;
         }
 
-        /** Default, no thread specific settings. */
+        /** Default, no chat specific settings. */
         Background(Component parent) {
-            //mOrigin = View.getImage("thread_bg.png");
+            //mOrigin = View.getImage("chat_bg.png");
             this(parent, null, new Color(255, 255, 255, 255));
         }
 
-        /** Image set by user (global or only for thread). */
+        /** Image set by user (global or only for chat). */
         Background(Component parent, String imagePath) {
             // image loaded async!
             this(parent, Toolkit.getDefaultToolkit().createImage(imagePath), null);
         }
 
-        /** Thread specific color. */
+        /** Chat specific color. */
         Background(Component parent, Color bottomColor) {
             this(parent, null, bottomColor);
         }
@@ -328,7 +508,7 @@ final class ThreadView extends WebPanel implements Observer {
                 this.updateCachedBG(null);
                 return true;
             }
-            Image scaledImage = ImageLoader.scale(mOrigin,
+            Image scaledImage = MediaUtils.scale(mOrigin,
                     mParent.getWidth(),
                     mParent.getHeight(),
                     true);
@@ -352,7 +532,7 @@ final class ThreadView extends WebPanel implements Observer {
                         0, 0, mCustomColor,
                         width, 0, new Color(0, 0, 0, 0));
                 cachedG.setPaint(p2);
-                cachedG.fillRect(0, 0, width, ThreadView.this.getHeight());
+                cachedG.fillRect(0, 0, width, ChatView.this.getHeight());
             }
             if (scaledImage == null)
                 return;

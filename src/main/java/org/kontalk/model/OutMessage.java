@@ -18,12 +18,11 @@
 
 package org.kontalk.model;
 
+import java.net.URI;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
-import org.kontalk.crypto.Coder;
 
 /**
  * Model for a XMPP message that we are sending.
@@ -52,31 +51,35 @@ public final class OutMessage extends KonMessage {
         this.changed(mReceiptStatus);
     }
 
-    public void setError(String condition, String text) {
+    public void setServerError(String condition, String text) {
         if (mReceiptStatus != Status.SENT)
             LOGGER.warning("unexpected status of message with error: "+mReceiptStatus);
         mServerError = new KonMessage.ServerError(condition, text);
         this.setStatus(Status.ERROR);
     }
 
+    public void setAttachmentURL(URI url) {
+        MessageContent.Attachment attachment = this.getAttachment();
+        if (attachment == null)
+            return;
+
+        attachment.setURL(url);
+        this.save();
+    }
+
 public static class Builder extends KonMessage.Builder {
 
-        public Builder(KonThread thread, User user, boolean encrypted) {
-            super(-1, thread, Direction.OUT, user, new Date());
+        public Builder(Chat chat, Contact contact, boolean encrypted) {
+            super(-1, chat, Direction.OUT, contact, new Date());
 
-            mJID = user.getJID();
+            mJID = contact.getJID();
             mXMPPID = "Kon_" + StringUtils.randomString(8);
             mServerDate = Optional.empty();
             mReceiptStatus = Status.PENDING;
 
-            mCoderStatus = new CoderStatus(
-                // outgoing messages are never saved encrypted
-                encrypted ? Coder.Encryption.DECRYPTED : Coder.Encryption.NOT,
-                // if we want encryption we also want signing, doesn't hurt
-                encrypted ? Coder.Signing.SIGNED : Coder.Signing.NOT,
-                // of course, no errors
-                EnumSet.noneOf(Coder.Error.class)
-            );
+            mCoderStatus = encrypted ?
+                CoderStatus.createToEncrypt() :
+                CoderStatus.createInsecure();
         }
 
         @Override
@@ -85,7 +88,7 @@ public static class Builder extends KonMessage.Builder {
         public void xmppID(String xmppID) { throw new UnsupportedOperationException(); }
 
         @Override
-        public void serverDate(Optional<Date> date) { throw new UnsupportedOperationException(); }
+        public void serverDate(Date date) { throw new UnsupportedOperationException(); }
         @Override
         public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
 

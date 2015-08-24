@@ -26,6 +26,7 @@ import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.utils.filefilter.ImageFilesFilter;
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -38,11 +39,13 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Path;
 import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
 import javax.swing.Icon;
@@ -51,9 +54,8 @@ import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
 
@@ -73,8 +75,6 @@ final class Utils {
 
     static WebFileChooserField createImageChooser(boolean enabled, String path) {
         WebFileChooserField chooser = new WebFileChooserField();
-        chooser.setEnabled(enabled);
-        chooser.getChooseButton().setEnabled(enabled);
         if (!path.isEmpty())
             chooser.setSelectedFile(new File(path));
         chooser.setMultiSelectionEnabled(false);
@@ -133,6 +133,20 @@ final class Utils {
         area.setOpaque(false);
         area.setFontSizeAndStyle(13, true, false);
         return area;
+    }
+
+    static Runnable createLinkRunnable(final Path path) {
+        return new Runnable () {
+            @Override
+            public void run () {
+                Desktop dt = Desktop.getDesktop();
+                try {
+                    dt.open(path.toFile());
+                } catch (IOException ex) {
+                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
+                }
+            }
+        };
     }
 
     static String getErrorText(KonException ex) {
@@ -204,7 +218,7 @@ final class Utils {
         return errorText;
     }
 
-    static String shortenUserName(String jid, int maxLength) {
+    static String shortenContactName(String jid, int maxLength) {
         String local = XmppStringUtils.parseLocalpart(jid);
         local = StringUtils.abbreviate(local, maxLength);
         String domain = XmppStringUtils.parseDomain(jid);
@@ -229,7 +243,7 @@ final class Utils {
     }
 
     static Image getImage(String fileName) {
-        URL imageUrl = ClassLoader.getSystemResource(Kontalk.RES_PATH + fileName);
+        URL imageUrl = ClassLoader.getSystemResource(fileName);
         if (imageUrl == null) {
             LOGGER.warning("can't find icon image resource");
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
@@ -246,37 +260,37 @@ final class Utils {
         return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
     }
 
-    static String userNameList(Set<User> users) {
-        List<String> nameList = new ArrayList<>(users.size());
-        for (User user : users) {
-            nameList.add(user.getName().isEmpty() ?
+    static String contactNameList(Set<Contact> contacts) {
+        List<String> nameList = new ArrayList<>(contacts.size());
+        for (Contact contact : contacts) {
+            nameList.add(contact.getName().isEmpty() ?
                     Tr.tr("<unknown>") :
-                    user.getName());
+                    contact.getName());
         }
         return StringUtils.join(nameList, ", ");
     }
 
-    static String name(User user) {
-        return user.isDeleted() ? Tr.tr("<deleted>") :
-                !user.getName().isEmpty() ? user.getName() :
+    static String name(Contact contact) {
+        return contact.isDeleted() ? Tr.tr("<deleted>") :
+                !contact.getName().isEmpty() ? contact.getName() :
                 Tr.tr("<unknown>");
     }
 
-    static String mainStatus(User u) {
-        User.Subscription subStatus = u.getSubScription();
+    static String mainStatus(Contact u, boolean pre) {
+        Contact.Subscription subStatus = u.getSubScription();
         return u.isMe() ? Tr.tr("Me myself") :
                     u.isBlocked() ? Tr.tr("Blocked") :
-                    u.getOnline() == User.Online.YES ? Tr.tr("Online") :
-                    subStatus == User.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
-                    subStatus == User.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    lastSeen(u, true);
+                    u.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
+                    subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
+                    subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
+                    lastSeen(u, true, pre);
     }
 
-    static String lastSeen(User user, boolean pretty) {
-        String lastSeen = !user.getLastSeen().isPresent() ? Tr.tr("never") :
-                pretty ? Utils.PRETTY_TIME.format(user.getLastSeen().get()) :
-                Utils.MID_DATE_FORMAT.format(user.getLastSeen().get());
-        return Tr.tr("Last seen")+": " + lastSeen;
+    static String lastSeen(Contact contact, boolean pretty, boolean pre) {
+        String lastSeen = !contact.getLastSeen().isPresent() ? Tr.tr("never") :
+                pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
+                Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get());
+        return pre ? Tr.tr("Last seen")+": " + lastSeen : lastSeen;
     }
 
     static boolean confirmDeletion(Component parent, String text) {

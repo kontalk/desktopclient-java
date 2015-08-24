@@ -33,6 +33,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -67,9 +68,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     };
 
     public static final String TABLE = "messages";
-    public static final String COL_THREAD_ID = "thread_id";
+    public static final String COL_CHAT_ID = "thread_id";
     public static final String COL_DIR = "direction";
-    public static final String COL_USER_ID = "user_id";
+    public static final String COL_CONTACT_ID = "user_id";
     public static final String COL_JID = "jid";
     public static final String COL_XMPP_ID = "xmpp_id";
     public static final String COL_DATE = "date";
@@ -82,11 +83,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String COL_SERV_DATE = "server_date";
     public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            COL_THREAD_ID + " INTEGER NOT NULL, " +
+            COL_CHAT_ID + " INTEGER NOT NULL, " +
             // enum, in- or outgoing
             COL_DIR + " INTEGER NOT NULL, " +
-            // from or to user
-            COL_USER_ID + " INTEGER NOT NULL, " +
+            // from or to contact
+            COL_CONTACT_ID + " INTEGER NOT NULL, " +
             // full jid with resource
             COL_JID + " TEXT NOT NULL, " +
             // XMPP ID attribute; only recommended (RFC 6120), but we generate
@@ -112,15 +113,15 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             COL_SERV_DATE + " INTEGER, " +
             // if this combinations is equal we consider messages to be equal
             // (see .equals())
-            "UNIQUE (direction, jid, xmpp_id, date), " +
-            "FOREIGN KEY (thread_id) REFERENCES "+KonThread.TABLE+" (_id), " +
-            "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
+            "UNIQUE ("+COL_DIR+", "+COL_JID+", "+COL_XMPP_ID+", "+COL_DATE+"), " +
+            "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id), " +
+            "FOREIGN KEY ("+COL_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
     private int mID;
-    private final KonThread mThread;
+    private final Chat mChat;
     private final Direction mDir;
-    private final User mUser;
+    private final Contact mContact;
 
     private final String mJID;
     private final String mXMPPID;
@@ -139,10 +140,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     protected KonMessage(Builder builder) {
         mID = builder.mID;
-        mThread = builder.mThread;
+        mChat = builder.mChat;
         mDir = builder.mDir;
         // TODO group message stuff
-        mUser = builder.mUser;
+        mContact = builder.mContact;
         mJID = builder.mJID;
         mXMPPID = builder.mXMPPID;
         mDate = builder.mDate;
@@ -176,16 +177,16 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mID;
     }
 
-    public KonThread getThread() {
-        return mThread;
+    public Chat getChat() {
+        return mChat;
     }
 
     public Direction getDir() {
         return mDir;
     }
 
-    public User getUser() {
-        return mUser;
+    public Contact getContact() {
+        return mContact;
     }
 
     public String getJID() {
@@ -212,6 +213,24 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mContent;
     }
 
+    public void setAttachmentErrors(EnumSet<Coder.Error> errors) {
+        MessageContent.Attachment attachment = this.getAttachment();
+        if (attachment == null)
+            return;
+
+        attachment.getCoderStatus().setSecurityErrors(errors);
+        this.save();
+    }
+
+    protected MessageContent.Attachment getAttachment() {
+        Optional<MessageContent.Attachment> optAttachment = this.getContent().getAttachment();
+        if (!optAttachment.isPresent()) {
+            LOGGER.warning("no attachment!?");
+            return null;
+        }
+        return optAttachment.get();
+    }
+
     public CoderStatus getCoderStatus() {
         return mCoderStatus;
     }
@@ -225,6 +244,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mServerError;
     }
 
+    public void setPreview(Preview preview) {
+        mContent.setPreview(preview);
+        this.save();
+        this.changed(preview);
+    }
+
     /**
      * Save (or insert) this message to/into the database.
      */
@@ -236,7 +261,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_REC_STAT, mReceiptStatus);
-        set.put(COL_CONTENT, mContent.toJSONString());
+        set.put(COL_CONTENT, mContent.toJSON());
         set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
         set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
         set.put(COL_COD_ERR, mCoderStatus.getErrors());
@@ -253,16 +278,16 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         Database db = Database.getInstance();
 
         List<Object> values = new LinkedList<>();
-        values.add(mThread.getID());
+        values.add(mChat.getID());
         values.add(mDir);
-        values.add(mUser.getID());
+        values.add(mContact.getID());
         values.add(mJID);
         values.add(Database.setString(mXMPPID));
         values.add(mDate);
         values.add(mReceiptStatus);
         // i simply don't like to save all possible content explicitly in the
         // database, so we use JSON here
-        values.add(mContent.toJSONString());
+        values.add(mContent.toJSON());
         values.add(mCoderStatus.getEncryption());
         values.add(mCoderStatus.getSigning());
         values.add(mCoderStatus.getErrors());
@@ -285,7 +310,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     @Override
     public String toString() {
-        return "M:id="+mID+",thread="+mThread+",dir="+mDir+",mUser="+mUser
+        return "M:id="+mID+",chat="+mChat+",dir="+mDir+",mContact="+mContact
                 +",jid="+mJID+",xmppid="+mXMPPID
                 +",date="+mDate+",sdate="+mServerDate
                 +",recstat="+mReceiptStatus+",cont="+mContent
@@ -367,17 +392,17 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             Object obj = JSONValue.parse(jsonContent);
             Map<?, ?> map = (Map) obj;
             if (map == null) return new ServerError();
-            String condition = EncodingUtils.getJSON(map, JSON_COND);
-            String text = EncodingUtils.getJSON(map, JSON_TEXT);
+            String condition = EncodingUtils.getJSONString(map, JSON_COND);
+            String text = EncodingUtils.getJSONString(map, JSON_TEXT);
             return new ServerError(condition, text);
         }
     }
 
     static class Builder {
         private final int mID;
-        private final KonThread mThread;
+        private final Chat mChat;
         private final Direction mDir;
-        private final User mUser;
+        private final Contact mContact;
         private final Date mDate;
 
         private ServerError mServerError = new ServerError();
@@ -385,7 +410,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         protected String mJID = null;
         protected String mXMPPID = null;
 
-        protected Optional<Date> mServerDate = null;
+        protected Optional<Date> mServerDate = Optional.empty();
         protected Status mReceiptStatus = null;
         protected MessageContent mContent = null;
 
@@ -393,21 +418,21 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         // used by subclasses and when loading from database
         Builder(int id,
-                KonThread thread,
+                Chat chat,
                 Direction dir,
-                User user,
+                Contact contact,
                 Date date) {
             mID = id;
-            mThread = thread;
+            mChat = chat;
             mDir = dir;
-            mUser = user;
+            mContact = contact;
             mDate = date;
         }
 
         public void jid(String jid) { mJID = jid; }
         public void xmppID(String xmppID) { mXMPPID = xmppID; }
 
-        public void serverDate(Optional<Date> date) { mServerDate = date; }
+        public void serverDate(Date date) { mServerDate = Optional.of(date); }
         public void content(MessageContent content) { mContent = content; }
 
         void receiptStatus(Status status) { mReceiptStatus = status; }

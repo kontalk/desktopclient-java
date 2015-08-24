@@ -30,18 +30,16 @@ import org.kontalk.system.Control;
 
 /**
  * Listen for presence packets. They also may include a custom Kontalk extension
- * for the public key fingerprint of a user.
+ * for the public key fingerprint of a contact.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class PresenceListener implements StanzaListener {
     private static final Logger LOGGER = Logger.getLogger(PresenceListener.class.getName());
 
-    private final Client mClient;
     private final Roster mRoster;
     private final Control mControl;
 
-    public PresenceListener(Client client, Roster roster, Control control) {
-        mClient = client;
+    public PresenceListener(Roster roster, Control control) {
         mRoster = roster;
         mControl = control;
 
@@ -53,7 +51,7 @@ public class PresenceListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.info("got presence packet: "+packet.toXML());
+        LOGGER.config("packet: "+packet);
 
         Presence presence = (Presence) packet;
 

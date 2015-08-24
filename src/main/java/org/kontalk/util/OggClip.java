@@ -28,7 +28,7 @@ import com.jcraft.jorbis.Info;
  *
  * @author kevin
  */
-public class OggClip {
+class OggClip {
 
     private final int BUFSIZE = 4096 * 2;
     private int convsize = BUFSIZE * 2;

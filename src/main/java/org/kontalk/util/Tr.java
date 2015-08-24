@@ -29,7 +29,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
-import org.kontalk.Kontalk;
 
 /**
  * Translation for strings used in view.
@@ -75,7 +74,7 @@ public class Tr {
         LOGGER.info("Setting language: "+lang);
 
         // load string keys file
-        String path = Kontalk.RES_PATH + I18N_DIR + STRING_FILE + PROP_EXT;
+        String path = I18N_DIR + STRING_FILE + PROP_EXT;
         PropertiesConfiguration stringKeys;
         try {
             stringKeys = new PropertiesConfiguration(ClassLoader.getSystemResource(path));
@@ -85,7 +84,7 @@ public class Tr {
         }
 
         // load translation file
-        path = Kontalk.RES_PATH + I18N_DIR + STRING_FILE + "_" + lang + PROP_EXT;
+        path = I18N_DIR + STRING_FILE + "_" + lang + PROP_EXT;
         URL url = ClassLoader.getSystemResource(path);
         if (url == null) {
             LOGGER.info("can't find translation file: "+path);

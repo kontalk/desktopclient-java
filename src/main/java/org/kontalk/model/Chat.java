@@ -40,11 +40,11 @@ import org.kontalk.system.Database;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
- * Changes of user in this thread are forwarded.
+ * Changes of contacts in this chat are forwarded.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class KonThread extends Observable implements Comparable<KonThread>, Observer {
-    private static final Logger LOGGER = Logger.getLogger(KonThread.class.getName());
+public final class Chat extends Observable implements Comparable<Chat>, Observer {
+    private static final Logger LOGGER = Logger.getLogger(Chat.class.getName());
 
     public static final String TABLE = "threads";
     public static final String COL_SUBJ = "subject";
@@ -52,7 +52,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     public static final String COL_VIEW_SET = "view_settings";
     public static final String CREATE_TABLE = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            // optional XMPP thread ID
+            // optional XMPP chat ID
             "xmpp_id TEXT UNIQUE, " +
             COL_SUBJ+" TEXT, " +
             // boolean, contains unread messages?
@@ -63,39 +63,41 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
     // many to many relationship requires additional table for receiver
     public static final String TABLE_RECEIVER = "receiver";
+    public static final String COL_REC_CHAT_ID = "thread_id";
+    public static final String COL_REC_CONTACT_ID = "user_id";
     public static final String CREATE_TABLE_RECEIVER = "(" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "thread_id INTEGER NOT NULL, " +
-            "user_id INTEGER NOT NULL, " +
-            "UNIQUE (thread_id, user_id), " +
-            "FOREIGN KEY (thread_id) REFERENCES "+TABLE+" (_id), " +
-            "FOREIGN KEY (user_id) REFERENCES "+User.TABLE+" (_id) " +
+            COL_REC_CHAT_ID+" INTEGER NOT NULL, " +
+            COL_REC_CONTACT_ID+" INTEGER NOT NULL, " +
+            "UNIQUE ("+COL_REC_CHAT_ID+", "+COL_REC_CONTACT_ID+"), " +
+            "FOREIGN KEY ("+COL_REC_CHAT_ID+") REFERENCES "+TABLE+" (_id), " +
+            "FOREIGN KEY ("+COL_REC_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
     private final int mID;
     private final String mXMPPID;
-    private final ThreadMessages mMessages;
-    private final HashMap<User, KonChatState> mUserMap = new HashMap<>();
+    private final ChatMessages mMessages;
+    private final HashMap<Contact, KonChatState> mContactMap = new HashMap<>();
 
     private String mSubject;
     private boolean mRead;
     private ViewSettings mViewSettings;
 
-    // used when creating a new thread
-    KonThread(Set<User> user) {
-        assert user != null;
-        // Kontalk Android client is ignoring the thread id, don't set it for now
+    // used when creating a new chat
+    Chat(Set<Contact> contacts) {
+        assert contacts != null;
+        // Kontalk Android client is ignoring the chat id, don't set it for now
         //mXMPPID = StringUtils.randomString(8);
         mXMPPID = "";
-        this.setUserMap(user);
-        if (user.size() > 1){
+        this.setContactMap(contacts);
+        if (contacts.size() > 1){
             mSubject = "New group chat";
         } else {
             mSubject = "";
         }
         mRead = true;
         mViewSettings = new ViewSettings();
-        mMessages = new ThreadMessages(this);
+        mMessages = new ChatMessages(this);
 
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
@@ -105,33 +107,33 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         values.add(mViewSettings.toJSONString());
         mID = db.execInsert(TABLE, values);
         if (mID < 1) {
-            LOGGER.warning("couldn't insert thread");
+            LOGGER.warning("couldn't insert chat");
             return;
         }
 
-        for (User oneUser : user)
-            this.insertReceiver(oneUser);
+        for (Contact contact : contacts)
+            this.insertReceiver(contact);
     }
 
     // used when loading from database
-    KonThread(int id,
+    Chat(int id,
             String xmppID,
-            Set<User> user,
+            Set<Contact> contacts,
             String subject,
             boolean read,
             String jsonViewSettings
             ) {
-        assert user != null;
+        assert contacts != null;
         mID = id;
         mXMPPID = xmppID;
-        this.setUserMap(user);
+        this.setContactMap(contacts);
         mSubject = subject;
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
-        mMessages = new ThreadMessages(this);
+        mMessages = new ChatMessages(this);
     }
 
-    public ThreadMessages getMessages() {
+    public ChatMessages getMessages() {
         return mMessages;
     }
 
@@ -139,33 +141,33 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         return mID;
     }
 
-    public Optional<String> getXMPPID() {
-        return mXMPPID.isEmpty() ? Optional.<String>empty() : Optional.of(mXMPPID);
+    public String getXMPPID() {
+        return mXMPPID;
     }
 
-    public Set<User> getUser() {
-        return mUserMap.keySet();
+    public Set<Contact> getContacts() {
+        return mContactMap.keySet();
     }
 
     /**
-     * Get user if there is only one.
+     * Get contact if there is only one.
      */
-    public Optional<User> getSingleUser() {
-        return mUserMap.keySet().size() == 1 ?
-                Optional.of(mUserMap.keySet().iterator().next()) :
-                Optional.<User>empty();
+    public Optional<Contact> getSingleContact() {
+        return mContactMap.keySet().size() == 1 ?
+                Optional.of(mContactMap.keySet().iterator().next()) :
+                Optional.<Contact>empty();
     }
 
-    public void setUser(Set<User> user) {
-        if (user.equals(mUserMap.keySet()))
+    public void setContacts(Set<Contact> contacts) {
+        if (contacts.equals(mContactMap.keySet()))
             return;
 
-        this.setUserMap(user);
-        this.changed(user);
+        this.setContactMap(contacts);
+        this.changed(contacts);
     }
 
     /**
-     * Get the user defined subject of this thread (empty string if not set).
+     * Get the contact defined subject of this chat (empty string if not set).
      */
     public String getSubject() {
         return mSubject;
@@ -217,10 +219,10 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         return added;
     }
 
-    public void setChatState(User user, ChatState chatState) {
-        KonChatState state = mUserMap.get(user);
+    public void setChatState(Contact contact, ChatState chatState) {
+        KonChatState state = mContactMap.get(contact);
         if (state == null) {
-            LOGGER.warning("can't find user in user map!?");
+            LOGGER.warning("can't find contact in contact map!?");
             return;
         }
         state.setState(chatState);
@@ -236,15 +238,15 @@ public final class KonThread extends Observable implements Comparable<KonThread>
 
         db.execUpdate(TABLE, set, mID);
 
-        // get receiver for this thread
-        Map<Integer, Integer> dbReceiver = this.loadReceiver();
+        // get receiver for this chat
+        Map<Integer, Integer> dbReceiver = loadReceiver(mID);
 
-        // add missing user
-        for (User user : mUserMap.keySet()) {
-            if (!dbReceiver.keySet().contains(user.getID())) {
-                this.insertReceiver(user);
+        // add missing contact
+        for (Contact contact : mContactMap.keySet()) {
+            if (!dbReceiver.keySet().contains(contact.getID())) {
+                this.insertReceiver(contact);
             }
-            dbReceiver.remove(user.getID());
+            dbReceiver.remove(contact.getID());
         }
 
         // whats left is too much and can be removed
@@ -257,61 +259,39 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         Database db = Database.getInstance();
         // delete messages
         db.execDeleteWhereInsecure(KonMessage.TABLE,
-                KonMessage.COL_THREAD_ID + " == " + mID);
+                KonMessage.COL_CHAT_ID + " == " + mID);
 
         // delete receiver
-        Map<Integer, Integer> dbReceiver = this.loadReceiver();
+        Map<Integer, Integer> dbReceiver = loadReceiver(mID);
         for (int id : dbReceiver.values()) {
             boolean deleted = db.execDelete(TABLE_RECEIVER, id);
             if (!deleted) return;
         }
 
-        // delete thread itself
+        // delete chat itself
         db.execDelete(TABLE, mID);
     }
 
-    private Map<Integer, Integer> loadReceiver() {
-        Database db = Database.getInstance();
-        String where = "thread_id == " + mID;
-        Map<Integer, Integer> dbReceiver = new HashMap<>();
-        ResultSet resultSet;
-        try {
-            resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't get receiver from db", ex);
-            return dbReceiver;
-        }
-        try {
-            while (resultSet.next()) {
-                dbReceiver.put(resultSet.getInt("user_id"), resultSet.getInt("_id"));
-            }
-            resultSet.close();
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't get receiver", ex);
-        }
-        return dbReceiver;
-    }
-
-    private void insertReceiver(User user) {
+    private void insertReceiver(Contact contact) {
         Database db = Database.getInstance();
         List<Object> recValues = new LinkedList<>();
         recValues.add(mID);
-        recValues.add(user.getID());
+        recValues.add(contact.getID());
         int id = db.execInsert(TABLE_RECEIVER, recValues);
         if (id < 1) {
             LOGGER.warning("couldn't insert receiver");
         }
     }
 
-    private void setUserMap(Set<User> user){
+    private void setContactMap(Set<Contact> contacts){
         // TODO only apply differences to preserve chat states
-        for (User oneUser: mUserMap.keySet())
-            oneUser.deleteObserver(this);
+        for (Contact contact: mContactMap.keySet())
+            contact.deleteObserver(this);
 
-        mUserMap.clear();
-        for (User oneUser : user) {
-            oneUser.addObserver(this);
-            mUserMap.put(oneUser, new KonChatState(oneUser));
+        mContactMap.clear();
+        for (Contact contact : contacts) {
+            contact.addObserver(this);
+            mContactMap.put(contact, new KonChatState(contact));
         }
     }
 
@@ -331,25 +311,48 @@ public final class KonThread extends Observable implements Comparable<KonThread>
     }
 
     @Override
-    public int compareTo(KonThread o) {
+    public int compareTo(Chat o) {
         return Integer.compare(this.mID, o.mID);
     }
 
+    static Map<Integer, Integer> loadReceiver(int chatID) {
+        Database db = Database.getInstance();
+        String where = COL_REC_CHAT_ID + " == " + chatID;
+        Map<Integer, Integer> dbReceiver = new HashMap<>();
+        ResultSet resultSet;
+        try {
+            resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't get receiver from db", ex);
+            return dbReceiver;
+        }
+        try {
+            while (resultSet.next()) {
+                dbReceiver.put(resultSet.getInt(COL_REC_CONTACT_ID),
+                        resultSet.getInt("_id"));
+            }
+            resultSet.close();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't get receiver", ex);
+        }
+        return dbReceiver;
+    }
+
     public class KonChatState {
-        private final User mUser;
+        private final Contact mContact;
         private ChatState mState = ChatState.gone;
         // note: the Android client does not set active states when only viewing
-        // the thread (not necessary according to XEP-0085), this makes the
+        // the chat (not necessary according to XEP-0085), this makes the
         // extra date field a bit useless
         // TODO save last active date to DB
         private Optional<Date> mLastActive = Optional.empty();
 
-        private KonChatState(User user) {
-            mUser = user;
+        private KonChatState(Contact contact) {
+            mContact = contact;
         }
 
-        public User getUser() {
-            return mUser;
+        public Contact getContact() {
+            return mContact;
         }
 
         public ChatState getState() {
@@ -372,7 +375,7 @@ public final class KonThread extends Observable implements Comparable<KonThread>
         // custom image, if set
         private final String mImagePath;
 
-        private ViewSettings(KonThread t, String json) {
+        private ViewSettings(Chat t, String json) {
             Object obj = JSONValue.parse(json);
             Optional<Color> optColor;
             String imagePath;

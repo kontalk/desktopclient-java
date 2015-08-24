@@ -18,8 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.label.WebLinkLabel;
-import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.UnselectableListModel;
 import com.alee.laf.menu.WebMenuItem;
@@ -31,17 +29,13 @@ import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.File;
-import java.io.IOException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
@@ -67,16 +61,17 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
+import org.kontalk.model.Chat;
 import org.kontalk.model.MessageContent;
-import org.kontalk.model.User;
-import org.kontalk.system.Downloader;
+import org.kontalk.model.Contact;
+import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.util.Tr;
-import org.kontalk.view.ThreadView.Background;
+import org.kontalk.view.ChatView.Background;
+import org.kontalk.view.ComponentUtils.AttachmentPanel;
 
 
 /**
- * View all messages of one thread in a left/right MIM style list.
+ * View all messages of one chat in a left/right MIM style list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
@@ -90,14 +85,14 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
     private static final Icon CRYPT_ICON = Utils.getIcon("ic_msg_crypt.png");
     private static final Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
 
-    private final ThreadView mThreadView;
-    private final KonThread mThread;
+    private final ChatView mChatView;
+    private final Chat mChat;
     private Optional<Background> mBackground = Optional.empty();
 
-    MessageList(View view, ThreadView threadView, KonThread thread) {
+    MessageList(View view, ChatView chatView, Chat chat) {
         super(view, false);
-        mThreadView = threadView;
-        mThread = thread;
+        mChatView = chatView;
+        mChat = chat;
 
         // use custom editor (for mouse events)
         this.setDefaultEditor(Table.TableItem.class, new TableEditor());
@@ -105,6 +100,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         //this.setEditable(false);
         //this.setAutoscrolls(true);
         this.setOpaque(false);
+
+        // hide grid
+        this.setShowGrid(false);
 
         // disable selection
         this.setSelectionModel(new UnselectableListModel());
@@ -126,15 +124,15 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             }
         });
 
-        this.setBackground(mThread.getViewSettings());
+        this.setBackground(mChat.getViewSettings());
 
         this.setVisible(false);
         this.updateOnEDT(null);
         this.setVisible(true);
     }
 
-    KonThread getThread() {
-        return mThread;
+    Chat getChat() {
+        return mChat;
     }
 
     Optional<Background> getBG() {
@@ -146,17 +144,17 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         if (arg instanceof Set ||
                 arg instanceof String ||
                 arg instanceof Boolean ||
-                arg instanceof KonThread.KonChatState) {
-            // users, subject, read status or chat state changed, nothing
+                arg instanceof Chat.KonChatState) {
+            // contacts, subject, read status or chat state changed, nothing
             // to do here
             return;
         }
 
-        if (arg instanceof KonThread.ViewSettings) {
-            this.setBackground((KonThread.ViewSettings) arg);
-            if (mThreadView.getCurrentThread().orElse(null) == mThread) {
-                //mThreadView.mScrollPane.getViewport().repaint();
-                mThreadView.repaint();
+        if (arg instanceof Chat.ViewSettings) {
+            this.setBackground((Chat.ViewSettings) arg);
+            if (mChatView.getCurrentChat().orElse(null) == mChat) {
+                //mChatView.mScrollPane.getViewport().repaint();
+                mChatView.repaint();
             }
             return;
         }
@@ -165,33 +163,33 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             this.insertMessage((KonMessage) arg);
         } else {
             // check for new messages to add
-            if (this.getModel().getRowCount() < mThread.getMessages().getAll().size())
+            if (this.getModel().getRowCount() < mChat.getMessages().getAll().size())
                 this.insertMessages();
         }
 
-        if (mThreadView.getCurrentThread().orElse(null) == mThread) {
-            mThread.setRead();
+        if (mChatView.getCurrentChat().orElse(null) == mChat) {
+            mChat.setRead();
         }
     }
 
     private void insertMessages() {
         Set<MessageItem> newItems = new HashSet<>();
-        for (KonMessage message: mThread.getMessages().getAll()) {
+        for (KonMessage message: mChat.getMessages().getAll()) {
             if (!this.containsValue(message)) {
                 newItems.add(new MessageItem(message));
                 // trigger scrolling
-                mThreadView.setScrolling();
+                mChatView.setScrolling();
             }
         }
-        this.sync(mThread.getMessages().getAll(), newItems);
+        this.sync(mChat.getMessages().getAll(), newItems);
     }
 
     private void insertMessage(KonMessage message) {
         Set<MessageItem> newItems = new HashSet<>();
         newItems.add(new MessageItem(message));
-        this.sync(mThread.getMessages().getAll(), newItems);
+        this.sync(mChat.getMessages().getAll(), newItems);
         // trigger scrolling
-        mThreadView.setScrolling();
+        mChatView.setScrolling();
     }
 
     private void showPopupMenu(MouseEvent e) {
@@ -204,9 +202,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         popupMenu.show(this, e.getX(), e.getY());
     }
 
-    private void setBackground(KonThread.ViewSettings s) {
+    private void setBackground(Chat.ViewSettings s) {
         // simply overwrite
-        mBackground = mThreadView.createBG(s);
+        mBackground = mChatView.createBG(s);
     }
 
     /**
@@ -221,6 +219,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         private WebTextPane mTextPane;
         private WebPanel mStatusPanel;
         private WebLabel mStatusIconLabel;
+        private AttachmentPanel mAttPanel = null;
         private int mPreferredTextWidth;
         private boolean mCreated = false;
 
@@ -311,7 +310,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 this.add(messagePanel, BorderLayout.EAST);
             }
 
-            mValue.getUser().addObserver(this);
+            mValue.getContact().addObserver(this);
         }
 
         @Override
@@ -333,7 +332,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             if (!mCreated)
                 return;
 
-            if ((arg == null || arg instanceof User) && mFromLabel != null)
+            if ((arg == null || arg instanceof Contact) && mFromLabel != null)
                 mFromLabel.setText(" "+getFromString(mValue));
 
             if (arg == null || arg instanceof String)
@@ -342,7 +341,8 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             if (arg == null || arg instanceof KonMessage.Status)
                 this.updateStatus();
 
-            if (arg == null || arg instanceof MessageContent.Attachment)
+            if (arg == null || arg instanceof MessageContent.Attachment ||
+                    arg instanceof MessageContent.Preview)
                 this.updateAttachment();
 
             // changes are not instantly painted
@@ -484,72 +484,71 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         // attachment / image, note: loading many images is very slow
         private void updateAttachment() {
-            // remove possible old component (replacing does not work right)
-            BorderLayout layout = (BorderLayout) mContentPanel.getLayout();
-            Component oldComp = layout.getLayoutComponent(BorderLayout.SOUTH);
-            if (oldComp != null)
-                mContentPanel.remove(oldComp);
-
-            Optional<MessageContent.Attachment> optAttachment =
-                    mValue.getContent().getAttachment();
+            Optional<Attachment> optAttachment = mValue.getContent().getAttachment();
             if (!optAttachment.isPresent())
                 return;
+            Attachment att = optAttachment.get();
 
-            MessageContent.Attachment att = optAttachment.get();
-            String base = Downloader.getInstance().getAttachmentDir();
-            String fName = att.getFileName();
-            Path path = Paths.get(base, fName);
-
-            // rely on mime type in message
-            if (!att.getFileName().isEmpty() &&
-                    att.getMimeType().startsWith("image")) {
-                WebLinkLabel imageView = new WebLinkLabel();
-                imageView.setLink("", createLinkRunnable(path));
-                // file should be present and should be an image, show it
-                ImageLoader.setImageIconAsync(imageView, path.toString());
-                mContentPanel.add(imageView, BorderLayout.SOUTH);
-                return;
+            if (mAttPanel == null) {
+                mAttPanel = new AttachmentPanel();
+                mContentPanel.add(mAttPanel, BorderLayout.SOUTH);
             }
 
-            // show a link to the file
-            WebLabel attLabel;
-            if (att.getFileName().isEmpty()) {
+            // image thumbnail preview
+            Optional<Path> optImagePath = mView.getControl().getImagePath(mValue);
+            String imagePath = optImagePath.isPresent() ? optImagePath.get().toString() : "";
+            mAttPanel.setImage(imagePath);
+
+            // link to the file
+            Path linkPath = mView.getControl().getFilePath(att);
+            if (!linkPath.toString().isEmpty()) {
+                mAttPanel.setLink(imagePath.isEmpty() ?
+                        linkPath.getFileName().toString() :
+                        "",
+                        linkPath);
+            } else {
+                // status text
                 String statusText = Tr.tr("loading...");
                 switch (att.getDownloadProgress()) {
+                    case -1: statusText = Tr.tr("stalled"); break;
                     case 0:
                     case -2: statusText = Tr.tr("downloading..."); break;
                     case -3: statusText = Tr.tr("download failed"); break;
                 }
-                attLabel = new WebLabel(statusText);
-            } else {
-                WebLinkLabel linkLabel = new WebLinkLabel();
-                linkLabel.setLink(fName, createLinkRunnable(path));
-                attLabel = linkLabel;
+                mAttPanel.setStatus(statusText);
             }
-            WebLabel labelLabel = new WebLabel(Tr.tr("Attachment:")+" ");
-            labelLabel.setItalicFont();
-            GroupPanel attachmentPanel = new GroupPanel(4, true, labelLabel, attLabel);
-            mContentPanel.add(attachmentPanel, BorderLayout.SOUTH);
         }
 
         private WebPopupMenu getPopupMenu() {
             WebPopupMenu popupMenu = new WebPopupMenu();
-            if (mValue.getCoderStatus().isEncrypted()) {
-                WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
-                decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
-                decryptMenuItem.addActionListener(new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent event) {
-                        KonMessage m = MessageItem.this.mValue;
-                        if (!(m instanceof InMessage)) {
-                            LOGGER.warning("decrypted message not incoming message");
-                            return;
+            final KonMessage m = MessageItem.this.mValue;
+            if (m instanceof InMessage) {
+                if (m.getCoderStatus().isEncrypted()) {
+                    WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
+                    decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
+                    decryptMenuItem.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent event) {
+                            mView.getControl().decryptAgain((InMessage) m);
                         }
-                        mView.getControl().decryptAgain((InMessage) m);
-                    }
-                });
-                popupMenu.add(decryptMenuItem);
+                    });
+                    popupMenu.add(decryptMenuItem);
+                }
+                Optional<Attachment> optAtt = m.getContent().getAttachment();
+                if (optAtt.isPresent() &&
+                        optAtt.get().getFile().toString().isEmpty()) {
+                    WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
+                    attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
+                    attMenuItem.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent event) {
+                            mView.getControl().downloadAgain((InMessage) m);
+                        }
+                    });
+                    popupMenu.add(attMenuItem);
+                }
             }
+
             WebMenuItem cItem = Utils.createCopyMenuItem(
                     this.toCopyString(),
                     Tr.tr("Copy message content"));
@@ -566,13 +565,13 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         @Override
         protected boolean contains(String search) {
             return mValue.getContent().getText().toLowerCase().contains(search) ||
-                    mValue.getUser().getName().toLowerCase().contains(search) ||
+                    mValue.getContact().getName().toLowerCase().contains(search) ||
                     mValue.getJID().toLowerCase().contains(search);
         }
 
         @Override
         protected void onRemove() {
-            mValue.getUser().deleteObserver(this);
+            mValue.getContact().deleteObserver(this);
         }
 
         @Override
@@ -604,28 +603,14 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
     private static String getFromString(KonMessage message) {
         String from;
-        if (!message.getUser().getName().isEmpty()) {
-            from = message.getUser().getName();
+        if (!message.getContact().getName().isEmpty()) {
+            from = message.getContact().getName();
         } else {
             from = XmppStringUtils.parseBareJid(message.getJID());
             if (from.length() > 40)
                 from = from.substring(0, 8) + "...";
         }
         return from;
-    }
-
-    private static Runnable createLinkRunnable(final Path path) {
-        return new Runnable () {
-            @Override
-            public void run () {
-                Desktop dt = Desktop.getDesktop();
-                try {
-                    dt.open(new File(path.toString()));
-                } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
-                }
-            }
-        };
     }
 
     private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();

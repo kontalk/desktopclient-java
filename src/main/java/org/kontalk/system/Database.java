@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -36,8 +37,8 @@ import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
-import org.kontalk.model.User;
+import org.kontalk.model.Chat;
+import org.kontalk.model.Contact;
 import org.kontalk.util.EncodingUtils;
 import org.sqlite.SQLiteConfig;
 
@@ -56,7 +57,7 @@ public final class Database {
 
     private static Database INSTANCE = null;
 
-    public static final String DB_NAME = "kontalk_db.sqlite";
+    public static final String FILENAME = "kontalk_db.sqlite";
 
     private static final int DB_VERSION = 2;
     private static final String SV = "schema_version";
@@ -64,7 +65,7 @@ public final class Database {
 
     private Connection mConn = null;
 
-    private Database(String path) throws KonException {
+    private Database(Path path) throws KonException {
         // load the sqlite-JDBC driver using the current class loader
         try {
             Class.forName("org.sqlite.JDBC");
@@ -77,7 +78,7 @@ public final class Database {
         SQLiteConfig config = new SQLiteConfig();
         config.enforceForeignKeys(true);
         try {
-          mConn = DriverManager.getConnection("jdbc:sqlite:" + path, config.toProperties());
+          mConn = DriverManager.getConnection("jdbc:sqlite:" + path.toString(), config.toProperties());
         } catch(SQLException ex) {
           // if the error message is "out of memory",
           // it probably means no database file is found
@@ -104,15 +105,15 @@ public final class Database {
             LOGGER.info("new database, creating tables");
             String create = "CREATE TABLE IF NOT EXISTS ";
             try (Statement stat = mConn.createStatement()) {
-                stat.executeUpdate(create + User.TABLE + " " + User.CREATE_TABLE);
+                stat.executeUpdate(create + Contact.TABLE + " " + Contact.CREATE_TABLE);
                 stat.executeUpdate(create +
-                        KonThread.TABLE +
+                        Chat.TABLE +
                         " " +
-                        KonThread.CREATE_TABLE);
+                        Chat.CREATE_TABLE);
                 stat.executeUpdate(create +
-                        KonThread.TABLE_RECEIVER +
+                        Chat.TABLE_RECEIVER +
                         " " +
-                        KonThread.CREATE_TABLE_RECEIVER);
+                        Chat.CREATE_TABLE_RECEIVER);
                 stat.executeUpdate(create +
                         KonMessage.TABLE +
                         " " +
@@ -134,7 +135,7 @@ public final class Database {
             LOGGER.log(Level.WARNING, "can't get db version", ex);
             return;
         }
-        LOGGER.info("database version: "+version);
+        LOGGER.config("version: "+version);
         try {
             this.update(version);
         } catch (SQLException ex) {
@@ -147,8 +148,8 @@ public final class Database {
             return;
 
         if (fromVersion < 1) {
-            mConn.createStatement().execute("ALTER TABLE "+KonThread.TABLE+
-                    " ADD COLUMN "+KonThread.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
+            mConn.createStatement().execute("ALTER TABLE "+Chat.TABLE+
+                    " ADD COLUMN "+Chat.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
         }
         if (fromVersion < 2) {
             mConn.createStatement().execute("ALTER TABLE "+KonMessage.TABLE+
@@ -334,15 +335,14 @@ public final class Database {
         return s.isEmpty() ? null : s;
     }
 
-    public static void initialize(String path) throws KonException {
-        INSTANCE = new Database(path);
+    public static void initialize(Path dbFile) throws KonException {
+        INSTANCE = new Database(dbFile);
     }
 
     public static Database getInstance() {
-        if (INSTANCE == null) {
-            LOGGER.warning("database not initialized");
-            throw new RuntimeException();
-        }
+        if (INSTANCE == null)
+            throw new IllegalStateException("database not initialized");
+
         return INSTANCE;
     }
 }

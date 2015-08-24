@@ -20,14 +20,16 @@ package org.kontalk.util;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.PacketParserUtils;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -42,7 +44,7 @@ public final class XMPPUtils {
     public static final String XML_XMPP_TYPE = "application/xmpp+xml";
 
     // TODO do not hardcode, maybe download
-    private static final List<String> KONTALK_SERVER = Arrays.asList("beta.kontalk.org");
+    private static final List<String> KONTALK_SERVER = Arrays.asList("beta.kontalk.net");
 
     private XMPPUtils() {
         throw new AssertionError();
@@ -65,7 +67,8 @@ public final class XMPPUtils {
     /**
      * Parses a &lt;xmpp&gt;-wrapped message stanza.
      */
-    public static Message parseMessageStanza(String data) throws Exception {
+    public static Message parseMessageStanza(String data)
+            throws XmlPullParserException, IOException, SmackException {
 
         XmlPullParser parser = getPullParser(data);
         boolean done = false, in_xmpp = false;
@@ -116,7 +119,7 @@ public final class XMPPUtils {
                 PhoneNumberUtil.PhoneNumberFormat.E164));
     }
 
-    public static boolean isKontalkUser(User user){
-        return KONTALK_SERVER.contains(XmppStringUtils.parseDomain(user.getJID()));
+    public static boolean isKontalkContact(Contact contact){
+        return KONTALK_SERVER.contains(XmppStringUtils.parseDomain(contact.getJID()));
     }
 }

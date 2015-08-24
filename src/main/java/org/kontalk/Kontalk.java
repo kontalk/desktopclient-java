@@ -20,12 +20,13 @@ package org.kontalk;
 
 import org.kontalk.misc.KonException;
 import org.kontalk.system.Database;
-import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -33,8 +34,9 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
-import org.kontalk.model.ThreadList;
-import org.kontalk.model.UserList;
+import org.kontalk.model.ChatList;
+import org.kontalk.model.ContactList;
+import org.kontalk.system.AccountLoader;
 import org.kontalk.system.Config;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
@@ -49,59 +51,19 @@ public final class Kontalk {
     private static final Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
     public static final String VERSION = "3.0.3";
-    public static final String RES_PATH = "res/";
-    private static final String CONFIG_DIR;
+    private final Path mAppDir;
 
     private static ServerSocket RUN_LOCK;
 
-    static {
-        // initialize translation
-        Tr.init();
-
-        // check java version
-        String jVersion = System.getProperty("java.version");
-        if (jVersion.startsWith("1.7")) {
-            View.showWrongJavaVersionDialog();
-            LOGGER.severe("java too old: "+jVersion);
-            System.exit(-3);
-        }
-
-        // use platform dependent configuration directory
+    private Kontalk() {
+        // platform dependent configuration directory
         String homeDir = System.getProperty("user.home");
-        if (SystemUtils.IS_OS_WINDOWS) {
-            CONFIG_DIR = Paths.get(homeDir,"Kontalk").toString();
-        } else {
-            CONFIG_DIR = Paths.get(homeDir, ".kontalk").toString();
-        }
-
-        // create app directory
-        boolean created = new File(CONFIG_DIR).mkdirs();
-        if (created)
-            LOGGER.info("created configuration directory");
-
-        // log to file
-        String logPath = Paths.get(CONFIG_DIR, "debug.log").toString();
-        Handler fileHandler = null;
-        try {
-            fileHandler = new FileHandler(logPath, 1024*1000, 1, true);
-        } catch (IOException | SecurityException ex) {
-            LOGGER.log(Level.WARNING, "can't log to file", ex);
-        }
-        if (fileHandler != null) {
-            fileHandler.setFormatter(new SimpleFormatter());
-            Logger.getLogger("").addHandler(fileHandler);
-        }
-
-        LOGGER.info("--START, version: "+VERSION+"--");
-
-        // fix crypto restriction
-        CryptoUtils.removeCryptographyRestrictions();
-
-        // register provider
-        PGPUtils.registerProvider();
+        mAppDir = SystemUtils.IS_OS_WINDOWS ?
+                Paths.get(homeDir, "Kontalk") :
+                Paths.get(homeDir, ".kontalk");
     }
 
-    private Kontalk(String[] args) {
+    private void start() {
         // check if already running
         try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
@@ -113,13 +75,55 @@ public final class Kontalk {
             LOGGER.log(Level.WARNING, "can't create socket", ex);
         }
 
-        this.parseArgs(args);
-    }
+        // initialize translation
+        Tr.init();
 
-    public void start() {
-        Config.initialize(CONFIG_DIR + "/" + Config.CONF_NAME);
+        // check java version
+        String jVersion = System.getProperty("java.version");
+        if (jVersion.startsWith("1.7")) {
+            View.showWrongJavaVersionDialog();
+            LOGGER.severe("java too old: "+jVersion);
+            System.exit(-3);
+        }
 
-        ViewControl control = Control.create();
+        // create app directory
+        boolean created = mAppDir.toFile().mkdirs();
+        if (created)
+            LOGGER.info("created configuration directory");
+
+        // logging
+        Logger logger = Logger.getLogger("");
+        logger.setLevel(Level.CONFIG);
+        for (Handler h : logger.getHandlers()) {
+            if (h instanceof ConsoleHandler)
+                h.setLevel(Level.CONFIG);
+        }
+        String logPath = mAppDir.resolve("debug.log").toString();
+        Handler fileHandler = null;
+        try {
+            fileHandler = new FileHandler(logPath, 1024*1000, 1, true);
+        } catch (IOException | SecurityException ex) {
+            LOGGER.log(Level.WARNING, "can't log to file", ex);
+        }
+        if (fileHandler != null) {
+            fileHandler.setLevel(Level.INFO);
+            fileHandler.setFormatter(new SimpleFormatter());
+            logger.addHandler(fileHandler);
+        }
+
+        LOGGER.info("--START, version: "+VERSION+"--");
+
+        // fix crypto restriction
+        CryptoUtils.removeCryptographyRestrictions();
+
+        // register provider
+        PGPUtils.registerProvider();
+
+
+        Config.initialize(mAppDir.resolve(Config.FILENAME));
+        AccountLoader.initialize(mAppDir);
+
+        ViewControl control = Control.create(mAppDir);
 
         Optional<View> optView = View.create(control);
         if (!optView.isPresent()) {
@@ -129,7 +133,7 @@ public final class Kontalk {
         View view = optView.get();
 
         try {
-            Database.initialize(CONFIG_DIR + "/" + Database.DB_NAME);
+            Database.initialize(mAppDir.resolve(Database.FILENAME));
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
             control.shutDown();
@@ -137,24 +141,16 @@ public final class Kontalk {
         }
 
         // order matters!
-        UserList.getInstance().load();
-        ThreadList.getInstance().load();
+        ContactList.getInstance().load();
+        ChatList.getInstance().load();
 
         view.init();
 
         control.launch();
     }
 
-    // parse optional arguments
-    private void parseArgs(String[] args) {
-        if (args.length != 0) {
-            String className = this.getClass().getEnclosingClass().getName();
-            LOGGER.log(Level.WARNING, "Usage: java {0} ", className);
-        }
-    }
-
-    public static String getConfigDir() {
-        return CONFIG_DIR;
+    public Path getAppDir() {
+        return mAppDir;
     }
 
     public static void exit() {
@@ -171,10 +167,9 @@ public final class Kontalk {
      * @param args the command line arguments
      */
     public static void main(String[] args) {
-
         LOGGER.setLevel(Level.ALL);
 
-        Kontalk model = new Kontalk(args);
-        model.start();
+        Kontalk app = new Kontalk();
+        app.start();
     }
 }

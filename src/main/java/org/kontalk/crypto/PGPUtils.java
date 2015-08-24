@@ -75,7 +75,7 @@ public final class PGPUtils {
     }
 
     /**
-     * A users public keys for encryption and signing together with UID and
+     * A contacts public keys for encryption and signing together with UID and
      * fingerprint (from signing key).
      */
     public static final class PGPCoderKey {

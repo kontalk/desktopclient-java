@@ -18,6 +18,8 @@
 
 package org.kontalk.system;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
@@ -46,12 +48,13 @@ import org.kontalk.misc.KonException;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
+import org.kontalk.model.Chat;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
-import org.kontalk.model.ThreadList;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
+import org.kontalk.model.ChatList;
+import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
+import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.util.XMPPUtils;
 
 /**
@@ -77,18 +80,18 @@ public final class Control {
     }
 
     /**
-     * Message attributes to identify the thread for a message.
+     * Message attributes to identify the chat for a message.
      */
     public static class MessageIDs {
         public final String jid;
         public final String xmppID;
-        public final String threadID;
+        public final String xmppThreadID;
         //public final Optional<GroupID> groupID;
 
         private MessageIDs(String jid, String xmppID, String threadID) {
             this.jid = jid;
             this.xmppID = xmppID;
-            this.threadID = threadID;
+            this.xmppThreadID = threadID;
         }
 
         public static MessageIDs from(Message m) {
@@ -105,20 +108,22 @@ public final class Control {
 
         @Override
         public String toString() {
-            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+threadID;
+            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID;
         }
     }
 
     private final Client mClient;
     private final ChatStateManager mChatStateManager;
+    private final AttachmentManager mAttachmentManager;
 
     private final ViewControl mViewControl;
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
-    private Control() {
+    private Control(Path appDir) {
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
+        mAttachmentManager = AttachmentManager.create(appDir, this);
 
         mViewControl = new ViewControl();
     }
@@ -131,17 +136,17 @@ public final class Control {
 
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (KonThread thread: ThreadList.getInstance().getAll())
-                for (OutMessage m : thread.getMessages().getPending())
+            for (Chat chat: ChatList.getInstance().getAll())
+                for (OutMessage m : chat.getMessages().getPending())
                     this.sendMessage(m);
 
-            // send public key requests for Kontalk users with missing key
-            for (User user : UserList.getInstance().getAll())
-                if (user.getFingerprint().isEmpty())
-                    Control.this.sendKeyRequest(user);
+            // send public key requests for Kontalk contacts with missing key
+            for (Contact contact : ContactList.getInstance().getAll())
+                if (contact.getFingerprint().isEmpty())
+                    Control.this.sendKeyRequest(contact);
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
-            for (User user : UserList.getInstance().getAll())
-                user.setOffline();
+            for (Contact contact : ContactList.getInstance().getAll())
+                contact.setOffline();
         }
     }
 
@@ -155,7 +160,7 @@ public final class Control {
                 errors.contains(Coder.Error.INVALID_SIGNATURE) ||
                 errors.contains(Coder.Error.INVALID_SENDER)) {
             // maybe there is something wrong with the senders key
-            this.sendKeyRequest(message.getUser());
+            this.sendKeyRequest(message.getContact());
         }
         mViewControl.changed(new ViewEvent.SecurityError(message));
     }
@@ -168,26 +173,29 @@ public final class Control {
     public boolean newInMessage(MessageIDs ids,
             Optional<Date> serverDate,
             MessageContent content) {
+        LOGGER.info("new incoming message, "+ids);
+
         String jid = XmppStringUtils.parseBareJid(ids.jid);
-        UserList userList = UserList.getInstance();
-        Optional<User> optUser = userList.contains(jid) ?
-                userList.get(jid) :
-                this.createNewUser(jid, "", true);
-        if (!optUser.isPresent()) {
-            LOGGER.warning("can't get user for message");
+        ContactList contactList = ContactList.getInstance();
+        Optional<Contact> optContact = contactList.contains(jid) ?
+                contactList.get(jid) :
+                this.createNewContact(jid, "", true);
+        if (!optContact.isPresent()) {
+            LOGGER.warning("can't get contact for message");
             return false;
         }
-        User user = optUser.get();
-        KonThread thread = getThread(ids.threadID, user);
-        InMessage.Builder builder = new InMessage.Builder(thread, user);
+        Contact contact = optContact.get();
+        Chat chat = getChat(ids.xmppThreadID, contact);
+        InMessage.Builder builder = new InMessage.Builder(chat, contact);
         builder.jid(ids.jid);
         builder.xmppID(ids.xmppID);
-        builder.serverDate(serverDate);
+        if (serverDate.isPresent())
+            builder.serverDate(serverDate.get());
         builder.content(content);
         InMessage newMessage = builder.build();
-        boolean added = thread.addMessage(newMessage);
+        boolean added = chat.addMessage(newMessage);
         if (!added) {
-            LOGGER.info("message already in thread, dropping this one");
+            LOGGER.info("message already in chat, dropping this one");
             return true;
         }
         newMessage.save();
@@ -221,7 +229,7 @@ public final class Control {
         Optional<OutMessage> optMessage = getMessage(ids);
         if (!optMessage.isPresent())
             return ;
-        optMessage.get().setError(condition.toString(), errorText);
+        optMessage.get().setServerError(condition.toString(), errorText);
     }
 
     /**
@@ -246,26 +254,26 @@ public final class Control {
             return;
         }
         String jid = XmppStringUtils.parseBareJid(from);
-        Optional<User> optUser = UserList.getInstance().get(jid);
-        if (!optUser.isPresent()) {
-            LOGGER.warning("(chat state) can't find user with jid: "+jid);
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (!optContact.isPresent()) {
+            LOGGER.warning("(chat state) can't find contact with jid: "+jid);
             return;
         }
-        User user = optUser.get();
-        KonThread thread = getThread(xmppThreadID, user);
-        thread.setChatState(user, chatState);
+        Contact contact = optContact.get();
+        Chat chat = getChat(xmppThreadID, contact);
+        chat.setChatState(contact, chatState);
     }
 
-    public void addUserFromRoster(String jid,
+    public void addContactFromRoster(String jid,
         String rosterName,
         ItemType type,
         ItemStatus itemStatus) {
-        if (UserList.getInstance().contains(jid)) {
+        if (ContactList.getInstance().contains(jid)) {
             this.setSubscriptionStatus(jid, type, itemStatus);
             return;
         }
 
-        LOGGER.info("adding user from roster, jid: "+jid);
+        LOGGER.info("adding contact from roster, jid: "+jid);
 
         String name = rosterName == null ? "" : rosterName;
         if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
@@ -274,210 +282,226 @@ public final class Control {
             name = "";
         }
 
-        Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
-        if (!optNewUser.isPresent())
+        Optional<Contact> optNewContact = ContactList.getInstance().createContact(jid, name);
+        if (!optNewContact.isPresent())
             return;
-        User newUser = optNewUser.get();
+        Contact newContact = optNewContact.get();
 
-        User.Subscription status = rosterToModelSubscription(itemStatus, type);
-        newUser.setSubScriptionStatus(status);
+        Contact.Subscription status = rosterToModelSubscription(itemStatus, type);
+        newContact.setSubScriptionStatus(status);
 
-        if (status == User.Subscription.UNSUBSCRIBED)
+        if (status == Contact.Subscription.UNSUBSCRIBED)
             mClient.sendPresenceSubscriptionRequest(jid);
 
-        this.sendKeyRequest(newUser);
+        this.sendKeyRequest(newContact);
     }
 
     public void setSubscriptionStatus(String jid, ItemType type, ItemStatus itemStatus) {
-        Optional<User> optUser = UserList.getInstance().get(jid);
-        if (!optUser.isPresent()) {
-            LOGGER.warning("(subscription) can't find user with jid: "+jid);
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (!optContact.isPresent()) {
+            LOGGER.warning("(subscription) can't find contact with jid: "+jid);
             return;
         }
-        optUser.get().setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
+        optContact.get().setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
         if (jid.equals(XmppStringUtils.parseBareJid(mClient.getOwnJID()))
-                && !UserList.getInstance().contains(jid))
+                && !ContactList.getInstance().contains(jid))
             // don't wanna see myself
             return;
 
-        Optional<User> optUser = UserList.getInstance().get(jid);
-        if (!optUser.isPresent()) {
-            LOGGER.warning("(presence) can't find user with jid: "+jid);
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (!optContact.isPresent()) {
+            LOGGER.warning("(presence) can't find contact with jid: "+jid);
             return;
         }
-        optUser.get().setOnline(type, status);
+        optContact.get().setOnline(type, status);
     }
 
     public void checkFingerprint(String jid, String fingerprint) {
-        Optional<User> optUser = UserList.getInstance().get(jid);
-        if (!optUser.isPresent()) {
-            LOGGER.warning("(fingerprint) can't find user with jid:" + jid);
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (!optContact.isPresent()) {
+            LOGGER.warning("(fingerprint) can't find contact with jid:" + jid);
             return;
         }
 
-        User user = optUser.get();
-        if (!user.getFingerprint().equals(fingerprint)) {
+        Contact contact = optContact.get();
+        if (!contact.getFingerprint().equals(fingerprint)) {
             LOGGER.info("detected public key change, requesting new key...");
-            this.sendKeyRequest(user);
+            this.sendKeyRequest(contact);
         }
     }
 
     public void handlePGPKey(String jid, byte[] rawKey) {
-        Optional<User> optUser = UserList.getInstance().get(jid);
-        if (!optUser.isPresent()) {
-            LOGGER.warning("(PGPKey) can't find user with jid: "+jid);
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (!optContact.isPresent()) {
+            LOGGER.warning("(PGPKey) can't find contact with jid: "+jid);
             return;
         }
-        User user = optUser.get();
+        Contact contact = optContact.get();
 
         Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
         if (!optKey.isPresent()) {
-            LOGGER.warning("invalid public PGP key, user: "+user);
+            LOGGER.warning("invalid public PGP key, contact: "+contact);
             return;
         }
         PGPCoderKey key = optKey.get();
 
-        if (key.fingerprint.equals(user.getFingerprint()))
+        if (key.fingerprint.equals(contact.getFingerprint()))
             // same key
             return;
 
-        if (user.hasKey())
+        if (contact.hasKey())
             // ask before overwriting
-            mViewControl.changed(new ViewEvent.NewKey(user, key));
+            mViewControl.changed(new ViewEvent.NewKey(contact, key));
         else
-            this.setKey(user, key);
+            this.setKey(contact, key);
     }
 
-    public void setKey(User user, PGPCoderKey key) {
+    public void setKey(Contact contact, PGPCoderKey key) {
+        contact.setKey(key.rawKey, key.fingerprint);
 
-        user.setKey(key.rawKey, key.fingerprint);
-
-        // if not set, use uid in key for user name
+        // if not set, use uid in key for contact name
         LOGGER.info("full UID in key: '" + key.userID + "'");
-        if (user.getName().isEmpty() && key.userID != null) {
-            String userName = key.userID.replaceFirst(" <[a-f0-9]+@.+>$", "");
-            if (userName.endsWith(LEGACY_CUT_FROM_ID))
-                userName = userName.substring(0,
-                        userName.length() - LEGACY_CUT_FROM_ID.length());
-            LOGGER.info("user name from key: '" + userName + "'");
-            if (!userName.isEmpty())
-                user.setName(userName);
+        if (contact.getName().isEmpty() && key.userID != null) {
+            String contactName = key.userID.replaceFirst(" <[a-f0-9]+@.+>$", "");
+            if (contactName.endsWith(LEGACY_CUT_FROM_ID))
+                contactName = contactName.substring(0,
+                        contactName.length() - LEGACY_CUT_FROM_ID.length());
+            LOGGER.info("contact name from key: '" + contactName + "'");
+            if (!contactName.isEmpty())
+                contact.setName(contactName);
         }
     }
 
-    public void setBlockedUser(List<String> jids) {
+    public void setBlockedContacts(List<String> jids) {
         for (String jid : jids) {
             if (XmppStringUtils.isFullJID(jid)) {
                 LOGGER.info("ignoring blocking of JID with resource");
                 return;
             }
-            this.setUserBlocking(jid, true);
+            this.setContactBlocking(jid, true);
         }
     }
 
-    public void setUserBlocking(String jid, boolean blocking) {
-        Optional<User> optUser = UserList.getInstance().get(jid);
-        if (!optUser.isPresent()) {
-            LOGGER.info("ignoring blocking of JID not in user list");
+    public void setContactBlocking(String jid, boolean blocking) {
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (!optContact.isPresent()) {
+            LOGGER.info("ignoring blocking of JID not in contact list");
             return;
         }
-        User user = optUser.get();
+        Contact contact = optContact.get();
 
-        LOGGER.info("set user blocking: "+user+" "+blocking);
-        user.setBlocked(blocking);
+        LOGGER.info("set contact blocking: "+contact+" "+blocking);
+        contact.setBlocked(blocking);
+    }
+
+    /* package */
+
+    void sendMessage(OutMessage message) {
+        if (message.getContent().getAttachment().isPresent() &&
+                !message.getContent().getAttachment().get().hasURL()) {
+            // continue later...
+            mAttachmentManager.queueUpload(message);
+            return;
+        }
+
+        mClient.sendMessage(message);
+        mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
     }
 
     /* private */
 
-    private Optional<User> createNewUser(String jid, String name, boolean encrypted) {
+    private Optional<Contact> createNewContact(String jid, String name, boolean encrypted) {
         if (!mClient.isConnected()) {
-            // workaround: create only if user can be added to roster
+            // workaround: create only if contact can be added to roster
             return Optional.empty();
         }
 
-        Optional<User> optNewUser = UserList.getInstance().createUser(jid, name);
-        if (!optNewUser.isPresent()) {
-            LOGGER.warning("can't create new user");
+        Optional<Contact> optNewContact = ContactList.getInstance().createContact(jid, name);
+        if (!optNewContact.isPresent()) {
+            LOGGER.warning("can't create new contact");
             // TODO tell view
             return Optional.empty();
         }
-        User newUser = optNewUser.get();
+        Contact newContact = optNewContact.get();
 
-        newUser.setEncrypted(encrypted);
+        newContact.setEncrypted(encrypted);
 
-        boolean succ = mClient.addToRoster(newUser);
+        boolean succ = mClient.addToRoster(newContact);
         if (!succ)
-            LOGGER.warning("can't add new user to roster: "+newUser);
+            LOGGER.warning("can't add new contact to roster: "+newContact);
 
-        return Optional.of(newUser);
+        return Optional.of(newContact);
     }
 
-    private void sendMessage(OutMessage message) {
-        mClient.sendMessage(message);
-        mChatStateManager.handleOwnChatStateEvent(message.getThread(), ChatState.active);
-    }
-
-    private void sendKeyRequest(User user) {
-        if (!XMPPUtils.isKontalkUser(user))
+    private void sendKeyRequest(Contact contact) {
+        if (!XMPPUtils.isKontalkContact(contact))
             return;
 
-        if (user.getSubScription() == User.Subscription.UNSUBSCRIBED ||
-                user.getSubScription() == User.Subscription.PENDING) {
-            LOGGER.info("no presence subscription, not sending key request, user: "+user);
+        if (contact.getSubScription() == Contact.Subscription.UNSUBSCRIBED ||
+                contact.getSubScription() == Contact.Subscription.PENDING) {
+            LOGGER.info("no presence subscription, not sending key request, contact: "+contact);
             return;
         }
-        mClient.sendPublicKeyRequest(user.getJID());
+        mClient.sendPublicKeyRequest(contact.getJID());
     }
 
     /**
      * Decrypt an incoming message and download attachment if present.
      */
     private void decryptAndDownload(InMessage message) {
-        Coder.processInMessage(message);
+        Coder.decryptMessage(message);
 
         if (!message.getCoderStatus().getErrors().isEmpty()) {
             this.handleSecurityErrors(message);
         }
 
-        if (message.getContent().getAttachment().isPresent()) {
-            Downloader.getInstance().queueDownload(message);
+        if (message.getContent().getPreview().isPresent()) {
+            mAttachmentManager.savePreview(message);
         }
+
+        if (message.getContent().getAttachment().isPresent()) {
+            this.download(message);
+        }
+    }
+
+    private void download(InMessage message){
+        mAttachmentManager.queueDownload(message);
     }
 
     /* static */
 
-    public static ViewControl create() {
-        return new Control().mViewControl;
+    public static ViewControl create(Path appDir) {
+        return new Control(appDir).mViewControl;
     }
 
-    private static KonThread getThread(String xmppThreadID, User user) {
-        ThreadList threadList = ThreadList.getInstance();
-        Optional<KonThread> optThread = threadList.get(xmppThreadID);
-        return optThread.orElse(threadList.get(user));
+    private static Chat getChat(String xmppThreadID, Contact contact) {
+        ChatList chatList = ChatList.getInstance();
+        Optional<Chat> optChat = chatList.get(xmppThreadID);
+        return optChat.orElse(chatList.get(contact));
     }
 
     private static Optional<OutMessage> getMessage(MessageIDs ids) {
-        // get thread by thread ID
-        ThreadList tl = ThreadList.getInstance();
-        Optional<KonThread> optThread = tl.get(ids.threadID);
-        if (optThread.isPresent()) {
-            return optThread.get().getMessages().getLast(ids.xmppID);
+        // get chat by thread ID
+        ChatList tl = ChatList.getInstance();
+        Optional<Chat> optChat = tl.get(ids.xmppThreadID);
+        if (optChat.isPresent()) {
+            return optChat.get().getMessages().getLast(ids.xmppID);
         }
 
-        // get thread by thread by jid
-        Optional<User> optUser = UserList.getInstance().get(ids.jid);
-        if (optUser.isPresent() && tl.contains(optUser.get())) {
-            Optional<OutMessage> optM = tl.get(optUser.get()).getMessages().getLast(ids.xmppID);
+        // get chat by jid
+        Optional<Contact> optContact = ContactList.getInstance().get(ids.jid);
+        if (optContact.isPresent() && tl.contains(optContact.get())) {
+            Optional<OutMessage> optM = tl.get(optContact.get()).getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
         }
 
         // fallback: search everywhere
-        for (KonThread thread: tl.getAll()) {
-            Optional<OutMessage> optM = thread.getMessages().getLast(ids.xmppID);
+        for (Chat chat: tl.getAll()) {
+            Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
         }
@@ -486,17 +510,17 @@ public final class Control {
         return Optional.empty();
     }
 
-    private static User.Subscription rosterToModelSubscription(
+    private static Contact.Subscription rosterToModelSubscription(
             RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
         if (type == RosterPacket.ItemType.both ||
                 type == RosterPacket.ItemType.to ||
                 type == RosterPacket.ItemType.remove)
-            return User.Subscription.SUBSCRIBED;
+            return Contact.Subscription.SUBSCRIBED;
 
         if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
-            return User.Subscription.PENDING;
+            return Contact.Subscription.PENDING;
 
-        return User.Subscription.UNSUBSCRIBED;
+        return Contact.Subscription.UNSUBSCRIBED;
     }
 
     /* commands from view */
@@ -507,7 +531,7 @@ public final class Control {
             new Thread(mClient).start();
 
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-            if (!AccountLoader.getInstance().isPresent()) {
+            if (!AccountLoader.getInstance().accountIsPresent()) {
                 this.changed(new ViewEvent.MissingAccount(connect));
                 return;
             }
@@ -521,8 +545,8 @@ public final class Control {
             LOGGER.info("Shutting down...");
             mCurrentStatus = Status.SHUTTING_DOWN;
             this.changed(new ViewEvent.StatusChanged());
-            UserList.getInstance().save();
-            ThreadList.getInstance().save();
+            ContactList.getInstance().save();
+            ChatList.getInstance().save();
             try {
                 Database.getInstance().close();
             } catch (RuntimeException ex) {
@@ -538,11 +562,11 @@ public final class Control {
         }
 
         public void connect(char[] password) {
-            Optional<PersonalKey> optKey = this.loadKey(password);
-            if (!optKey.isPresent())
+            PersonalKey key = this.keyOrNull(password);
+            if (key == null)
                 return;
 
-            mClient.connect(optKey.get());
+            mClient.connect(key);
         }
 
         public void disconnect() {
@@ -560,59 +584,67 @@ public final class Control {
             mClient.sendInitialPresence();
         }
 
-        /* user */
-
-        public Optional<User> createUser(String jid, String name, boolean encrypted) {
-            return Control.this.createNewUser(jid, name, encrypted);
+        public Path getFilePath(Attachment attachment) {
+            return mAttachmentManager.filePath(attachment);
         }
 
-        public void deleteUser(User user) {
-            boolean succ = mClient.removeFromRoster(user);
+        public Optional<Path> getImagePath(KonMessage message) {
+            return mAttachmentManager.imagePreviewPath(message);
+        }
+
+        /* contact */
+
+        public Optional<Contact> createContact(String jid, String name, boolean encrypted) {
+            return Control.this.createNewContact(jid, name, encrypted);
+        }
+
+        public void deleteContact(Contact contact) {
+            boolean succ = mClient.removeFromRoster(contact);
             if (!succ)
                 // only delete if not in roster
                 return;
 
-            UserList.getInstance().remove(user);
+            ContactList.getInstance().remove(contact);
 
-            user.setDeleted();
+            contact.setDeleted();
         }
 
-        public void sendUserBlocking(User user, boolean blocking) {
-            mClient.sendBlockingCommand(user.getJID(), blocking);
+        public void sendContactBlocking(Contact contact, boolean blocking) {
+            mClient.sendBlockingCommand(contact.getJID(), blocking);
         }
 
-        public void changeJID(User user, String jid) {
+        public void changeJID(Contact contact, String jid) {
             jid = XmppStringUtils.parseBareJid(jid);
-            if (user.getJID().equals(jid))
+            if (contact.getJID().equals(jid))
                 return;
 
-            UserList.getInstance().changeJID(user, jid);
+            ContactList.getInstance().changeJID(contact, jid);
         }
 
-        public void requestKey(User user) {
-            Control.this.sendKeyRequest(user);
+        public void requestKey(Contact contact) {
+            Control.this.sendKeyRequest(contact);
         }
 
-        public void acceptKey(User user, PGPCoderKey key) {
-            Control.this.setKey(user, key);
+        public void acceptKey(Contact contact, PGPCoderKey key) {
+            Control.this.setKey(contact, key);
         }
 
-        public void declineKey(User user) {
-            this.sendUserBlocking(user, true);
+        public void declineKey(Contact contact) {
+            this.sendContactBlocking(contact, true);
         }
 
-        /* threads */
+        /* chats */
 
-        public KonThread createNewThread(Set<User> user) {
-            return ThreadList.getInstance().createNew(user);
+        public Chat createNewChat(Set<Contact> contact) {
+            return ChatList.getInstance().createNew(contact);
         }
 
-        public void deleteThread(KonThread thread) {
-            ThreadList.getInstance().delete(thread.getID());
+        public void deleteChat(Chat chat) {
+            ChatList.getInstance().delete(chat.getID());
         }
 
-        public void handleOwnChatStateEvent(KonThread thread, ChatState state) {
-            mChatStateManager.handleOwnChatStateEvent(thread, state);
+        public void handleOwnChatStateEvent(Chat chat, ChatState state) {
+            mChatStateManager.handleOwnChatStateEvent(chat, state);
         }
 
         /* messages */
@@ -621,46 +653,72 @@ public final class Control {
             Control.this.decryptAndDownload(message);
         }
 
-        public void sendText(KonThread thread, String text) {
+        public void downloadAgain(InMessage message) {
+            Control.this.download(message);
+        }
+
+        public void sendText(Chat chat, String text) {
+            this.sendMessage(chat, text, Paths.get(""));
+        }
+
+        public void sendAttachment(Chat chat, Path file){
+            this.sendMessage(chat, "", file);
+        }
+
+        private void sendMessage(Chat chat, String text, Path file) {
             // TODO no group chat support yet
-            Set<User> user = thread.getUser();
-            for (User oneUser: user) {
-                if (oneUser.isDeleted())
-                    continue;
-                OutMessage newMessage = this.newOutMessage(
-                        thread,
-                        oneUser,
-                        text,
-                        oneUser.getEncrypted());
-                Control.this.sendMessage(newMessage);
+            Contact contact = null;
+            for (Contact c: chat.getContacts()) {
+                if (!c.isDeleted()) {
+                    contact = c;
+                }
             }
+            //Contact = chat.getContacts().stream().filter(c -> !c.isDeleted()).findFirst().orElse(null);
+            if (contact == null) {
+                LOGGER.warning("can't send message, no (valid) contact");
+                return;
+            }
+
+            Attachment attachment = null;
+            if (!file.toString().isEmpty()) {
+                attachment = AttachmentManager.attachmentOrNull(file);
+                if (attachment == null)
+                    return;
+            }
+            MessageContent content =
+                    attachment == null ? new MessageContent(text) :
+                    new MessageContent(text, attachment);
+
+            OutMessage newMessage = this.newOutMessage(chat, contact, content,
+                    contact.getEncrypted());
+
+            Control.this.sendMessage(newMessage);
         }
 
         /* private */
 
-        private Optional<PersonalKey> loadKey(char[] password) {
+        private PersonalKey keyOrNull(char[] password) {
             AccountLoader account = AccountLoader.getInstance();
             Optional<PersonalKey> optKey = account.getPersonalKey();
             if (optKey.isPresent())
-                return optKey;
+                return optKey.get();
 
             if (password.length == 0) {
                 if (account.isPasswordProtected()) {
                     this.changed(new ViewEvent.PasswordSet());
-                    return Optional.empty();
+                    return null;
                 }
 
                 password = Config.getInstance().getString(Config.ACC_PASS).toCharArray();
             }
 
             try {
-                optKey = Optional.of(account.load(password));
+                return account.load(password);
             } catch (KonException ex) {
                 // something wrong with the account, tell view
                 Control.this.handleException(ex);
-                return Optional.empty();
+                return null;
             }
-            return optKey;
         }
 
         /**
@@ -668,14 +726,16 @@ public final class Control {
          * save and process the message.
          * @return the new created message
          */
-        private OutMessage newOutMessage(KonThread thread, User user, String text, boolean encrypted) {
-            MessageContent content = new MessageContent(text);
-            OutMessage.Builder builder = new OutMessage.Builder(thread, user, encrypted);
+        private OutMessage newOutMessage(Chat chat, Contact contact,
+                MessageContent content , boolean encrypted) {
+            OutMessage.Builder builder = new OutMessage.Builder(chat, contact, encrypted);
             builder.content(content);
             OutMessage newMessage = builder.build();
-            boolean added = thread.addMessage(newMessage);
+            if (newMessage.getContent().getAttachment().isPresent())
+                mAttachmentManager.createImagePreview(newMessage);
+            boolean added = chat.addMessage(newMessage);
             if (!added) {
-                LOGGER.warning("could not add outgoing message to thread");
+                LOGGER.warning("could not add outgoing message to chat");
             }
             return newMessage;
         }

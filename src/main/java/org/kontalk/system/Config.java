@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -38,7 +39,7 @@ public final class Config extends PropertiesConfiguration {
 
     private static Config INSTANCE = null;
 
-    public static final String CONF_NAME = "kontalk.properties";
+    public static final String FILENAME = "kontalk.properties";
     // all configuration property keys
     // disable network property for now -> same as server host
     //public static final String SERV_NET = "server.network";
@@ -49,8 +50,8 @@ public final class Config extends PropertiesConfiguration {
     public static final String ACC_JID = "account.jid";
     public static final String VIEW_FRAME_WIDTH = "view.frame.width";
     public static final String VIEW_FRAME_HEIGHT = "view.frame.height";
-    public static final String VIEW_SELECTED_THREAD = "view.thread";
-    public static final String VIEW_THREAD_BG = "view.thread_bg";
+    public static final String VIEW_SELECTED_CHAT = "view.thread";
+    public static final String VIEW_CHAT_BG = "view.thread_bg";
     public static final String NET_SEND_CHAT_STATE = "net.chatstate";
     public static final String NET_STATUS_LIST = "net.status_list";
     public static final String MAIN_CONNECT_STARTUP = "main.connect_startup";
@@ -65,19 +66,19 @@ public final class Config extends PropertiesConfiguration {
     private static final String DEFAULT_XMPP_STATUS =
             Tr.tr("Hey, I'm using Kontalk on my PC!");
 
-    private Config(String filePath) {
+    private Config(Path configFile) {
         super();
 
         // separate list elements by tab character
         this.setListDelimiter((char) 9);
 
         try {
-            this.load(filePath);
+            this.load(configFile.toString());
         } catch (ConfigurationException ex) {
             LOGGER.info("Configuration not found. Using default values");
         }
 
-        this.setFileName(filePath);
+        this.setFileName(configFile.toString());
 
         // init config / set default values for new properties
         Map<String, Object> map = new HashMap<>();
@@ -89,8 +90,8 @@ public final class Config extends PropertiesConfiguration {
         map.put(ACC_JID, "");
         map.put(VIEW_FRAME_WIDTH, 600);
         map.put(VIEW_FRAME_HEIGHT, 650);
-        map.put(VIEW_SELECTED_THREAD, -1);
-        map.put(VIEW_THREAD_BG, "");
+        map.put(VIEW_SELECTED_CHAT, -1);
+        map.put(VIEW_CHAT_BG, "");
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_STATUS_LIST, new String[]{DEFAULT_XMPP_STATUS});
         map.put(MAIN_CONNECT_STARTUP, true);
@@ -113,12 +114,12 @@ public final class Config extends PropertiesConfiguration {
         }
     }
 
-    public synchronized static void initialize(String filePath)  {
+    public synchronized static void initialize(Path configFile)  {
         if (INSTANCE != null) {
             LOGGER.warning("configuration already initialized");
             return;
         }
-        INSTANCE = new Config(filePath);
+        INSTANCE = new Config(configFile);
     }
 
     public synchronized static Config getInstance() {

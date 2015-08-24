@@ -22,7 +22,6 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
-import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
@@ -30,15 +29,11 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextArea;
-import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.data.TooltipWay;
 import com.alee.managers.notification.NotificationIcon;
 import com.alee.managers.notification.NotificationListener;
 import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.notification.NotificationOption;
 import com.alee.managers.notification.WebNotificationPopup;
-import com.alee.managers.tooltip.TooltipManager;
 import java.awt.Color;
 import java.awt.event.*;
 import java.util.Observable;
@@ -54,23 +49,17 @@ import javax.swing.Icon;
 import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
-import javax.swing.event.DocumentEvent;
-
-import com.alee.utils.swing.DocumentChangeListener;
 import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.EventQueue;
-import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.KonThread;
-import org.kontalk.model.ThreadList;
-import org.kontalk.model.User;
-import org.kontalk.model.UserList;
+import org.kontalk.model.Chat;
+import org.kontalk.model.ChatList;
+import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.Tr;
@@ -101,12 +90,10 @@ public final class View implements Observer {
     private final Notifier mNotifier;
 
     private final SearchPanel mSearchPanel;
-    private final UserListView mUserListView;
-    private final ThreadListView mThreadListView;
+    private final ContactListView mContactListView;
+    private final ChatListView mChatListView;
     private final Content mContent;
-    private final ThreadView mThreadView;
-    private final WebTextArea mSendTextArea;
-    private final WebButton mSendButton;
+    private final ChatView mChatView;
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
 
@@ -117,59 +104,22 @@ public final class View implements Observer {
 
         ToolTipManager.sharedInstance().setInitialDelay(200);
 
-        mUserListView = new UserListView(this, UserList.getInstance());
-        UserList.getInstance().addObserver(mUserListView);
-        mThreadListView = new ThreadListView(this, ThreadList.getInstance());
-        ThreadList.getInstance().addObserver(mThreadListView);
+        mContactListView = new ContactListView(this, ContactList.getInstance());
+        ContactList.getInstance().addObserver(mContactListView);
+        mChatListView = new ChatListView(this, ChatList.getInstance());
+        ChatList.getInstance().addObserver(mChatListView);
 
-        // text area
-        mSendTextArea = new WebTextArea();
-        mSendTextArea.setMargin(View.MARGIN_SMALL);
-        mSendTextArea.setLineWrap(true);
-        mSendTextArea.setWrapStyleWord(true);
-        mSendTextArea.setFontSize(13);
-        mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
-            @Override
-            public void documentChanged(DocumentEvent e) {
-                View.this.handleKeyTypeEvent(e.getDocument().getLength() == 0);
-            }
-        });
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                mSendTextArea.requestFocusInWindow();
-            }
-        });
-
-        // send button
-        mSendButton = new WebButton(Tr.tr("Send"));
-        mSendButton.setMargin(MARGIN_SMALL);
-        mSendButton.setFontStyle(true, false);
-        // for showing the hotkey tooltip
-        TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
-        mSendButton.setEnabled(false);
-        mSendButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Component focusOwner = mMainFrame.getFocusOwner();
-                if (focusOwner != mSendTextArea && focusOwner != mSendButton)
-                    return;
-
-                View.this.callSendText();
-            }
-        });
-
-        // thread view
-        mThreadView = new ThreadView(this, mSendTextArea, mSendButton);
-        ThreadList.getInstance().addObserver(mThreadView);
+        // chat view
+        mChatView = new ChatView(this);
+        ChatList.getInstance().addObserver(mChatView);
 
         // content area
-        mContent = new Content(this, mThreadView);
+        mContent = new Content(this, mChatView);
 
         // search panel
         mSearchPanel = new SearchPanel(
-                new Table[]{mUserListView, mThreadListView},
-                mThreadView);
+                new Table[]{mContactListView, mChatListView},
+                mChatView);
 
         // status bar
         WebStatusBar statusBar = new WebStatusBar();
@@ -177,13 +127,13 @@ public final class View implements Observer {
         statusBar.add(mStatusBarLabel);
 
         // main frame
-        mMainFrame = new MainFrame(this, mUserListView, mThreadListView,
+        mMainFrame = new MainFrame(this, mContactListView, mChatListView,
                 mContent, mSearchPanel, statusBar);
         mMainFrame.setVisible(true);
 
         // tray
         mTrayManager = new TrayManager(this, mMainFrame);
-        ThreadList.getInstance().addObserver(mTrayManager);
+        ChatList.getInstance().addObserver(mTrayManager);
 
         // hotkeys
         this.setHotkeys();
@@ -195,35 +145,8 @@ public final class View implements Observer {
     }
 
     void setHotkeys() {
-        final boolean enterSends = Config.getInstance().getBoolean(Config.MAIN_ENTER_SENDS);
-
-        for (KeyListener l : mSendTextArea.getKeyListeners())
-            mSendTextArea.removeKeyListener(l);
-        mSendTextArea.addKeyListener(new KeyListener() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
-                        e.getModifiersEx() == KeyEvent.CTRL_DOWN_MASK) {
-                    e.consume();
-                    mSendTextArea.append(System.getProperty("line.separator"));
-                }
-                if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
-                        e.getModifiers() == 0) {
-                    // only ignore
-                    e.consume();
-                }
-            }
-            @Override
-            public void keyReleased(KeyEvent e) {
-            }
-            @Override
-            public void keyTyped(KeyEvent e) {
-            }
-        });
-
-        mSendButton.removeHotkeys();
-        HotkeyData sendHotkey = enterSends ? Hotkey.ENTER : Hotkey.CTRL_ENTER;
-        mSendButton.addHotkey(sendHotkey, TooltipWay.up);
+        boolean enterSends = Config.getInstance().getBoolean(Config.MAIN_ENTER_SENDS);
+        mChatView.setHotkeys(enterSends);
     }
 
     /**
@@ -233,10 +156,10 @@ public final class View implements Observer {
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                View.this.mThreadListView.selectLastThread();
+                View.this.mChatListView.selectLastChat();
 
-                if (ThreadList.getInstance().getAll().isEmpty())
-                    mMainFrame.selectTab(MainFrame.Tab.USER);
+                if (ChatList.getInstance().getAll().isEmpty())
+                    mMainFrame.selectTab(MainFrame.Tab.CONTACT);
             }
         });
     }
@@ -285,7 +208,7 @@ public final class View implements Observer {
            mNotifier.onNewMessage(newMessage.message);
        } else if (arg instanceof ViewEvent.NewKey) {
            ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
-           this.confirmNewKey(newKey.user, newKey.key);
+           this.confirmNewKey(newKey.contact, newKey.key);
        } else {
            LOGGER.warning("unexpected argument");
        }
@@ -298,7 +221,7 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Connecting..."));
                 break;
             case CONNECTED:
-                mThreadView.setColor(Color.WHITE);
+                mChatView.setColor(Color.WHITE);
                 mStatusBarLabel.setText(Tr.tr("Connected"));
                 NotificationManager.hideAllNotifications();
                 break;
@@ -306,14 +229,14 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Disconnecting..."));
                 break;
             case DISCONNECTED:
-                mThreadView.setColor(Color.LIGHT_GRAY);
+                mChatView.setColor(Color.LIGHT_GRAY);
                 mStatusBarLabel.setText(Tr.tr("Not connected"));
                 //if (mTrayIcon != null)
                 //    trayIcon.setImage(updatedImage);
                 break;
             case SHUTTING_DOWN:
                 mMainFrame.save();
-                mThreadListView.save();
+                mChatListView.save();
                 mTrayManager.removeTray();
                 mMainFrame.setVisible(false);
                 mMainFrame.dispose();
@@ -322,7 +245,7 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Connecting failed"));
                 break;
             case ERROR:
-                mThreadView.setColor(Color.lightGray);
+                mChatView.setColor(Color.lightGray);
                 mStatusBarLabel.setText(Tr.tr("Connection error"));
                 break;
             }
@@ -403,19 +326,19 @@ public final class View implements Observer {
         errorText += "</html>";
 
         // TODO too intrusive for user, but use the explanation above for message view
-        //NotificationManager.showNotification(mThreadView, errorText);
+        //NotificationManager.showNotification(mChatView, errorText);
     }
 
-    private void confirmNewKey(final User user, final PGPUtils.PGPCoderKey key) {
+    private void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {
         WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
         panel.setOpaque(false);
 
-        panel.add(new WebLabel(Tr.tr("Received new key for Contact")).setBoldFont());
+        panel.add(new WebLabel(Tr.tr("Received new key for contact")).setBoldFont());
         panel.add(new WebSeparator(true, true));
 
         panel.add(new WebLabel(Tr.tr("Contact:")));
-        String userText = Utils.name(user) + " " + Utils.jid(user.getJID(), 30, true);
-        panel.add(new WebLabel(userText).setBoldFont());
+        String contactText = Utils.name(contact) + " " + Utils.jid(contact.getJID(), 30, true);
+        panel.add(new WebLabel(contactText).setBoldFont());
 
         panel.add(new WebLabel(Tr.tr("Key fingerprint:")));
         WebTextArea fpArea = Utils.createFingerprintArea();
@@ -438,10 +361,10 @@ public final class View implements Observer {
             public void optionSelected(NotificationOption option) {
                 switch (option) {
                     case accept :
-                        mControl.acceptKey(user, key);
+                        mControl.acceptKey(contact, key);
                         break;
                     case decline :
-                        mControl.declineKey(user);
+                        mControl.declineKey(contact);
                 }
             }
             @Override
@@ -458,46 +381,36 @@ public final class View implements Observer {
     }
 
     void callShutDown() {
-        // trigger save if user details are shown
+        // trigger save if contact details are shown
         mContent.showNothing();
         mControl.shutDown();
     }
 
-    void callCreateNewThread(Set<User> user) {
-        KonThread thread = mControl.createNewThread(user);
-        this.selectThread(thread);
-    }
-
-    private void callSendText() {
-       Optional<KonThread> optThread = mContent.getCurrentThread();
-       if (!optThread.isPresent())
-           // now current thread
-           return;
-
-       mControl.sendText(optThread.get(), mSendTextArea.getText());
-       mSendTextArea.setText("");
+    void callCreateNewChat(Set<Contact> contact) {
+        Chat chat = mControl.createNewChat(contact);
+        this.selectChat(chat);
     }
 
     /* view internal */
 
-    void showThread(User user) {
-        KonThread thread = ThreadList.getInstance().get(user);
-        this.selectThread(thread);
+    void showChat(Contact contact) {
+        Chat chat = ChatList.getInstance().get(contact);
+        this.selectChat(chat);
     }
 
-    private void selectThread(KonThread thread) {
-        mMainFrame.selectTab(MainFrame.Tab.THREADS);
-        mThreadListView.setSelectedItem(thread);
+    private void selectChat(Chat chat) {
+        mMainFrame.selectTab(MainFrame.Tab.CHATS);
+        mChatListView.setSelectedItem(chat);
     }
 
-    void showUserDetails(User user) {
-        mContent.showUser(user);
+    void showContactDetails(Contact contact) {
+        mContent.showContact(contact);
     }
 
-    void showThread(KonThread thread) {
-        if (mMainFrame.getCurrentTab() != MainFrame.Tab.THREADS)
+    void showChat(Chat chat) {
+        if (mMainFrame.getCurrentTab() != MainFrame.Tab.CHATS)
             return;
-        mContent.showThread(thread);
+        mContent.showChat(chat);
     }
 
     void clearSearch() {
@@ -505,44 +418,32 @@ public final class View implements Observer {
     }
 
     void tabPaneChanged(MainFrame.Tab tab) {
-        if (tab == MainFrame.Tab.THREADS) {
-            Optional<KonThread> optThread = mThreadListView.getSelectedValue();
-            if (optThread.isPresent()) {
-                mContent.showThread(optThread.get());
+        if (tab == MainFrame.Tab.CHATS) {
+            Optional<Chat> optChat = mChatListView.getSelectedValue();
+            if (optChat.isPresent()) {
+                mContent.showChat(optChat.get());
                 return;
             }
         } else {
-            Optional<User> optUser = mUserListView.getSelectedValue();
-            if (optUser.isPresent()) {
-                mContent.showUser(optUser.get());
+            Optional<Contact> optContact = mContactListView.getSelectedValue();
+            if (optContact.isPresent()) {
+                mContent.showContact(optContact.get());
                 return;
             }
         }
         mContent.showNothing();
     }
 
-    private void handleKeyTypeEvent(boolean empty) {
-        mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
-
-        Optional<KonThread> optThread = mContent.getCurrentThread();
-        if (!optThread.isPresent())
-            return;
-
-        // workaround: clearing the text area is not a key event
-        if (!empty)
-            mControl.handleOwnChatStateEvent(optThread.get(), ChatState.composing);
-    }
-
-    Optional<KonThread> getCurrentShownThread() {
-        return mContent.getCurrentThread();
+    Optional<Chat> getCurrentShownChat() {
+        return mContent.getCurrentChat();
     }
 
     boolean mainFrameIsFocused() {
         return mMainFrame.isFocused();
     }
 
-    void reloadThreadBG() {
-        mThreadView.loadDefaultBG();
+    void reloadChatBG() {
+        mChatView.loadDefaultBG();
     }
 
     void updateTray() {

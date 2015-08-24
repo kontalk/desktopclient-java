@@ -57,8 +57,8 @@ final class KonRosterListener implements RosterListener {
                 return;
             }
 
-            LOGGER.info("roster entry: "+entry.toString());
-            mControl.addUserFromRoster(entry.getUser(),
+            LOGGER.config("entry: "+entry.toString());
+            mControl.addContactFromRoster(entry.getUser(),
                     entry.getName(),
                     entry.getType(),
                     entry.getStatus());
@@ -74,7 +74,7 @@ final class KonRosterListener implements RosterListener {
                 return;
             }
 
-            LOGGER.info("roster update: "+entry.toString());
+            LOGGER.info("entry: "+entry.toString());
             mControl.setSubscriptionStatus(entry.getUser(),
                     entry.getType(),
                     entry.getStatus());
@@ -83,7 +83,7 @@ final class KonRosterListener implements RosterListener {
 
     @Override
     public void entriesDeleted(Collection<String> addresses) {
-        LOGGER.info("ignoring entry deletion in roster");
+        LOGGER.info("ignored");
     }
 
     @Override

@@ -38,7 +38,7 @@ import org.kontalk.model.InMessage;
 import org.kontalk.util.MediaUtils;
 
 /**
- * Inform user about events.
+ * Inform contact about events.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class Notifier {
@@ -52,7 +52,7 @@ final class Notifier {
     }
 
     public void onNewMessage(InMessage newMessage) {
-        if (newMessage.getThread() == mView.getCurrentShownThread().orElse(null) &&
+        if (newMessage.getChat() == mView.getCurrentShownChat().orElse(null) &&
                 mView.mainFrameIsFocused())
             return;
         MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);

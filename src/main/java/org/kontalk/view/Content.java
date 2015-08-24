@@ -24,39 +24,39 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.GridBagLayout;
 import java.util.Optional;
-import org.kontalk.model.KonThread;
-import org.kontalk.model.User;
+import org.kontalk.model.Chat;
+import org.kontalk.model.Contact;
 
 /**
- * Content view area: show a thread or user details
+ * Content view area: show a chat or contact details
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class Content extends WebPanel {
 
     private final View mView;
-    private final ThreadView mThreadView;
+    private final ChatView mChatView;
     private Component mCurrent;
 
-    Content(View view, ThreadView threadView) {
+    Content(View view, ChatView chatView) {
         mView = view;
-        mThreadView = threadView;
-        this.show(mThreadView);
+        mChatView = chatView;
+        this.show(mChatView);
     }
 
-    Optional<KonThread> getCurrentThread() {
-        if (!(mCurrent instanceof ThreadView))
+    Optional<Chat> getCurrentChat() {
+        if (!(mCurrent instanceof ChatView))
             return Optional.empty();
-        return mThreadView.getCurrentThread();
+        return mChatView.getCurrentChat();
     }
 
-    void showThread(KonThread thread) {
-        mThreadView.showThread(thread);
-        if (mCurrent != mThreadView)
-            this.show(mThreadView);
+    void showChat(Chat chat) {
+        mChatView.showChat(chat);
+        if (mCurrent != mChatView)
+            this.show(mChatView);
     }
 
-    void showUser(User user) {
-        this.show(new UserDetails(mView, user));
+    void showContact(Contact contact) {
+        this.show(new ContactDetails(mView, contact));
     }
 
     void showNothing() {
@@ -69,8 +69,8 @@ public class Content extends WebPanel {
     }
 
     private void show(Component comp) {
-        if (mCurrent instanceof UserDetails) {
-            ((UserDetails) mCurrent).onClose();
+        if (mCurrent instanceof ContactDetails) {
+            ((ContactDetails) mCurrent).onClose();
         }
         // Swing...
         this.removeAll();

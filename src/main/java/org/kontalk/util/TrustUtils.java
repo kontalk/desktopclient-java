@@ -41,7 +41,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509TrustManager;
-import org.kontalk.Kontalk;
 import org.kontalk.crypto.PGPUtils;
 
 /**
@@ -150,7 +149,7 @@ public class TrustUtils {
             // add own certs
             try {
                 KeyStore myTS = KeyStore.getInstance("BKS", PGPUtils.PROVIDER);
-                InputStream in = ClassLoader.getSystemResourceAsStream(Kontalk.RES_PATH + TRUSSTORE_FILE);
+                InputStream in = ClassLoader.getSystemResourceAsStream(TRUSSTORE_FILE);
                 myTS.load(in, "changeit".toCharArray());
                 Enumeration<String> aliases = myTS.aliases();
                 while (aliases.hasMoreElements()) {

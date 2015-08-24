@@ -35,7 +35,7 @@ import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
-import org.kontalk.model.ThreadList;
+import org.kontalk.model.ChatList;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 
@@ -112,7 +112,7 @@ final class TrayManager implements Observer {
     }
 
     private static Image getTrayImage() {
-        return ThreadList.getInstance().isUnread() ?
+        return ChatList.getInstance().isUnread() ?
                 NOTIFICATION_TRAY :
                 NORMAL_TRAY ;
     }

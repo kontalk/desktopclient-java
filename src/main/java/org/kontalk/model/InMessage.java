@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.Preview;
 
 /**
  * Model for a XMPP message that was sent to us.
@@ -57,21 +58,12 @@ public final class InMessage extends KonMessage {
         if (attachment == null)
             return;
 
-        attachment.setFileName(fileName);
+        attachment.setFile(fileName);
         this.save();
         // only tell view if file not encrypted
         if (!attachment.getCoderStatus().isEncrypted())
             this.changed(attachment);
      }
-
-    public void setAttachmentErrors(EnumSet<Coder.Error> errors) {
-        Attachment attachment = this.getAttachment();
-        if (attachment == null)
-            return;
-
-        attachment.getCoderStatus().setSecurityErrors(errors);
-        this.save();
-    }
 
     public void setAttachmentSigning(Coder.Signing signing) {
         Attachment attachment = this.getAttachment();
@@ -97,24 +89,26 @@ public final class InMessage extends KonMessage {
         if (attachment == null)
             return;
 
-        attachment.setDecryptedFilename(filename);
+        attachment.setDecryptedFile(filename);
         this.save();
         this.changed(attachment);
     }
 
-    private Attachment getAttachment() {
-        Optional<Attachment> optAttachment = this.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
-            LOGGER.warning("no attachment!?");
-            return null;
+    public void setPreviewFilename(String filename) {
+        Optional<Preview> optPreview = this.getContent().getPreview();
+        if (!optPreview.isPresent()) {
+            LOGGER.warning("no preview !?");
+            return;
         }
-        return optAttachment.get();
+        optPreview.get().setFilename(filename);
+        this.save();
+        this.changed(optPreview.get());
     }
 
     public static class Builder extends KonMessage.Builder {
 
-        public Builder(KonThread thread, User user) {
-            super(-1, thread, Direction.IN, user, new Date());
+        public Builder(Chat chat, Contact contact) {
+            super(-1, chat, Direction.IN, contact, new Date());
 
             mReceiptStatus = Status.IN;
         }

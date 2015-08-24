@@ -53,8 +53,12 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
-import org.kontalk.model.User;
+import org.kontalk.model.Contact;
+import org.kontalk.model.KonMessage;
+import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.system.Control;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
 
 /**
@@ -129,7 +133,7 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-        mConn.addAsyncStanzaListener(new PresenceListener(this, Roster.getInstanceFor(mConn), mControl), presenceFilter);
+        mConn.addAsyncStanzaListener(new PresenceListener(Roster.getInstanceFor(mConn), mControl), presenceFilter);
 
          // fallback listener
         mConn.addAsyncStanzaListener(this,
@@ -156,11 +160,10 @@ public final class Client implements StanzaListener, Runnable {
         // TODO unsure if everything is thread-safe
         synchronized (this) {
             // connect
-            LOGGER.info("connecting to "+mConn.getDestination()+" ...");
             try {
                 mConn.connect();
             } catch (XMPPException | SmackException | IOException ex) {
-                LOGGER.log(Level.WARNING, "can't connect", ex);
+                LOGGER.log(Level.WARNING, "can't connect to "+mConn.getServer(), ex);
                 mControl.setStatus(Control.Status.FAILED);
                 mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
                 return;
@@ -170,7 +173,7 @@ public final class Client implements StanzaListener, Runnable {
             try {
                 mConn.login();
             } catch (XMPPException | SmackException | IOException ex) {
-                LOGGER.log(Level.WARNING, "can't login", ex);
+                LOGGER.log(Level.WARNING, "can't login on "+mConn.getServer(), ex);
                 mConn.disconnect();
                 mControl.setStatus(Control.Status.FAILED);
                 mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
@@ -206,6 +209,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendMessage(OutMessage message) {
+        LOGGER.info("to "+message.getJID());
         // check for correct receipt status and reset it
         Status status = message.getReceiptStatus();
         assert status == Status.PENDING || status == Status.ERROR;
@@ -221,19 +225,26 @@ public final class Client implements StanzaListener, Runnable {
             return;
         }
 
-        Message smackMessage = new Message(message.getJID(), Message.Type.chat);
-        smackMessage.setStanzaId(message.getXMPPID());
-        smackMessage.addExtension(new DeliveryReceiptRequest());
-        Config conf = Config.getInstance();
-        if (conf.getBoolean(Config.NET_SEND_CHAT_STATE))
-            smackMessage.addExtension(new ChatStateExtension(ChatState.active));
-
+        Message sendMessage;
         if (message.getCoderStatus().getEncryption() == Coder.Encryption.NOT &&
                 message.getCoderStatus().getSigning() == Coder.Signing.NOT) {
-            // TODO send more possible content
-            smackMessage.setBody(message.getContent().getPlainText());
+            // unencrypted
+            Message rawMessage = rawMessageOrNull(message, false);
+            if (rawMessage == null)
+                return;
+            sendMessage = rawMessage;
         } else {
-            Optional<byte[]> encrypted = Coder.processOutMessage(message);
+            // encrypted
+            sendMessage = new Message(message.getJID(), Message.Type.chat);
+            Optional<byte[]> encrypted;
+            if (message.getContent().getAttachment().isPresent()) {
+                Message rawMessage = rawMessageOrNull(message, true);
+                if (rawMessage == null)
+                    return;
+                encrypted = Coder.encryptStanza(message, rawMessage.toXML().toString());
+            } else {
+                encrypted = Coder.encryptMessage(message);
+            }
             // check also for security errors just to be sure
             if (!encrypted.isPresent() ||
                     !message.getCoderStatus().getErrors().isEmpty()) {
@@ -242,12 +253,48 @@ public final class Client implements StanzaListener, Runnable {
                 mControl.handleSecurityErrors(message);
                 return;
             }
-            smackMessage.addExtension(new E2EEncryption(encrypted.get()));
+            sendMessage.addExtension(new E2EEncryption(encrypted.get()));
         }
 
-        this.sendPacket(smackMessage);
+        sendMessage.setStanzaId(message.getXMPPID());
+
+        sendMessage.addExtension(new DeliveryReceiptRequest());
+
+        if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
+            sendMessage.addExtension(new ChatStateExtension(ChatState.active));
+
+        this.sendPacket(sendMessage);
     }
 
+    private static Message rawMessageOrNull(KonMessage message, boolean encrypted) {
+        Message smackMessage = new Message(message.getJID(), Message.Type.chat);
+
+        smackMessage.setBody(message.getContent().getPlainText());
+
+        Optional<Attachment> optAtt = message.getContent().getAttachment();
+        if (optAtt.isPresent()) {
+            Attachment att = optAtt.get();
+            if (!att.hasURL()) {
+                LOGGER.warning("attachment not uploaded");
+                return null;
+            }
+
+            OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
+                    att.getMimeType(), att.getLength(), encrypted);
+            smackMessage.addExtension(oobData);
+
+            Optional<Preview> optPreview = message.getContent().getPreview();
+            if (optPreview.isPresent()) {
+                Preview preview = optPreview.get();
+                String data = EncodingUtils.bytesToBase64(preview.getData());
+                BitsOfBinary bob = new BitsOfBinary(preview.getMimeType(), data);
+                smackMessage.addExtension(bob);
+            }
+        }
+        return smackMessage;
+    }
+
+    // TODO unused
     public void sendVCardRequest(String jid) {
         VCard4 vcard = new VCard4();
         vcard.setType(IQ.Type.get);
@@ -256,6 +303,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendPublicKeyRequest(String jid) {
+        LOGGER.info("to "+jid);
         PublicKeyPublish publicKeyRequest = new PublicKeyPublish();
         publicKeyRequest.setTo(jid);
         this.sendPacket(publicKeyRequest);
@@ -266,10 +314,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendBlockingCommand(String jid, boolean blocking) {
-        if (!this.isConnected()) {
-            LOGGER.warning("not sending blocking command, not connected");
-            return;
-        }
+        LOGGER.info("jid: "+jid+" blocking="+blocking);
 
         String command = blocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
         BlockingCommand blockingCommand = new BlockingCommand(command, jid);
@@ -294,18 +339,19 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendPresenceSubscriptionRequest(String jid) {
+        LOGGER.info("to "+jid);
         Presence subscribeRequest = new Presence(Presence.Type.subscribe);
         subscribeRequest.setTo(jid);
         this.sendPacket(subscribeRequest);
     }
 
-    public void sendChatState(String jid, Optional<String> optThreadID, ChatState state) {
+    public void sendChatState(String jid, String threadID, ChatState state) {
         if (!Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
             return;
 
         Message message = new Message(jid, Message.Type.chat);
-        if (optThreadID.isPresent())
-            message.setThread(optThreadID.get());
+        if (!threadID.isEmpty())
+            message.setThread(threadID);
         message.addExtension(new ChatStateExtension(state));
 
         this.sendPacket(message);
@@ -317,46 +363,46 @@ public final class Client implements StanzaListener, Runnable {
         } catch (SmackException.NotConnectedException ex) {
             LOGGER.info("can't send packet, not connected.");
         }
-        LOGGER.info("sent packet: "+p.toXML());
+        LOGGER.config("packet: "+p);
     }
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.info("got packet (unhandled): "+packet.toXML());
+        LOGGER.config("unhandled: "+packet);
     }
 
-    public boolean addToRoster(User user) {
+    public boolean addToRoster(Contact contact) {
         if (!this.isConnected()) {
-            LOGGER.info("can't add user to roster, not connected");
+            LOGGER.info("can't add contact to roster, not connected");
             return false;
         }
 
-        String rosterName = user.getName();
+        String rosterName = contact.getName();
         if (rosterName.isEmpty())
             rosterName = XmppStringUtils.parseLocalpart(rosterName);
         try {
             // also sends presence subscription request
-            Roster.getInstanceFor(mConn).createEntry(user.getJID(), rosterName,
+            Roster.getInstanceFor(mConn).createEntry(contact.getJID(), rosterName,
                     null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
                 SmackException.NotConnectedException ex) {
-            LOGGER.log(Level.WARNING, "can't add user to roster", ex);
+            LOGGER.log(Level.WARNING, "can't add contact to roster", ex);
             return false;
         }
         return true;
     }
 
-    public boolean removeFromRoster(User user) {
+    public boolean removeFromRoster(Contact contact) {
         if (!this.isConnected()) {
-            LOGGER.info("can't remove user from roster, not connected");
+            LOGGER.info("not connected");
             return false;
         }
         Roster roster = Roster.getInstanceFor(mConn);
-        RosterEntry entry = roster.getEntry(user.getJID());
+        RosterEntry entry = roster.getEntry(contact.getJID());
         if (entry == null) {
-            LOGGER.warning("can't find roster entry for user: "+user);
+            LOGGER.warning("can't find roster entry for contact: "+contact);
             return true;
         }
         try {
@@ -366,7 +412,7 @@ public final class Client implements StanzaListener, Runnable {
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
                 SmackException.NotConnectedException ex) {
-            LOGGER.log(Level.WARNING, "can't remove user from roster", ex);
+            LOGGER.log(Level.WARNING, "can't remove contact from roster", ex);
             return false;
         }
         return true;

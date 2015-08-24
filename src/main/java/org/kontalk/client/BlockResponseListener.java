@@ -51,7 +51,7 @@ final class BlockResponseListener implements StanzaListener {
     @Override
     public void processPacket(Stanza packet)
             throws SmackException.NotConnectedException {
-        LOGGER.info("got block response: "+packet.toXML());
+        LOGGER.info("block response: "+packet);
 
         mConn.removeSyncStanzaListener(this);
 
@@ -66,6 +66,6 @@ final class BlockResponseListener implements StanzaListener {
             return;
         }
 
-        mControl.setUserBlocking(mJID, mBlocking);
+        mControl.setContactBlocking(mJID, mBlocking);
     }
 };

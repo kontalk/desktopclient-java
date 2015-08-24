@@ -18,6 +18,9 @@
 
 package org.kontalk.model;
 
+import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
@@ -38,41 +41,46 @@ public class MessageContent {
 
     // plain message text, empty string if not present
     private final String mPlainText;
-    // attachment a.k.a. file url in plaintext
-    private final Optional<Attachment> mOptAttachment;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
+    // attachment (file url, path and metadata)
+    private final Optional<Attachment> mOptAttachment;
+    // small preview file of attachment
+    private Optional<Preview> mOptPreview;
     // decrypted message content
     private Optional<MessageContent> mOptDecryptedContent;
 
     private static final String JSON_PLAIN_TEXT = "plain_text";
-    private static final String JSON_ATTACHMENT = "attachment";
     private static final String JSON_ENC_CONTENT = "encrypted_content";
+    private static final String JSON_ATTACHMENT = "attachment";
+    private static final String JSON_PREVIEW = "preview";
     private static final String JSON_DEC_CONTENT = "decrypted_content";
 
+    // used for decrypted content of incoming messages, outgoing messages
+    // and as fallback
     public MessageContent(String plainText) {
-        this(plainText, Optional.<Attachment>empty(), "");
+        this(plainText, "", null, null);
     }
 
-    public MessageContent(String plainText,
-            Optional<Attachment> optAttachment,
-            String encryptedContent) {
-        this(
-                plainText,
-                optAttachment,
-                encryptedContent,
-                Optional.<MessageContent>empty()
-        );
+    // used for outgoing messages
+    public MessageContent(String plainText, Attachment attachment) {
+        this(plainText, "", attachment, null);
     }
 
-    private MessageContent(String plainText,
-            Optional<Attachment> optAttachment,
-            String encryptedContent,
-            Optional<MessageContent> optDecryptedContent) {
+    // used for incoming messages
+    public MessageContent(String plainText, String encrypted,
+            Attachment attachment, Preview preview) {
+        this(plainText, encrypted, attachment, preview, null);
+    }
+
+    // used when loading from db
+    private MessageContent(String plainText, String encrypted,
+            Attachment attachment, Preview preview, MessageContent decryptedContent) {
         mPlainText = plainText;
-        mOptAttachment = optAttachment;
-        mEncryptedContent = encryptedContent;
-        mOptDecryptedContent = optDecryptedContent;
+        mEncryptedContent = encrypted;
+        mOptAttachment = Optional.ofNullable(attachment);
+        mOptPreview = Optional.ofNullable(preview);
+        mOptDecryptedContent = Optional.ofNullable(decryptedContent);
     }
 
     /**
@@ -92,10 +100,9 @@ public class MessageContent {
     }
 
     public Optional<Attachment> getAttachment() {
-        if (mOptDecryptedContent.isPresent()) {
-            if (mOptDecryptedContent.get().getAttachment().isPresent()) {
-                return mOptDecryptedContent.get().getAttachment();
-            }
+        if (mOptDecryptedContent.isPresent() &&
+                mOptDecryptedContent.get().getAttachment().isPresent()) {
+            return mOptDecryptedContent.get().getAttachment();
         }
         return mOptAttachment;
     }
@@ -111,32 +118,53 @@ public class MessageContent {
         mEncryptedContent = "";
     }
 
+    public Optional<Preview> getPreview() {
+        if (mOptDecryptedContent.isPresent() &&
+                mOptDecryptedContent.get().getPreview().isPresent()) {
+            return mOptDecryptedContent.get().getPreview();
+        }
+        return mOptPreview;
+    }
+
+    void setPreview(Preview preview) {
+        if (mOptPreview.isPresent()) {
+            LOGGER.warning("preview already present, not overwriting");
+            return;
+        }
+        mOptPreview = Optional.of(preview);
+    }
+
     /**
      * Return if there is no content in this message.
      * @return true if there is no content at all, false otherwise
      */
     public boolean isEmpty() {
         return mPlainText.isEmpty() &&
+                mEncryptedContent.isEmpty() &&
                 !mOptAttachment.isPresent() &&
-                mEncryptedContent.isEmpty();
+                !mOptPreview.isPresent() &&
+                !mOptDecryptedContent.isPresent();
     }
 
     @Override
     public String toString() {
-        return "CONT:plain="+mPlainText+",att="+mOptAttachment
-                +",encr="+mEncryptedContent+",decr="+mOptDecryptedContent;
+        return "CONT:plain="+mPlainText+",encr="+mEncryptedContent
+                +",att="+mOptAttachment+",decr="+mOptDecryptedContent;
     }
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    String toJSONString() {
+    String toJSON() {
         JSONObject json = new JSONObject();
         EncodingUtils.putJSON(json, JSON_PLAIN_TEXT, mPlainText);
         if (mOptAttachment.isPresent())
             json.put(JSON_ATTACHMENT, mOptAttachment.get().toJSONString());
         EncodingUtils.putJSON(json, JSON_ENC_CONTENT, mEncryptedContent);
         if (mOptDecryptedContent.isPresent())
-            json.put(JSON_DEC_CONTENT, mOptDecryptedContent.get().toJSONString());
+            json.put(JSON_DEC_CONTENT, mOptDecryptedContent.get().toJSON());
+        if (mOptPreview.isPresent()){
+            json.put(JSON_PREVIEW, mOptPreview.get().toJSON());
+        }
         return json.toJSONString();
     }
 
@@ -144,22 +172,26 @@ public class MessageContent {
         Object obj = JSONValue.parse(jsonContent);
         try {
             Map<?, ?> map = (Map) obj;
-            String plainText = (String) map.get(JSON_PLAIN_TEXT);
-            if (plainText == null) plainText = "";
-            String jsonAttachment = (String) map.get(JSON_ATTACHMENT);
-            Optional<Attachment> optAttachment = jsonAttachment == null ?
-                    Optional.<Attachment>empty() :
-                    Attachment.fromJSONString(jsonAttachment);
 
-            String encryptedContent = (String) map.get(JSON_ENC_CONTENT);
-            if (encryptedContent == null) encryptedContent = "";
+            String plainText = EncodingUtils.getJSONString(map, JSON_PLAIN_TEXT);
+
+            String encrypted = EncodingUtils.getJSONString(map, JSON_ENC_CONTENT);
+
+            String att = (String) map.get(JSON_ATTACHMENT);
+            Attachment attachment = att == null ? null : Attachment.fromJSONOrNull(att);
+
+            String pre = (String) map.get(JSON_PREVIEW);
+            Preview preview = pre == null ? null : Preview.fromJSONOrNull(pre);
+
             String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
-            Optional<MessageContent> decryptedContent = jsonDecryptedContent == null ?
-                    Optional.<MessageContent>empty() :
-                    Optional.of(fromJSONString(jsonDecryptedContent));
+            MessageContent decryptedContent = jsonDecryptedContent == null ?
+                    null :
+                    fromJSONString(jsonDecryptedContent);
+
             return new MessageContent(plainText,
-                    optAttachment,
-                    encryptedContent,
+                    encrypted,
+                    attachment,
+                    preview,
                     decryptedContent);
         } catch(ClassCastException ex) {
             LOGGER.log(Level.WARNING, "can't parse JSON message content", ex);
@@ -168,91 +200,99 @@ public class MessageContent {
     }
 
     public static class Attachment {
-        // URL to file, empty string by default
-        private final String mURL;
+
+        private static final String JSON_URL = "url";
+        private static final String JSON_MIME_TYPE = "mime_type";
+        private static final String JSON_LENGTH = "length";
+        private static final String JSON_FILENAME = "file_name";
+        private static final String JSON_ENCRYPTION = "encryption";
+        private static final String JSON_SIGNING = "signing";
+        private static final String JSON_CODER_ERRORS = "coder_errors";
+
+        // URL for file download, empty string by default
+        private URI mURL;
+        // file name of downloaded file or path to upload file, empty by default
+        private Path mFile;
         // MIME of file, empty string by default
         private final String mMimeType;
-        // size of (decrypted) file, -1 by default
+        // size of (decrypted) file in bytes, -1 by default
         private final long mLength;
-        // file name of downloaded and encrypted file, empty string by default
-        private String mFileName;
         // coder status of file encryption
         private final CoderStatus mCoderStatus;
         // progress downloaded of (encrypted) file in percent
         private int mDownloadProgress = -1;
 
-        private static final String JSON_URL = "url";
-        private static final String JSON_MIME_TYPE = "mime_type";
-        private static final String JSON_LENGTH = "length";
-        private static final String JSON_FILE_NAME = "file_name";
-        private static final String JSON_ENCRYPTION = "encryption";
-        private static final String JSON_SIGNING = "signing";
-        private static final String JSON_CODER_ERRORS = "coder_errors";
+        // used for outgoing attachments
+        public Attachment(Path path, String mimeType, long length) {
+            this(URI.create(""), path, mimeType, length,
+                    CoderStatus.createInsecure());
+        }
 
         // used for incoming attachments
-        public Attachment(String url,
-                String mimeType,
-                long length,
+        public Attachment(URI url, String mimeType, long length,
                 boolean encrypted) {
-            this(
-                    url,
-                    mimeType,
-                    length,
-                    "",
-                    new CoderStatus(
-                        encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT,
-                        encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT,
-                        EnumSet.noneOf(Coder.Error.class)
-                    )
+            this(url, Paths.get(""), mimeType, length,
+                    encrypted ? CoderStatus.createEncrypted() :
+                            CoderStatus.createInsecure()
             );
         }
 
         // used when loading from database.
-        private Attachment(String url,
-                String mimeType,
-                long length,
-                String fileName,
+        private Attachment(URI url, Path file,
+                String mimeType, long length,
                 CoderStatus coderStatus)  {
             mURL = url;
+            mFile = file;
             mMimeType = mimeType;
             mLength = length;
-            mFileName = fileName;
             mCoderStatus = coderStatus;
         }
 
-        public String getURL() {
+        public boolean hasURL() {
+            return !mURL.toString().isEmpty();
+        }
+
+        public URI getURL() {
             return mURL;
+        }
+
+        public void setURL(URI url){
+            mURL = url;
         }
 
         public String getMimeType() {
             return mMimeType;
         }
 
+        public long getLength() {
+            return mLength;
+        }
+
        /**
-        * Return name of file or empty string if file wasn't downloaded yet.
+        * Return the filename (download) or path to the local file (upload).
         */
-        public String getFileName() {
-            return mFileName;
+        public Path getFile() {
+            return mFile;
         }
 
-        void setFileName(String fileName) {
-            mFileName = fileName;
+        void setFile(String fileName) {
+            mFile = Paths.get(fileName);
         }
 
-        void setDecryptedFilename(String fileName) {
+        void setDecryptedFile(String fileName) {
             mCoderStatus.setDecrypted();
-            mFileName = fileName;
+            mFile = Paths.get(fileName);
         }
 
         public CoderStatus getCoderStatus() {
             return mCoderStatus;
         }
 
-        /** Download progress in percent.<br>
-         * -1: no download/default<br>
-         *  0: download started...<br>
-         * 100: ...download finished<br>
-         * -2: unknown size<br>
+        /** Download progress in percent. <br>
+         * -1: no download/default <br>
+         *  0: download started... <br>
+         * 100: ...download finished <br>
+         * -2: unknown size <br>
          * -3: download aborted
          */
         public int getDownloadProgress() {
@@ -266,18 +306,18 @@ public class MessageContent {
 
         @Override
         public String toString() {
-            return "ATT:url="+mURL+",mime="+mMimeType+",file="+mFileName
-                    +",status="+mCoderStatus;
+            return "{ATT:url="+mURL+",file="+mFile+",mime="+mMimeType
+                    +",status="+mCoderStatus+"}";
         }
 
         // using legacy lib, raw types extend Object
         @SuppressWarnings("unchecked")
         private String toJSONString() {
             JSONObject json = new JSONObject();
-            json.put(JSON_URL, mURL);
-            json.put(JSON_MIME_TYPE, mMimeType);
+            EncodingUtils.putJSON(json, JSON_URL, mURL.toString());
+            EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
-            json.put(JSON_FILE_NAME, mFileName);
+            EncodingUtils.putJSON(json, JSON_FILENAME, mFile.toString());
             json.put(JSON_ENCRYPTION, mCoderStatus.getEncryption().ordinal());
             json.put(JSON_SIGNING, mCoderStatus.getSigning().ordinal());
             int errs = EncodingUtils.enumSetToInt(mCoderStatus.getErrors());
@@ -285,21 +325,18 @@ public class MessageContent {
             return json.toJSONString();
         }
 
-        static Optional<Attachment> fromJSONString(String jsonAttachment) {
-            Object obj = JSONValue.parse(jsonAttachment);
+        private static Attachment fromJSONOrNull(String json) {
+            Object obj = JSONValue.parse(json);
             try {
                 Map<?, ?> map = (Map) obj;
 
-                String url = (String) map.get(JSON_URL);
-                assert url != null;
+                URI url = URI.create(EncodingUtils.getJSONString(map, JSON_URL));
 
-                String mimeType = (String) map.get(JSON_MIME_TYPE);
-                if (mimeType == null) mimeType = "";
+                String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
 
                 long length = ((Number) map.get(JSON_LENGTH)).longValue();
 
-                String fileName = (String) map.get(JSON_FILE_NAME);
-                if (fileName == null) fileName = "";
+                Path file = Paths.get(EncodingUtils.getJSONString(map, JSON_FILENAME));
 
                 Number enc = (Number) map.get(JSON_ENCRYPTION);
                 Coder.Encryption encryption = Coder.Encryption.values()[enc.intValue()];
@@ -310,17 +347,88 @@ public class MessageContent {
                 Number err = ((Number) map.get(JSON_CODER_ERRORS));
                 EnumSet<Coder.Error> errors = EncodingUtils.intToEnumSet(Coder.Error.class, err.intValue());
 
-                Attachment a = new Attachment(
-                        url,
-                        mimeType,
-                        length,
-                        fileName,
+                return new Attachment(url, file, mimeType, length,
                         new CoderStatus(encryption, signing, errors));
-                return Optional.of(a);
-            } catch (NullPointerException | ClassCastException ex) {
+            } catch (ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON attachment", ex);
-                return Optional.empty();
+                return null;
             }
+        }
+    }
+
+    public static class Preview {
+
+        private static final String JSON_FILENAME= "filename";
+        private static final String JSON_MIME_TYPE = "mime_type";
+
+        private final byte[] mData;
+        private String mFilename = "";
+        private final String mMimeType;
+
+        // used for incoming
+        public Preview(byte[] data, String mimeType) {
+            mData = data;
+            mMimeType = mimeType;
+        }
+
+        // used for outgoing / self created
+        public Preview(byte[] data, String filename, String mimeType) {
+            mData = data;
+            mFilename = filename;
+            mMimeType = mimeType;
+        }
+
+        private Preview(String filename, String mimeType) {
+            mData = new byte[0];
+            mFilename = filename;
+            mMimeType = mimeType;
+        }
+
+        public byte[] getData() {
+            return mData;
+        }
+
+        public String getFilename() {
+            return mFilename;
+        }
+
+        void setFilename(String filename) {
+            mFilename = filename;
+        }
+
+        public String getMimeType() {
+            return mMimeType;
+        }
+
+        public void save(int messageID) {
+            Integer.toString(messageID);
+        }
+
+        // using legacy lib, raw types extend Object
+        @SuppressWarnings("unchecked")
+        private String toJSON() {
+            JSONObject json = new JSONObject();
+            EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
+            EncodingUtils.putJSON(json, JSON_FILENAME, mFilename);
+            return json.toJSONString();
+        }
+
+        private static Preview fromJSONOrNull(String json) {
+            Object obj = JSONValue.parse(json);
+            try {
+                Map<?, ?> map = (Map) obj;
+                String filename = EncodingUtils.getJSONString(map, JSON_FILENAME);
+                String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
+                return new Preview(filename, mimeType);
+            }  catch (NullPointerException | ClassCastException ex) {
+                LOGGER.log(Level.WARNING, "can't parse JSON preview", ex);
+                return null;
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "{PRE:fn="+mFilename+",mime="+mMimeType+"}";
         }
     }
 }

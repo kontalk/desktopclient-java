@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.layout.FormLayout;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
@@ -53,6 +54,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -169,7 +171,7 @@ final class ComponentUtils {
         }
     }
 
-    static class AddUserPanel extends WebPanel {
+    static class AddContactPanel extends WebPanel {
 
         private final View mView;
         private final WebTextField mNameField;
@@ -183,7 +185,7 @@ final class ComponentUtils {
         private final WebCheckBox mEncryptionBox;
         private final WebButton mSaveButton;
 
-        AddUserPanel(View view, final Component focusGainer) {
+        AddContactPanel(View view, final Component focusGainer) {
             mView = view;
 
             GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
@@ -204,7 +206,7 @@ final class ComponentUtils {
             mTabbedPane.addChangeListener(new ChangeListener() {
                 @Override
                 public void stateChanged(ChangeEvent e) {
-                    AddUserPanel.this.checkSaveButton();
+                    AddContactPanel.this.checkSaveButton();
                 }
             });
 
@@ -258,7 +260,7 @@ final class ComponentUtils {
             mSaveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    AddUserPanel.this.saveUser();
+                    AddContactPanel.this.saveContact();
                     focusGainer.requestFocus();
                 }
             });
@@ -281,7 +283,7 @@ final class ComponentUtils {
             mSaveButton.setEnabled(enable);
         }
 
-        private void saveUser() {
+        private void saveContact() {
             String jid;
             if (mTabbedPane.getSelectedIndex() == 0) {
                 String kontalkLocal = XMPPUtils.phoneNumberToKontalkLocal(
@@ -294,12 +296,12 @@ final class ComponentUtils {
             } else {
                 jid = mJIDField.getText();
             }
-            mView.getControl().createUser(jid,
+            mView.getControl().createContact(jid,
                     mNameField.getText(),
                     mEncryptionBox.isSelected());
         }
 
-        private static void addListener(final AddUserPanel panel,
+        private static void addListener(final AddContactPanel panel,
                 WebTextField field) {
             field.getDocument().addDocumentListener(new DocumentChangeListener() {
                 @Override
@@ -429,8 +431,8 @@ final class ComponentUtils {
 
     abstract static class EditableTextField extends WebTextField {
 
-        public EditableTextField(int width, final Component focusGainer) {
-            super(width, false);
+        public EditableTextField(int columns, final Component focusGainer) {
+            super(columns, false);
 
             this.setMinimumHeight(20);
             this.setHideInputPromptOnFocus(false);
@@ -542,6 +544,41 @@ final class ComponentUtils {
                     popupLayer.revalidate();
                 }
             });
+        }
+    }
+
+    static class AttachmentPanel extends GroupPanel {
+
+        private final WebLabel mStatus;
+        private final WebLinkLabel mAttLabel;
+        private String mImagePath = "";
+
+        AttachmentPanel() {
+           super(View.GAP_SMALL, false);
+
+           mStatus = new WebLabel().setItalicFont();
+           this.add(mStatus);
+
+           mAttLabel = new WebLinkLabel();
+           this.add(mAttLabel);
+        }
+
+        void setImage(String path) {
+            if (path.equals(mImagePath))
+                return;
+
+            mImagePath = path;
+            // file should be present and should be an image, show it
+            ImageLoader.setImageIconAsync(mAttLabel, mImagePath);
+        }
+
+        void setStatus(String text) {
+            mStatus.setText(Tr.tr("Attachment:") + " " + text);
+        }
+
+        void setLink(String text, Path linkPath) {
+            mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
+            mStatus.setText("");
         }
     }
 }

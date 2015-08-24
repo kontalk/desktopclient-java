@@ -100,4 +100,23 @@ public class CoderStatus {
     public String toString() {
         return "CSTAT:encr="+mEncryption+",sign="+mSigning+",err="+mErrors;
     }
+
+    static CoderStatus createInsecure() {
+        return new CoderStatus(Coder.Encryption.NOT, Coder.Signing.NOT,
+                EnumSet.noneOf(Coder.Error.class));
+    }
+
+    static CoderStatus createEncrypted() {
+        return new CoderStatus(Coder.Encryption.ENCRYPTED, Coder.Signing.UNKNOWN,
+                EnumSet.noneOf(Coder.Error.class));
+    }
+
+    static CoderStatus createToEncrypt() {
+        return new CoderStatus(
+                // outgoing messages are never saved encrypted
+                Coder.Encryption.DECRYPTED,
+                // ignored: when encrypting we always sign too
+                Coder.Signing.SIGNED,
+                EnumSet.noneOf(Coder.Error.class));
+    }
 }
