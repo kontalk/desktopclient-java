@@ -44,7 +44,7 @@ public final class XMPPUtils {
     public static final String XML_XMPP_TYPE = "application/xmpp+xml";
 
     // TODO do not hardcode, maybe download
-    private static final List<String> KONTALK_SERVER = Arrays.asList("beta.kontalk.org");
+    private static final List<String> KONTALK_SERVER = Arrays.asList("beta.kontalk.net");
 
     private XMPPUtils() {
         throw new AssertionError();
