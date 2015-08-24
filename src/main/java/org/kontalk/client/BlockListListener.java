@@ -44,7 +44,7 @@ final class BlockListListener implements StanzaListener {
     @Override
     public void processPacket(Stanza packet) {
         BlockingCommand p = (BlockingCommand) packet;
-        LOGGER.config("XML: "+p.toXML());
+        LOGGER.config("blocking command: "+p);
 
         if (p.getItems() != null) {
             mControl.setBlockedContacts(p.getItems());

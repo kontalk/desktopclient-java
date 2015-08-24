@@ -32,7 +32,7 @@ final class VCardListener implements StanzaListener {
     @Override
     public void processPacket(Stanza packet) {
         VCard4 p = (VCard4) packet;
-        LOGGER.info("got vcard: "+p.toXML());
+        LOGGER.info("vcard: "+p);
 
         byte[] publicKey = p.getPGPKey();
 

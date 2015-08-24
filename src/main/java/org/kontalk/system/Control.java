@@ -173,6 +173,8 @@ public final class Control {
     public boolean newInMessage(MessageIDs ids,
             Optional<Date> serverDate,
             MessageContent content) {
+        LOGGER.info("new incoming message, "+ids);
+
         String jid = XmppStringUtils.parseBareJid(ids.jid);
         ContactList contactList = ContactList.getInstance();
         Optional<Contact> optContact = contactList.contains(jid) ?

@@ -45,7 +45,7 @@ public class PublicKeyListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.info("got public key: "+StringUtils.abbreviate(packet.toXML().toString(), 300));
+        LOGGER.info("got public key: "+StringUtils.abbreviate(packet.toString(), 300));
 
         PublicKeyPublish publicKeyPacket = (PublicKeyPublish) packet;
 

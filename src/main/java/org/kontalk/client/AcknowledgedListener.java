@@ -52,7 +52,7 @@ public final class AcknowledgedListener implements StanzaListener {
         }
         Message m = (Message) p;
 
-        LOGGER.config("got acknowledgement for message: "+m.toXML());
+        LOGGER.config("for message: "+m);
 
         if (DeliveryReceipt.from(m) != null) {
             // this is an ack for a 'received' message send by

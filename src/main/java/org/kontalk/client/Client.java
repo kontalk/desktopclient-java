@@ -363,12 +363,12 @@ public final class Client implements StanzaListener, Runnable {
         } catch (SmackException.NotConnectedException ex) {
             LOGGER.info("can't send packet, not connected.");
         }
-        LOGGER.config("XML: "+p.toXML());
+        LOGGER.config("packet: "+p);
     }
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.config("unhandled: "+packet.toXML());
+        LOGGER.config("unhandled: "+packet);
     }
 
     public boolean addToRoster(Contact contact) {
