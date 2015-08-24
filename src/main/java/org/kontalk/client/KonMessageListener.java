@@ -69,11 +69,26 @@ final public class KonMessageListener implements StanzaListener {
     @Override
     public void processPacket(Stanza packet) {
         Message m = (Message) packet;
+
+        // check for delivery receipt (XEP-0184)
+        if (m.getType() == Message.Type.normal ||
+                m.getType() == Message.Type.chat) {
+            DeliveryReceipt receipt = DeliveryReceipt.from(m);
+            if (receipt != null) {
+                // HOORAY! our message was received
+                this.processReceiptMessage(m, receipt);
+                return;
+            }
+        }
+
         if (m.getType() == Message.Type.chat) {
             // somebody has news for us
             this.processChatMessage(m);
-        } else if (m.getType() == Message.Type.error) {
-            LOGGER.warning("got error message: "+m.toXML());
+            return;
+        }
+
+        if (m.getType() == Message.Type.error) {
+            LOGGER.warning("got error message: "+m);
 
             XMPPError error = m.getError();
             if (error == null) {
@@ -82,13 +97,26 @@ final public class KonMessageListener implements StanzaListener {
             }
             String text = StringUtils.defaultString(error.getDescriptiveText());
             mControl.setMessageError(MessageIDs.from(m), error.getCondition(), text);
-        } else {
-            LOGGER.warning("unknown message type: "+m.getType());
+            return;
         }
+
+        LOGGER.warning("unhandled message: "+m);
+    }
+
+    private void processReceiptMessage(Message m, DeliveryReceipt receipt) {
+        LOGGER.config("message: "+m);
+        String receiptID = receipt.getId();
+        if (receiptID == null || receiptID.isEmpty()) {
+            LOGGER.warning("message has invalid receipt ID: "+receiptID);
+        } else {
+            MessageIDs ids = MessageIDs.from(m, receiptID);
+            mControl.setMessageStatus(ids, Status.RECEIVED);
+        }
+        // we ignore anything else that might be in this message
     }
 
     private void processChatMessage(Message m) {
-        LOGGER.config("got message: "+m.toXML().toString());
+        LOGGER.config("message: "+m);
         // note: thread and subject are null if message comes from the Kontalk
         // Android client
 
@@ -127,21 +155,6 @@ final public class KonMessageListener implements StanzaListener {
                 return;
         }
 
-        // check for delivery receipt (XEP-0184)
-        DeliveryReceipt receipt = DeliveryReceipt.from(m);
-        if (receipt != null) {
-            // HOORAY! our message was received
-            String receiptID = receipt.getId();
-            if (receiptID == null || receiptID.isEmpty()) {
-                LOGGER.warning("message has invalid receipt ID: "+receiptID);
-            } else {
-                MessageIDs ids = MessageIDs.from(m, receiptID);
-                mControl.setMessageStatus(ids, Status.RECEIVED);
-            }
-            // we ignore anything else that might be in this message
-            return;
-        }
-
         // must be an incoming message
 
         // get content/text from body and/or encryption/url extension
@@ -154,7 +167,6 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         MessageIDs ids = MessageIDs.from(m);
-        LOGGER.info("new incoming message, "+ids);
 
         // add message
         boolean success = mControl.newInMessage(ids, optServerDate, content);
@@ -192,7 +204,7 @@ final public class KonMessageListener implements StanzaListener {
             if (bits == null)
                 bits = new byte[0];
             if (mime.isEmpty() || bits.length <= 0)
-                LOGGER.warning("invalid BOB data, XML: "+bob.toXML());
+                LOGGER.warning("invalid BOB data: "+bob.toXML());
             else
                 preview = new Preview(bits, mime);
         }
