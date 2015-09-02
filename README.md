@@ -7,6 +7,12 @@ The desktop client uses your existing Kontalk account from the [Android client](
 
 **FAQ:** Common questions are answered [HERE!](https://github.com/kontalk/desktopclient-java/wiki)
 
+### Screenshots
+
+![Conversation screen](/misc/kon_snap1.png?raw=true)
+
+[Contacts screen](/misc/kon_snap2.png?raw=true)
+
 ## Software Dependencies
 
 - Java 8
