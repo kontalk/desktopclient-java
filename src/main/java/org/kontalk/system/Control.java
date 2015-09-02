@@ -429,9 +429,11 @@ public final class Control {
 
         newContact.setEncrypted(encrypted);
 
-        boolean succ = mClient.addToRoster(newContact);
-        if (!succ)
-            LOGGER.warning("can't add new contact to roster: "+newContact);
+        if (!newContact.isMe()) {
+            boolean succ = mClient.addToRoster(newContact);
+            if (!succ)
+                LOGGER.warning("can't add new contact to roster: "+newContact);
+        }
 
         return Optional.of(newContact);
     }
