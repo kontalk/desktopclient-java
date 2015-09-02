@@ -53,14 +53,16 @@ public final class Kontalk {
     public static final String VERSION = "3.0.3";
     private final Path mAppDir;
 
-    private static ServerSocket RUN_LOCK;
+    private static ServerSocket RUN_LOCK = null;
 
-    private Kontalk() {
+    Kontalk() {
         // platform dependent configuration directory
-        String homeDir = System.getProperty("user.home");
-        mAppDir = SystemUtils.IS_OS_WINDOWS ?
-                Paths.get(homeDir, "Kontalk") :
-                Paths.get(homeDir, ".kontalk");
+        this(Paths.get(System.getProperty("user.home"),
+                SystemUtils.IS_OS_WINDOWS ? "Kontalk" : ".kontalk"));
+    }
+
+    Kontalk(Path appDir) {
+        mAppDir = appDir;
     }
 
     private void start() {
@@ -89,7 +91,7 @@ public final class Kontalk {
         // create app directory
         boolean created = mAppDir.toFile().mkdirs();
         if (created)
-            LOGGER.info("created configuration directory");
+            LOGGER.info("created application directory");
 
         // logging
         Logger logger = Logger.getLogger("");
@@ -154,10 +156,12 @@ public final class Kontalk {
     }
 
     public static void exit() {
-        try {
-            RUN_LOCK.close();
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't close run socket", ex);
+        if (RUN_LOCK != null) {
+            try {
+                RUN_LOCK.close();
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't close run socket", ex);
+            }
         }
         LOGGER.info("exit");
         System.exit(0);
