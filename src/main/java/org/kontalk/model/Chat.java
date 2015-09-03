@@ -50,7 +50,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     public static final String COL_SUBJ = "subject";
     public static final String COL_READ = "read";
     public static final String COL_VIEW_SET = "view_settings";
-    public static final String CREATE_TABLE = "( " +
+    public static final String SCHEMA = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             // optional XMPP chat ID
             "xmpp_id TEXT UNIQUE, " +
@@ -62,10 +62,10 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             ")";
 
     // many to many relationship requires additional table for receiver
-    public static final String TABLE_RECEIVER = "receiver";
+    public static final String RECEIVER_TABLE = "receiver";
     public static final String COL_REC_CHAT_ID = "thread_id";
     public static final String COL_REC_CONTACT_ID = "user_id";
-    public static final String CREATE_TABLE_RECEIVER = "(" +
+    public static final String RECEIVER_SCHEMA = "(" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             COL_REC_CHAT_ID+" INTEGER NOT NULL, " +
             COL_REC_CONTACT_ID+" INTEGER NOT NULL, " +
@@ -251,7 +251,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
 
         // whats left is too much and can be removed
         for (int id : dbReceiver.values()) {
-            db.execDelete(TABLE_RECEIVER, id);
+            db.execDelete(RECEIVER_TABLE, id);
         }
     }
 
@@ -264,7 +264,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         // delete receiver
         Map<Integer, Integer> dbReceiver = loadReceiver(mID);
         for (int id : dbReceiver.values()) {
-            boolean deleted = db.execDelete(TABLE_RECEIVER, id);
+            boolean deleted = db.execDelete(RECEIVER_TABLE, id);
             if (!deleted) return;
         }
 
@@ -277,7 +277,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         List<Object> recValues = new LinkedList<>();
         recValues.add(mID);
         recValues.add(contact.getID());
-        int id = db.execInsert(TABLE_RECEIVER, recValues);
+        int id = db.execInsert(RECEIVER_TABLE, recValues);
         if (id < 1) {
             LOGGER.warning("couldn't insert receiver");
         }
@@ -321,7 +321,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         Map<Integer, Integer> dbReceiver = new HashMap<>();
         ResultSet resultSet;
         try {
-            resultSet = db.execSelectWhereInsecure(TABLE_RECEIVER, where);
+            resultSet = db.execSelectWhereInsecure(RECEIVER_TABLE, where);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't get receiver from db", ex);
             return dbReceiver;

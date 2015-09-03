@@ -60,6 +60,7 @@ public final class Database {
     public static final String FILENAME = "kontalk_db.sqlite";
 
     private static final int DB_VERSION = 2;
+    private static final String CREATE = "CREATE TABLE IF NOT EXISTS ";
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
 
@@ -103,21 +104,11 @@ public final class Database {
 
         if (isNew) {
             LOGGER.info("new database, creating tables");
-            String create = "CREATE TABLE IF NOT EXISTS ";
             try (Statement stat = mConn.createStatement()) {
-                stat.executeUpdate(create + Contact.TABLE + " " + Contact.CREATE_TABLE);
-                stat.executeUpdate(create +
-                        Chat.TABLE +
-                        " " +
-                        Chat.CREATE_TABLE);
-                stat.executeUpdate(create +
-                        Chat.TABLE_RECEIVER +
-                        " " +
-                        Chat.CREATE_TABLE_RECEIVER);
-                stat.executeUpdate(create +
-                        KonMessage.TABLE +
-                        " " +
-                        KonMessage.CREATE_TABLE);
+                this.createTable(stat, Contact.TABLE, Contact.SCHEMA);
+                this.createTable(stat, Chat.TABLE, Chat.SCHEMA);
+                this.createTable(stat, Chat.RECEIVER_TABLE, Chat.RECEIVER_SCHEMA);
+                this.createTable(stat, KonMessage.TABLE, KonMessage.SCHEMA);
                 // set version
                 mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
             } catch (SQLException ex) {
@@ -141,6 +132,10 @@ public final class Database {
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't update db", ex);
         }
+    }
+
+    private void createTable(Statement stat, String table, String schema) throws SQLException {
+        stat.executeUpdate(CREATE + table + " " + schema);
     }
 
     private void update(int fromVersion) throws SQLException {

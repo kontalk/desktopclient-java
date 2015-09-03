@@ -81,7 +81,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String COL_COD_ERR = "coder_errors";
     public static final String COL_SERV_ERR = "server_error";
     public static final String COL_SERV_DATE = "server_date";
-    public static final String CREATE_TABLE = "( " +
+    public static final String SCHEMA = "( " +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             COL_CHAT_ID + " INTEGER NOT NULL, " +
             // enum, in- or outgoing

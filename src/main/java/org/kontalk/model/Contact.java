@@ -62,7 +62,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
     public static final String COL_ENCR = "encrypted";
     public static final String COL_PUB_KEY = "public_key";
     public static final String COL_KEY_FP = "key_fingerprint";
-    public static final String CREATE_TABLE = "(" +
+    public static final String SCHEMA = "(" +
             "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
             COL_JID + " TEXT NOT NULL UNIQUE, " +
             COL_NAME + " TEXT, " +
