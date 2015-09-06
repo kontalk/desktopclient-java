@@ -431,4 +431,61 @@ public class MessageContent {
             return "{PRE:fn="+mFilename+",mime="+mMimeType+"}";
         }
     }
+
+    public static class Group {
+
+        public enum OP {
+            CREATE,
+            LIST_UPDATE,
+            LEAVE
+        }
+
+        private final OP mOP;
+        private final String[] mJIDsAdded;
+        private final String[] mJIDsRemoved;
+        private final String mSubject;
+
+        /** Group creation. */
+        Group(String[] added) {
+            this(OP.CREATE, added, new String[0], "");
+        }
+
+        /** Group creation with subject. */
+        Group(String[] added, String subject) {
+            this(OP.CREATE, added, new String[0], subject);
+        }
+
+        /** Member list changed. */
+        Group(String[] added, String[] removed) {
+            this(OP.LIST_UPDATE, added, removed, "");
+        }
+
+        /** Member left. */
+        Group(String jidRemoved) {
+            this(OP.LEAVE, new String[0], new String[]{"jidRemoved"}, "");
+        }
+
+        private Group(OP operation, String[] added, String[] removed, String subject) {
+            mOP = operation;
+            mJIDsAdded = added;
+            mJIDsRemoved = removed;
+            mSubject = subject;
+        }
+
+        public OP getOperation() {
+            return mOP;
+        }
+
+        public String[] getAdded() {
+            return mJIDsAdded;
+        }
+
+        public String[] getRemoved() {
+            return mJIDsRemoved;
+        }
+
+        public String getSubject() {
+            return mSubject;
+        }
+    }
 }
