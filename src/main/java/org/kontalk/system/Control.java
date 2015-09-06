@@ -20,8 +20,10 @@ package org.kontalk.system;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
@@ -160,7 +162,8 @@ public final class Control {
                 errors.contains(Coder.Error.INVALID_SIGNATURE) ||
                 errors.contains(Coder.Error.INVALID_SENDER)) {
             // maybe there is something wrong with the senders key
-            this.sendKeyRequest(message.getContact());
+            // TODO get contact by throwing something
+            // this.sendKeyRequest(contact);
         }
         mViewControl.changed(new ViewEvent.SecurityError(message));
     }
@@ -186,13 +189,13 @@ public final class Control {
         }
         Contact contact = optContact.get();
         Chat chat = getChat(ids.xmppThreadID, contact);
-        InMessage.Builder builder = new InMessage.Builder(chat, contact);
-        builder.jid(ids.jid);
+        InMessage.Builder builder = new InMessage.Builder(chat, contact, ids.jid);
         builder.xmppID(ids.xmppID);
         if (serverDate.isPresent())
             builder.serverDate(serverDate.get());
         builder.content(content);
         InMessage newMessage = builder.build();
+        // TODO check before
         boolean added = chat.addMessage(newMessage);
         if (!added) {
             LOGGER.info("message already in chat, dropping this one");
@@ -218,7 +221,7 @@ public final class Control {
             return;
         OutMessage m = optMessage.get();
 
-        if (m.getReceiptStatus() == KonMessage.Status.RECEIVED)
+        if (m.getStatus() == KonMessage.Status.RECEIVED)
             // probably by another client
             return;
 
@@ -730,7 +733,9 @@ public final class Control {
          */
         private OutMessage newOutMessage(Chat chat, Contact contact,
                 MessageContent content , boolean encrypted) {
-            OutMessage.Builder builder = new OutMessage.Builder(chat, contact, encrypted);
+            LOGGER.config("chat: "+chat+" contact: "+contact+" encrypted: "+encrypted);
+            Set<Contact> contacts = new HashSet<>(Arrays.asList(contact));
+            OutMessage.Builder builder = new OutMessage.Builder(chat, contacts, encrypted);
             builder.content(content);
             OutMessage newMessage = builder.build();
             if (newMessage.getContent().getAttachment().isPresent())

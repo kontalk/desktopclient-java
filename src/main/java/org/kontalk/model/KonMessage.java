@@ -21,12 +21,15 @@ package org.kontalk.model;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
@@ -44,12 +47,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
-     * Direction (in-, outgoing) of one message.
-     * Do not modify, only add! Ordinal used in database.
-     */
-    public static enum Direction {IN, OUT};
-
-    /**
      * Sending status of one message.
      * Do not modify, only add! Ordinal used in database
      */
@@ -61,7 +58,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         PENDING,
         /** Outgoing message, message was handled by server. */
         SENT,
-        /** Outgoing message, message was received by recipient. */
+        /** Outgoing message, message was received by recipient TODO [DEPRECATED]. */
         RECEIVED,
         /** Outgoing message, an error occurred somewhere in the transmission. */
         ERROR
@@ -69,12 +66,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     public static final String TABLE = "messages";
     public static final String COL_CHAT_ID = "thread_id";
-    public static final String COL_DIR = "direction";
-    public static final String COL_CONTACT_ID = "user_id";
-    public static final String COL_JID = "jid";
+    //public static final String COL_DIR = "direction";
+    // TODO for every transmission?
     public static final String COL_XMPP_ID = "xmpp_id";
     public static final String COL_DATE = "date";
-    public static final String COL_REC_STAT = "receipt_status";
+    public static final String COL_STATUS = "status";
     public static final String COL_CONTENT = "content";
     public static final String COL_ENCR_STAT = "encryption_status";
     public static final String COL_SIGN_STAT = "signing_status";
@@ -82,22 +78,16 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String COL_SERV_ERR = "server_error";
     public static final String COL_SERV_DATE = "server_date";
     public static final String SCHEMA = "( " +
-            "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            Database.SQL_ID +
             COL_CHAT_ID + " INTEGER NOT NULL, " +
-            // enum, in- or outgoing
-            COL_DIR + " INTEGER NOT NULL, " +
-            // from or to contact
-            COL_CONTACT_ID + " INTEGER NOT NULL, " +
-            // full jid with resource
-            COL_JID + " TEXT NOT NULL, " +
             // XMPP ID attribute; only recommended (RFC 6120), but we generate
             // a random string if not in message for model consistency
             // Note: must be unique only within a stream (RFC 6120)
             COL_XMPP_ID + " TEXT NOT NULL, " +
             // unix time, local creation timestamp
             COL_DATE + " INTEGER NOT NULL, " +
-            // enum, server receipt status
-            COL_REC_STAT + " INTEGER NOT NULL, " +
+            // enum, message sending status
+            COL_STATUS + " INTEGER NOT NULL, " +
             // message content in JSON format
             COL_CONTENT + " TEXT NOT NULL, " +
             // enum, determines if content is encrypted
@@ -108,30 +98,26 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // enum set, encryption and signing errors of content
             COL_COD_ERR + " INTEGER NOT NULL, " +
             // optional error reply in JSON format
+            // TODO for each transmission?
             COL_SERV_ERR + " TEXT, " +
             // unix time, transmission/delay timestamp
             COL_SERV_DATE + " INTEGER, " +
-            // if this combinations is equal we consider messages to be equal
-            // (see .equals())
-            "UNIQUE ("+COL_DIR+", "+COL_JID+", "+COL_XMPP_ID+", "+COL_DATE+"), " +
-            "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id), " +
-            "FOREIGN KEY ("+COL_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
+            "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id) " +
             ")";
 
     private int mID;
     private final Chat mChat;
-    private final Direction mDir;
-    private final Contact mContact;
 
-    private final String mJID;
+    protected final Transmission[] mTransmissions;
+
     private final String mXMPPID;
 
     // (local) creation time
     private final Date mDate;
     // last timestamp of server transmission packet
-    // incoming: (delayed) sent; outgoing: sent/received/error
+    // incoming: (delayed) sent; outgoing: sent or error
     protected Optional<Date> mServerDate;
-    protected Status mReceiptStatus;
+    protected Status mStatus;
     protected final MessageContent mContent;
 
     protected CoderStatus mCoderStatus;
@@ -141,23 +127,19 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     protected KonMessage(Builder builder) {
         mID = builder.mID;
         mChat = builder.mChat;
-        mDir = builder.mDir;
-        // TODO group message stuff
-        mContact = builder.mContact;
-        mJID = builder.mJID;
         mXMPPID = builder.mXMPPID;
         mDate = builder.mDate;
         mServerDate = builder.mServerDate;
-        mReceiptStatus = builder.mReceiptStatus;
+        mStatus = builder.mStatus;
         mContent = builder.mContent;
         mCoderStatus = builder.mCoderStatus;
         mServerError = builder.mServerError;
 
-        if (mJID == null ||
+        if ((builder.mContacts == null) == (builder.mTransmissions == null) ||
                 mXMPPID == null ||
                 mDate == null ||
                 mServerDate == null ||
-                mReceiptStatus == null ||
+                mStatus == null ||
                 mContent == null ||
                 mCoderStatus == null ||
                 mServerError == null)
@@ -165,6 +147,19 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         if (mID < 0)
             this.save();
+
+        if (builder.mTransmissions != null) {
+            mTransmissions = builder.mTransmissions;
+        } else {
+            Set<Transmission> t = new HashSet<>();
+            for (Entry<Contact,String> e : builder.mContacts.entrySet()) {
+                t.add(new Transmission(e.getKey(), e.getValue(), mID));
+            }
+            mTransmissions = t.toArray(new Transmission[0]);
+        }
+
+        if (mTransmissions.length == 0)
+            LOGGER.warning("no transmission(s) for message");
     }
 
     /**
@@ -181,16 +176,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mChat;
     }
 
-    public Direction getDir() {
-        return mDir;
+    public boolean isInMessage() {
+        return mStatus == Status.IN;
     }
 
-    public Contact getContact() {
-        return mContact;
-    }
-
-    public String getJID() {
-        return mJID;
+    public Transmission[] getTransmissions() {
+        return mTransmissions;
     }
 
     public String getXMPPID() {
@@ -205,8 +196,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mServerDate;
     }
 
-    public Status getReceiptStatus() {
-        return mReceiptStatus;
+    public Status getStatus() {
+        return mStatus;
     }
 
     public MessageContent getContent() {
@@ -260,7 +251,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         }
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
-        set.put(COL_REC_STAT, mReceiptStatus);
+        set.put(COL_STATUS, mStatus);
         set.put(COL_CONTENT, mContent.toJSON());
         set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
         set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
@@ -279,12 +270,9 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
         List<Object> values = new LinkedList<>();
         values.add(mChat.getID());
-        values.add(mDir);
-        values.add(mContact.getID());
-        values.add(mJID);
         values.add(Database.setString(mXMPPID));
         values.add(mDate);
-        values.add(mReceiptStatus);
+        values.add(mStatus);
         // i simply don't like to save all possible content explicitly in the
         // database, so we use JSON here
         values.add(mContent.toJSON());
@@ -310,10 +298,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     @Override
     public String toString() {
-        return "M:id="+mID+",chat="+mChat+",dir="+mDir+",mContact="+mContact
-                +",jid="+mJID+",xmppid="+mXMPPID
+        return "M:id="+mID+",chat="+mChat+",transmissions="+mTransmissions
+                +",xmppid="+mXMPPID
                 +",date="+mDate+",sdate="+mServerDate
-                +",recstat="+mReceiptStatus+",cont="+mContent
+                +",recstat="+mStatus+",cont="+mContent
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
@@ -336,8 +324,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             LOGGER.warning("different messages have same ID: "+mID);
             return true;
         }
-        return mDir == o.mDir &&
-                mJID.equals(o.mJID) &&
+        // TODO unique field?
+        return this.isInMessage() == o.isInMessage() &&
                 mXMPPID.equals(o.mXMPPID) &&
                 mDate.equals(o.mDate);
     }
@@ -345,8 +333,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 67 * hash + Objects.hashCode(this.mDir);
-        hash = 67 * hash + Objects.hashCode(this.mJID);
         hash = 67 * hash + Objects.hashCode(this.mXMPPID);
         hash = 67 * hash + Objects.hashCode(this.mDate);
         return hash;
@@ -401,46 +387,44 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     static class Builder {
         private final int mID;
         private final Chat mChat;
-        private final Direction mDir;
-        private final Contact mContact;
+        private final Status mStatus;
         private final Date mDate;
 
-        private ServerError mServerError = new ServerError();
+        protected Map<Contact, String> mContacts = null;
+        protected Transmission[] mTransmissions = null;
 
-        protected String mJID = null;
         protected String mXMPPID = null;
 
         protected Optional<Date> mServerDate = Optional.empty();
-        protected Status mReceiptStatus = null;
         protected MessageContent mContent = null;
 
         protected CoderStatus mCoderStatus = null;
 
+        private ServerError mServerError = new ServerError();
+
         // used by subclasses and when loading from database
         Builder(int id,
                 Chat chat,
-                Direction dir,
-                Contact contact,
+                Status status,
                 Date date) {
             mID = id;
             mChat = chat;
-            mDir = dir;
-            mContact = contact;
+            mStatus = status;
             mDate = date;
         }
 
-        public void jid(String jid) { mJID = jid; }
+        void transmissions(Transmission[] transmission) { mTransmissions = transmission; }
+
         public void xmppID(String xmppID) { mXMPPID = xmppID; }
 
         public void serverDate(Date date) { mServerDate = Optional.of(date); }
         public void content(MessageContent content) { mContent = content; }
 
-        void receiptStatus(Status status) { mReceiptStatus = status; }
         void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
         void serverError(ServerError error) { mServerError = error; }
 
         KonMessage build() {
-            if (mDir == Direction.IN)
+            if (mStatus == Status.IN)
                 return new InMessage(this);
             else
                 return new OutMessage(this);

@@ -57,6 +57,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.Preview;
+import org.kontalk.model.Transmission;
 import org.kontalk.system.Control;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -209,9 +210,15 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendMessage(OutMessage message) {
-        LOGGER.info("to "+message.getJID());
+        for (Transmission t: message.getTransmissions()) {
+            this.sendMessage(message, t);
+        }
+    }
+
+    public void sendMessage(OutMessage message, Transmission transmission) {
+        LOGGER.info("to "+transmission.getJID());
         // check for correct receipt status and reset it
-        Status status = message.getReceiptStatus();
+        Status status = message.getStatus();
         assert status == Status.PENDING || status == Status.ERROR;
         message.setStatus(Status.PENDING);
 
@@ -220,8 +227,8 @@ public final class Client implements StanzaListener, Runnable {
             return;
         }
 
-        if (!XMPPUtils.isValid(message.getJID())) {
-            LOGGER.warning("not sending message, invalid JID: "+message.getJID());
+        if (!XMPPUtils.isValid(transmission.getJID())) {
+            LOGGER.warning("not sending message, invalid JID: "+transmission.getJID());
             return;
         }
 
@@ -229,21 +236,23 @@ public final class Client implements StanzaListener, Runnable {
         if (message.getCoderStatus().getEncryption() == Coder.Encryption.NOT &&
                 message.getCoderStatus().getSigning() == Coder.Signing.NOT) {
             // unencrypted
-            Message rawMessage = rawMessageOrNull(message, false);
+            Message rawMessage = rawMessageOrNull(message, transmission, false);
             if (rawMessage == null)
                 return;
             sendMessage = rawMessage;
         } else {
             // encrypted
-            sendMessage = new Message(message.getJID(), Message.Type.chat);
+            sendMessage = new Message(transmission.getJID(), Message.Type.chat);
             Optional<byte[]> encrypted;
             if (message.getContent().getAttachment().isPresent()) {
-                Message rawMessage = rawMessageOrNull(message, true);
+                Message rawMessage = rawMessageOrNull(message, transmission, true);
                 if (rawMessage == null)
                     return;
-                encrypted = Coder.encryptStanza(message, rawMessage.toXML().toString());
+                encrypted = Coder.encryptStanza(message,
+                        transmission.getContact(),
+                        rawMessage.toXML().toString());
             } else {
-                encrypted = Coder.encryptMessage(message);
+                encrypted = Coder.encryptMessage(message, transmission.getContact());
             }
             // check also for security errors just to be sure
             if (!encrypted.isPresent() ||
@@ -266,8 +275,10 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(sendMessage);
     }
 
-    private static Message rawMessageOrNull(KonMessage message, boolean encrypted) {
-        Message smackMessage = new Message(message.getJID(), Message.Type.chat);
+    private static Message rawMessageOrNull(KonMessage message,
+            Transmission transmission,
+            boolean encrypted) {
+        Message smackMessage = new Message(transmission.getJID(), Message.Type.chat);
 
         smackMessage.setBody(message.getContent().getPlainText());
 

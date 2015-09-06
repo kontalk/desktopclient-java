@@ -302,7 +302,7 @@ public final class View implements Observer {
     private void showSecurityErrors(KonMessage message) {
         String errorText = "<html>";
 
-        boolean isOut = message.getDir() == KonMessage.Direction.OUT;
+        boolean isOut = !message.isInMessage();
         errorText += isOut ? Tr.tr("Encryption error") : Tr.tr("Decryption error");
         errorText += ":";
 

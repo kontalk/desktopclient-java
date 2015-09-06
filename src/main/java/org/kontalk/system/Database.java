@@ -39,6 +39,7 @@ import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Transmission;
 import org.kontalk.util.EncodingUtils;
 import org.sqlite.SQLiteConfig;
 
@@ -58,9 +59,10 @@ public final class Database {
     private static Database INSTANCE = null;
 
     public static final String FILENAME = "kontalk_db.sqlite";
+    public static final String SQL_ID = "_id INTEGER PRIMARY KEY AUTOINCREMENT, ";
 
     private static final int DB_VERSION = 2;
-    private static final String CREATE = "CREATE TABLE IF NOT EXISTS ";
+    private static final String SQL_CREATE = "CREATE TABLE IF NOT EXISTS ";
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
 
@@ -105,12 +107,13 @@ public final class Database {
         if (isNew) {
             LOGGER.info("new database, creating tables");
             try (Statement stat = mConn.createStatement()) {
+                // set version
+                mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
                 this.createTable(stat, Contact.TABLE, Contact.SCHEMA);
                 this.createTable(stat, Chat.TABLE, Chat.SCHEMA);
                 this.createTable(stat, Chat.RECEIVER_TABLE, Chat.RECEIVER_SCHEMA);
                 this.createTable(stat, KonMessage.TABLE, KonMessage.SCHEMA);
-                // set version
-                mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
+                this.createTable(stat, Transmission.TABLE, Transmission.SCHEMA);
             } catch (SQLException ex) {
                 LOGGER.log(Level.SEVERE, "can't create tables", ex);
                 throw new KonException(KonException.Error.DB, ex);
@@ -135,7 +138,7 @@ public final class Database {
     }
 
     private void createTable(Statement stat, String table, String schema) throws SQLException {
-        stat.executeUpdate(CREATE + table + " " + schema);
+        stat.executeUpdate(SQL_CREATE + table + " " + schema);
     }
 
     private void update(int fromVersion) throws SQLException {

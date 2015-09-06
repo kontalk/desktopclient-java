@@ -35,6 +35,7 @@ import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FilenameUtils;
@@ -72,6 +73,7 @@ import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Transmission;
 import org.kontalk.system.AccountLoader;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.XMPPUtils;
@@ -161,23 +163,23 @@ public final class Coder {
      * @param message
      * @return the encrypted and signed text.
      */
-    public static Optional<byte[]> encryptMessage(OutMessage message) {
-        return encryptData(message, message.getContent().getPlainText(), "text/plain");
+    public static Optional<byte[]> encryptMessage(OutMessage message, Contact contact) {
+        return encryptData(message, contact, message.getContent().getPlainText(), "text/plain");
     }
 
-    public static Optional<byte[]> encryptStanza(OutMessage message, String xml) {
+    public static Optional<byte[]> encryptStanza(OutMessage message, Contact contact, String xml) {
         String data = "<xmpp xmlns='jabber:client'>" + xml + "</xmpp>";
-        return encryptData(message, data, "application/xmpp+xml");
+        return encryptData(message, contact, data, "application/xmpp+xml");
     }
 
-    private static Optional<byte[]> encryptData(OutMessage message, String data, String mime) {
+    private static Optional<byte[]> encryptData(OutMessage message, Contact contact, String data, String mime) {
         if (message.getCoderStatus().getEncryption() != Encryption.DECRYPTED) {
             LOGGER.warning("message does not want to be encrypted");
             return Optional.empty();
         }
 
         // get keys
-        KeysResult keys = getKeys(message.getContact());
+        KeysResult keys = getKeys(contact);
         if (keys.myKey == null || keys.otherKey == null) {
             message.setSecurityErrors(keys.errors);
             return Optional.empty();
@@ -186,9 +188,17 @@ public final class Coder {
         // secure the message against the most basic attacks using Message/CPIM
         // [for Android client - dont know if its useful, but doesnt hurt]
         String from = keys.myKey.getUserId();
-        String to = keys.otherKey.userID + "; ";
+        final StringBuilder to = new StringBuilder();
+        for (Transmission t : message.getTransmissions()) {
+            getKey(t.getContact()).ifPresent(new Consumer<PGPCoderKey>() {
+                @Override
+                public void accept(PGPCoderKey k) {
+                    to.append(k.userID).append("; ");
+                }
+            });
+        }
 
-        CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, data);
+        CPIMMessage cpim = new CPIMMessage(from, to.toString(), new Date(), mime, data);
         byte[] plainText;
         try {
             plainText = cpim.toByteArray();
@@ -220,7 +230,13 @@ public final class Coder {
         Attachment attachment = optAttachment.get();
 
         // get keys
-        KeysResult keys = getKeys(message.getContact());
+        Transmission[] transmissions = message.getTransmissions();
+        if (transmissions.length != 1) {
+            LOGGER.warning("attachment encryption not supported for multiple receiver");
+            return Optional.empty();
+        }
+
+        KeysResult keys = getKeys(transmissions[0].getContact());
         if (keys.myKey == null || keys.otherKey == null) {
             message.setAttachmentErrors(keys.errors);
             return Optional.empty();

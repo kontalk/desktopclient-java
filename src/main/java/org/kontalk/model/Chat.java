@@ -210,7 +210,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     public boolean addMessage(KonMessage message) {
         boolean added = mMessages.add(message);
         if (added) {
-            if (message.getDir() == KonMessage.Direction.IN) {
+            if (message.isInMessage()) {
                 mRead = false;
                 this.changed(mRead);
             }

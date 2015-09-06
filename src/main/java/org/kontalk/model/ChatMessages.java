@@ -61,53 +61,53 @@ public final class ChatMessages {
 
     private void loadMessages() {
         Database db = Database.getInstance();
-        KonMessage.Direction[] dirValues = KonMessage.Direction.values();
         KonMessage.Status[] statusValues = KonMessage.Status.values();
         Coder.Encryption[] encryptionValues = Coder.Encryption.values();
         Coder.Signing[] signingValues = Coder.Signing.values();
-        String where = KonMessage.COL_CHAT_ID + " == " + mChat.getID();
-        try (ResultSet resultSet = db.execSelectWhereInsecure(KonMessage.TABLE,
-                where)) {
-            while (resultSet.next()) {
-                int id = resultSet.getInt("_id");
 
-                int dirIndex = resultSet.getInt(KonMessage.COL_DIR);
-                KonMessage.Direction dir = dirValues[dirIndex];
-                int contactID = resultSet.getInt(KonMessage.COL_CONTACT_ID);
-                Optional<Contact> optContact = ContactList.getInstance().get(contactID);
-                if (!optContact.isPresent()) {
-                    LOGGER.warning("can't find contact in db, id: "+contactID);
-                    continue;
-                }
-                String jid = resultSet.getString(KonMessage.COL_JID);
-                String xmppID = Database.getString(resultSet, KonMessage.COL_XMPP_ID);
-                Date date = new Date(resultSet.getLong(KonMessage.COL_DATE));
-                int statusIndex = resultSet.getInt(KonMessage.COL_REC_STAT);
+        String where = KonMessage.COL_CHAT_ID + " == " + mChat.getID();
+        try (ResultSet messageRS = db.execSelectWhereInsecure(KonMessage.TABLE,
+                where)) {
+            while (messageRS.next()) {
+                // TODO move this to message class
+                int id = messageRS.getInt("_id");
+
+                String xmppID = Database.getString(messageRS, KonMessage.COL_XMPP_ID);
+
+                Date date = new Date(messageRS.getLong(KonMessage.COL_DATE));
+
+                int statusIndex = messageRS.getInt(KonMessage.COL_STATUS);
                 KonMessage.Status status = statusValues[statusIndex];
-                String jsonContent = resultSet.getString(KonMessage.COL_CONTENT);
+
+                String jsonContent = messageRS.getString(KonMessage.COL_CONTENT);
+
                 MessageContent content = MessageContent.fromJSONString(jsonContent);
 
-                int encryptionIndex = resultSet.getInt(KonMessage.COL_ENCR_STAT);
+                int encryptionIndex = messageRS.getInt(KonMessage.COL_ENCR_STAT);
                 Coder.Encryption encryption = encryptionValues[encryptionIndex];
-                int signingIndex = resultSet.getInt(KonMessage.COL_SIGN_STAT);
+
+                int signingIndex = messageRS.getInt(KonMessage.COL_SIGN_STAT);
                 Coder.Signing signing = signingValues[signingIndex];
-                int errorFlags = resultSet.getInt(KonMessage.COL_COD_ERR);
+
+                int errorFlags = messageRS.getInt(KonMessage.COL_COD_ERR);
                 EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(
                         Coder.Error.class, errorFlags);
+
                 CoderStatus coderStatus = new CoderStatus(encryption, signing, coderErrors);
-                String jsonServerError = resultSet.getString(KonMessage.COL_SERV_ERR);
+
+                String jsonServerError = messageRS.getString(KonMessage.COL_SERV_ERR);
                 KonMessage.ServerError serverError =
                         KonMessage.ServerError.fromJSON(jsonServerError);
-                long sDate = resultSet.getLong(KonMessage.COL_SERV_DATE);
+
+                long sDate = messageRS.getLong(KonMessage.COL_SERV_DATE);
                 Date serverDate = sDate == 0 ? null : new Date(sDate);
 
-                KonMessage.Builder builder = new KonMessage.Builder(id, mChat,
-                        dir, optContact.get(), date);
-                builder.jid(jid);
+                KonMessage.Builder builder = new KonMessage.Builder(id, mChat, status, date);
                 builder.xmppID(xmppID);
+                // TODO one SQL SELECT for each message, performance?
+                builder.transmissions(Transmission.load(id));
                 if (serverDate != null)
                     builder.serverDate(serverDate);
-                builder.receiptStatus(status);
                 builder.content(content);
                 builder.coderStatus(coderStatus);
                 builder.serverError(serverError);
@@ -156,7 +156,7 @@ public final class ChatMessages {
         // TODO performance, probably additional map needed
         // TODO use lambda in near future
         for (KonMessage m : mSet) {
-            if (m.getReceiptStatus() == KonMessage.Status.PENDING &&
+            if (m.getStatus() == KonMessage.Status.PENDING &&
                     m instanceof OutMessage) {
                 s.add((OutMessage) m);
             }
