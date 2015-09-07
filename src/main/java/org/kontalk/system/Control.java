@@ -298,8 +298,7 @@ public final class Control {
     }
 
     public void setPresence(String jid, Presence.Type type, String status) {
-        if (jid.equals(XmppStringUtils.parseBareJid(mClient.getOwnJID()))
-                && !ContactList.getInstance().contains(jid))
+        if (this.isMe(jid) && !ContactList.getInstance().contains(jid))
             // don't wanna see myself
             return;
 
@@ -314,7 +313,8 @@ public final class Control {
     public void checkFingerprint(String jid, String fingerprint) {
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (!optContact.isPresent()) {
-            LOGGER.warning("(fingerprint) can't find contact with jid:" + jid);
+            if (!this.isMe(jid))
+                LOGGER.warning("can't find contact with jid:" + jid);
             return;
         }
 
@@ -404,6 +404,11 @@ public final class Control {
     }
 
     /* private */
+
+    private boolean isMe(String jid) {
+        return XmppStringUtils.parseBareJid(jid).equals(
+                XmppStringUtils.parseBareJid(mClient.getOwnJID()));
+    }
 
     private Optional<Contact> createNewContact(String jid, String name, boolean encrypted) {
         if (!mClient.isConnected()) {
