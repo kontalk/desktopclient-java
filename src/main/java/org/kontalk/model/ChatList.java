@@ -31,6 +31,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.kontalk.model.Chat.GID;
 import org.kontalk.system.Database;
 
 /**
@@ -57,8 +58,16 @@ public final class ChatList extends Observable implements Observer {
         try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
             // now, create chats
             while (chatRS.next()) {
+                // TODO move to chat class
                 int id = chatRS.getInt("_id");
-                String xmppThreadID = Database.getString(chatRS, "xmpp_id");
+
+                String jsonGID = Database.getString(chatRS, Chat.COL_GID);
+                Optional<GID> optGID = Optional.ofNullable(jsonGID.isEmpty() ?
+                        null :
+                        GID.fromJSONOrNull(jsonGID));
+
+                String xmppThreadID = Database.getString(chatRS, Chat.COL_XMPPID);
+
                 // get contacts for chats
                 Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
                 Set<Contact> contacts = new HashSet<>();
@@ -69,13 +78,15 @@ public final class ChatList extends Observable implements Observer {
                     else
                         LOGGER.warning("can't find contact");
                 }
-                String subject = Database.getString(chatRS,
-                        Chat.COL_SUBJ);
+
+                String subject = Database.getString(chatRS, Chat.COL_SUBJ);
+
                 boolean read = chatRS.getBoolean(Chat.COL_READ);
+
                 String jsonViewSettings = Database.getString(chatRS,
                         Chat.COL_VIEW_SET);
 
-                this.put(new Chat(id, xmppThreadID, contacts, subject, read,
+                this.putSilent(new Chat(id, contacts, optGID, xmppThreadID, subject, read,
                         jsonViewSettings));
                 if (!read)
                     mUnread = true;
@@ -105,19 +116,24 @@ public final class ChatList extends Observable implements Observer {
         if (chat != null)
             return chat;
 
-        Set<Contact> contactSet = new HashSet<>();
-        contactSet.add(contact);
-        return this.createNew(contactSet);
+        return this.createNew(contact);
     }
 
-    public Chat createNew(Set<Contact> contact) {
+    public Chat createNew(Contact contact) {
         Chat newChat = new Chat(contact);
-        this.put(newChat);
+        this.putSilent(newChat);
         this.changed(newChat);
         return newChat;
     }
 
-    private void put(Chat chat) {
+    public Chat createNew(Contact[] contacts, GID gid, String subject) {
+        Chat newChat = new Chat(null, gid, subject);
+        this.putSilent(newChat);
+        this.changed(newChat);
+        return newChat;
+    }
+
+    private void putSilent(Chat chat) {
         synchronized (this) {
             mMap.put(chat.getID(), chat);
         }

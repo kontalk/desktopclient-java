@@ -39,7 +39,6 @@ import java.awt.event.*;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -384,11 +383,6 @@ public final class View implements Observer {
         // trigger save if contact details are shown
         mContent.showNothing();
         mControl.shutDown();
-    }
-
-    void callCreateNewChat(Set<Contact> contact) {
-        Chat chat = mControl.createNewChat(contact);
-        this.selectChat(chat);
     }
 
     /* view internal */

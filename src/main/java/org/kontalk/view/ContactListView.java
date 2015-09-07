@@ -230,9 +230,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             mNewMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    Set<Contact> contact = new HashSet<>();
-                    contact.add(mItem.mValue);
-                    ContactListView.this.mView.callCreateNewChat(contact);
+                    mView.getControl().createNewSingleChat(mItem.mValue);
                 }
             });
             this.add(mNewMenuItem);

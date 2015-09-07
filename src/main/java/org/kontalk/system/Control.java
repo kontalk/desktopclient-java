@@ -637,7 +637,7 @@ public final class Control {
 
         /* chats */
 
-        public Chat createNewChat(Set<Contact> contact) {
+        public Chat createNewSingleChat(Contact contact) {
             return ChatList.getInstance().createNew(contact);
         }
 
