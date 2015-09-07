@@ -63,7 +63,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
     public static final String COL_PUB_KEY = "public_key";
     public static final String COL_KEY_FP = "key_fingerprint";
     public static final String SCHEMA = "(" +
-            "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            Database.SQL_ID +
             COL_JID + " TEXT NOT NULL UNIQUE, " +
             COL_NAME + " TEXT, " +
             COL_STAT + " TEXT, " +
@@ -196,7 +196,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
     }
 
     /**
-     * Reset online status when client is disconneted.
+     * Reset online status when client is disconnected.
      */
     public void setOffline() {
         mAvailable = Online.UNKNOWN;

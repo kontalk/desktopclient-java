@@ -58,7 +58,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     public static final String COL_READ = "read";
     public static final String COL_VIEW_SET = "view_settings";
     public static final String SCHEMA = "( " +
-            "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            Database.SQL_ID +
             // optional XMPP chat ID
             COL_XMPPID+" TEXT UNIQUE, " +
             // optional subject
@@ -76,7 +76,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     public static final String COL_REC_CHAT_ID = "thread_id";
     public static final String COL_REC_CONTACT_ID = "user_id";
     public static final String RECEIVER_SCHEMA = "(" +
-            "_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+            Database.SQL_ID +
             COL_REC_CHAT_ID+" INTEGER NOT NULL, " +
             COL_REC_CONTACT_ID+" INTEGER NOT NULL, " +
             "UNIQUE ("+COL_REC_CHAT_ID+", "+COL_REC_CONTACT_ID+"), " +
