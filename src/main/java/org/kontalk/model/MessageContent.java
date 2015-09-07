@@ -462,7 +462,7 @@ public class MessageContent {
 
         /** Member left. */
         Group(String jidRemoved) {
-            this(OP.LEAVE, new String[0], new String[]{"jidRemoved"}, "");
+            this(OP.LEAVE, new String[0], new String[]{jidRemoved}, "");
         }
 
         private Group(OP operation, String[] added, String[] removed, String subject) {
