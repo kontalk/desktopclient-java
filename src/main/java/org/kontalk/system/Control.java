@@ -29,7 +29,6 @@ import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.Message;
@@ -241,20 +240,13 @@ public final class Control {
     public void processChatState(String from,
             String xmppThreadID,
             Optional<Date> serverDate,
-            String chatStateString) {
+            ChatState chatState) {
         if (serverDate.isPresent()) {
             long diff = new Date().getTime() - serverDate.get().getTime();
             if (diff > TimeUnit.SECONDS.toMillis(10)) {
                 // too old
                 return;
             }
-        }
-        ChatState chatState;
-        try {
-            chatState = ChatState.valueOf(chatStateString);
-        } catch (IllegalArgumentException ex) {
-            LOGGER.log(Level.WARNING, "can't parse chat state ", ex);
-            return;
         }
         String jid = XmppStringUtils.parseBareJid(from);
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
