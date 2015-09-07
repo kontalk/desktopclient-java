@@ -143,16 +143,14 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         // process possible chat state notification (XEP-0085)
-        ExtensionElement chatstate = m.getExtension(ChatStateExtension.NAMESPACE);
-        if (chatstate != null) {
-            LOGGER.config("got chatstate: " + chatstate.getElementName());
+        ExtensionElement csExt = m.getExtension(ChatStateExtension.NAMESPACE);
+        ChatState chatState = null;
+        if (csExt != null) {
+            chatState = ((ChatStateExtension) csExt).getChatState();
             mControl.processChatState(m.getFrom(),
                     threadID,
                     optServerDate,
-                    chatstate.getElementName());
-            if (!chatstate.getElementName().equals(ChatState.active.name()))
-                // we assume there is no other content
-                return;
+                    chatState);
         }
 
         // must be an incoming message
@@ -162,7 +160,8 @@ final public class KonMessageListener implements StanzaListener {
 
         // make sure not to save a message without content
         if (content.isEmpty()) {
-            LOGGER.warning("can't find any content in message");
+            if (chatState == null)
+                LOGGER.warning("can't find any content in message");
             return;
         }
 
