@@ -127,7 +127,7 @@ public final class ChatList extends Observable implements Observer {
     }
 
     public Chat createNew(Contact[] contacts, GID gid, String subject) {
-        Chat newChat = new Chat(null, gid, subject);
+        Chat newChat = new Chat(contacts, gid, subject);
         this.putSilent(newChat);
         this.changed(newChat);
         return newChat;
