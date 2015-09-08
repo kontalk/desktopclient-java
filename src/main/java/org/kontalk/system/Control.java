@@ -50,6 +50,7 @@ import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
+import org.kontalk.model.Chat.GID;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.ChatList;
@@ -637,8 +638,20 @@ public final class Control {
 
         /* chats */
 
-        public Chat createNewSingleChat(Contact contact) {
-            return ChatList.getInstance().createNew(contact);
+        public void createSingleChat(Contact contact) {
+            ChatList.getInstance().createNew(contact);
+        }
+
+        public void createGroupChat(Contact[] contacts, String subject) {
+            String jid = Config.getInstance().getString(Config.ACC_JID);
+            if (jid.isEmpty()) {
+                LOGGER.warning("can't create group, no JID");
+                return;
+            }
+            ChatList.getInstance().createNew(contacts,
+                    new GID(jid ,
+                            org.jivesoftware.smack.util.StringUtils.randomString(8)),
+                    subject);
         }
 
         public void deleteChat(Chat chat) {
