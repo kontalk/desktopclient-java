@@ -212,7 +212,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
 
         @Override
         public int compareTo(TableItem o) {
-            return mValue.getName().compareToIgnoreCase(o.mValue.getName());
+            return Utils.compareContacts(mValue, o.mValue);
         }
     }
 

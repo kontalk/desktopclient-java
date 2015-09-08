@@ -40,9 +40,7 @@ import java.awt.event.ItemListener;
 import java.util.Optional;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.Chat;
-import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 
 /**
@@ -209,21 +207,6 @@ final class ChatDetails extends WebPanel {
 
         if (!newSettings.equals(mChat.getViewSettings())) {
              mChat.setViewSettings(newSettings);
-        }
-    }
-
-    private class ContactElement {
-        Contact contact;
-
-        ContactElement(Contact contact) {
-            this.contact = contact;
-        }
-
-        @Override
-        public String toString() {
-            String jid = Utils.jid(contact.getJID(), 40, true);
-            String name = StringUtils.abbreviate(contact.getName(), 24);
-            return name.isEmpty() ? jid : name +" " + jid;
         }
     }
 }
