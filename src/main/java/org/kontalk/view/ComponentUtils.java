@@ -22,6 +22,7 @@ import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.layout.FormLayout;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
+import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
@@ -32,6 +33,7 @@ import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebPasswordField;
 import com.alee.laf.text.WebTextField;
+import com.alee.managers.popup.PopupAdapter;
 import com.alee.managers.popup.WebPopup;
 import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.SwingUtils;
@@ -57,12 +59,21 @@ import java.awt.event.WindowStateListener;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import javax.swing.AbstractButton;
+import javax.swing.DefaultListModel;
+import javax.swing.DefaultListSelectionModel;
+import javax.swing.Icon;
 import javax.swing.JLayeredPane;
+import javax.swing.JList;
 import javax.swing.JRootPane;
+import javax.swing.ListCellRenderer;
+import javax.swing.ListSelectionModel;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -70,6 +81,8 @@ import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
@@ -171,9 +184,52 @@ final class ComponentUtils {
         }
     }
 
-    static class AddContactPanel extends WebPanel {
+    static abstract class PopupPanel extends WebPanel {
+
+        abstract void onShow();
+
+    }
+
+    static class ToggleButton extends WebToggleButton {
+
+        private final PopupPanel mPanel;
+        private WebPopup mPopup = new WebPopup();
+
+        ToggleButton(Icon icon, String tooltip, PopupPanel panel) {
+            super(icon);
+            mPanel = panel;
+            this.setShadeWidth(0).setRound(0);
+            TooltipManager.addTooltip(this, tooltip);
+            this.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    if (!mPopup.isShowing())
+                        ToggleButton.this.showAddContactPopup();
+                }
+            });
+        }
+
+        private void showAddContactPopup() {
+            mPopup = new WebPopup();
+            mPopup.setCloseOnFocusLoss(true);
+            mPopup.addPopupListener(new PopupAdapter() {
+                @Override
+                public void popupWillBeClosed() {
+                    ToggleButton.this.doClick();
+                }
+            });
+            mPanel.onShow();
+            mPopup.add(mPanel);
+            //mPopup.packPopup();
+            mPopup.showAsPopupMenu(this);
+        }
+    }
+
+    static class AddContactPanel extends PopupPanel {
 
         private final View mView;
+
+        private final WebTabbedPane mTabbedPane;
         private final WebTextField mNameField;
 
         private final WebTextField mJIDField;
@@ -269,7 +325,6 @@ final class ComponentUtils {
             buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
             this.add(buttonPanel, BorderLayout.SOUTH);
         }
-        private final WebTabbedPane mTabbedPane;
 
         private void checkSaveButton() {
             boolean enable;
@@ -309,6 +364,146 @@ final class ComponentUtils {
                     panel.checkSaveButton();
                 }
             });
+        }
+
+        @Override
+        void onShow() {
+        }
+    }
+
+    static class AddGroupChatPanel extends PopupPanel {
+
+        private final View mView;
+        private final WebTextField mSubjectField;
+        private final ContactSelectionList mList;
+
+        private final WebButton mCreateButton;
+
+        AddGroupChatPanel(View view, final Component focusGainer) {
+            mView = view;
+
+            GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
+
+            groupPanel.add(new WebLabel(Tr.tr("Create Group")).setBoldFont());
+            groupPanel.add(new WebSeparator(true, true));
+
+            // editable fields
+            mSubjectField = new WebTextField(20);
+            mSubjectField.getDocument().addDocumentListener(new DocumentChangeListener() {
+                @Override
+                public void documentChanged(DocumentEvent e) {
+                    AddGroupChatPanel.this.checkSaveButton();
+                }
+            });
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    new WebLabel(Tr.tr("Subject:"+" ")), mSubjectField));
+
+            mList = new ContactSelectionList();
+            mList.addListSelectionListener(new ListSelectionListener() {
+                @Override
+                public void valueChanged(ListSelectionEvent e) {
+                    AddGroupChatPanel.this.checkSaveButton();
+                }
+            });
+            groupPanel.add(new ScrollPane(mList));
+
+            this.add(groupPanel, BorderLayout.CENTER);
+
+            mCreateButton = new WebButton(Tr.tr("Create"));
+            mCreateButton.setEnabled(false);
+            mCreateButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    AddGroupChatPanel.this.createGroup();
+                    focusGainer.requestFocus();
+                }
+            });
+
+            GroupPanel buttonPanel = new GroupPanel(mCreateButton);
+            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
+            this.add(buttonPanel, BorderLayout.SOUTH);
+        }
+
+        private void checkSaveButton() {
+            mCreateButton.setEnabled(!mSubjectField.getText().isEmpty() &&
+                    // TODO
+                    mList.getSelectedContacts().length > 0);
+        }
+
+        private void createGroup() {
+            mView.getControl().createGroupChat(mList.getSelectedContacts(),
+                    mSubjectField.getText());
+        }
+
+        @Override
+        void onShow() {
+            mList.reload();
+        }
+    }
+
+    // Note: https://github.com/mgarin/weblaf/issues/153
+    static class ContactSelectionList extends WebList {
+
+        private final DefaultListModel<Contact> mModel;
+
+        @SuppressWarnings("unchecked")
+        ContactSelectionList() {
+            mModel = new DefaultListModel<>();
+            this.setModel(mModel);
+
+            this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+            this.setSelectionModel(new DefaultListSelectionModel() {
+                @Override
+                public void setSelectionInterval(int index0, int index1) {
+                    if(super.isSelectedIndex(index0)) {
+                        super.removeSelectionInterval(index0, index1);
+                    } else {
+                        super.addSelectionInterval(index0, index1);
+                    }
+                }
+            });
+
+            this.setCellRenderer(new CellRenderer());
+        }
+
+        void reload() {
+            mModel.clear();
+
+            Set<Contact> allContacts = ContactList.getInstance().getAll();
+            List<Contact> contacts = new LinkedList<>();
+            for (Contact c : allContacts) {
+                if (XMPPUtils.isKontalkContact(c))
+                    contacts.add(c);
+            }
+
+            contacts.sort(new Comparator<Contact>() {
+                @Override
+                public int compare(Contact c1, Contact c2) {
+                    return Utils.compareContacts(c1, c2);
+                }
+            });
+
+            for (Contact contact : contacts) {
+                mModel.addElement(contact);
+            }
+        }
+
+        @SuppressWarnings("unchecked")
+        Contact[] getSelectedContacts() {
+            return (Contact[]) this.getSelectedValuesList().toArray(new Contact[0]);
+        }
+
+        private class CellRenderer extends WebLabel implements ListCellRenderer<Contact> {
+            @Override
+            public Component getListCellRendererComponent(JList list,
+                    Contact contact,
+                    int index,
+                    boolean isSelected,
+                    boolean cellHasFocus) {
+                this.setText(Utils.nameOrJID(contact, 40));
+                return this;
+            }
         }
     }
 

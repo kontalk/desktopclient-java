@@ -37,9 +37,6 @@ import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.popup.PopupAdapter;
-import com.alee.managers.popup.WebPopup;
-import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.WebUtils;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -74,8 +71,8 @@ final class MainFrame extends WebFrame {
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
+    private final WebToggleButton mAddGroupButton;
     private final WebToggleButton mAddContactButton;
-    private WebPopup mAddContactPopup = new WebPopup();
 
     MainFrame(final View view,
             Table<?, ?> contactList,
@@ -211,27 +208,28 @@ final class MainFrame extends WebFrame {
         //String chatOverlayText =
         //        Tr.t/r("No chats to display. You can create a new chat from your contacts");
         WebScrollPane chatPane = createTablePane(chatList, "chatOverlayText");
-        mTabbedPane.addTab("", chatPane);
+        mAddGroupButton = new ComponentUtils.ToggleButton(
+                // TODO different button
+                Utils.getIcon("ic_ui_add.png"),
+                Tr.tr("Create a new group chat"),
+                new ComponentUtils.AddGroupChatPanel(mView, this));
+        WebPanel chatPanel = new GroupPanel(GroupingType.fillFirst, false,
+                chatPane, mAddGroupButton);
+        chatPanel.setPaintSides(false, false, false, false);
+        mTabbedPane.addTab("", chatPanel);
         mTabbedPane.setTabComponentAt(Tab.CHATS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
         //String contactOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
         WebScrollPane contactPane = createTablePane(contactList, "contactOverlayText");
-        mAddContactButton = new WebToggleButton(Utils.getIcon("ic_ui_add.png"));
-        mAddContactButton.setShadeWidth(0).setRound(0);
-        TooltipManager.addTooltip(mAddContactButton, Tr.tr("Add a new contact"));
-        mAddContactButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (!MainFrame.this.mAddContactPopup.isShowing())
-                    MainFrame.this.showAddContactPopup(mAddContactButton);
-            }
-        });
+        mAddContactButton = new ComponentUtils.ToggleButton(
+                Utils.getIcon("ic_ui_add.png"),
+                Tr.tr("Add a new contact"),
+                new ComponentUtils.AddContactPanel(mView, this));
         WebPanel contactPanel = new GroupPanel(GroupingType.fillFirst, false,
                 contactPane, mAddContactButton);
         contactPanel.setPaintSides(false, false, false, false);
         mTabbedPane.addTab("", contactPanel);
-
         mTabbedPane.setTabComponentAt(Tab.CONTACT.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         // setSize() does not work, whatever
@@ -317,20 +315,6 @@ final class MainFrame extends WebFrame {
                 Tr.tr("About"),
                 WebOptionPane.INFORMATION_MESSAGE,
                 icon);
-    }
-
-    private void showAddContactPopup(final WebToggleButton invoker) {
-        mAddContactPopup = new WebPopup();
-        mAddContactPopup.setCloseOnFocusLoss(true);
-        mAddContactPopup.addPopupListener(new PopupAdapter() {
-            @Override
-            public void popupWillBeClosed() {
-                invoker.doClick();
-            }
-        });
-        mAddContactPopup.add(new ComponentUtils.AddContactPanel(mView, this));
-        //mPopup.packPopup();
-        mAddContactPopup.showAsPopupMenu(invoker);
     }
 
     private static WebScrollPane createTablePane(final Table<?, ?> table,
