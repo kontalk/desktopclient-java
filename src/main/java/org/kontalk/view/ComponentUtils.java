@@ -404,13 +404,14 @@ final class ComponentUtils {
                     new WebLabel(Tr.tr("Subject:"+" ")), mSubjectField));
 
             mList = new ContactSelectionList();
+            mList.setVisibleRowCount(10);
             mList.addListSelectionListener(new ListSelectionListener() {
                 @Override
                 public void valueChanged(ListSelectionEvent e) {
                     AddGroupChatPanel.this.checkSaveButton();
                 }
             });
-            groupPanel.add(new ScrollPane(mList));
+            groupPanel.add(new ScrollPane(mList).setPreferredWidth(200));
 
             this.add(groupPanel, BorderLayout.CENTER);
 
