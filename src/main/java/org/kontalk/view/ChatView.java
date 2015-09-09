@@ -100,6 +100,7 @@ final class ChatView extends WebPanel implements Observer {
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
+    private Chat mCurrentChat = null;
     private boolean mScrollDown = false;
 
     ChatView(View view) {
@@ -269,26 +270,22 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void showChat(Chat chat) {
-        // TODO update
-        mTitleLabel.setText(Utils.chatTitle(chat));
+        if (mCurrentChat != null)
+            mCurrentChat.deleteObserver(this);
 
-        if (chat.isGroupChat()) {
-            mSubTitleLabel.setText(Utils.contactNameList(chat.getContacts()));
-        } else {
-            Optional<Contact> optContact = chat.getSingleContact();
-            mSubTitleLabel.setText(optContact.isPresent() ?
-                    Utils.mainStatus(optContact.get(), true) :
-                    "--no subtitle--");
+        mCurrentChat = chat;
+        mCurrentChat.addObserver(this);
+
+        this.updateTitles();
+        if (!mChatCache.containsKey(mCurrentChat.getID())) {
+            MessageList newMessageList = new MessageList(mView, this, mCurrentChat);
+            mCurrentChat.addObserver(newMessageList);
+            mChatCache.put(mCurrentChat.getID(), newMessageList);
         }
-        if (!mChatCache.containsKey(chat.getID())) {
-            MessageList newMessageList = new MessageList(mView, this, chat);
-            chat.addObserver(newMessageList);
-            mChatCache.put(chat.getID(), newMessageList);
-        }
-        MessageList list = mChatCache.get(chat.getID());
+        MessageList list = mChatCache.get(mCurrentChat.getID());
         mScrollPane.getViewport().setView(list);
 
-        chat.setRead();
+        mCurrentChat.setRead();
     }
 
     void setColor(Color color) {
@@ -388,6 +385,24 @@ final class ChatView extends WebPanel implements Observer {
                     mScrollPane.setViewportView(null);
                 }
             }
+        }
+
+        if (arg instanceof String || arg instanceof Contact) {
+            this.updateTitles();
+        }
+    }
+
+    private void updateTitles() {
+        if (mCurrentChat == null)
+            return;
+        mTitleLabel.setText(Utils.chatTitle(mCurrentChat));
+        if (mCurrentChat.isGroupChat()) {
+            mSubTitleLabel.setText(Utils.contactNameList(mCurrentChat.getContacts()));
+        } else {
+            Optional<Contact> optContact = mCurrentChat.getSingleContact();
+            mSubTitleLabel.setText(optContact.isPresent() ?
+                    Utils.mainStatus(optContact.get(), true) :
+                    "--no subtitle--");
         }
     }
 
