@@ -78,6 +78,10 @@ public final class View implements Observer {
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
 
+    static final int MAX_SUBJ_LENGTH = 30;
+    static final int MAX_NAME_LENGTH = 60;
+    static final int MAX_JID_LENGTH = 100;
+
     static final Color BLUE = new Color(130, 170, 240);
     static final Color DARK_BLUE = new Color(0, 0, 160);
     static final Color LIGHT_BLUE = new Color(220, 220, 250);

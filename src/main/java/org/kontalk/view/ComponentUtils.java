@@ -80,6 +80,9 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
@@ -390,6 +393,7 @@ final class ComponentUtils {
 
             // editable fields
             mSubjectField = new WebTextField(20);
+            mSubjectField.setDocument(new TextLimitDocument(View.MAX_SUBJ_LENGTH));
             mSubjectField.getDocument().addDocumentListener(new DocumentChangeListener() {
                 @Override
                 public void documentChanged(DocumentEvent e) {
@@ -659,7 +663,7 @@ final class ComponentUtils {
             this.setDrawBorder(true);
         }
 
-        private void setLabel() {
+        void setLabel() {
             this.setText(this.labelText());
             this.setDrawBorder(false);
         }
@@ -774,6 +778,26 @@ final class ComponentUtils {
         void setLink(String text, Path linkPath) {
             mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
             mStatus.setText("");
+        }
+    }
+
+    // Source: http://www.rgagnon.com/javadetails/java-0198.html
+    static class TextLimitDocument extends PlainDocument {
+        private final int mLimit;
+
+        TextLimitDocument(int limit) {
+            super();
+            this.mLimit = limit;
+        }
+
+        @Override
+        public void insertString( int offset, String  str, AttributeSet attr)
+                throws BadLocationException {
+            if (str == null) return;
+
+            if ((this.getLength() + str.length()) <= mLimit) {
+                super.insertString(offset, str, attr);
+            }
         }
     }
 }

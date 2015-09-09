@@ -73,6 +73,7 @@ final class ChatDetails extends WebPanel {
         groupPanel.add(new WebLabel(Tr.tr("Subject:")));
         String subj = mChat.getSubject();
         mSubjectField = new WebTextField(subj, 22);
+        mSubjectField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_SUBJ_LENGTH));
         mSubjectField.setInputPrompt(subj);
         mSubjectField.setHideInputPromptOnFocus(false);
         groupPanel.add(mSubjectField);
