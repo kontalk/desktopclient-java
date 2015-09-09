@@ -55,9 +55,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
@@ -91,7 +89,7 @@ final class ChatView extends WebPanel implements Observer {
     private final View mView;
 
     private final WebLabel mTitleLabel;
-    private final WebLabel mSubLabel;
+    private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
     private final WebTextArea mSendTextArea;
     private final WebButton mSendButton;
@@ -113,10 +111,10 @@ final class ChatView extends WebPanel implements Observer {
         mTitleLabel = new WebLabel();
         mTitleLabel.setFontSize(16);
         mTitleLabel.setDrawShade(true);
-        mSubLabel = new WebLabel();
-        mSubLabel.setFontSize(11);
-        mSubLabel.setForeground(Color.GRAY);
-        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel),
+        mSubTitleLabel = new WebLabel();
+        mSubTitleLabel.setFontSize(11);
+        mSubTitleLabel.setForeground(Color.GRAY);
+        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubTitleLabel),
                 BorderLayout.CENTER);
 
         final WebToggleButton editButton = new WebToggleButton(
@@ -271,14 +269,17 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void showChat(Chat chat) {
-        List<Contact> contact = new ArrayList<>(chat.getContacts());
-        mTitleLabel.setText(!chat.isGroupChat() ? Utils.nameOrJID(contact.get(0)) :
-                !chat.getSubject().isEmpty() ? chat.getSubject() :
-                Tr.tr("Group Chat"));
         // TODO update
-        mSubLabel.setText(!chat.isGroupChat() ?
-                Utils.mainStatus(contact.get(0), true) :
-                Utils.contactNameList(chat.getContacts()));
+        mTitleLabel.setText(Utils.chatTitle(chat));
+
+        if (chat.isGroupChat()) {
+            mSubTitleLabel.setText(Utils.contactNameList(chat.getContacts()));
+        } else {
+            Optional<Contact> optContact = chat.getSingleContact();
+            mSubTitleLabel.setText(optContact.isPresent() ?
+                    Utils.mainStatus(optContact.get(), true) :
+                    "--no subtitle--");
+        }
         if (!mChatCache.containsKey(chat.getID())) {
             MessageList newMessageList = new MessageList(mView, this, chat);
             chat.addObserver(newMessageList);

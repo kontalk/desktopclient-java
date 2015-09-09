@@ -44,6 +44,7 @@ import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -55,6 +56,7 @@ import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.misc.KonException;
+import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
@@ -216,6 +218,17 @@ final class Utils {
         if (brackets)
             jid = "<" + jid + ">";
         return jid;
+    }
+
+    static String chatTitle(Chat chat) {
+        if (chat.isGroupChat()) {
+            String subj = chat.getSubject();
+            return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
+        } else {
+            Optional<Contact> optContact = chat.getSingleContact();
+            return optContact.isPresent() ? Utils.nameOrJID(optContact.get()) :
+                    "--no title--";
+        }
     }
 
     static String fingerprint(String fp) {

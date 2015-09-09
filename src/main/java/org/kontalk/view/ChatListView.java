@@ -213,13 +213,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
         private void updateView(Object arg) {
             if (arg == null || arg instanceof Contact || arg instanceof String) {
-                if (mValue.isGroupChat()) {
-                    mTitleLabel.setText(mValue.getSubject());
-                } else {
-                    Optional<Contact> optContact = mValue.getSingleContact();
-                    if (optContact.isPresent())
-                        mTitleLabel.setText(Utils.nameOrJID(optContact.get()));
-                }
+                mTitleLabel.setText(Utils.chatTitle(mValue));
             }
 
             if (arg == null || arg instanceof KonMessage) {
