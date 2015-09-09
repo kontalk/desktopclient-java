@@ -70,14 +70,19 @@ final class ChatDetails extends WebPanel {
         groupPanel.add(new WebSeparator(true, true));
 
         // editable fields
-        groupPanel.add(new WebLabel(Tr.tr("Subject:")));
-        String subj = mChat.getSubject();
-        mSubjectField = new WebTextField(subj, 22);
-        mSubjectField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_SUBJ_LENGTH));
-        mSubjectField.setInputPrompt(subj);
-        mSubjectField.setHideInputPromptOnFocus(false);
-        groupPanel.add(mSubjectField);
-        groupPanel.add(new WebSeparator(true, true));
+        if (chat.isGroupChat()) {
+            groupPanel.add(new WebLabel(Tr.tr("Subject:")));
+            mSubjectField = new WebTextField(22);
+            mSubjectField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_SUBJ_LENGTH));
+            String subj = mChat.getSubject();
+            mSubjectField.setText(subj);
+            mSubjectField.setInputPrompt(subj);
+            mSubjectField.setHideInputPromptOnFocus(false);
+            groupPanel.add(mSubjectField);
+            groupPanel.add(new WebSeparator(true, true));
+        } else {
+            mSubjectField = null;
+        }
 
         final WebSlider colorSlider = new WebSlider(WebSlider.HORIZONTAL);
 
@@ -188,8 +193,10 @@ final class ChatDetails extends WebPanel {
     }
 
     private void save() {
-        if (!mSubjectField.getText().equals(mChat.getSubject())) {
-            mChat.setSubject(mSubjectField.getText());
+        if (mSubjectField != null) {
+            String subj = mSubjectField.getText();
+            if (subj.length() > 0 && !mSubjectField.getText().equals(mChat.getSubject()))
+                mChat.setSubject(mSubjectField.getText());
         }
 //        List<?> participants = mParticipantsList.getCheckedValues();
 //        Set<Contact> chatContact = new HashSet<>();
