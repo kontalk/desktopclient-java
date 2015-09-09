@@ -189,7 +189,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         @Override
         protected void updateOnEDT(Object arg) {
             // name
-            String name = Utils.name(mValue);
+            String name = Utils.nameOrJID(mValue);
             if (!name.equals(mNameLabel.getText())) {
                 mNameLabel.setText(name);
                 ContactListView.this.updateSorting();

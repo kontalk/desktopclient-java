@@ -57,6 +57,7 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
+import org.kontalk.util.XMPPUtils;
 import org.ocpsoft.prettytime.PrettyTime;
 
 /**
@@ -168,11 +169,14 @@ final class Utils {
 
     /* strings */
 
-    // TODO replace
     static String name(Contact contact) {
         return contact.isDeleted() ? Tr.tr("<deleted>") :
                 !contact.getName().isEmpty() ? contact.getName() :
                 Tr.tr("<unknown>");
+    }
+
+    static String nameOrJID(Contact contact) {
+        return nameOrJID(contact, Integer.MAX_VALUE);
     }
 
     static String nameOrJID(Contact contact, int maxLength) {
@@ -180,25 +184,28 @@ final class Utils {
                 Tr.tr("<deleted>") :
                 !contact.getName().isEmpty() ?
                 StringUtils.abbreviate(contact.getName(), maxLength) :
+                hashOrJID(contact, maxLength);
+    }
+
+    private static String hashOrJID(Contact contact, int maxLength) {
+        String jid = contact.getJID();
+        return XMPPUtils.isHash(jid) && jid.length() >= 10 ?
+                "[" + jid.substring(0, 10) + "]" :
                 jid(contact, maxLength, true);
     }
 
-    // TODO unused
-    static String shortenContactName(String jid, int maxLength) {
-        String local = XmppStringUtils.parseLocalpart(jid);
-        local = StringUtils.abbreviate(local, maxLength);
-        String domain = XmppStringUtils.parseDomain(jid);
-        return XmppStringUtils.completeJidFrom(local, domain);
+    static String contactNameList(Set<Contact> contacts) {
+        List<String> nameList = new ArrayList<>(contacts.size());
+        for (Contact contact : contacts) {
+            nameList.add(nameOrJID(contact, 18));
+        }
+        return StringUtils.join(nameList, ", ");
     }
 
     static String jid(Contact contact, int maxLength, boolean brackets) {
-        return jid(contact.getJID(), maxLength, brackets);
-    }
-
-    // TODO replace
-    static String jid(String jid, int maxLength, boolean brackets) {
+        String jid = contact.getJID();
         if (brackets)
-            jid = "<" + jid + ">";
+            maxLength -= 2;
         if (jid.length() > maxLength) {
             String local = XmppStringUtils.parseLocalpart(jid);
             local = StringUtils.abbreviate(local, (int) (maxLength * 0.4));
@@ -206,17 +213,9 @@ final class Utils {
             domain = StringUtils.abbreviate(domain, (int) (maxLength * 0.6));
             jid = XmppStringUtils.completeJidFrom(local, domain);
         }
+        if (brackets)
+            jid = "<" + jid + ">";
         return jid;
-    }
-
-    static String contactNameList(Set<Contact> contacts) {
-        List<String> nameList = new ArrayList<>(contacts.size());
-        for (Contact contact : contacts) {
-            nameList.add(contact.getName().isEmpty() ?
-                    Tr.tr("<unknown>") :
-                    contact.getName());
-        }
-        return StringUtils.join(nameList, ", ");
     }
 
     static String fingerprint(String fp) {

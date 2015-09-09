@@ -18,7 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
@@ -156,8 +155,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
     protected final class ChatItem extends Table<ChatItem, Chat>.TableItem {
 
-        private final WebLabel mNameLabel;
-        private final WebLabel mSubjectLabel;
+        private final WebLabel mTitleLabel;
         private final WebLabel mStatusLabel;
         private final WebLabel mChatStateLabel;
         private Color mBackground;
@@ -168,13 +166,11 @@ final class ChatListView extends Table<ChatItem, Chat> {
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
             this.setMargin(View.MARGIN_SMALL);
 
-            mNameLabel = new WebLabel();
-            mNameLabel.setFontSize(14);
-            mSubjectLabel = new WebLabel();
-            mSubjectLabel.setForeground(Color.GRAY);
-            mSubjectLabel.setFontSize(13);
-            this.add(new GroupPanel(View.GAP_DEFAULT, mNameLabel, mSubjectLabel),
-                    BorderLayout.NORTH);
+            mTitleLabel = new WebLabel();
+            mTitleLabel.setFontSize(14);
+            if (chat.isGroupChat())
+                mTitleLabel.setForeground(View.DARK_BLUE);
+            this.add(mTitleLabel, BorderLayout.NORTH);
 
             mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
@@ -216,25 +212,14 @@ final class ChatListView extends Table<ChatItem, Chat> {
         }
 
         private void updateView(Object arg) {
-            if (arg == null || arg instanceof Contact) {
-                Optional<Contact> optContact = mValue.getSingleContact();
-                if (optContact.isPresent())
-                    mNameLabel.setText(Utils.name(optContact.get()));
-            }
-
-            if (arg == null || arg instanceof String) {
-                mSubjectLabel.setText(mValue.getSubject());
-            }
-
-            if (arg == null || arg instanceof Set) {
-                // TODO group chat
-//                List<String> nameList = new ArrayList<>(mValue.getContact().size());
-//                for (Contact contact : mValue.getContact()) {
-//                    nameList.add(contact.getName().isEmpty() ?
-//                            Tr.tr("<unknown>") :
-//                            contact.getName());
-//                }
-//                mContactLabel.setText(StringUtils.join(nameList, ", "));
+            if (arg == null || arg instanceof Contact || arg instanceof String) {
+                if (mValue.isGroupChat()) {
+                    mTitleLabel.setText(mValue.getSubject());
+                } else {
+                    Optional<Contact> optContact = mValue.getSingleContact();
+                    if (optContact.isPresent())
+                        mTitleLabel.setText(Utils.nameOrJID(optContact.get()));
+                }
             }
 
             if (arg == null || arg instanceof KonMessage) {
@@ -291,13 +276,11 @@ final class ChatListView extends Table<ChatItem, Chat> {
         @Override
         public int compareTo(TableItem o) {
             SortedSet<KonMessage> messages = this.mValue.getMessages().getAll();
-            if (messages.isEmpty())
-                return -1;
             SortedSet<KonMessage> oMessages = o.mValue.getMessages().getAll();
-            if (oMessages.isEmpty())
-                return 1;
+            if (!messages.isEmpty() && !oMessages.isEmpty())
+                return -messages.last().getDate().compareTo(oMessages.last().getDate());
 
-            return -messages.last().getDate().compareTo(oMessages.last().getDate());
+            return -Integer.compare(this.mValue.getID(), o.mValue.getID());
         }
     }
 

@@ -79,6 +79,7 @@ public final class View implements Observer {
     static final int MARGIN_SMALL = 5;
 
     static final Color BLUE = new Color(130, 170, 240);
+    static final Color DARK_BLUE = new Color(0, 0, 160);
     static final Color LIGHT_BLUE = new Color(220, 220, 250);
     static final Color LIGHT_GREY = new Color(240, 240, 240);
     static final Color GREEN = new Color(83, 196, 46);
@@ -336,7 +337,7 @@ public final class View implements Observer {
         panel.add(new WebSeparator(true, true));
 
         panel.add(new WebLabel(Tr.tr("Contact:")));
-        String contactText = Utils.name(contact) + " " + Utils.jid(contact.getJID(), 30, true);
+        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
         panel.add(new WebLabel(contactText).setBoldFont());
 
         panel.add(new WebLabel(Tr.tr("Key fingerprint:")));

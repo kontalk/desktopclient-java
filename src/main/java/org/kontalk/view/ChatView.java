@@ -272,11 +272,11 @@ final class ChatView extends WebPanel implements Observer {
 
     void showChat(Chat chat) {
         List<Contact> contact = new ArrayList<>(chat.getContacts());
-        mTitleLabel.setText(contact.size() == 1 ? Utils.name(contact.get(0)) :
+        mTitleLabel.setText(!chat.isGroupChat() ? Utils.nameOrJID(contact.get(0)) :
                 !chat.getSubject().isEmpty() ? chat.getSubject() :
                 Tr.tr("Group Chat"));
         // TODO update
-        mSubLabel.setText(contact.size() == 1 ?
+        mSubLabel.setText(!chat.isGroupChat() ?
                 Utils.mainStatus(contact.get(0), true) :
                 Utils.contactNameList(chat.getContacts()));
         if (!mChatCache.containsKey(chat.getID())) {
