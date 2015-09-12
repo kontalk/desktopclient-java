@@ -51,14 +51,17 @@ import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.model.Chat.GID;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.model.Transmission;
 import org.kontalk.system.Control;
+import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
 
@@ -243,6 +246,15 @@ public final class Client implements StanzaListener, Runnable {
 
         if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
+
+        Optional<GID> optGID = message.getChat().getGID();
+        if (optGID.isPresent()) {
+            GID gid = optGID.get();
+            Optional<GroupCommand> optGroupCommand = content.getGroupCommand();
+            protoMessage.addExtension(optGroupCommand.isPresent() ?
+                    ClientUtils.groupCommandToGroupExtension(message.getChat(), optGroupCommand.get()) :
+                    new GroupExtension(gid.id, gid.ownerJID));
+        }
 
         // transmission specific
 
