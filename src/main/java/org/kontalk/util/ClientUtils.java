@@ -18,9 +18,15 @@
 
 package org.kontalk.util;
 
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.Message;
+import org.kontalk.client.GroupExtension;
+import org.kontalk.model.Chat;
+import org.kontalk.model.Chat.GID;
+import org.kontalk.model.MessageContent.GroupCommand;
+import org.kontalk.model.MessageContent.GroupCommand.OP;
 
 /**
  *
@@ -60,5 +66,43 @@ public final class ClientUtils {
         public String toString() {
             return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID;
         }
+    }
+
+    public static GroupExtension groupCommandToGroupExtension(Chat chat,
+        GroupCommand groupCommand) {
+        assert chat.isGroupChat();
+
+        Optional<GID> optGID = chat.getGID();
+        if (!optGID.isPresent()) {
+            LOGGER.warning("no GID");
+            return new GroupExtension("", "");
+        }
+        GID gid = optGID.get();
+
+        OP op = groupCommand.getOperation();
+        if (op == OP.LEAVE) {
+            // weare leaving
+            return new GroupExtension(gid.id, gid.ownerJID, true);
+        }
+        if (op == OP.CREATE) {
+            return new GroupExtension(gid.id, gid.ownerJID, true, groupCommand.getAdded());
+        }
+
+        // TODO: else part list changed, this is complicated
+        return new GroupExtension("TODO", "TODO");
+    }
+
+    public static GroupCommand groupExtensionToGroupCommand(Chat chat,
+            GroupExtension.Command com,
+            String[] members,
+            String senderJID) {
+        if (com == GroupExtension.Command.CREATE) {
+            return new GroupCommand(members);
+        } else if (com == GroupExtension.Command.LEAVE) {
+            return new GroupCommand(senderJID);
+        }
+
+        // TODO
+        return new GroupCommand(new String[0], new String[0]);
     }
 }

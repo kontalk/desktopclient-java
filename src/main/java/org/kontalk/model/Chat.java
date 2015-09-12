@@ -160,6 +160,10 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return mID;
     }
 
+    public Optional<GID> getGID() {
+        return mOptGID;
+    }
+
     public String getXMPPID() {
         return mXMPPID;
     }

@@ -478,7 +478,7 @@ public class MessageContent {
         private final String mSubject;
 
         /** Group creation. */
-        GroupCommand(String[] added) {
+        public GroupCommand(String[] added) {
             this(OP.CREATE, added, new String[0], "");
         }
 
@@ -488,12 +488,12 @@ public class MessageContent {
         }
 
         /** Member list changed. */
-        GroupCommand(String[] added, String[] removed) {
+        public GroupCommand(String[] added, String[] removed) {
             this(OP.LIST_UPDATE, added, removed, "");
         }
 
         /** Member left. */
-        GroupCommand(String jidRemoved) {
+        public GroupCommand(String jidRemoved) {
             this(OP.LEAVE, new String[0], new String[]{jidRemoved}, "");
         }
 
