@@ -54,7 +54,7 @@ import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.Contact;
-import org.kontalk.model.KonMessage;
+import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.model.Transmission;
@@ -210,91 +210,73 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendMessage(OutMessage message) {
-        for (Transmission t: message.getTransmissions()) {
-            this.sendMessage(message, t);
-        }
-    }
-
-    public void sendMessage(OutMessage message, Transmission transmission) {
-        LOGGER.info("to "+transmission.getJID());
         // check for correct receipt status and reset it
         Status status = message.getStatus();
         assert status == Status.PENDING || status == Status.ERROR;
         message.setStatus(Status.PENDING);
 
         if (!this.isConnected()) {
-            LOGGER.info("not sending message, not connected");
+            LOGGER.info("not sending message(s), not connected");
             return;
         }
 
-        if (!XMPPUtils.isValid(transmission.getJID())) {
-            LOGGER.warning("not sending message, invalid JID: "+transmission.getJID());
+        MessageContent content = message.getContent();
+        Optional<Attachment> optAtt = content.getAttachment();
+        if (optAtt.isPresent() && !optAtt.get().hasURL()) {
+            LOGGER.warning("attachment not uploaded");
+            message.setStatus(Status.ERROR);
             return;
         }
 
-        Message sendMessage;
-        if (message.getCoderStatus().getEncryption() == Coder.Encryption.NOT &&
-                message.getCoderStatus().getSigning() == Coder.Signing.NOT) {
-            // unencrypted
-            Message rawMessage = rawMessageOrNull(message, transmission, false);
-            if (rawMessage == null)
-                return;
-            sendMessage = rawMessage;
-        } else {
-            // encrypted
-            sendMessage = new Message(transmission.getJID(), Message.Type.chat);
-            Optional<byte[]> encrypted;
-            if (message.getContent().getAttachment().isPresent()) {
-                Message rawMessage = rawMessageOrNull(message, transmission, true);
-                if (rawMessage == null)
-                    return;
-                encrypted = Coder.encryptStanza(message,
-                        transmission.getContact(),
-                        rawMessage.toXML().toString());
-            } else {
-                encrypted = Coder.encryptMessage(message, transmission.getContact());
-            }
-            // check also for security errors just to be sure
-            if (!encrypted.isPresent() ||
-                    !message.getCoderStatus().getErrors().isEmpty()) {
-                LOGGER.warning("encryption failed, not sending message");
-                message.setStatus(Status.ERROR);
-                mControl.handleSecurityErrors(message);
-                return;
-            }
-            sendMessage.addExtension(new E2EEncryption(encrypted.get()));
-        }
+        boolean encrypted =
+                message.getCoderStatus().getEncryption() != Coder.Encryption.NOT ||
+                message.getCoderStatus().getSigning() != Coder.Signing.NOT;
 
-        sendMessage.setStanzaId(message.getXMPPID());
+        Message protoMessage = encrypted ? new Message() : rawMessage(content, false);
 
-        sendMessage.addExtension(new DeliveryReceiptRequest());
+        protoMessage.setType(Message.Type.chat);
+        protoMessage.setStanzaId(message.getXMPPID());
+
+        // extensions
+
+        protoMessage.addExtension(new DeliveryReceiptRequest());
 
         if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
-            sendMessage.addExtension(new ChatStateExtension(ChatState.active));
+            protoMessage.addExtension(new ChatStateExtension(ChatState.active));
 
-        this.sendPacket(sendMessage);
+        // transmission specific
+
+        Transmission[] transmissions = message.getTransmissions();
+        ArrayList<Message> sendMessages = new ArrayList<>(transmissions.length);
+        for (Transmission transmission: message.getTransmissions()) {
+            Message m = messageOrNull(protoMessage.clone(), message, transmission, encrypted);
+            if (m == null) {
+                if (!message.getCoderStatus().getErrors().isEmpty()) {
+                    mControl.handleEncryptionErrors(message, transmission.getContact());
+                }
+                message.setStatus(Status.ERROR);
+                return;
+            }
+            sendMessages.add(m);
+        }
+
+        this.sendPackets(sendMessages.toArray(new Message[0]));
     }
 
-    private static Message rawMessageOrNull(KonMessage message,
-            Transmission transmission,
-            boolean encrypted) {
-        Message smackMessage = new Message(transmission.getJID(), Message.Type.chat);
+    private static Message rawMessage(MessageContent content, boolean encrypted) {
+        Message smackMessage = new Message();
 
-        smackMessage.setBody(message.getContent().getPlainText());
+        smackMessage.setBody(content.getPlainText());
 
-        Optional<Attachment> optAtt = message.getContent().getAttachment();
+        Optional<Attachment> optAtt = content.getAttachment();
         if (optAtt.isPresent()) {
             Attachment att = optAtt.get();
-            if (!att.hasURL()) {
-                LOGGER.warning("attachment not uploaded");
-                return null;
-            }
 
             OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
                     att.getMimeType(), att.getLength(), encrypted);
             smackMessage.addExtension(oobData);
 
-            Optional<Preview> optPreview = message.getContent().getPreview();
+            Optional<Preview> optPreview = content.getPreview();
             if (optPreview.isPresent()) {
                 Preview preview = optPreview.get();
                 String data = EncodingUtils.bytesToBase64(preview.getData());
@@ -303,6 +285,36 @@ public final class Client implements StanzaListener, Runnable {
             }
         }
         return smackMessage;
+    }
+
+    private static Message messageOrNull(Message sendMessage,
+            OutMessage message,
+            Transmission transmission,
+            boolean encrypted) {
+
+        String toJID = transmission.getJID();
+        if (!XMPPUtils.isValid(toJID)) {
+            LOGGER.warning("invalid JID: "+toJID);
+            return null;
+        }
+        sendMessage.setTo(toJID);
+
+        MessageContent content = message.getContent();
+        if (encrypted) {
+            Optional<byte[]> encryptedData = content.isComplex() ?
+                        Coder.encryptStanza(message, transmission.getContact(),
+                                rawMessage(content, true).toXML().toString()) :
+                        Coder.encryptMessage(message, transmission.getContact());
+            // check also for security errors just to be sure
+            if (!encryptedData.isPresent() ||
+                    !message.getCoderStatus().getErrors().isEmpty()) {
+                LOGGER.warning("encryption failed");
+                return null;
+            }
+            sendMessage.addExtension(new E2EEncryption(encryptedData.get()));
+        }
+
+        return sendMessage;
     }
 
     // TODO unused
@@ -366,6 +378,11 @@ public final class Client implements StanzaListener, Runnable {
         message.addExtension(new ChatStateExtension(state));
 
         this.sendPacket(message);
+    }
+
+    private synchronized void sendPackets(Stanza[] stanzas) {
+        for (Stanza s: stanzas)
+            this.sendPacket(s);
     }
 
     synchronized void sendPacket(Stanza p) {

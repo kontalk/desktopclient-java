@@ -156,15 +156,18 @@ public final class Control {
         mViewControl.changed(new ViewEvent.Exception(ex));
     }
 
-    public void handleSecurityErrors(KonMessage message) {
+    public void handleEncryptionErrors(KonMessage message, Contact contact) {
         EnumSet<Coder.Error> errors = message.getCoderStatus().getErrors();
         if (errors.contains(Coder.Error.KEY_UNAVAILABLE) ||
                 errors.contains(Coder.Error.INVALID_SIGNATURE) ||
                 errors.contains(Coder.Error.INVALID_SENDER)) {
             // maybe there is something wrong with the senders key
-            // TODO get contact by throwing something
-            // this.sendKeyRequest(contact);
+            this.sendKeyRequest(contact);
         }
+        this.handleSecurityErrors(message);
+    }
+
+    public void handleSecurityErrors(KonMessage message) {
         mViewControl.changed(new ViewEvent.SecurityError(message));
     }
 
