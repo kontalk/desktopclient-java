@@ -27,7 +27,7 @@ import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.system.Control;
-import org.kontalk.system.Control.MessageIDs;
+import org.kontalk.util.ClientUtils.MessageIDs;
 
 /**
  * Listener for acknowledged packets (Stream Management, XEP-0198).

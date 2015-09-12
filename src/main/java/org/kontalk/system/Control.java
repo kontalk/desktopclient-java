@@ -30,8 +30,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.apache.commons.lang.StringUtils;
-import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
@@ -57,6 +55,7 @@ import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
 
 /**
@@ -79,39 +78,6 @@ public final class Control {
         FAILED,
         /** Connection was lost due to error. */
         ERROR
-    }
-
-    /**
-     * Message attributes to identify the chat for a message.
-     */
-    public static class MessageIDs {
-        public final String jid;
-        public final String xmppID;
-        public final String xmppThreadID;
-        //public final Optional<GroupID> groupID;
-
-        private MessageIDs(String jid, String xmppID, String threadID) {
-            this.jid = jid;
-            this.xmppID = xmppID;
-            this.xmppThreadID = threadID;
-        }
-
-        public static MessageIDs from(Message m) {
-            return from(m, "");
-        }
-
-        public static MessageIDs from(Message m, String receiptID) {
-            return new MessageIDs(
-                    StringUtils.defaultString(m.getFrom()),
-                    !receiptID.isEmpty() ? receiptID :
-                            StringUtils.defaultString(m.getStanzaId()),
-                    StringUtils.defaultString(m.getThread()));
-        }
-
-        @Override
-        public String toString() {
-            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID;
-        }
     }
 
     private final Client mClient;

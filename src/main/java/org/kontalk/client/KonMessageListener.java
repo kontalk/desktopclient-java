@@ -43,7 +43,7 @@ import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.system.Control;
-import org.kontalk.system.Control.MessageIDs;
+import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.EncodingUtils;
 
 /**
