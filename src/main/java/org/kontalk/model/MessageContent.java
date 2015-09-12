@@ -22,6 +22,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -47,6 +48,8 @@ public class MessageContent {
     private final Optional<Attachment> mOptAttachment;
     // small preview file of attachment
     private Optional<Preview> mOptPreview;
+    // group command
+    private final Optional<GroupCommand> mOptGroupCommand;
     // decrypted message content
     private Optional<MessageContent> mOptDecryptedContent;
 
@@ -54,32 +57,40 @@ public class MessageContent {
     private static final String JSON_ENC_CONTENT = "encrypted_content";
     private static final String JSON_ATTACHMENT = "attachment";
     private static final String JSON_PREVIEW = "preview";
+    private static final String JSON_GROUP_COMMAND = "group_command";
     private static final String JSON_DEC_CONTENT = "decrypted_content";
 
     // used for decrypted content of incoming messages, outgoing messages
     // and as fallback
     public MessageContent(String plainText) {
-        this(plainText, "", null, null);
+        this(plainText, "", null, null, null);
     }
 
     // used for outgoing messages
     public MessageContent(String plainText, Attachment attachment) {
-        this(plainText, "", attachment, null);
+        this(plainText, "", attachment, null, null);
+    }
+
+    // used for outgoing group commands
+    public MessageContent(GroupCommand group) {
+        this("", "", null, null, group);
     }
 
     // used for incoming messages
     public MessageContent(String plainText, String encrypted,
-            Attachment attachment, Preview preview) {
-        this(plainText, encrypted, attachment, preview, null);
+            Attachment attachment, Preview preview, GroupCommand group) {
+        this(plainText, encrypted, attachment, preview, group, null);
     }
 
     // used when loading from db
     private MessageContent(String plainText, String encrypted,
-            Attachment attachment, Preview preview, MessageContent decryptedContent) {
+            Attachment attachment, Preview preview, GroupCommand group,
+            MessageContent decryptedContent) {
         mPlainText = plainText;
         mEncryptedContent = encrypted;
         mOptAttachment = Optional.ofNullable(attachment);
         mOptPreview = Optional.ofNullable(preview);
+        mOptGroupCommand = Optional.ofNullable(group);
         mOptDecryptedContent = Optional.ofNullable(decryptedContent);
     }
 
@@ -134,6 +145,14 @@ public class MessageContent {
         mOptPreview = Optional.of(preview);
     }
 
+    public Optional<GroupCommand> getGroupCommand() {
+        if (mOptDecryptedContent.isPresent() &&
+                mOptDecryptedContent.get().getGroupCommand().isPresent()) {
+            return mOptDecryptedContent.get().getGroupCommand();
+        }
+        return mOptGroupCommand;
+    }
+
     /**
      * Return if there is no content in this message.
      * @return true if there is no content at all, false otherwise
@@ -146,10 +165,15 @@ public class MessageContent {
                 !mOptDecryptedContent.isPresent();
     }
 
+    public boolean isComplex() {
+        return mOptAttachment.isPresent() || mOptGroupCommand.isPresent();
+    }
+
     @Override
     public String toString() {
         return "CONT:plain="+mPlainText+",encr="+mEncryptedContent
-                +",att="+mOptAttachment+",decr="+mOptDecryptedContent;
+                +",att="+mOptAttachment+",gc="+mOptGroupCommand
+                +",decr="+mOptDecryptedContent;
     }
 
     // using legacy lib, raw types extend Object
@@ -183,6 +207,9 @@ public class MessageContent {
             String pre = (String) map.get(JSON_PREVIEW);
             Preview preview = pre == null ? null : Preview.fromJSONOrNull(pre);
 
+            String gc = (String) map.get(JSON_GROUP_COMMAND);
+            GroupCommand groupCommand = gc == null ? null : GroupCommand.fromJSONOrNull(gc);
+
             String jsonDecryptedContent = (String) map.get(JSON_DEC_CONTENT);
             MessageContent decryptedContent = jsonDecryptedContent == null ?
                     null :
@@ -192,6 +219,7 @@ public class MessageContent {
                     encrypted,
                     attachment,
                     preview,
+                    groupCommand,
                     decryptedContent);
         } catch(ClassCastException ex) {
             LOGGER.log(Level.WARNING, "can't parse JSON message content", ex);
@@ -432,7 +460,11 @@ public class MessageContent {
         }
     }
 
-    public static class Group {
+    public static class GroupCommand {
+        private static final String JSON_OP = "op";
+        private static final String JSON_ADDED = "added";
+        private static final String JSON_REMOVED = "removed";
+        private static final String JSON_SUBJECT = "subj";
 
         public enum OP {
             CREATE,
@@ -446,26 +478,26 @@ public class MessageContent {
         private final String mSubject;
 
         /** Group creation. */
-        Group(String[] added) {
+        GroupCommand(String[] added) {
             this(OP.CREATE, added, new String[0], "");
         }
 
         /** Group creation with subject. */
-        Group(String[] added, String subject) {
+        GroupCommand(String[] added, String subject) {
             this(OP.CREATE, added, new String[0], subject);
         }
 
         /** Member list changed. */
-        Group(String[] added, String[] removed) {
+        GroupCommand(String[] added, String[] removed) {
             this(OP.LIST_UPDATE, added, removed, "");
         }
 
         /** Member left. */
-        Group(String jidRemoved) {
+        GroupCommand(String jidRemoved) {
             this(OP.LEAVE, new String[0], new String[]{jidRemoved}, "");
         }
 
-        private Group(OP operation, String[] added, String[] removed, String subject) {
+        private GroupCommand(OP operation, String[] added, String[] removed, String subject) {
             mOP = operation;
             mJIDsAdded = added;
             mJIDsRemoved = removed;
@@ -486,6 +518,31 @@ public class MessageContent {
 
         public String getSubject() {
             return mSubject;
+        }
+
+        // using legacy lib, raw types extend Object
+        @SuppressWarnings("unchecked")
+        private static GroupCommand fromJSONOrNull(String json) {
+            Object obj = JSONValue.parse(json);
+            try {
+                Map<?, ?> map = (Map) obj;
+
+                Number o = (Number) map.get(JSON_OP);
+                OP op = OP.values()[o.intValue()];
+
+                List<String> a = (List<String>) map.get(JSON_ADDED);
+                String[] added = a.toArray(new String[0]);
+
+                List<String> r = (List<String>) map.get(JSON_REMOVED);
+                String[] removed = r.toArray(new String[0]);
+
+                String subj = EncodingUtils.getJSONString(map, JSON_SUBJECT);
+
+                return new GroupCommand(op, added, removed, subj);
+             }  catch (NullPointerException | ClassCastException ex) {
+                LOGGER.log(Level.WARNING, "can't parse JSON group command", ex);
+                return null;
+            }
         }
     }
 }

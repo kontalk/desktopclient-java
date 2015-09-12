@@ -40,6 +40,7 @@ import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.MessageIDs;
@@ -226,6 +227,10 @@ final public class KonMessageListener implements StanzaListener {
                     oobData.isEncrypted());
         }
 
-        return new MessageContent(plainText, encrypted, attachment, preview);
+        // group command
+        GroupCommand groupCommand = null;
+        // TODO
+
+        return new MessageContent(plainText, encrypted, attachment, preview, groupCommand);
     }
 }
