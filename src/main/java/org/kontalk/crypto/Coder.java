@@ -30,12 +30,13 @@ import java.io.UnsupportedEncodingException;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.text.ParseException;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FilenameUtils;
@@ -136,12 +137,6 @@ public final class Coder {
 
     private static final HashMap<Contact, PGPCoderKey> KEY_MAP = new HashMap<>();
 
-    private static class KeysResult {
-        PersonalKey myKey = null;
-        PGPCoderKey otherKey = null;
-        EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
-    }
-
     private static class DecryptionResult {
         EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
         Signing signing = Signing.UNKNOWN;
@@ -163,40 +158,43 @@ public final class Coder {
      * @param message
      * @return the encrypted and signed text.
      */
-    public static Optional<byte[]> encryptMessage(OutMessage message, Contact contact) {
-        return encryptData(message, contact, message.getContent().getPlainText(), "text/plain");
+    public static Optional<byte[]> encryptMessage(OutMessage message) {
+        return encryptData(message, message.getContent().getPlainText(), "text/plain");
     }
 
-    public static Optional<byte[]> encryptStanza(OutMessage message, Contact contact, String xml) {
+    public static Optional<byte[]> encryptStanza(OutMessage message, String xml) {
         String data = "<xmpp xmlns='jabber:client'>" + xml + "</xmpp>";
-        return encryptData(message, contact, data, "application/xmpp+xml");
+        return encryptData(message, data, "application/xmpp+xml");
     }
 
-    private static Optional<byte[]> encryptData(OutMessage message, Contact contact, String data, String mime) {
+    private static Optional<byte[]> encryptData(OutMessage message, String data, String mime) {
         if (message.getCoderStatus().getEncryption() != Encryption.DECRYPTED) {
             LOGGER.warning("message does not want to be encrypted");
             return Optional.empty();
         }
 
         // get keys
-        KeysResult keys = getKeys(contact);
-        if (keys.myKey == null || keys.otherKey == null) {
-            message.setSecurityErrors(keys.errors);
+        // TODO equal code
+        PersonalKey myKey = myKeyOrNull();
+        if (myKey == null) {
+            message.setSecurityErrors(EnumSet.of(Error.MY_KEY_UNAVAILABLE));
+            return Optional.empty();
+        }
+        List<Contact> contacts = new ArrayList<>(message.getTransmissions().length);
+        for (Transmission t : message.getTransmissions())
+            contacts.add(t.getContact());
+        PGPCoderKey[] receiverKeys = receiverKeysOrNull(contacts.toArray(new Contact[0]));
+        if (receiverKeys == null) {
+            message.setSecurityErrors(EnumSet.of(Error.KEY_UNAVAILABLE));
             return Optional.empty();
         }
 
         // secure the message against the most basic attacks using Message/CPIM
         // [for Android client - dont know if its useful, but doesnt hurt]
-        String from = keys.myKey.getUserId();
-        final StringBuilder to = new StringBuilder();
-        for (Transmission t : message.getTransmissions()) {
-            getKey(t.getContact()).ifPresent(new Consumer<PGPCoderKey>() {
-                @Override
-                public void accept(PGPCoderKey k) {
-                    to.append(k.userID).append("; ");
-                }
-            });
-        }
+        String from = myKey.getUserId();
+        StringBuilder to = new StringBuilder();
+        for (PGPCoderKey k : receiverKeys)
+            to.append(k.userID).append("; ");
 
         CPIMMessage cpim = new CPIMMessage(from, to.toString(), new Date(), mime, data);
         byte[] plainText;
@@ -210,7 +208,7 @@ public final class Coder {
         ByteArrayInputStream in = new ByteArrayInputStream(plainText);
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try {
-            encryptAndSign(in, out, keys.myKey, keys.otherKey.encryptKey);
+            encryptAndSign(in, out, myKey, receiverKeys);
         } catch(IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't encrypt message", ex);
             message.setSecurityErrors(EnumSet.of(Error.UNKNOWN_ERROR));
@@ -230,15 +228,18 @@ public final class Coder {
         Attachment attachment = optAttachment.get();
 
         // get keys
-        Transmission[] transmissions = message.getTransmissions();
-        if (transmissions.length != 1) {
-            LOGGER.warning("attachment encryption not supported for multiple receiver");
+        // TODO equal code
+        PersonalKey myKey = myKeyOrNull();
+        if (myKey == null) {
+            message.setSecurityErrors(EnumSet.of(Error.MY_KEY_UNAVAILABLE));
             return Optional.empty();
         }
-
-        KeysResult keys = getKeys(transmissions[0].getContact());
-        if (keys.myKey == null || keys.otherKey == null) {
-            message.setAttachmentErrors(keys.errors);
+        List<Contact> contacts = new ArrayList<>(message.getTransmissions().length);
+        for (Transmission t : message.getTransmissions())
+            contacts.add(t.getContact());
+        PGPCoderKey[] receiverKeys = receiverKeysOrNull(contacts.toArray(new Contact[0]));
+        if (receiverKeys == null) {
+            message.setSecurityErrors(EnumSet.of(Error.KEY_UNAVAILABLE));
             return Optional.empty();
         }
 
@@ -252,7 +253,7 @@ public final class Coder {
 
         try (FileInputStream in = new FileInputStream(attachment.getFile().toFile());
                 FileOutputStream out = new FileOutputStream(tempFile)) {
-            encryptAndSign(in, out, keys.myKey, keys.otherKey.encryptKey);
+            encryptAndSign(in, out, myKey, receiverKeys);
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't encrypt attachment", ex);
             return Optional.empty();
@@ -275,9 +276,15 @@ public final class Coder {
         }
 
         // get keys
-        KeysResult keys = getKeys(message.getContact());
-        if (keys.myKey == null || keys.otherKey == null) {
-            message.setSecurityErrors(keys.errors);
+        // TODO double code
+        PersonalKey myKey = myKeyOrNull();
+        if (myKey == null) {
+            message.setSecurityErrors(EnumSet.of(Error.MY_KEY_UNAVAILABLE));
+            return;
+        }
+        PGPCoderKey senderKey = senderkeyOrNull(message.getContact());
+        if (senderKey == null) {
+            message.setSecurityErrors(EnumSet.of(Error.KEY_UNAVAILABLE));
             return;
         }
 
@@ -292,8 +299,7 @@ public final class Coder {
         ByteArrayOutputStream plainOut = new ByteArrayOutputStream();
         DecryptionResult decResult;
         try {
-            decResult = decryptAndVerify(encryptedIn, plainOut,
-                    keys.myKey, keys.otherKey.signKey);
+            decResult = decryptAndVerify(encryptedIn, plainOut, myKey, senderKey.signKey);
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't decrypt message", ex);
             return;
@@ -302,8 +308,8 @@ public final class Coder {
         message.setSigning(decResult.signing);
 
         // parse decrypted CPIM content
-        String myUID = keys.myKey.getUserId();
-        String senderUID = keys.otherKey.userID;
+        String myUID = myKey.getUserId();
+        String senderUID = senderKey.userID;
         String decrText = EncodingUtils.getString(
                 plainOut.toByteArray(),
                 CPIMMessage.CHARSET);
@@ -336,9 +342,15 @@ public final class Coder {
         Attachment attachment = optAttachment.get();
 
         // get keys
-        KeysResult keys = getKeys(message.getContact());
-        if (keys.myKey == null || keys.otherKey == null) {
-            message.setAttachmentErrors(keys.errors);
+        // TODO double code
+        PersonalKey myKey = myKeyOrNull();
+        if (myKey == null) {
+            message.setSecurityErrors(EnumSet.of(Error.MY_KEY_UNAVAILABLE));
+            return;
+        }
+        PGPCoderKey senderKey = senderkeyOrNull(message.getContact());
+        if (senderKey == null) {
+            message.setSecurityErrors(EnumSet.of(Error.KEY_UNAVAILABLE));
             return;
         }
 
@@ -357,42 +369,18 @@ public final class Coder {
         DecryptionResult decResult;
         try (FileInputStream encryptedIn = new FileInputStream(inFile);
                 FileOutputStream plainOut = new FileOutputStream(outFile)) {
-            decResult = decryptAndVerify(encryptedIn, plainOut,
-                    keys.myKey, keys.otherKey.signKey);
+            decResult = decryptAndVerify(encryptedIn, plainOut, myKey, senderKey.signKey);
         } catch (IOException | PGPException ex){
             LOGGER.log(Level.WARNING, "can't decrypt attachment", ex);
             message.setAttachmentErrors(EnumSet.of(Error.UNKNOWN_ERROR));
             return;
         }
-        message.setAttachmentErrors(keys.errors);
+        message.setAttachmentErrors(decResult.errors);
         message.setAttachmentSigning(decResult.signing);
 
         // set new filename
         message.setDecryptedAttachment(outFile.getName());
         LOGGER.info("attachment decryption successful");
-    }
-
-    private static KeysResult getKeys(Contact contact) {
-        KeysResult result = new KeysResult();
-
-        Optional<PersonalKey> optMyKey = AccountLoader.getInstance().getPersonalKey();
-        if (!optMyKey.isPresent()) {
-            LOGGER.log(Level.WARNING, "can't get personal key");
-            result.errors.add(Error.MY_KEY_UNAVAILABLE);
-            return result;
-        }
-        result.myKey = optMyKey.get();
-
-        Optional<PGPCoderKey> optKey = getKey(contact);
-        if (!optKey.isPresent()) {
-            LOGGER.warning("key not found for contact: "+contact);
-            result.errors.add(Error.KEY_UNAVAILABLE);
-            return result;
-        }
-
-        result.otherKey = optKey.get();
-
-        return result;
     }
 
     /**
@@ -402,7 +390,7 @@ public final class Coder {
      */
     private static void encryptAndSign(
             InputStream plainInput, OutputStream encryptedOutput,
-            PersonalKey myKey, PGPPublicKey encryptKey)
+            PersonalKey myKey, PGPCoderKey[] receiverKeys)
             throws IOException, PGPException {
 
         // setup data encryptor & generator
@@ -412,8 +400,8 @@ public final class Coder {
 
         // add public key recipients
         PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
-        //for (PGPPublicKey rcpt : mRecipients)
-        encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(encryptKey));
+        for (PGPCoderKey key : receiverKeys)
+            encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(key.encryptKey));
 
         OutputStream encryptedOut = encGen.open(encryptedOutput, new byte[BUFFER_SIZE]);
 
@@ -674,23 +662,43 @@ public final class Coder {
         return result;
     }
 
-    private static Optional<PGPCoderKey> getKey(Contact contact) {
+    private static PersonalKey myKeyOrNull() {
+        Optional<PersonalKey> optMyKey = AccountLoader.getInstance().getPersonalKey();
+        if (!optMyKey.isPresent()) {
+            LOGGER.log(Level.WARNING, "can't get personal key");
+            return null;
+        }
+        return optMyKey.get();
+    }
+
+    private static PGPCoderKey[] receiverKeysOrNull(Contact[] contacts) {
+        List<PGPCoderKey> keys = new ArrayList<>(contacts.length);
+        for (Contact c : contacts) {
+            PGPCoderKey k = senderkeyOrNull(c);
+            if (k == null)
+                return null;
+            keys.add(k);
+        }
+        return keys.toArray(new PGPCoderKey[0]);
+    }
+
+    private static PGPCoderKey senderkeyOrNull(Contact contact) {
         if (KEY_MAP.containsKey(contact)) {
             PGPCoderKey key = KEY_MAP.get(contact);
             if (key.fingerprint.equals(contact.getFingerprint()))
-                return Optional.of(key);
+                return key;
         }
 
         byte[] rawKey = contact.getKey();
-        if (rawKey.length == 0) {
-            return Optional.empty();
+        if (rawKey.length != 0) {
+            Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
+            if (optKey.isPresent()) {
+                KEY_MAP.put(contact, optKey.get());
+                return optKey.get();
+            }
         }
 
-        Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
-
-        if (optKey.isPresent())
-            KEY_MAP.put(contact, optKey.get());
-
-        return optKey;
+        LOGGER.warning("key not found for contact: "+contact);
+        return null;
     }
 }

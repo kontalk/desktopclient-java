@@ -122,6 +122,7 @@ public final class Control {
         mViewControl.changed(new ViewEvent.Exception(ex));
     }
 
+    // TODO unused
     public void handleEncryptionErrors(KonMessage message, Contact contact) {
         EnumSet<Coder.Error> errors = message.getCoderStatus().getErrors();
         if (errors.contains(Coder.Error.KEY_UNAVAILABLE) ||
@@ -221,7 +222,7 @@ public final class Control {
         String jid = XmppStringUtils.parseBareJid(from);
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (!optContact.isPresent()) {
-            LOGGER.warning("(chat state) can't find contact with jid: "+jid);
+            LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
         Contact contact = optContact.get();

@@ -256,20 +256,34 @@ public final class Client implements StanzaListener, Runnable {
                     new GroupExtension(gid.id, gid.ownerJID));
         }
 
-        // transmission specific
+        if (encrypted) {
+            Optional<byte[]> encryptedData = content.isComplex() ?
+                        Coder.encryptStanza(message,
+                                rawMessage(content, true).toXML().toString()) :
+                        Coder.encryptMessage(message);
+            // check also for security errors just to be sure
+            if (!encryptedData.isPresent() ||
+                    !message.getCoderStatus().getErrors().isEmpty()) {
+                LOGGER.warning("encryption failed");
+                message.setStatus(Status.ERROR);
+                mControl.handleSecurityErrors(message);
+                return;
+            }
+            protoMessage.addExtension(new E2EEncryption(encryptedData.get()));
+        }
 
+        // transmission specific
         Transmission[] transmissions = message.getTransmissions();
         ArrayList<Message> sendMessages = new ArrayList<>(transmissions.length);
         for (Transmission transmission: message.getTransmissions()) {
-            Message m = messageOrNull(protoMessage.clone(), message, transmission, encrypted);
-            if (m == null) {
-                if (!message.getCoderStatus().getErrors().isEmpty()) {
-                    mControl.handleEncryptionErrors(message, transmission.getContact());
-                }
-                message.setStatus(Status.ERROR);
+            Message sendMessage = protoMessage.clone();
+            String toJID = transmission.getJID();
+            if (!XMPPUtils.isValid(toJID)) {
+                LOGGER.warning("invalid JID: "+toJID);
                 return;
             }
-            sendMessages.add(m);
+            sendMessage.setTo(toJID);
+            sendMessages.add(sendMessage);
         }
 
         this.sendPackets(sendMessages.toArray(new Message[0]));
@@ -297,36 +311,6 @@ public final class Client implements StanzaListener, Runnable {
             }
         }
         return smackMessage;
-    }
-
-    private static Message messageOrNull(Message sendMessage,
-            OutMessage message,
-            Transmission transmission,
-            boolean encrypted) {
-
-        String toJID = transmission.getJID();
-        if (!XMPPUtils.isValid(toJID)) {
-            LOGGER.warning("invalid JID: "+toJID);
-            return null;
-        }
-        sendMessage.setTo(toJID);
-
-        MessageContent content = message.getContent();
-        if (encrypted) {
-            Optional<byte[]> encryptedData = content.isComplex() ?
-                        Coder.encryptStanza(message, transmission.getContact(),
-                                rawMessage(content, true).toXML().toString()) :
-                        Coder.encryptMessage(message, transmission.getContact());
-            // check also for security errors just to be sure
-            if (!encryptedData.isPresent() ||
-                    !message.getCoderStatus().getErrors().isEmpty()) {
-                LOGGER.warning("encryption failed");
-                return null;
-            }
-            sendMessage.addExtension(new E2EEncryption(encryptedData.get()));
-        }
-
-        return sendMessage;
     }
 
     // TODO unused
