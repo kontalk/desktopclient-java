@@ -60,51 +60,38 @@ import org.kontalk.util.CPIMMessage;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Encryptor {
+final class Encryptor {
     private static final Logger LOGGER = Logger.getLogger(Encryptor.class.getName());
 
     // should always be a power of 2
     private static final int BUFFER_SIZE = 1 << 8;
 
-    private Encryptor() {
+    private final OutMessage message;
+    private PersonalKey myKey = null;
+    private PGPUtils.PGPCoderKey[] receiverKeys = null;
+
+    Encryptor(OutMessage message) {
+        this.message = message;
     }
 
-    /**
-     * Creates encrypted and signed message body.
-     * Errors that may occur are saved to the message.
-     * @param message
-     * @return the encrypted and signed text.
-     */
-    public static Optional<byte[]> encryptMessage(OutMessage message) {
-        return encryptData(message, message.getContent().getPlainText(), "text/plain");
+    Optional<byte[]> encryptMessage() {
+        return encryptData(message.getContent().getPlainText(), "text/plain");
     }
 
-    public static Optional<byte[]> encryptStanza(OutMessage message, String xml) {
+    Optional<byte[]> encryptStanza(String xml) {
         String data = "<xmpp xmlns='jabber:client'>" + xml + "</xmpp>";
-        return encryptData(message, data, "application/xmpp+xml");
+        return encryptData(data, "application/xmpp+xml");
     }
 
-    private static Optional<byte[]> encryptData(OutMessage message, String data, String mime) {
+    private Optional<byte[]> encryptData(String data, String mime) {
         if (message.getCoderStatus().getEncryption() != Coder.Encryption.DECRYPTED) {
             LOGGER.warning("message does not want to be encrypted");
             return Optional.empty();
         }
 
-        // get keys
-        // TODO equal code
-        PersonalKey myKey = Coder.myKeyOrNull();
-        if (myKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
+        boolean loaded = this.loadKeys();
+        if (!loaded)
             return Optional.empty();
-        }
-        List<Contact> contacts = new ArrayList<>(message.getTransmissions().length);
-        for (Transmission t : message.getTransmissions())
-            contacts.add(t.getContact());
-        PGPUtils.PGPCoderKey[] receiverKeys = receiverKeysOrNull(contacts.toArray(new Contact[0]));
-        if (receiverKeys == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
-            return Optional.empty();
-        }
 
         // secure the message against the most basic attacks using Message/CPIM
         // [for Android client - dont know if its useful, but doesnt hurt]
@@ -136,7 +123,7 @@ public final class Encryptor {
         return Optional.of(out.toByteArray());
     }
 
-    public static Optional<File> encryptAttachment(OutMessage message) {
+    Optional<File> encryptAttachment() {
         Optional<MessageContent.Attachment> optAttachment = message.getContent().getAttachment();
         if (!optAttachment.isPresent()) {
             LOGGER.warning("no attachment in out-message");
@@ -144,21 +131,9 @@ public final class Encryptor {
         }
         MessageContent.Attachment attachment = optAttachment.get();
 
-        // get keys
-        // TODO equal code
-        PersonalKey myKey = Coder.myKeyOrNull();
-        if (myKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
+        boolean loaded = this.loadKeys();
+        if (!loaded)
             return Optional.empty();
-        }
-        List<Contact> contacts = new ArrayList<>(message.getTransmissions().length);
-        for (Transmission t : message.getTransmissions())
-            contacts.add(t.getContact());
-        PGPUtils.PGPCoderKey[] receiverKeys = receiverKeysOrNull(contacts.toArray(new Contact[0]));
-        if (receiverKeys == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
-            return Optional.empty();
-        }
 
         File tempFile;
         try {
@@ -178,6 +153,23 @@ public final class Encryptor {
 
         LOGGER.info("attachment encryption successful");
         return Optional.of(tempFile);
+    }
+
+    private boolean loadKeys() {
+        myKey = Coder.myKeyOrNull();
+        if (myKey == null) {
+            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
+            return false;
+        }
+        List<Contact> contacts = new ArrayList<>(message.getTransmissions().length);
+        for (Transmission t : message.getTransmissions())
+            contacts.add(t.getContact());
+        receiverKeys = receiverKeysOrNull(contacts.toArray(new Contact[0]));
+        if (receiverKeys == null) {
+            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
+            return false;
+        }
+        return true;
     }
 
     private static PGPUtils.PGPCoderKey[] receiverKeysOrNull(Contact[] contacts) {

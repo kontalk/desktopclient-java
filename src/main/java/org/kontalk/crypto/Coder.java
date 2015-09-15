@@ -18,12 +18,16 @@
 
 package org.kontalk.crypto;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.Contact;
+import org.kontalk.model.InMessage;
+import org.kontalk.model.OutMessage;
 import org.kontalk.system.AccountLoader;
 
 /**
@@ -33,6 +37,9 @@ import org.kontalk.system.AccountLoader;
  */
 public final class Coder {
     private static final Logger LOGGER = Logger.getLogger(Coder.class.getName());
+
+    private Coder() {
+    }
 
     /**
      * Encryption status of a message.
@@ -107,5 +114,39 @@ public final class Coder {
 
         LOGGER.warning("key not found for contact: "+contact);
         return null;
+    }
+
+    /**
+     * Decrypt and verify the body of a message. Sets the encryption and signing
+     * status of the message and errors that may occur are saved to the message.
+     */
+    public static void decryptMessage(InMessage message) {
+        new Decryptor(message).decryptMessage();
+    }
+
+    /**
+     * Decrypt and verify a downloaded attachment file. Sets the encryption and
+     * signing status of the message attachment and errors that may occur are
+     * saved to the message.
+     */
+    public static void decryptAttachment(InMessage message, Path baseDir) {
+        new Decryptor(message).decryptAttachment(baseDir);
+    }
+
+    /**
+     * Creates encrypted and signed message body.
+     * Errors that may occur are saved to the message.
+     * @return the encrypted and signed text.
+     */
+    public static Optional<byte[]> encryptMessage(OutMessage message) {
+        return new Encryptor(message).encryptMessage();
+    }
+
+    public static Optional<byte[]> encryptStanza(OutMessage message, String xml) {
+        return new Encryptor(message).encryptStanza(xml);
+    }
+
+    public static Optional<File> encryptAttachment(OutMessage message) {
+        return new Encryptor(message).encryptAttachment();
     }
 }

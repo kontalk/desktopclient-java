@@ -62,7 +62,7 @@ import org.xmlpull.v1.XmlPullParserException;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Decryptor {
+final class Decryptor {
     private static final Logger LOGGER = Logger.getLogger(Decryptor.class.getName());
 
     private static class DecryptionResult {
@@ -75,30 +75,24 @@ public final class Decryptor {
         EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
     }
 
-    /**
-     * Decrypt and verify the body of a message. Sets the encryption and signing
-     * status of the message and errors that may occur are saved to the message.
-     * @param message
-     */
-    public static void decryptMessage(InMessage message) {
+    private final InMessage message;
+    private PersonalKey myKey = null;
+    private PGPUtils.PGPCoderKey senderKey = null;
+
+    Decryptor(InMessage message) {
+        this.message = message;
+    }
+
+    void decryptMessage() {
         // signing requires also encryption
         if (!message.getCoderStatus().isEncrypted()) {
             LOGGER.warning("message not encrypted");
             return;
         }
 
-        // get keys
-        // TODO double code
-        PersonalKey myKey = Coder.myKeyOrNull();
-        if (myKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
+        boolean loaded = this.loadKeys();
+        if (!loaded)
             return;
-        }
-        PGPUtils.PGPCoderKey senderKey = Coder.contactkeyOrNull(message.getContact());
-        if (senderKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
-            return;
-        }
 
         // decrypt
         String encryptedContent = message.getContent().getEncryptedContent();
@@ -140,12 +134,7 @@ public final class Decryptor {
         }
     }
 
-    /**
-     * Decrypt and verify a downloaded attachment file. Sets the encryption and
-     * signing status of the message attachment and errors that may occur are
-     * saved to the message.
-     */
-    public static void decryptAttachment(InMessage message, Path baseDir) {
+    void decryptAttachment(Path baseDir) {
         Optional<MessageContent.Attachment> optAttachment = message.getContent().getAttachment();
         if (!optAttachment.isPresent()) {
             LOGGER.warning("no attachment in in-message");
@@ -153,18 +142,9 @@ public final class Decryptor {
         }
         MessageContent.Attachment attachment = optAttachment.get();
 
-        // get keys
-        // TODO double code
-        PersonalKey myKey = Coder.myKeyOrNull();
-        if (myKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
+        boolean loaded = this.loadKeys();
+        if (!loaded)
             return;
-        }
-        PGPUtils.PGPCoderKey senderKey = Coder.contactkeyOrNull(message.getContact());
-        if (senderKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
-            return;
-        }
 
         // in file
         File inFile = baseDir.resolve(attachment.getFile()).toFile();
@@ -195,9 +175,21 @@ public final class Decryptor {
         LOGGER.info("attachment decryption successful");
     }
 
-    /**
-     * Decrypt, verify and write input stream data to output stream.
-     */
+    private boolean loadKeys() {
+        myKey = Coder.myKeyOrNull();
+        if (myKey == null) {
+            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
+            return false;
+        }
+        senderKey = Coder.contactkeyOrNull(message.getContact());
+        if (senderKey == null) {
+            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
+            return false;
+        }
+        return true;
+    }
+
+    /** Decrypt, verify and write input stream data to output stream. */
     private static DecryptionResult decryptAndVerify(
             InputStream encryptedInput, OutputStream plainOutput,
             PersonalKey myKey, PGPPublicKey senderSigningKey)

@@ -50,7 +50,6 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
-import org.kontalk.crypto.Encryptor;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Chat.GID;
 import org.kontalk.model.KonMessage.Status;
@@ -259,9 +258,9 @@ public final class Client implements StanzaListener, Runnable {
 
         if (encrypted) {
             Optional<byte[]> encryptedData = content.isComplex() ?
-                        Encryptor.encryptStanza(message,
+                        Coder.encryptStanza(message,
                                 rawMessage(content, true).toXML().toString()) :
-                        Encryptor.encryptMessage(message);
+                        Coder.encryptMessage(message);
             // check also for security errors just to be sure
             if (!encryptedData.isPresent() ||
                     !message.getCoderStatus().getErrors().isEmpty()) {

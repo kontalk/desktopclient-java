@@ -38,9 +38,8 @@ import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.bouncycastle.openpgp.PGPException;
 import org.kontalk.client.HTTPFileClient;
+import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
-import org.kontalk.crypto.Decryptor;
-import org.kontalk.crypto.Encryptor;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
@@ -147,7 +146,7 @@ public class AttachmentManager implements Runnable {
         boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
         File file;
         if (encrypt){
-            Optional<File> optFile = Encryptor.encryptAttachment(message);
+            Optional<File> optFile = Coder.encryptAttachment(message);
             if (!optFile.isPresent())
                 return;
             file = optFile.get();
@@ -214,7 +213,7 @@ public class AttachmentManager implements Runnable {
 
         // decrypt file
         if (attachment.getCoderStatus().isEncrypted()) {
-            Decryptor.decryptAttachment(message, mAttachmentDir);
+            Coder.decryptAttachment(message, mAttachmentDir);
         }
 
         // create preview if not in message
