@@ -468,7 +468,7 @@ public class MessageContent {
 
         public enum OP {
             CREATE,
-            LIST_UPDATE,
+            SET,
             LEAVE
         }
 
@@ -489,7 +489,7 @@ public class MessageContent {
 
         /** Member list changed. */
         public GroupCommand(String[] added, String[] removed) {
-            this(OP.LIST_UPDATE, added, removed, "");
+            this(OP.SET, added, removed, "");
         }
 
         /** Member left. */

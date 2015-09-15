@@ -18,13 +18,18 @@
 
 package org.kontalk.util;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.Message;
 import org.kontalk.client.GroupExtension;
+import org.kontalk.client.GroupExtension.Command;
+import org.kontalk.client.GroupExtension.Member;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Chat.GID;
+import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.GroupCommand.OP;
 
@@ -80,16 +85,47 @@ public final class ClientUtils {
         GID gid = optGID.get();
 
         OP op = groupCommand.getOperation();
-        if (op == OP.LEAVE) {
-            // weare leaving
-            return new GroupExtension(gid.id, gid.ownerJID, true);
-        }
-        if (op == OP.CREATE) {
-            return new GroupExtension(gid.id, gid.ownerJID, true, groupCommand.getAdded());
-        }
+        switch (op) {
+            case LEAVE:
+                // weare leaving
+                return new GroupExtension(gid.id, gid.ownerJID, Command.LEAVE);
+            case CREATE:
+            case SET:
+                Set<Member> member = new HashSet<>();
+                Command command;
+                if (op == OP.CREATE) {
+                    command = Command.CREATE;
+                    for (String jid : groupCommand.getAdded())
+                        member.add(new Member(jid));
+                } else {
+                    command = Command.SET;
+                    Set<String> incl = new HashSet<>();
+                    for (String jid : groupCommand.getAdded()) {
+                        incl.add(jid);
+                        member.add(new Member(jid, Member.Type.ADD));
+                    }
+                    for (String jid : groupCommand.getRemoved()) {
+                        incl.add(jid);
+                        member.add(new Member(jid, Member.Type.REMOVE));
+                    }
+                    if (groupCommand.getAdded().length > 0) {
+                        // list all remaining member for the new member
+                        for (Contact c : chat.getContacts()) {
+                            String jid = c.getJID();
+                            if (!incl.contains(jid))
+                                member.add(new Member(jid));
+                        }
+                    }
+                }
 
-        // TODO: else part list changed, this is complicated
-        return new GroupExtension("TODO", "TODO");
+                return new GroupExtension(gid.id,
+                        gid.ownerJID,
+                        command,
+                        member.toArray(new Member[0]));
+            default:
+                // can not happen
+                return null;
+        }
     }
 
     public static GroupCommand groupExtensionToGroupCommand(Chat chat,
