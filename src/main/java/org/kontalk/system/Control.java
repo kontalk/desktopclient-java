@@ -40,6 +40,7 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
 import org.kontalk.crypto.Coder;
+import org.kontalk.crypto.Decryptor;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.crypto.PersonalKey;
@@ -425,7 +426,7 @@ public final class Control {
      * Decrypt an incoming message and download attachment if present.
      */
     private void decryptAndDownload(InMessage message) {
-        Coder.decryptMessage(message);
+        Decryptor.decryptMessage(message);
 
         if (!message.getCoderStatus().getErrors().isEmpty()) {
             this.handleSecurityErrors(message);
