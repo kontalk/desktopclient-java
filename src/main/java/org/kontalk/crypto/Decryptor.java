@@ -70,11 +70,6 @@ final class Decryptor {
         Coder.Signing signing = Coder.Signing.UNKNOWN;
     }
 
-    private static class ParsingResult {
-        MessageContent content = null;
-        EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
-    }
-
     private final InMessage message;
     private PersonalKey myKey = null;
     private PGPUtils.PGPCoderKey senderKey = null;
@@ -119,16 +114,15 @@ final class Decryptor {
         String decrText = EncodingUtils.getString(
                 plainOut.toByteArray(),
                 CPIMMessage.CHARSET);
-        ParsingResult parsingResult = parseCPIM(decrText, myUID, senderUID);
-        allErrors.addAll(parsingResult.errors);
+        MessageContent content = this.parseCPIMOrNull(decrText, myUID, senderUID);
 
         // set errors
         message.setSecurityErrors(allErrors);
 
-        if (parsingResult.content != null) {
+        if (content != null) {
             // everything went better than expected
             LOGGER.info("message decryption successful");
-            message.setDecryptedContent(parsingResult.content);
+            message.setDecryptedContent(content);
         } else {
             LOGGER.warning("message decryption failed");
         }
@@ -343,19 +337,19 @@ final class Decryptor {
      *
      * The decrypted content of a message is in CPIM format.
      */
-    private static ParsingResult parseCPIM(String cpim,
+    private MessageContent parseCPIMOrNull(String cpim,
             String myUid, String senderKeyUID) {
-
-        ParsingResult result = new ParsingResult();
 
         CPIMMessage cpimMessage;
         try {
             cpimMessage = CPIMMessage.parse(cpim);
         } catch (ParseException ex) {
             LOGGER.log(Level.WARNING, "can't find valid CPIM data", ex);
-            result.errors.add(Coder.Error.INVALID_DATA);
-            return result;
+            message.setSecurityErrors(EnumSet.of(Coder.Error.INVALID_DATA));
+            return null;
         }
+
+        EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
 
         String mime = cpimMessage.getMime();
 
@@ -369,12 +363,12 @@ final class Decryptor {
         // check that the recipient matches the full uid of the personal key
         if (!myUid.equals(cpimMessage.getTo())) {
             LOGGER.warning("destination does not match personal key");
-            result.errors.add(Coder.Error.INVALID_RECIPIENT);
+            errors.add(Coder.Error.INVALID_RECIPIENT);
         }
         // check that the sender matches the full uid of the sender's key
         if (!senderKeyUID.equals(cpimMessage.getFrom())) {
             LOGGER.warning("sender doesn't match sender's key");
-            result.errors.add(Coder.Error.INVALID_SENDER);
+            errors.add(Coder.Error.INVALID_SENDER);
         }
         // maybe add: check DateTime (possibly compare it with <delay/>)
 
@@ -387,8 +381,9 @@ final class Decryptor {
                 m = XMPPUtils.parseMessageStanza(content);
             } catch (XmlPullParserException | IOException | SmackException ex) {
                 LOGGER.log(Level.WARNING, "can't parse XMPP XML string", ex);
-                result.errors.add(Coder.Error.INVALID_DATA);
-                return result;
+                errors.add(Coder.Error.INVALID_DATA);
+                message.setSecurityErrors(errors);
+                return null;
             }
             LOGGER.config("decrypted XML: "+m.toXML());
             decryptedContent = KonMessageListener.parseMessageContent(m);
@@ -397,7 +392,7 @@ final class Decryptor {
             decryptedContent = new MessageContent(content);
         }
 
-        result.content = decryptedContent;
-        return result;
+        message.setSecurityErrors(errors);
+        return decryptedContent;
     }
 }
