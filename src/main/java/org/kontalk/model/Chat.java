@@ -168,12 +168,25 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return mXMPPID;
     }
 
-    public Set<Contact> getContacts() {
+    /** Get all contacts (including deleted). */
+    public Set<Contact> getAllContacts() {
         return mContactMap.keySet();
     }
 
+    /** Get contacts (without deleted). */
+    public Set<Contact> getContacts() {
+        //chat.getContacts().stream().filter(c -> !c.isDeleted());
+        Set<Contact> contacts = new HashSet<>();
+        for (Contact c : this.getAllContacts()) {
+            if (!c.isDeleted()) {
+                contacts.add(c);
+            }
+        }
+        return contacts;
+    }
+
     /**
-     * Get contact if there is only one.
+     * Get contact if there is only one (can be deleted).
      */
     public Optional<Contact> getSingleContact() {
         return mContactMap.keySet().size() == 1 ?
@@ -330,7 +343,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
 
     @Override
     public String toString() {
-        return "T:id="+mID+",xmppid="+mXMPPID+",subject="+mSubject;
+        return "T:id="+mID+",xmppid="+mXMPPID+",subject="+mSubject+",gid="+mOptGID;
     }
 
     @Override

@@ -77,7 +77,7 @@ public final class ContactList extends Observable {
     }
 
     /**
-     * Return all but deleted contact.
+     * Return all but deleted contacts.
      */
     public synchronized SortedSet<Contact> getAll() {
         SortedSet<Contact> contact = new TreeSet<>();

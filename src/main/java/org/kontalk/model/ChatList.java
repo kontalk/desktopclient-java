@@ -186,7 +186,7 @@ public final class ChatList extends Observable implements Observer {
 
     private synchronized Chat getOrNull(Contact contact) {
         for (Chat chat : mMap.values()) {
-            if (!chat.isGroupChat() && chat.getContacts().contains(contact))
+            if (!chat.isGroupChat() && chat.getAllContacts().contains(contact))
                 return chat;
         }
         return null;

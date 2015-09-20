@@ -397,7 +397,7 @@ final class ChatView extends WebPanel implements Observer {
             return;
         mTitleLabel.setText(Utils.chatTitle(mCurrentChat));
         if (mCurrentChat.isGroupChat()) {
-            mSubTitleLabel.setText(Utils.contactNameList(mCurrentChat.getContacts()));
+            mSubTitleLabel.setText(Utils.contactNameList(mCurrentChat.getAllContacts()));
         } else {
             Optional<Contact> optContact = mCurrentChat.getSingleContact();
             mSubTitleLabel.setText(optContact.isPresent() ?
