@@ -20,7 +20,6 @@ package org.kontalk.system;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
@@ -96,18 +95,16 @@ final class ChatStateManager {
             // currently set states from XEP-0085: active, inactive, composing
             mCurrentState = state;
 
-            Set<Contact> contacts = mChat.getContacts();
-
-            if (contacts.size() > 1 || state == ChatState.active)
-                // don't send for groups
+            if (mChat.isGroupChat() || state == ChatState.active)
+                // don't send for groups (TODO (?))
                 // 'active' is send inside a message
                 return;
 
-            for (Contact contact : contacts)
-                if (!contact.isMe() && !contact.isBlocked())
-                    mClient.sendChatState(contact.getJID(),
-                            mChat.getXMPPID(),
-                            state);
+            Contact contact = mChat.getSingleContact().orElse(null);
+            if (contact == null || contact.isMe() || contact.isBlocked() || contact.isDeleted())
+                return;
+
+            mClient.sendChatState(contact.getJID(), mChat.getXMPPID(), state);
         }
     }
 
