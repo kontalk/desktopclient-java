@@ -37,7 +37,7 @@ final public class Transmission {
     private static final Logger LOGGER = Logger.getLogger(Transmission.class.getName());
 
     public static final String TABLE = "transmissions";
-    private static final String COL_MESSAGE_ID = "message_id";
+    static final String COL_MESSAGE_ID = "message_id";
     private static final String COL_CONTACT_ID = "user_id";
     private static final String COL_JID = "jid";
     private static final String COL_REC_DATE = "received_date";
@@ -59,7 +59,7 @@ final public class Transmission {
 
     private final Contact mContact;
     private final String mJID;
-
+    // TODO used?
     protected Optional<Date> mReceivedDate;
 
     Transmission(Contact contact, String jid, int messageID) {

@@ -298,18 +298,25 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
 
     void delete() {
         Database db = Database.getInstance();
-        // delete messages
-        db.execDeleteWhereInsecure(KonMessage.TABLE,
-                KonMessage.COL_CHAT_ID + " == " + mID);
 
-        // delete receiver
+        String whereMessages = KonMessage.COL_CHAT_ID + " == " + mID;
+
+        // transmissions
+        db.execDeleteWhereInsecure(Transmission.TABLE,
+                Transmission.COL_MESSAGE_ID + " == (SELECT _id FROM " +
+                        KonMessage.TABLE + " WHERE " + whereMessages + ")");
+
+        // messages
+        db.execDeleteWhereInsecure(KonMessage.TABLE, whereMessages);
+
+        // receiver
         Map<Integer, Integer> dbReceiver = loadReceiver(mID);
         for (int id : dbReceiver.values()) {
             boolean deleted = db.execDelete(RECEIVER_TABLE, id);
             if (!deleted) return;
         }
 
-        // delete chat itself
+        // chat itself
         db.execDelete(TABLE, mID);
     }
 
