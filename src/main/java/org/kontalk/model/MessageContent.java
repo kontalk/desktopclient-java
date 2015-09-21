@@ -21,6 +21,7 @@ package org.kontalk.model;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -180,15 +181,23 @@ public class MessageContent {
     @SuppressWarnings("unchecked")
     String toJSON() {
         JSONObject json = new JSONObject();
+
         EncodingUtils.putJSON(json, JSON_PLAIN_TEXT, mPlainText);
+
         if (mOptAttachment.isPresent())
             json.put(JSON_ATTACHMENT, mOptAttachment.get().toJSONString());
+
         EncodingUtils.putJSON(json, JSON_ENC_CONTENT, mEncryptedContent);
+
+        if (mOptPreview.isPresent())
+            json.put(JSON_PREVIEW, mOptPreview.get().toJSON());
+
+        if (mOptGroupCommand.isPresent())
+            json.put(JSON_GROUP_COMMAND, mOptGroupCommand.get().toJSON());
+
         if (mOptDecryptedContent.isPresent())
             json.put(JSON_DEC_CONTENT, mOptDecryptedContent.get().toJSON());
-        if (mOptPreview.isPresent()){
-            json.put(JSON_PREVIEW, mOptPreview.get().toJSON());
-        }
+
         return json.toJSONString();
     }
 
@@ -483,7 +492,7 @@ public class MessageContent {
         }
 
         /** Group creation with subject. */
-        GroupCommand(String[] added, String subject) {
+        public GroupCommand(String[] added, String subject) {
             this(OP.CREATE, added, new String[0], subject);
         }
 
@@ -522,6 +531,17 @@ public class MessageContent {
 
         // using legacy lib, raw types extend Object
         @SuppressWarnings("unchecked")
+        private String toJSON() {
+            JSONObject json = new JSONObject();
+            json.put(JSON_OP, mOP.ordinal());
+            EncodingUtils.putJSON(json, JSON_SUBJECT, mSubject);
+            json.put(JSON_ADDED, Arrays.asList(mJIDsAdded));
+            json.put(JSON_REMOVED, Arrays.asList(mJIDsRemoved));
+            return json.toJSONString();
+        }
+
+        // using legacy lib
+        @SuppressWarnings("unchecked")
         private static GroupCommand fromJSONOrNull(String json) {
             Object obj = JSONValue.parse(json);
             try {
@@ -543,6 +563,11 @@ public class MessageContent {
                 LOGGER.log(Level.WARNING, "can't parse JSON group command", ex);
                 return null;
             }
+        }
+
+        @Override
+        public String toString() {
+            return "{GC:op="+mOP+",subj="+mSubject+"}";
         }
     }
 }
