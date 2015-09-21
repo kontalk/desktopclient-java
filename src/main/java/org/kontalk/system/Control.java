@@ -20,10 +20,9 @@ package org.kontalk.system;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
@@ -194,6 +193,8 @@ public final class Control {
         if (m.getStatus() == KonMessage.Status.RECEIVED)
             // probably by another client
             return;
+
+        // TODO SENT status for group messages ?
 
         m.setStatus(status);
     }
@@ -618,13 +619,29 @@ public final class Control {
                 LOGGER.warning("can't create group, no JID");
                 return;
             }
-            ChatList.getInstance().createNew(contacts,
+            Chat chat = ChatList.getInstance().createNew(contacts,
                     new GID(jid ,
                             org.jivesoftware.smack.util.StringUtils.randomString(8)),
                     subject);
+
+            // send create group command
+            List<String> jids = new ArrayList<>(contacts.length);
+            for (Contact c: contacts)
+                jids.add(c.getJID());
+
+            this.createAndSendMessage(chat,
+                    new MessageContent(
+                            new MessageContent.GroupCommand(
+                                    jids.toArray(new String[0]),
+                                    subject
+                            )
+                    )
+            );
         }
 
         public void deleteChat(Chat chat) {
+            // TODO "delete" group
+
             ChatList.getInstance().delete(chat.getID());
         }
 
@@ -650,20 +667,9 @@ public final class Control {
             this.sendMessage(chat, "", file);
         }
 
-        private void sendMessage(Chat chat, String text, Path file) {
-            // TODO no group chat support yet
-            Contact contact = null;
-            for (Contact c: chat.getContacts()) {
-                if (!c.isDeleted()) {
-                    contact = c;
-                }
-            }
-            //Contact = chat.getContacts().stream().filter(c -> !c.isDeleted()).findFirst().orElse(null);
-            if (contact == null) {
-                LOGGER.warning("can't send message, no (valid) contact");
-                return;
-            }
+        /* private */
 
+        private void sendMessage(Chat chat, String text, Path file) {
             Attachment attachment = null;
             if (!file.toString().isEmpty()) {
                 attachment = AttachmentManager.attachmentOrNull(file);
@@ -674,13 +680,8 @@ public final class Control {
                     attachment == null ? new MessageContent(text) :
                     new MessageContent(text, attachment);
 
-            OutMessage newMessage = this.newOutMessage(chat, contact, content,
-                    contact.getEncrypted());
-
-            Control.this.sendMessage(newMessage);
+            this.createAndSendMessage(chat, content);
         }
-
-        /* private */
 
         private PersonalKey keyOrNull(char[] password) {
             AccountLoader account = AccountLoader.getInstance();
@@ -707,15 +708,28 @@ public final class Control {
         }
 
         /**
-         * All-in-one method for a new outgoing message (except sending): Create,
-         * save and process the message.
-         * @return the new created message
+         * All-in-one method for a new outgoing message: Create,
+         * save, process and send message.
          */
-        private OutMessage newOutMessage(Chat chat, Contact contact,
-                MessageContent content , boolean encrypted) {
-            LOGGER.config("chat: "+chat+" contact: "+contact+" encrypted: "+encrypted);
-            Set<Contact> contacts = new HashSet<>(Arrays.asList(contact));
-            OutMessage.Builder builder = new OutMessage.Builder(chat, contacts, encrypted);
+        private void createAndSendMessage(Chat chat, MessageContent content) {
+
+            LOGGER.config("chat: "+chat+" content: "+content);
+
+            Set<Contact> contacts = chat.getContacts();
+
+            boolean encrypted = false;
+            for (Contact c: contacts) {
+                    encrypted |= c.getEncrypted();
+            }
+
+            if (contacts.isEmpty()) {
+                LOGGER.warning("can't send message, no (valid) contact(s)");
+                return;
+            }
+
+            OutMessage.Builder builder = new OutMessage.Builder(chat,
+                    contacts.toArray(new Contact[0]),
+                    encrypted);
             builder.content(content);
             OutMessage newMessage = builder.build();
             if (newMessage.getContent().getAttachment().isPresent())
@@ -724,7 +738,8 @@ public final class Control {
             if (!added) {
                 LOGGER.warning("could not add outgoing message to chat");
             }
-            return newMessage;
+
+            Control.this.sendMessage(newMessage);
         }
 
         private void changed(ViewEvent event) {

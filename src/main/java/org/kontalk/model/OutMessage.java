@@ -22,7 +22,6 @@ import java.net.URI;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Optional;
-import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 
@@ -71,7 +70,7 @@ public final class OutMessage extends KonMessage {
 
 public static class Builder extends KonMessage.Builder {
 
-        public Builder(Chat chat, Set<Contact> contacts, boolean encrypted) {
+        public Builder(Chat chat, Contact[] contacts, boolean encrypted) {
             super(-1, chat, Status.PENDING, new Date());
 
             mContacts = new HashMap<>();
