@@ -18,7 +18,9 @@
 
 package org.kontalk.util;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -129,13 +131,15 @@ public final class ClientUtils {
     }
 
     public static GroupCommand groupExtensionToGroupCommand(Chat chat,
-            GroupExtension.Command com,
-            String[] members,
-            String senderJID) {
+            Command com,
+            Member[] members) {
         if (com == GroupExtension.Command.CREATE) {
-            return new GroupCommand(members);
+            List<String> jids = new ArrayList<>(members.length);
+            for (Member m: members)
+                jids.add(m.jid);
+            return new GroupCommand(jids.toArray(new String[0]));
         } else if (com == GroupExtension.Command.LEAVE) {
-            return new GroupCommand(senderJID);
+            return new GroupCommand();
         }
 
         // TODO

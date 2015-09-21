@@ -43,6 +43,7 @@ import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.system.Control;
+import org.kontalk.util.ClientUtils;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.EncodingUtils;
 
@@ -65,6 +66,7 @@ final public class KonMessageListener implements StanzaListener {
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
         ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
         ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
+        ProviderManager.addExtensionProvider(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE, new GroupExtension.Provider());
     }
 
     @Override
@@ -182,7 +184,7 @@ final public class KonMessageListener implements StanzaListener {
 
     public static MessageContent parseMessageContent(Message m) {
         // default body
-        String plainText = m.getBody() != null ? m.getBody() : "";
+        String plainText = StringUtils.defaultString(m.getBody());
 
         // encryption extension (RFC 3923), decrypted later
         String encrypted = "";
@@ -229,7 +231,13 @@ final public class KonMessageListener implements StanzaListener {
 
         // group command
         GroupCommand groupCommand = null;
-        // TODO
+        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE);
+        if (groupExt instanceof GroupExtension) {
+            GroupExtension group = (GroupExtension) groupExt;
+            groupCommand = ClientUtils.groupExtensionToGroupCommand(
+                    // TODO
+                    null, group.getCommand(), group.getMember());
+        }
 
         return new MessageContent(plainText, encrypted, attachment, preview, groupCommand);
     }

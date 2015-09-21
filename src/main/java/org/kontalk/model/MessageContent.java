@@ -501,9 +501,9 @@ public class MessageContent {
             this(OP.SET, added, removed, "");
         }
 
-        /** Member left. */
-        public GroupCommand(String jidRemoved) {
-            this(OP.LEAVE, new String[0], new String[]{jidRemoved}, "");
+        /** Member left. Identified by sender JID */
+        public GroupCommand() {
+            this(OP.LEAVE, new String[0], new String[0], "");
         }
 
         private GroupCommand(OP operation, String[] added, String[] removed, String subject) {
