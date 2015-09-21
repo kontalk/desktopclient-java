@@ -243,7 +243,9 @@ public final class Client implements StanzaListener, Runnable {
 
         // extensions
 
-        protoMessage.addExtension(new DeliveryReceiptRequest());
+        // TODO with group chat? (for muc "NOT RECOMMENDED")
+        if (!chat.isGroupChat())
+            protoMessage.addExtension(new DeliveryReceiptRequest());
 
         if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
