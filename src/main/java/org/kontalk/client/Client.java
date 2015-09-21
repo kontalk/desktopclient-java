@@ -51,13 +51,12 @@ import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.Chat;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.model.Transmission;
 import org.kontalk.system.Control;
@@ -235,7 +234,9 @@ public final class Client implements StanzaListener, Runnable {
                 message.getCoderStatus().getEncryption() != Coder.Encryption.NOT ||
                 message.getCoderStatus().getSigning() != Coder.Signing.NOT;
 
-        Message protoMessage = encrypted ? new Message() : rawMessage(content, false);
+        Chat chat = message.getChat();
+
+        Message protoMessage = encrypted ? new Message() : rawMessage(content, chat, false);
 
         protoMessage.setType(Message.Type.chat);
         protoMessage.setStanzaId(message.getXMPPID());
@@ -247,19 +248,10 @@ public final class Client implements StanzaListener, Runnable {
         if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
 
-        Optional<GID> optGID = message.getChat().getGID();
-        if (optGID.isPresent()) {
-            GID gid = optGID.get();
-            Optional<GroupCommand> optGroupCommand = content.getGroupCommand();
-            protoMessage.addExtension(optGroupCommand.isPresent() ?
-                    ClientUtils.groupCommandToGroupExtension(message.getChat(), optGroupCommand.get()) :
-                    new GroupExtension(gid.id, gid.ownerJID));
-        }
-
         if (encrypted) {
             Optional<byte[]> encryptedData = content.isComplex() ?
                         Coder.encryptStanza(message,
-                                rawMessage(content, true).toXML().toString()) :
+                                rawMessage(content, chat, true).toXML().toString()) :
                         Coder.encryptMessage(message);
             // check also for security errors just to be sure
             if (!encryptedData.isPresent() ||
@@ -289,11 +281,15 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPackets(sendMessages.toArray(new Message[0]));
     }
 
-    private static Message rawMessage(MessageContent content, boolean encrypted) {
+    private static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
         Message smackMessage = new Message();
 
-        smackMessage.setBody(content.getPlainText());
+        // text
+        String text = content.getPlainText();
+        if (!text.isEmpty())
+            smackMessage.setBody(content.getPlainText());
 
+        // attachment
         Optional<Attachment> optAtt = content.getAttachment();
         if (optAtt.isPresent()) {
             Attachment att = optAtt.get();
@@ -310,6 +306,17 @@ public final class Client implements StanzaListener, Runnable {
                 smackMessage.addExtension(bob);
             }
         }
+
+        // group command
+        Optional<Chat.GID> optGID = chat.getGID();
+        if (optGID.isPresent()) {
+            Chat.GID gid = optGID.get();
+            Optional<MessageContent.GroupCommand> optGroupCommand = content.getGroupCommand();
+            smackMessage.addExtension(optGroupCommand.isPresent() ?
+                    ClientUtils.groupCommandToGroupExtension(chat, optGroupCommand.get()) :
+                    new GroupExtension(gid.id, gid.ownerJID));
+        }
+
         return smackMessage;
     }
 
