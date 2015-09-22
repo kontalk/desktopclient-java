@@ -34,6 +34,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.http.util.EncodingUtils;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPEncryptedDataList;
@@ -361,7 +362,7 @@ final class Decryptor {
         //}
 
         // check that the recipient matches the full uid of the personal key
-        if (!myUid.equals(cpimMessage.getTo())) {
+        if (!StringUtils.defaultString(cpimMessage.getTo()).contains(myUid)) {
             LOGGER.warning("destination does not match personal key");
             errors.add(Coder.Error.INVALID_RECIPIENT);
         }
@@ -370,7 +371,8 @@ final class Decryptor {
             LOGGER.warning("sender doesn't match sender's key");
             errors.add(Coder.Error.INVALID_SENDER);
         }
-        // maybe add: check DateTime (possibly compare it with <delay/>)
+
+        // TODO check DateTime (possibly compare it with <delay/>)
 
         String content = cpimMessage.getBody().toString();
         MessageContent decryptedContent;
