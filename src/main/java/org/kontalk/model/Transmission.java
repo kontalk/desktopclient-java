@@ -22,8 +22,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -59,20 +61,21 @@ final public class Transmission {
 
     private final Contact mContact;
     private final String mJID;
-    // TODO used?
     protected Optional<Date> mReceivedDate;
 
     Transmission(Contact contact, String jid, int messageID) {
         mContact = contact;
         mJID = jid;
+        mReceivedDate = Optional.empty();
 
         mID = this.insert(messageID);
     }
 
-    private Transmission(int id, Contact contact, String jid) {
+    private Transmission(int id, Contact contact, String jid, Date receivedDate) {
         mID = id;
         mContact = contact;
         mJID = jid;
+        mReceivedDate = Optional.ofNullable(receivedDate);
     }
 
     public Contact getContact() {
@@ -81,6 +84,19 @@ final public class Transmission {
 
     public String getJID() {
         return mJID;
+    }
+
+    public Optional<Date> getReceivedDate() {
+        return mReceivedDate;
+    }
+
+    public boolean isReceived() {
+        return mReceivedDate.isPresent();
+    }
+
+    void setReceived(Date date) {
+        mReceivedDate = Optional.of(date);
+        this.save();
     }
 
     private int insert(int messageID) {
@@ -98,6 +114,13 @@ final public class Transmission {
             return -2;
         }
         return id;
+    }
+
+    private void save() {
+        Database db = Database.getInstance();
+        Map<String, Object> set = new HashMap<>();
+        set.put(COL_REC_DATE, mReceivedDate);
+        db.execUpdate(TABLE, set, mID);
     }
 
     @Override
@@ -132,7 +155,9 @@ final public class Transmission {
             return null;
         }
         String jid = resultSet.getString(COL_JID);
+        long rDate = resultSet.getLong(COL_REC_DATE);
+        Date receivedDate = rDate == 0 ? null : new Date(rDate);
 
-        return new Transmission(id, optContact.get(), jid);
+        return new Transmission(id, optContact.get(), jid, receivedDate);
     }
 }
