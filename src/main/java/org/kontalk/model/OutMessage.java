@@ -36,15 +36,38 @@ public final class OutMessage extends KonMessage {
         super(builder);
     }
 
+    public void setReceived(String jid) {
+        Transmission transmission = null;
+            for (Transmission t: mTransmissions) {
+                if (t.getContact().getJID().equals(jid)) {
+                    transmission = t;
+                    break;
+                }
+            }
+
+            if (transmission == null) {
+                LOGGER.warning("can't find transmission for received status, IDs: "+jid);
+                return;
+            }
+
+            if (transmission.isReceived())
+                // probably by another client
+                return;
+
+            transmission.setReceived(new Date());
+            // status only dummy value
+            this.changed(mStatus);
+    }
+
     public void setStatus(Status status) {
-        if (status == Status.IN) {
-            LOGGER.warning("wrong argument status 'IN'");
+        if (status == Status.IN || status == Status.RECEIVED) {
+            LOGGER.warning("wrong status argument: "+status);
             return;
         }
+
         if (status == Status.SENT && mStatus != Status.PENDING)
             LOGGER.warning("unexpected new status of sent message: "+status);
-        if (status == Status.RECEIVED && mStatus != Status.SENT)
-            LOGGER.warning("unexpected new status of received message: "+status);
+
         mStatus = status;
         if (status != Status.PENDING)
             mServerDate = Optional.of(new Date());
@@ -52,6 +75,7 @@ public final class OutMessage extends KonMessage {
         this.changed(mStatus);
     }
 
+    // Note: only one error per message (not transmission) possible
     public void setServerError(String condition, String text) {
         if (mStatus != Status.SENT)
             LOGGER.warning("unexpected status of message with error: "+mStatus);

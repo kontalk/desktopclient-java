@@ -179,28 +179,24 @@ public final class Control {
         return newMessage.getID() >= -1;
     }
 
-    /**
-     * Set the receipt status of a message.
-     * @param xmppID XMPP ID of message
-     * @param status new receipt status of message
-     */
-    public void setMessageStatus(MessageIDs ids, KonMessage.Status status) {
-        Optional<OutMessage> optMessage = getMessage(ids);
+    public void setReceived(MessageIDs ids) {
+        Optional<OutMessage> optMessage = findMessage(ids);
         if (!optMessage.isPresent())
             return;
-        OutMessage m = optMessage.get();
 
-        if (m.getStatus() == KonMessage.Status.RECEIVED)
-            // probably by another client
+        optMessage.get().setReceived(XmppStringUtils.parseBareJid(ids.jid));
+    }
+
+    public void setSent(MessageIDs ids) {
+        Optional<OutMessage> optMessage = findMessage(ids);
+        if (!optMessage.isPresent())
             return;
 
-        // TODO SENT status for group messages ?
-
-        m.setStatus(status);
+        optMessage.get().setStatus(KonMessage.Status.SENT);
     }
 
     public void setMessageError(MessageIDs ids, Condition condition, String errorText) {
-        Optional<OutMessage> optMessage = getMessage(ids);
+        Optional<OutMessage> optMessage = findMessage(ids);
         if (!optMessage.isPresent())
             return ;
         optMessage.get().setServerError(condition.toString(), errorText);
@@ -381,8 +377,7 @@ public final class Control {
     /* private */
 
     private boolean isMe(String jid) {
-        return XmppStringUtils.parseBareJid(jid).equals(
-                XmppStringUtils.parseBareJid(mClient.getOwnJID()));
+        return XMPPUtils.isBarelyEqual(jid, mClient.getOwnJID());
     }
 
     private Optional<Contact> createNewContact(String jid, String name, boolean encrypted) {
@@ -457,7 +452,7 @@ public final class Control {
         return optChat.orElse(chatList.get(contact));
     }
 
-    private static Optional<OutMessage> getMessage(MessageIDs ids) {
+    private static Optional<OutMessage> findMessage(MessageIDs ids) {
         // get chat by thread ID
         ChatList tl = ChatList.getInstance();
         Optional<Chat> optChat = tl.get(ids.xmppThreadID);

@@ -25,7 +25,6 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
-import org.kontalk.model.KonMessage.Status;
 import org.kontalk.system.Control;
 import org.kontalk.util.ClientUtils.MessageIDs;
 
@@ -66,7 +65,7 @@ public final class AcknowledgedListener implements StanzaListener {
             return;
         }
 
-        mControl.setMessageStatus(MessageIDs.from(m), Status.SENT);
+        mControl.setSent(MessageIDs.from(m));
     }
 
 }

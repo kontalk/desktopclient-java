@@ -37,7 +37,6 @@ import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
@@ -112,8 +111,7 @@ final public class KonMessageListener implements StanzaListener {
         if (receiptID == null || receiptID.isEmpty()) {
             LOGGER.warning("message has invalid receipt ID: "+receiptID);
         } else {
-            MessageIDs ids = MessageIDs.from(m, receiptID);
-            mControl.setMessageStatus(ids, Status.RECEIVED);
+            mControl.setReceived(MessageIDs.from(m, receiptID));
         }
         // we ignore anything else that might be in this message
     }
