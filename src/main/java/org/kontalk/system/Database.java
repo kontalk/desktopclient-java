@@ -61,7 +61,7 @@ public final class Database {
     public static final String FILENAME = "kontalk_db.sqlite";
     public static final String SQL_ID = "_id INTEGER PRIMARY KEY AUTOINCREMENT, ";
 
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
     private static final String SQL_CREATE = "CREATE TABLE IF NOT EXISTS ";
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
@@ -152,6 +152,27 @@ public final class Database {
         if (fromVersion < 2) {
             mConn.createStatement().execute("ALTER TABLE "+KonMessage.TABLE+
                     " ADD COLUMN "+KonMessage.COL_SERV_DATE+" DEFAULT NULL");
+        }
+        if (fromVersion < 3) {
+            String messageTableTemp = KonMessage.TABLE + "_TEMP";
+            this.createTable(mConn.createStatement(), messageTableTemp, KonMessage.SCHEMA);
+            mConn.createStatement().execute("INSERT INTO "+messageTableTemp +
+                    " SELECT _id, thread_id, xmpp_id, date, receipt_status, " +
+                    "content, encryption_status, signing_status, coder_errors, " +
+                    "server_error, server_date FROM "+KonMessage.TABLE);
+
+            this.createTable(mConn.createStatement(), Transmission.TABLE, Transmission.SCHEMA);
+            mConn.createStatement().execute("INSERT INTO "+Transmission.TABLE +
+                    " SELECT NULL, _id, user_id, jid, NULL FROM "+KonMessage.TABLE);
+
+            mConn.createStatement().execute("PRAGMA foreign_keys=OFF");
+            mConn.createStatement().execute("DROP TABLE "+KonMessage.TABLE);
+            mConn.createStatement().execute("ALTER TABLE "+messageTableTemp+
+                    " RENAME TO "+KonMessage.TABLE);
+            mConn.createStatement().execute("PRAGMA foreign_keys=ON");
+
+            mConn.createStatement().execute("ALTER TABLE "+Chat.TABLE+
+                    " ADD COLUMN "+Chat.COL_GID+" DEFAULT NULL");
         }
 
         // set new version
@@ -326,7 +347,7 @@ public final class Database {
             LOGGER.log(Level.WARNING, "can't get string from db", ex);
             return "";
         }
-        return s == null ? "" : s;
+        return StringUtils.defaultString(s);
     }
 
     public static String setString(String s) {
