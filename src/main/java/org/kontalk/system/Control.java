@@ -164,12 +164,19 @@ public final class Control {
             builder.serverDate(serverDate.get());
         builder.content(content);
         InMessage newMessage = builder.build();
-        // TODO check before
-        boolean added = chat.addMessage(newMessage);
-        if (!added) {
+
+        // TODO always false
+        if (chat.getMessages().getAll().contains(newMessage)) {
             LOGGER.info("message already in chat, dropping this one");
             return true;
         }
+
+        boolean added = chat.addMessage(newMessage);
+        if (!added) {
+            LOGGER.warning("can't add message to chat");
+            return false;
+        }
+
         newMessage.save();
 
         this.decryptAndDownload(newMessage);

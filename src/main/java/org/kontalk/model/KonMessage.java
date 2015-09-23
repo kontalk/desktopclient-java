@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -28,7 +29,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
@@ -43,6 +43,9 @@ import org.kontalk.util.EncodingUtils;
 
 /**
  * Base class for incoming and outgoing XMMP messages.
+ *
+ * TODO: unique field for equal()?
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class KonMessage extends Observable implements Comparable<KonMessage> {
@@ -82,9 +85,8 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String SCHEMA = "( " +
             Database.SQL_ID +
             COL_CHAT_ID + " INTEGER NOT NULL, " +
-            // XMPP ID attribute; only recommended (RFC 6120), but we generate
-            // a random string if not in message for model consistency
-            // Note: must be unique only within a stream (RFC 6120)
+            // XMPP ID attribute; only RECOMMENDED and must be unique only
+            // within a stream (RFC 6120)
             COL_XMPP_ID + " TEXT NOT NULL, " +
             // unix time, local creation timestamp
             COL_DATE + " INTEGER NOT NULL, " +
@@ -95,7 +97,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // enum, determines if content is encrypted
             COL_ENCR_STAT + " INTEGER NOT NULL, " +
             // enum, determines if content is verified
-            // can only tell if signed after encryption attempt
+            // can only tell after encryption
             COL_SIGN_STAT + " INTEGER NOT NULL, " +
             // enum set, encryption and signing errors of content
             COL_COD_ERR + " INTEGER NOT NULL, " +
@@ -263,7 +265,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         set.put(COL_ENCR_STAT, mCoderStatus.getEncryption());
         set.put(COL_SIGN_STAT, mCoderStatus.getSigning());
         set.put(COL_COD_ERR, mCoderStatus.getErrors());
-        set.put(COL_SERV_ERR, mServerError.toJSON());
+        set.put(COL_SERV_ERR, Database.setString(mServerError.toJSON()));
         set.put(COL_SERV_DATE, mServerDate);
         db.execUpdate(TABLE, set, mID);
     }
@@ -305,44 +307,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     @Override
     public String toString() {
-        return "M:id="+mID+",chat="+mChat+",transmissions="+mTransmissions
-                +",xmppid="+mXMPPID
+        return "M:id="+mID+",chat="+mChat+",xmppid="+mXMPPID
+                +",transmissions="+Arrays.toString(mTransmissions)
                 +",date="+mDate+",sdate="+mServerDate
                 +",recstat="+mStatus+",cont="+mContent
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
-    }
-
-    /**
-     * Return if two messages are logically equal.
-     * Inconsistent with "natural ordering"!
-     */
-    @Override
-    public boolean equals(Object obj) {
-        // performance optimization
-        if (this == obj)
-            return true;
-
-        if (!(obj instanceof KonMessage))
-            return false;
-
-        KonMessage o = (KonMessage) obj;
-        // note: use ONLY final fields
-        if (mID == o.mID) {
-            LOGGER.warning("different messages have same ID: "+mID);
-            return true;
-        }
-        // TODO unique field?
-        return this.isInMessage() == o.isInMessage() &&
-                mXMPPID.equals(o.mXMPPID) &&
-                mDate.equals(o.mDate);
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 67 * hash + Objects.hashCode(this.mXMPPID);
-        hash = 67 * hash + Objects.hashCode(this.mDate);
-        return hash;
     }
 
     @Override
