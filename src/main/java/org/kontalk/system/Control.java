@@ -20,6 +20,7 @@ package org.kontalk.system;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
@@ -28,8 +29,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.apache.commons.lang.StringUtils;
-import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
@@ -48,12 +47,14 @@ import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
+import org.kontalk.model.Chat.GID;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
 
 /**
@@ -76,39 +77,6 @@ public final class Control {
         FAILED,
         /** Connection was lost due to error. */
         ERROR
-    }
-
-    /**
-     * Message attributes to identify the chat for a message.
-     */
-    public static class MessageIDs {
-        public final String jid;
-        public final String xmppID;
-        public final String xmppThreadID;
-        //public final Optional<GroupID> groupID;
-
-        private MessageIDs(String jid, String xmppID, String threadID) {
-            this.jid = jid;
-            this.xmppID = xmppID;
-            this.xmppThreadID = threadID;
-        }
-
-        public static MessageIDs from(Message m) {
-            return from(m, "");
-        }
-
-        public static MessageIDs from(Message m, String receiptID) {
-            return new MessageIDs(
-                    StringUtils.defaultString(m.getFrom()),
-                    !receiptID.isEmpty() ? receiptID :
-                            StringUtils.defaultString(m.getStanzaId()),
-                    StringUtils.defaultString(m.getThread()));
-        }
-
-        @Override
-        public String toString() {
-            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID;
-        }
     }
 
     private final Client mClient;
@@ -153,14 +121,19 @@ public final class Control {
         mViewControl.changed(new ViewEvent.Exception(ex));
     }
 
-    public void handleSecurityErrors(KonMessage message) {
+    // TODO unused
+    public void handleEncryptionErrors(KonMessage message, Contact contact) {
         EnumSet<Coder.Error> errors = message.getCoderStatus().getErrors();
         if (errors.contains(Coder.Error.KEY_UNAVAILABLE) ||
                 errors.contains(Coder.Error.INVALID_SIGNATURE) ||
                 errors.contains(Coder.Error.INVALID_SENDER)) {
             // maybe there is something wrong with the senders key
-            this.sendKeyRequest(message.getContact());
+            this.sendKeyRequest(contact);
         }
+        this.handleSecurityErrors(message);
+    }
+
+    public void handleSecurityErrors(KonMessage message) {
         mViewControl.changed(new ViewEvent.SecurityError(message));
     }
 
@@ -185,18 +158,25 @@ public final class Control {
         }
         Contact contact = optContact.get();
         Chat chat = getChat(ids.xmppThreadID, contact);
-        InMessage.Builder builder = new InMessage.Builder(chat, contact);
-        builder.jid(ids.jid);
+        InMessage.Builder builder = new InMessage.Builder(chat, contact, ids.jid);
         builder.xmppID(ids.xmppID);
         if (serverDate.isPresent())
             builder.serverDate(serverDate.get());
         builder.content(content);
         InMessage newMessage = builder.build();
-        boolean added = chat.addMessage(newMessage);
-        if (!added) {
+
+        // TODO always false
+        if (chat.getMessages().getAll().contains(newMessage)) {
             LOGGER.info("message already in chat, dropping this one");
             return true;
         }
+
+        boolean added = chat.addMessage(newMessage);
+        if (!added) {
+            LOGGER.warning("can't add message to chat");
+            return false;
+        }
+
         newMessage.save();
 
         this.decryptAndDownload(newMessage);
@@ -206,26 +186,24 @@ public final class Control {
         return newMessage.getID() >= -1;
     }
 
-    /**
-     * Set the receipt status of a message.
-     * @param xmppID XMPP ID of message
-     * @param status new receipt status of message
-     */
-    public void setMessageStatus(MessageIDs ids, KonMessage.Status status) {
-        Optional<OutMessage> optMessage = getMessage(ids);
+    public void setReceived(MessageIDs ids) {
+        Optional<OutMessage> optMessage = findMessage(ids);
         if (!optMessage.isPresent())
             return;
-        OutMessage m = optMessage.get();
 
-        if (m.getReceiptStatus() == KonMessage.Status.RECEIVED)
-            // probably by another client
+        optMessage.get().setReceived(XmppStringUtils.parseBareJid(ids.jid));
+    }
+
+    public void setSent(MessageIDs ids) {
+        Optional<OutMessage> optMessage = findMessage(ids);
+        if (!optMessage.isPresent())
             return;
 
-        m.setStatus(status);
+        optMessage.get().setStatus(KonMessage.Status.SENT);
     }
 
     public void setMessageError(MessageIDs ids, Condition condition, String errorText) {
-        Optional<OutMessage> optMessage = getMessage(ids);
+        Optional<OutMessage> optMessage = findMessage(ids);
         if (!optMessage.isPresent())
             return ;
         optMessage.get().setServerError(condition.toString(), errorText);
@@ -248,7 +226,7 @@ public final class Control {
         String jid = XmppStringUtils.parseBareJid(from);
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (!optContact.isPresent()) {
-            LOGGER.warning("(chat state) can't find contact with jid: "+jid);
+            LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
         Contact contact = optContact.get();
@@ -406,8 +384,7 @@ public final class Control {
     /* private */
 
     private boolean isMe(String jid) {
-        return XmppStringUtils.parseBareJid(jid).equals(
-                XmppStringUtils.parseBareJid(mClient.getOwnJID()));
+        return XMPPUtils.isBarelyEqual(jid, mClient.getOwnJID());
     }
 
     private Optional<Contact> createNewContact(String jid, String name, boolean encrypted) {
@@ -482,7 +459,7 @@ public final class Control {
         return optChat.orElse(chatList.get(contact));
     }
 
-    private static Optional<OutMessage> getMessage(MessageIDs ids) {
+    private static Optional<OutMessage> findMessage(MessageIDs ids) {
         // get chat by thread ID
         ChatList tl = ChatList.getInstance();
         Optional<Chat> optChat = tl.get(ids.xmppThreadID);
@@ -634,11 +611,39 @@ public final class Control {
 
         /* chats */
 
-        public Chat createNewChat(Set<Contact> contact) {
-            return ChatList.getInstance().createNew(contact);
+        public void createSingleChat(Contact contact) {
+            ChatList.getInstance().createNew(contact);
+        }
+
+        public void createGroupChat(Contact[] contacts, String subject) {
+            String jid = Config.getInstance().getString(Config.ACC_JID);
+            if (jid.isEmpty()) {
+                LOGGER.warning("can't create group, no JID");
+                return;
+            }
+            Chat chat = ChatList.getInstance().createNew(contacts,
+                    new GID(jid ,
+                            org.jivesoftware.smack.util.StringUtils.randomString(8)),
+                    subject);
+
+            // send create group command
+            List<String> jids = new ArrayList<>(contacts.length);
+            for (Contact c: contacts)
+                jids.add(c.getJID());
+
+            this.createAndSendMessage(chat,
+                    new MessageContent(
+                            new MessageContent.GroupCommand(
+                                    jids.toArray(new String[0]),
+                                    subject
+                            )
+                    )
+            );
         }
 
         public void deleteChat(Chat chat) {
+            // TODO "delete" group
+
             ChatList.getInstance().delete(chat.getID());
         }
 
@@ -664,20 +669,9 @@ public final class Control {
             this.sendMessage(chat, "", file);
         }
 
-        private void sendMessage(Chat chat, String text, Path file) {
-            // TODO no group chat support yet
-            Contact contact = null;
-            for (Contact c: chat.getContacts()) {
-                if (!c.isDeleted()) {
-                    contact = c;
-                }
-            }
-            //Contact = chat.getContacts().stream().filter(c -> !c.isDeleted()).findFirst().orElse(null);
-            if (contact == null) {
-                LOGGER.warning("can't send message, no (valid) contact");
-                return;
-            }
+        /* private */
 
+        private void sendMessage(Chat chat, String text, Path file) {
             Attachment attachment = null;
             if (!file.toString().isEmpty()) {
                 attachment = AttachmentManager.attachmentOrNull(file);
@@ -688,13 +682,8 @@ public final class Control {
                     attachment == null ? new MessageContent(text) :
                     new MessageContent(text, attachment);
 
-            OutMessage newMessage = this.newOutMessage(chat, contact, content,
-                    contact.getEncrypted());
-
-            Control.this.sendMessage(newMessage);
+            this.createAndSendMessage(chat, content);
         }
-
-        /* private */
 
         private PersonalKey keyOrNull(char[] password) {
             AccountLoader account = AccountLoader.getInstance();
@@ -721,13 +710,28 @@ public final class Control {
         }
 
         /**
-         * All-in-one method for a new outgoing message (except sending): Create,
-         * save and process the message.
-         * @return the new created message
+         * All-in-one method for a new outgoing message: Create,
+         * save, process and send message.
          */
-        private OutMessage newOutMessage(Chat chat, Contact contact,
-                MessageContent content , boolean encrypted) {
-            OutMessage.Builder builder = new OutMessage.Builder(chat, contact, encrypted);
+        private void createAndSendMessage(Chat chat, MessageContent content) {
+
+            LOGGER.config("chat: "+chat+" content: "+content);
+
+            Set<Contact> contacts = chat.getContacts();
+
+            boolean encrypted = false;
+            for (Contact c: contacts) {
+                    encrypted |= c.getEncrypted();
+            }
+
+            if (contacts.isEmpty()) {
+                LOGGER.warning("can't send message, no (valid) contact(s)");
+                return;
+            }
+
+            OutMessage.Builder builder = new OutMessage.Builder(chat,
+                    contacts.toArray(new Contact[0]),
+                    encrypted);
             builder.content(content);
             OutMessage newMessage = builder.build();
             if (newMessage.getContent().getAttachment().isPresent())
@@ -736,7 +740,8 @@ public final class Control {
             if (!added) {
                 LOGGER.warning("could not add outgoing message to chat");
             }
-            return newMessage;
+
+            Control.this.sendMessage(newMessage);
         }
 
         private void changed(ViewEvent event) {

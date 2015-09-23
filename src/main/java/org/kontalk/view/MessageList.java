@@ -65,6 +65,7 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.Transmission;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
 import org.kontalk.view.ComponentUtils.AttachmentPanel;
@@ -239,13 +240,13 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             WebPanel messagePanel = new WebPanel(true);
             messagePanel.setWebColoredBackground(false);
             messagePanel.setMargin(2);
-            if (mValue.getDir().equals(KonMessage.Direction.IN))
+            if (mValue.isInMessage())
                 messagePanel.setBackground(Color.WHITE);
             else
                 messagePanel.setBackground(View.LIGHT_BLUE);
 
             // from label
-            if (mValue.getDir().equals(KonMessage.Direction.IN)) {
+            if (mValue.isInMessage()) {
                 mFromLabel = new WebLabel();
                 mFromLabel.setFontSize(12);
                 mFromLabel.setForeground(Color.BLUE);
@@ -304,13 +305,15 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             southPanel.add(mStatusPanel, BorderLayout.EAST);
             messagePanel.add(southPanel, BorderLayout.SOUTH);
 
-            if (mValue.getDir().equals(KonMessage.Direction.IN)) {
+            if (mValue.isInMessage()) {
                 this.add(messagePanel, BorderLayout.WEST);
             } else {
                 this.add(messagePanel, BorderLayout.EAST);
             }
 
-            mValue.getContact().addObserver(this);
+            for (Transmission t: mValue.getTransmissions()) {
+                t.getContact().addObserver(this);
+            }
         }
 
         @Override
@@ -332,8 +335,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             if (!mCreated)
                 return;
 
-            if ((arg == null || arg instanceof Contact) && mFromLabel != null)
-                mFromLabel.setText(" "+getFromString(mValue));
+            if ((arg == null || arg instanceof Contact) && mFromLabel != null &&
+                    mValue instanceof InMessage)
+                mFromLabel.setText(" "+getFromString((InMessage) mValue));
 
             if (arg == null || arg instanceof String)
                 this.updateText();
@@ -355,8 +359,11 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             boolean encrypted = mValue.getCoderStatus().isEncrypted();
             String text = encrypted ?
                     Tr.tr("[encrypted]") :
-                    // removing whitespace (Pidgin adds weird tab character)
+                    // removing whitespace (Pidgin adds weird tab characters)
                     mValue.getContent().getText().trim();
+            // TODO this could look A BIT nicer
+            if (mValue.getContent().getGroupCommand().isPresent())
+                text += " "+ mValue.getContent().getGroupCommand().get();
             mTextPane.setFontStyle(false, encrypted);
             //mTextPane.setText(text);
             LinkUtils.linkify(mTextPane.getStyledDocument(), text);
@@ -365,24 +372,35 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         }
 
         private void updateStatus() {
-            boolean isOut = mValue.getDir() == KonMessage.Direction.OUT;
+            boolean isOut = !mValue.isInMessage();
+
+            Date deliveredDate = null;
+            Optional<Transmission> optTransmission = mValue.getSingleTransmission();
+            if (optTransmission.isPresent())
+                deliveredDate = optTransmission.get().getReceivedDate().orElse(null);
+
             // status icon
             if (isOut) {
-                switch (mValue.getReceiptStatus()) {
-                    case PENDING :
-                        mStatusIconLabel.setIcon(PENDING_ICON);
-                        break;
-                    case SENT :
-                        mStatusIconLabel.setIcon(SENT_ICON);
-                        break;
-                    case RECEIVED:
-                        mStatusIconLabel.setIcon(DELIVERED_ICON);
-                        break;
-                    case ERROR:
-                        mStatusIconLabel.setIcon(ERROR_ICON);
-                        break;
-                    default:
-                        LOGGER.warning("unknown message receipt status!?");
+                if (deliveredDate != null) {
+                    mStatusIconLabel.setIcon(DELIVERED_ICON);
+                } else {
+                    switch (mValue.getStatus()) {
+                        case PENDING :
+                            mStatusIconLabel.setIcon(PENDING_ICON);
+                            break;
+                        case SENT :
+                            mStatusIconLabel.setIcon(SENT_ICON);
+                            break;
+                        case RECEIVED:
+                            // legacy
+                            mStatusIconLabel.setIcon(DELIVERED_ICON);
+                            break;
+                        case ERROR:
+                            mStatusIconLabel.setIcon(ERROR_ICON);
+                            break;
+                        default:
+                            LOGGER.warning("unknown message receipt status!?");
+                    }
                 }
             } else { // IN message
                 if (!mValue.getCoderStatus().getErrors().isEmpty()) {
@@ -394,20 +412,20 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             String html = "<html><body>" + /*"<h3>Header</h3>"+*/ "<br>";
 
             if (isOut) {
-                Date createDate = mValue.getDate();
-                String create = Utils.MID_DATE_FORMAT.format(createDate);
-                Optional<Date> serverDate = mValue.getServerDate();
-                String status = serverDate.isPresent() ?
-                        Utils.MID_DATE_FORMAT.format(serverDate.get()) :
-                        null;
-                if (!create.equals(status))
-                    html += Tr.tr("Created:")+ " " + create + "<br>";
-                if (status != null) {
-                    String secStat = null;
-                    switch (mValue.getReceiptStatus()) {
-                        case SENT :
+                String secStat = null;
+                Date statusDate;
+                if (deliveredDate != null) {
+                    secStat = Tr.tr("Delivered:");
+                    statusDate = deliveredDate;
+                } else {
+                    statusDate = mValue.getServerDate().orElse(null);
+                    switch (mValue.getStatus()) {
+                        case PENDING:
+                            break;
+                        case SENT:
                             secStat = Tr.tr("Sent:");
                             break;
+                        // legacy
                         case RECEIVED:
                             secStat = Tr.tr("Delivered:");
                             break;
@@ -415,11 +433,20 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                             secStat = Tr.tr("Error report:");
                             break;
                         default:
-                            LOGGER.warning("unexpected msg status: "+mValue.getReceiptStatus());
+                            LOGGER.warning("unexpected msg status: "+mValue.getStatus());
                     }
-                    if (secStat != null)
-                        html += secStat + " " + status + "<br>";
                 }
+
+                String status = statusDate != null ?
+                        Utils.MID_DATE_FORMAT.format(statusDate) :
+                        null;
+
+                String create = Utils.MID_DATE_FORMAT.format(mValue.getDate());
+                if (!create.equals(status))
+                    html += Tr.tr("Created:")+ " " + create + "<br>";
+
+                if (status != null && secStat != null)
+                    html += secStat + " " + status + "<br>";
             } else { // IN message
                 Date receivedDate = mValue.getDate();
                 String rec = Utils.MID_DATE_FORMAT.format(receivedDate);
@@ -558,20 +585,30 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         private String toCopyString() {
             String date = Utils.LONG_DATE_FORMAT.format(mValue.getDate());
-            String from = getFromString(mValue);
+            String from = mValue instanceof InMessage ?
+                    getFromString((InMessage) mValue) :
+                    Tr.tr("me");
             return date + " - " + from + " : " + mValue.getContent().getText();
         }
 
         @Override
         protected boolean contains(String search) {
-            return mValue.getContent().getText().toLowerCase().contains(search) ||
-                    mValue.getContact().getName().toLowerCase().contains(search) ||
-                    mValue.getJID().toLowerCase().contains(search);
+            if (mValue.getContent().getText().toLowerCase().contains(search))
+                return true;
+            for (Transmission t: mValue.getTransmissions()) {
+                if (t.getContact().getName().toLowerCase().contains(search) ||
+                        t.getContact().getJID().toLowerCase().contains(search))
+                    return true;
+            }
+
+            return false;
         }
 
         @Override
         protected void onRemove() {
-            mValue.getContact().deleteObserver(this);
+            for (Transmission t: mValue.getTransmissions()) {
+                t.getContact().deleteObserver(this);
+            }
         }
 
         @Override
@@ -601,7 +638,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         }
     }
 
-    private static String getFromString(KonMessage message) {
+    private static String getFromString(InMessage message) {
         String from;
         if (!message.getContact().getName().isEmpty()) {
             from = message.getContact().getName();

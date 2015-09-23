@@ -37,12 +37,13 @@ import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.system.Control;
-import org.kontalk.system.Control.MessageIDs;
+import org.kontalk.util.ClientUtils;
+import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -64,6 +65,7 @@ final public class KonMessageListener implements StanzaListener {
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
         ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
         ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
+        ProviderManager.addExtensionProvider(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE, new GroupExtension.Provider());
     }
 
     @Override
@@ -109,8 +111,7 @@ final public class KonMessageListener implements StanzaListener {
         if (receiptID == null || receiptID.isEmpty()) {
             LOGGER.warning("message has invalid receipt ID: "+receiptID);
         } else {
-            MessageIDs ids = MessageIDs.from(m, receiptID);
-            mControl.setMessageStatus(ids, Status.RECEIVED);
+            mControl.setReceived(MessageIDs.from(m, receiptID));
         }
         // we ignore anything else that might be in this message
     }
@@ -181,7 +182,7 @@ final public class KonMessageListener implements StanzaListener {
 
     public static MessageContent parseMessageContent(Message m) {
         // default body
-        String plainText = m.getBody() != null ? m.getBody() : "";
+        String plainText = StringUtils.defaultString(m.getBody());
 
         // encryption extension (RFC 3923), decrypted later
         String encrypted = "";
@@ -226,6 +227,16 @@ final public class KonMessageListener implements StanzaListener {
                     oobData.isEncrypted());
         }
 
-        return new MessageContent(plainText, encrypted, attachment, preview);
+        // group command
+        GroupCommand groupCommand = null;
+        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE);
+        if (groupExt instanceof GroupExtension) {
+            GroupExtension group = (GroupExtension) groupExt;
+            groupCommand = ClientUtils.groupExtensionToGroupCommand(
+                    // TODO
+                    null, group.getCommand(), group.getMember());
+        }
+
+        return new MessageContent(plainText, encrypted, attachment, preview, groupCommand);
     }
 }

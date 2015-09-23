@@ -189,7 +189,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         @Override
         protected void updateOnEDT(Object arg) {
             // name
-            String name = Utils.name(mValue);
+            String name = Utils.nameOrJID(mValue);
             if (!name.equals(mNameLabel.getText())) {
                 mNameLabel.setText(name);
                 ContactListView.this.updateSorting();
@@ -212,7 +212,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
 
         @Override
         public int compareTo(TableItem o) {
-            return mValue.getName().compareToIgnoreCase(o.mValue.getName());
+            return Utils.compareContacts(mValue, o.mValue);
         }
     }
 
@@ -230,9 +230,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             mNewMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    Set<Contact> contact = new HashSet<>();
-                    contact.add(mItem.mValue);
-                    ContactListView.this.mView.callCreateNewChat(contact);
+                    mView.getControl().createSingleChat(mItem.mValue);
                 }
             });
             this.add(mNewMenuItem);

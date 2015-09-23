@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
@@ -39,6 +40,16 @@ public final class InMessage extends KonMessage {
      */
     InMessage(KonMessage.Builder builder) {
         super(builder);
+    }
+
+    public Contact getContact() {
+        assert mTransmissions.length == 1;
+        return mTransmissions[0].getContact();
+    }
+
+    public String getJID() {
+        assert mTransmissions.length == 1;
+        return mTransmissions[0].getJID();
     }
 
     public void setSigning(Coder.Signing signing) {
@@ -107,10 +118,11 @@ public final class InMessage extends KonMessage {
 
     public static class Builder extends KonMessage.Builder {
 
-        public Builder(Chat chat, Contact contact) {
-            super(-1, chat, Direction.IN, contact, new Date());
+        public Builder(Chat chat, Contact contact, String jid) {
+            super(-1, chat, Status.IN, new Date());
 
-            mReceiptStatus = Status.IN;
+            mContacts = new HashMap<>();
+            mContacts.put(contact, jid);
         }
 
         @Override
@@ -128,9 +140,6 @@ public final class InMessage extends KonMessage {
                 EnumSet.noneOf(Coder.Error.class)
             );
         }
-
-        @Override
-        public void receiptStatus(Status s) { throw new UnsupportedOperationException(); }
 
         @Override
         public void coderStatus(CoderStatus c) { throw new UnsupportedOperationException(); }

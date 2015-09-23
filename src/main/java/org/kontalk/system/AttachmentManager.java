@@ -81,7 +81,7 @@ public class AttachmentManager implements Runnable {
 
     // TODO get this from server
     private static final String UPLOAD_URL = "https://beta.kontalk.net:5980/upload";
-    
+
     private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
 
     private final Control mControl;

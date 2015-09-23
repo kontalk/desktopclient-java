@@ -55,9 +55,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
@@ -91,7 +89,7 @@ final class ChatView extends WebPanel implements Observer {
     private final View mView;
 
     private final WebLabel mTitleLabel;
-    private final WebLabel mSubLabel;
+    private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
     private final WebTextArea mSendTextArea;
     private final WebButton mSendButton;
@@ -102,6 +100,7 @@ final class ChatView extends WebPanel implements Observer {
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
+    private Chat mCurrentChat = null;
     private boolean mScrollDown = false;
 
     ChatView(View view) {
@@ -113,10 +112,10 @@ final class ChatView extends WebPanel implements Observer {
         mTitleLabel = new WebLabel();
         mTitleLabel.setFontSize(16);
         mTitleLabel.setDrawShade(true);
-        mSubLabel = new WebLabel();
-        mSubLabel.setFontSize(11);
-        mSubLabel.setForeground(Color.GRAY);
-        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubLabel),
+        mSubTitleLabel = new WebLabel();
+        mSubTitleLabel.setFontSize(11);
+        mSubTitleLabel.setForeground(Color.GRAY);
+        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubTitleLabel),
                 BorderLayout.CENTER);
 
         final WebToggleButton editButton = new WebToggleButton(
@@ -271,23 +270,22 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void showChat(Chat chat) {
-        List<Contact> contact = new ArrayList<>(chat.getContacts());
-        mTitleLabel.setText(contact.size() == 1 ? Utils.name(contact.get(0)) :
-                !chat.getSubject().isEmpty() ? chat.getSubject() :
-                Tr.tr("Group Chat"));
-        // TODO update
-        mSubLabel.setText(contact.size() == 1 ?
-                Utils.mainStatus(contact.get(0), true) :
-                Utils.contactNameList(chat.getContacts()));
-        if (!mChatCache.containsKey(chat.getID())) {
-            MessageList newMessageList = new MessageList(mView, this, chat);
-            chat.addObserver(newMessageList);
-            mChatCache.put(chat.getID(), newMessageList);
+        if (mCurrentChat != null)
+            mCurrentChat.deleteObserver(this);
+
+        mCurrentChat = chat;
+        mCurrentChat.addObserver(this);
+
+        this.updateTitles();
+        if (!mChatCache.containsKey(mCurrentChat.getID())) {
+            MessageList newMessageList = new MessageList(mView, this, mCurrentChat);
+            mCurrentChat.addObserver(newMessageList);
+            mChatCache.put(mCurrentChat.getID(), newMessageList);
         }
-        MessageList list = mChatCache.get(chat.getID());
+        MessageList list = mChatCache.get(mCurrentChat.getID());
         mScrollPane.getViewport().setView(list);
 
-        chat.setRead();
+        mCurrentChat.setRead();
     }
 
     void setColor(Color color) {
@@ -387,6 +385,24 @@ final class ChatView extends WebPanel implements Observer {
                     mScrollPane.setViewportView(null);
                 }
             }
+        }
+
+        if (arg instanceof String || arg instanceof Contact) {
+            this.updateTitles();
+        }
+    }
+
+    private void updateTitles() {
+        if (mCurrentChat == null)
+            return;
+        mTitleLabel.setText(Utils.chatTitle(mCurrentChat));
+        if (mCurrentChat.isGroupChat()) {
+            mSubTitleLabel.setText(Utils.contactNameList(mCurrentChat.getAllContacts()));
+        } else {
+            Optional<Contact> optContact = mCurrentChat.getSingleContact();
+            mSubTitleLabel.setText(optContact.isPresent() ?
+                    Utils.mainStatus(optContact.get(), true) :
+                    "--no subtitle--");
         }
     }
 

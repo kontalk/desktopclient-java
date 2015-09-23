@@ -39,7 +39,6 @@ import java.awt.event.*;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
@@ -79,10 +78,15 @@ public final class View implements Observer {
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
 
+    static final int MAX_SUBJ_LENGTH = 30;
+    static final int MAX_NAME_LENGTH = 60;
+    static final int MAX_JID_LENGTH = 100;
+
     static final Color BLUE = new Color(130, 170, 240);
     static final Color LIGHT_BLUE = new Color(220, 220, 250);
     static final Color LIGHT_GREY = new Color(240, 240, 240);
     static final Color GREEN = new Color(83, 196, 46);
+    static final Color DARK_GREEN = new Color(0, 100, 0);
 
     private final ViewControl mControl;
     private final TrayManager mTrayManager;
@@ -302,7 +306,7 @@ public final class View implements Observer {
     private void showSecurityErrors(KonMessage message) {
         String errorText = "<html>";
 
-        boolean isOut = message.getDir() == KonMessage.Direction.OUT;
+        boolean isOut = !message.isInMessage();
         errorText += isOut ? Tr.tr("Encryption error") : Tr.tr("Decryption error");
         errorText += ":";
 
@@ -337,7 +341,7 @@ public final class View implements Observer {
         panel.add(new WebSeparator(true, true));
 
         panel.add(new WebLabel(Tr.tr("Contact:")));
-        String contactText = Utils.name(contact) + " " + Utils.jid(contact.getJID(), 30, true);
+        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
         panel.add(new WebLabel(contactText).setBoldFont());
 
         panel.add(new WebLabel(Tr.tr("Key fingerprint:")));
@@ -384,11 +388,6 @@ public final class View implements Observer {
         // trigger save if contact details are shown
         mContent.showNothing();
         mControl.shutDown();
-    }
-
-    void callCreateNewChat(Set<Contact> contact) {
-        Chat chat = mControl.createNewChat(contact);
-        this.selectChat(chat);
     }
 
     /* view internal */

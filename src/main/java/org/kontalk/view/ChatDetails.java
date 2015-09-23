@@ -40,9 +40,7 @@ import java.awt.event.ItemListener;
 import java.util.Optional;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.Chat;
-import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 
 /**
@@ -72,13 +70,19 @@ final class ChatDetails extends WebPanel {
         groupPanel.add(new WebSeparator(true, true));
 
         // editable fields
-        groupPanel.add(new WebLabel(Tr.tr("Subject:")));
-        String subj = mChat.getSubject();
-        mSubjectField = new WebTextField(subj, 22);
-        mSubjectField.setInputPrompt(subj);
-        mSubjectField.setHideInputPromptOnFocus(false);
-        groupPanel.add(mSubjectField);
-        groupPanel.add(new WebSeparator(true, true));
+        if (chat.isGroupChat()) {
+            groupPanel.add(new WebLabel(Tr.tr("Subject:")));
+            mSubjectField = new WebTextField(22);
+            mSubjectField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_SUBJ_LENGTH));
+            String subj = mChat.getSubject();
+            mSubjectField.setText(subj);
+            mSubjectField.setInputPrompt(subj);
+            mSubjectField.setHideInputPromptOnFocus(false);
+            groupPanel.add(mSubjectField);
+            groupPanel.add(new WebSeparator(true, true));
+        } else {
+            mSubjectField = null;
+        }
 
         final WebSlider colorSlider = new WebSlider(WebSlider.HORIZONTAL);
 
@@ -189,8 +193,10 @@ final class ChatDetails extends WebPanel {
     }
 
     private void save() {
-        if (!mSubjectField.getText().equals(mChat.getSubject())) {
-            mChat.setSubject(mSubjectField.getText());
+        if (mSubjectField != null) {
+            String subj = mSubjectField.getText();
+            if (subj.length() > 0 && !mSubjectField.getText().equals(mChat.getSubject()))
+                mChat.setSubject(mSubjectField.getText());
         }
 //        List<?> participants = mParticipantsList.getCheckedValues();
 //        Set<Contact> chatContact = new HashSet<>();
@@ -209,21 +215,6 @@ final class ChatDetails extends WebPanel {
 
         if (!newSettings.equals(mChat.getViewSettings())) {
              mChat.setViewSettings(newSettings);
-        }
-    }
-
-    private class ContactElement {
-        Contact contact;
-
-        ContactElement(Contact contact) {
-            this.contact = contact;
-        }
-
-        @Override
-        public String toString() {
-            String jid = Utils.jid(contact.getJID(), 40, true);
-            String name = StringUtils.abbreviate(contact.getName(), 24);
-            return name.isEmpty() ? jid : name +" " + jid;
         }
     }
 }

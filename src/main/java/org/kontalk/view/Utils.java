@@ -44,6 +44,7 @@ import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -55,8 +56,10 @@ import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.misc.KonException;
+import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
+import org.kontalk.util.XMPPUtils;
 import org.ocpsoft.prettytime.PrettyTime;
 
 /**
@@ -72,6 +75,8 @@ final class Utils {
     static final PrettyTime PRETTY_TIME = new PrettyTime();
 
     private Utils() {}
+
+    /* fields */
 
     static WebFileChooserField createImageChooser(boolean enabled, String path) {
         WebFileChooserField chooser = new WebFileChooserField();
@@ -149,6 +154,109 @@ final class Utils {
         };
     }
 
+    /* images */
+
+    static Icon getIcon(String fileName) {
+        return new ImageIcon(getImage(fileName));
+    }
+
+    static Image getImage(String fileName) {
+        URL imageUrl = ClassLoader.getSystemResource(fileName);
+        if (imageUrl == null) {
+            LOGGER.warning("can't find icon image resource");
+            return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
+        }
+        return Toolkit.getDefaultToolkit().createImage(imageUrl);
+    }
+
+    /* strings */
+
+    static String name(Contact contact) {
+        return contact.isDeleted() ? Tr.tr("<deleted>") :
+                !contact.getName().isEmpty() ? contact.getName() :
+                Tr.tr("<unknown>");
+    }
+
+    static String nameOrJID(Contact contact) {
+        return nameOrJID(contact, Integer.MAX_VALUE);
+    }
+
+    static String nameOrJID(Contact contact, int maxLength) {
+        return contact.isDeleted() ?
+                Tr.tr("<deleted>") :
+                !contact.getName().isEmpty() ?
+                StringUtils.abbreviate(contact.getName(), maxLength) :
+                hashOrJID(contact, maxLength);
+    }
+
+    private static String hashOrJID(Contact contact, int maxLength) {
+        String jid = contact.getJID();
+        return XMPPUtils.isHash(jid) && jid.length() >= 10 ?
+                "[" + jid.substring(0, 10) + "]" :
+                jid(contact, maxLength, true);
+    }
+
+    static String contactNameList(Set<Contact> contacts) {
+        List<String> nameList = new ArrayList<>(contacts.size());
+        for (Contact contact : contacts) {
+            nameList.add(nameOrJID(contact, 18));
+        }
+        return StringUtils.join(nameList, ", ");
+    }
+
+    static String jid(Contact contact, int maxLength, boolean brackets) {
+        String jid = contact.getJID();
+        if (brackets)
+            maxLength -= 2;
+        if (jid.length() > maxLength) {
+            String local = XmppStringUtils.parseLocalpart(jid);
+            local = StringUtils.abbreviate(local, (int) (maxLength * 0.4));
+            String domain = XmppStringUtils.parseDomain(jid);
+            domain = StringUtils.abbreviate(domain, (int) (maxLength * 0.6));
+            jid = XmppStringUtils.completeJidFrom(local, domain);
+        }
+        if (brackets)
+            jid = "<" + jid + ">";
+        return jid;
+    }
+
+    static String chatTitle(Chat chat) {
+        if (chat.isGroupChat()) {
+            String subj = chat.getSubject();
+            return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
+        } else {
+            Optional<Contact> optContact = chat.getSingleContact();
+            return optContact.isPresent() ? Utils.nameOrJID(optContact.get()) :
+                    "--no title--";
+        }
+    }
+
+    static String fingerprint(String fp) {
+        int m = fp.length() / 2;
+        return group(fp.substring(0, m)) + "\n" + group(fp.substring(m));
+    }
+
+    private static String group(String s) {
+        return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
+    }
+
+    static String mainStatus(Contact u, boolean pre) {
+        Contact.Subscription subStatus = u.getSubScription();
+        return u.isMe() ? Tr.tr("Me myself") :
+                    u.isBlocked() ? Tr.tr("Blocked") :
+                    u.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
+                    subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
+                    subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
+                    lastSeen(u, true, pre);
+    }
+
+    static String lastSeen(Contact contact, boolean pretty, boolean pre) {
+        String lastSeen = !contact.getLastSeen().isPresent() ? Tr.tr("never") :
+                pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
+                Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get());
+        return pre ? Tr.tr("Last seen")+": " + lastSeen : lastSeen;
+    }
+
     static String getErrorText(KonException ex) {
         String eol = " " + System.getProperty("line.separator");
         String errorText = Tr.tr("Unknown error!?");
@@ -218,80 +326,7 @@ final class Utils {
         return errorText;
     }
 
-    static String shortenContactName(String jid, int maxLength) {
-        String local = XmppStringUtils.parseLocalpart(jid);
-        local = StringUtils.abbreviate(local, maxLength);
-        String domain = XmppStringUtils.parseDomain(jid);
-        return XmppStringUtils.completeJidFrom(local, domain);
-    }
-
-    static String jid(String jid, int maxLength, boolean brackets) {
-        if (brackets)
-            jid = "<" + jid + ">";
-        if (jid.length() > maxLength) {
-            String local = XmppStringUtils.parseLocalpart(jid);
-            local = StringUtils.abbreviate(local, (int) (maxLength * 0.4));
-            String domain = XmppStringUtils.parseDomain(jid);
-            domain = StringUtils.abbreviate(domain, (int) (maxLength * 0.6));
-            jid = XmppStringUtils.completeJidFrom(local, domain);
-        }
-        return jid;
-    }
-
-    static Icon getIcon(String fileName) {
-        return new ImageIcon(getImage(fileName));
-    }
-
-    static Image getImage(String fileName) {
-        URL imageUrl = ClassLoader.getSystemResource(fileName);
-        if (imageUrl == null) {
-            LOGGER.warning("can't find icon image resource");
-            return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
-        }
-        return Toolkit.getDefaultToolkit().createImage(imageUrl);
-    }
-
-    static String fingerprint(String fp) {
-        int m = fp.length() / 2;
-        return group(fp.substring(0, m)) + "\n" + group(fp.substring(m));
-    }
-
-    private static String group(String s) {
-        return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
-    }
-
-    static String contactNameList(Set<Contact> contacts) {
-        List<String> nameList = new ArrayList<>(contacts.size());
-        for (Contact contact : contacts) {
-            nameList.add(contact.getName().isEmpty() ?
-                    Tr.tr("<unknown>") :
-                    contact.getName());
-        }
-        return StringUtils.join(nameList, ", ");
-    }
-
-    static String name(Contact contact) {
-        return contact.isDeleted() ? Tr.tr("<deleted>") :
-                !contact.getName().isEmpty() ? contact.getName() :
-                Tr.tr("<unknown>");
-    }
-
-    static String mainStatus(Contact u, boolean pre) {
-        Contact.Subscription subStatus = u.getSubScription();
-        return u.isMe() ? Tr.tr("Me myself") :
-                    u.isBlocked() ? Tr.tr("Blocked") :
-                    u.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
-                    subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
-                    subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    lastSeen(u, true, pre);
-    }
-
-    static String lastSeen(Contact contact, boolean pretty, boolean pre) {
-        String lastSeen = !contact.getLastSeen().isPresent() ? Tr.tr("never") :
-                pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
-                Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get());
-        return pre ? Tr.tr("Last seen")+": " + lastSeen : lastSeen;
-    }
+    /* misc */
 
     static boolean confirmDeletion(Component parent, String text) {
         int selectedOption = WebOptionPane.showConfirmDialog(parent,
@@ -300,5 +335,9 @@ final class Utils {
                 WebOptionPane.OK_CANCEL_OPTION,
                 WebOptionPane.WARNING_MESSAGE);
         return selectedOption == WebOptionPane.OK_OPTION;
+    }
+
+    static int compareContacts(Contact c1, Contact c2) {
+        return c1.getName().compareToIgnoreCase(c2.getName());
     }
 }

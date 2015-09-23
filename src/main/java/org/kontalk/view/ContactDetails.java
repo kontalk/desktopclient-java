@@ -92,15 +92,17 @@ final class ContactDetails extends WebPanel implements Observer {
                 ContactDetails.this.saveName(this.getText().trim());
             }
         };
+        mNameField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_NAME_LENGTH));
         mNameField.setFontSizeAndStyle(14, true, false);
         mNameField.setHideInputPromptOnFocus(false);
         mainPanel.add(mNameField);
 
         mainPanel.add(new WebLabel("Jabber ID:"));
-        final WebTextField jidField = new ComponentUtils.EditableTextField(20, this) {
+        ComponentUtils.EditableTextField jidField =
+                new ComponentUtils.EditableTextField(20, this) {
             @Override
             protected String labelText() {
-                return Utils.jid(mContact.getJID(), 28, false);
+                return Utils.jid(mContact, 28, false);
             }
             @Override
             protected String editText() {
@@ -111,7 +113,8 @@ final class ContactDetails extends WebPanel implements Observer {
                 ContactDetails.this.saveJID(this.getText().trim());
             }
         };
-
+        jidField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_JID_LENGTH));
+        jidField.setLabel();
         String jidText = Tr.tr("The unique address of this contact");
         TooltipManager.addTooltip(jidField, jidText);
         mainPanel.add(jidField);

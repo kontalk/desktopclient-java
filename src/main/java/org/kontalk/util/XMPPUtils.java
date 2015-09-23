@@ -102,6 +102,11 @@ public final class XMPPUtils {
                 !XmppStringUtils.parseDomain(jid).isEmpty();
     }
 
+    public static boolean isBarelyEqual(String jid1, String jid2) {
+        return XmppStringUtils.parseBareJid(jid1).equals(
+                XmppStringUtils.parseBareJid(jid2));
+    }
+
     public static String phoneNumberToKontalkLocal(String number) {
         PhoneNumberUtil pnUtil = PhoneNumberUtil.getInstance();
         PhoneNumber n;

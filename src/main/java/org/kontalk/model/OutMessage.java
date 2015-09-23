@@ -20,12 +20,13 @@ package org.kontalk.model;
 
 import java.net.URI;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 
 /**
- * Model for a XMPP message that we are sending.
+ * Model for an XMPP message that we are sending.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class OutMessage extends KonMessage {
@@ -35,25 +36,49 @@ public final class OutMessage extends KonMessage {
         super(builder);
     }
 
+    public void setReceived(String jid) {
+        Transmission transmission = null;
+            for (Transmission t: mTransmissions) {
+                if (t.getContact().getJID().equals(jid)) {
+                    transmission = t;
+                    break;
+                }
+            }
+
+            if (transmission == null) {
+                LOGGER.warning("can't find transmission for received status, IDs: "+jid);
+                return;
+            }
+
+            if (transmission.isReceived())
+                // probably by another client
+                return;
+
+            transmission.setReceived(new Date());
+            // status only dummy value
+            this.changed(mStatus);
+    }
+
     public void setStatus(Status status) {
-        if (status == Status.IN) {
-            LOGGER.warning("wrong argument status 'IN'");
+        if (status == Status.IN || status == Status.RECEIVED) {
+            LOGGER.warning("wrong status argument: "+status);
             return;
         }
-        if (status == Status.SENT && mReceiptStatus != Status.PENDING)
+
+        if (status == Status.SENT && mStatus != Status.PENDING)
             LOGGER.warning("unexpected new status of sent message: "+status);
-        if (status == Status.RECEIVED && mReceiptStatus != Status.SENT)
-            LOGGER.warning("unexpected new status of received message: "+status);
-        mReceiptStatus = status;
+
+        mStatus = status;
         if (status != Status.PENDING)
             mServerDate = Optional.of(new Date());
         this.save();
-        this.changed(mReceiptStatus);
+        this.changed(mStatus);
     }
 
+    // Note: only one error per message (not transmission) possible
     public void setServerError(String condition, String text) {
-        if (mReceiptStatus != Status.SENT)
-            LOGGER.warning("unexpected status of message with error: "+mReceiptStatus);
+        if (mStatus != Status.SENT)
+            LOGGER.warning("unexpected status of message with error: "+mStatus);
         mServerError = new KonMessage.ServerError(condition, text);
         this.setStatus(Status.ERROR);
     }
@@ -69,13 +94,15 @@ public final class OutMessage extends KonMessage {
 
 public static class Builder extends KonMessage.Builder {
 
-        public Builder(Chat chat, Contact contact, boolean encrypted) {
-            super(-1, chat, Direction.OUT, contact, new Date());
+        public Builder(Chat chat, Contact[] contacts, boolean encrypted) {
+            super(-1, chat, Status.PENDING, new Date());
 
-            mJID = contact.getJID();
+            mContacts = new HashMap<>();
+            for (Contact c: contacts)
+                mContacts.put(c, c.getJID());
+
             mXMPPID = "Kon_" + StringUtils.randomString(8);
             mServerDate = Optional.empty();
-            mReceiptStatus = Status.PENDING;
 
             mCoderStatus = encrypted ?
                 CoderStatus.createToEncrypt() :
@@ -83,14 +110,10 @@ public static class Builder extends KonMessage.Builder {
         }
 
         @Override
-        public void jid(String jid) { throw new UnsupportedOperationException(); }
-        @Override
         public void xmppID(String xmppID) { throw new UnsupportedOperationException(); }
 
         @Override
         public void serverDate(Date date) { throw new UnsupportedOperationException(); }
-        @Override
-        public void receiptStatus(Status status) { throw new UnsupportedOperationException(); }
 
         @Override
         public void coderStatus(CoderStatus c) { throw new UnsupportedOperationException(); }
