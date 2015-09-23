@@ -86,8 +86,8 @@ public final class Client implements StanzaListener, Runnable {
         mControl = control;
         //mLimited = limited;
 
-        // enable debug window
-        //SmackConfiguration.DEBUG_ENABLED = true;
+        // enable Smack debugging (print raw XML packet)
+        //SmackConfiguration.DEBUG = true;
     }
 
     public void connect(PersonalKey key) {
@@ -240,6 +240,9 @@ public final class Client implements StanzaListener, Runnable {
 
         protoMessage.setType(Message.Type.chat);
         protoMessage.setStanzaId(message.getXMPPID());
+        String threadID = chat.getXMPPID();
+        if (!threadID.isEmpty())
+            protoMessage.setThread(threadID);
 
         // extensions
 

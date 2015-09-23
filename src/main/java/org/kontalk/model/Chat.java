@@ -102,9 +102,9 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     /** New group chat. */
     Chat(Contact[] contacts, GID gid, String subject) {
         assert contacts != null;
-        // Kontalk Android client is ignoring the chat id, don't set it for now
-        //mXMPPID = StringUtils.randomString(8);
-        mXMPPID = "";
+        // Kontalk Android client is ignoring the chat id
+        // were using it for group chat identification
+        mXMPPID = gid != null ? gid.id : "";
         this.setContactMap(new HashSet<>(Arrays.asList(contacts)));
         mOptGID = Optional.ofNullable(gid);
         mSubject = subject;
