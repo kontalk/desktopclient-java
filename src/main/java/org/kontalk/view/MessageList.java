@@ -370,23 +370,34 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         private void updateStatus() {
             boolean isOut = !mValue.isInMessage();
+
+            Date deliveredDate = null;
+            Optional<Transmission> optTransmission = mValue.getSingleTransmission();
+            if (optTransmission.isPresent())
+                deliveredDate = optTransmission.get().getReceivedDate().orElse(null);
+
             // status icon
             if (isOut) {
-                switch (mValue.getStatus()) {
-                    case PENDING :
-                        mStatusIconLabel.setIcon(PENDING_ICON);
-                        break;
-                    case SENT :
-                        mStatusIconLabel.setIcon(SENT_ICON);
-                        break;
-                    case RECEIVED:
-                        mStatusIconLabel.setIcon(DELIVERED_ICON);
-                        break;
-                    case ERROR:
-                        mStatusIconLabel.setIcon(ERROR_ICON);
-                        break;
-                    default:
-                        LOGGER.warning("unknown message receipt status!?");
+                if (deliveredDate != null) {
+                    mStatusIconLabel.setIcon(DELIVERED_ICON);
+                } else {
+                    switch (mValue.getStatus()) {
+                        case PENDING :
+                            mStatusIconLabel.setIcon(PENDING_ICON);
+                            break;
+                        case SENT :
+                            mStatusIconLabel.setIcon(SENT_ICON);
+                            break;
+                        case RECEIVED:
+                            // legacy
+                            mStatusIconLabel.setIcon(DELIVERED_ICON);
+                            break;
+                        case ERROR:
+                            mStatusIconLabel.setIcon(ERROR_ICON);
+                            break;
+                        default:
+                            LOGGER.warning("unknown message receipt status!?");
+                    }
                 }
             } else { // IN message
                 if (!mValue.getCoderStatus().getErrors().isEmpty()) {
@@ -398,20 +409,20 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             String html = "<html><body>" + /*"<h3>Header</h3>"+*/ "<br>";
 
             if (isOut) {
-                Date createDate = mValue.getDate();
-                String create = Utils.MID_DATE_FORMAT.format(createDate);
-                Optional<Date> serverDate = mValue.getServerDate();
-                String status = serverDate.isPresent() ?
-                        Utils.MID_DATE_FORMAT.format(serverDate.get()) :
-                        null;
-                if (!create.equals(status))
-                    html += Tr.tr("Created:")+ " " + create + "<br>";
-                if (status != null) {
-                    String secStat = null;
+                String secStat = null;
+                Date statusDate;
+                if (deliveredDate != null) {
+                    secStat = Tr.tr("Delivered:");
+                    statusDate = deliveredDate;
+                } else {
+                    statusDate = mValue.getServerDate().orElse(null);
                     switch (mValue.getStatus()) {
-                        case SENT :
+                        case PENDING:
+                            break;
+                        case SENT:
                             secStat = Tr.tr("Sent:");
                             break;
+                        // legacy
                         case RECEIVED:
                             secStat = Tr.tr("Delivered:");
                             break;
@@ -421,9 +432,18 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                         default:
                             LOGGER.warning("unexpected msg status: "+mValue.getStatus());
                     }
-                    if (secStat != null)
-                        html += secStat + " " + status + "<br>";
                 }
+
+                String status = statusDate != null ?
+                        Utils.MID_DATE_FORMAT.format(statusDate) :
+                        null;
+
+                String create = Utils.MID_DATE_FORMAT.format(mValue.getDate());
+                if (!create.equals(status))
+                    html += Tr.tr("Created:")+ " " + create + "<br>";
+
+                if (status != null && secStat != null)
+                    html += secStat + " " + status + "<br>";
             } else { // IN message
                 Date receivedDate = mValue.getDate();
                 String rec = Utils.MID_DATE_FORMAT.format(receivedDate);

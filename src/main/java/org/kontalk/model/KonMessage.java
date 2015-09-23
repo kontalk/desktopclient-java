@@ -53,12 +53,13 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static enum Status {
         /** For all incoming messages. */
         IN,
-        //ACKNOWLEDGED,
         /** Outgoing message, message is about to be send. */
         PENDING,
         /** Outgoing message, message was handled by server. */
         SENT,
-        /** Outgoing message, message was received by recipient TODO [DEPRECATED]. */
+        /** Outgoing message, message was received by recipient.
+         * Not saved to database. Transmission used for that.
+         */
         RECEIVED,
         /** Outgoing message, an error occurred somewhere in the transmission. */
         ERROR
@@ -67,7 +68,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public static final String TABLE = "messages";
     public static final String COL_CHAT_ID = "thread_id";
     //public static final String COL_DIR = "direction";
-    // TODO for every transmission?
     public static final String COL_XMPP_ID = "xmpp_id";
     public static final String COL_DATE = "date";
     public static final String COL_STATUS = "status";
@@ -98,7 +98,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             // enum set, encryption and signing errors of content
             COL_COD_ERR + " INTEGER NOT NULL, " +
             // optional error reply in JSON format
-            // TODO for each transmission?
             COL_SERV_ERR + " TEXT, " +
             // unix time, transmission/delay timestamp
             COL_SERV_DATE + " INTEGER, " +
@@ -182,6 +181,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     public Transmission[] getTransmissions() {
         return mTransmissions;
+    }
+
+    public Optional<Transmission> getSingleTransmission() {
+        return mTransmissions.length == 1 ?
+            Optional.of(mTransmissions[0]) :
+            Optional.<Transmission>empty();
     }
 
     public String getXMPPID() {
