@@ -169,7 +169,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
             mTitleLabel = new WebLabel();
             mTitleLabel.setFontSize(14);
             if (chat.isGroupChat())
-                mTitleLabel.setForeground(View.DARK_BLUE);
+                mTitleLabel.setForeground(View.DARK_GREEN);
             this.add(mTitleLabel, BorderLayout.NORTH);
 
             mStatusLabel = new WebLabel();
@@ -241,7 +241,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
                     return;
                 }
 
-                if (mValue.getContacts().size() > 1)
+                if (mValue.isGroupChat())
                     stateText = state.getContact().getName() + " " + stateText;
 
                 mChatStateLabel.setText(stateText + " ");

@@ -83,10 +83,10 @@ public final class View implements Observer {
     static final int MAX_JID_LENGTH = 100;
 
     static final Color BLUE = new Color(130, 170, 240);
-    static final Color DARK_BLUE = new Color(0, 0, 140);
     static final Color LIGHT_BLUE = new Color(220, 220, 250);
     static final Color LIGHT_GREY = new Color(240, 240, 240);
     static final Color GREEN = new Color(83, 196, 46);
+    static final Color DARK_GREEN = new Color(0, 100, 0);
 
     private final ViewControl mControl;
     private final TrayManager mTrayManager;

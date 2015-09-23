@@ -359,8 +359,11 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             boolean encrypted = mValue.getCoderStatus().isEncrypted();
             String text = encrypted ?
                     Tr.tr("[encrypted]") :
-                    // removing whitespace (Pidgin adds weird tab character)
+                    // removing whitespace (Pidgin adds weird tab characters)
                     mValue.getContent().getText().trim();
+            // TODO this could look A BIT nicer
+            if (mValue.getContent().getGroupCommand().isPresent())
+                text += " "+ mValue.getContent().getGroupCommand().get();
             mTextPane.setFontStyle(false, encrypted);
             //mTextPane.setText(text);
             LinkUtils.linkify(mTextPane.getStyledDocument(), text);

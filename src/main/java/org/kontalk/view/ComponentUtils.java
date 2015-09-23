@@ -432,13 +432,14 @@ final class ComponentUtils {
 
         private void checkSaveButton() {
             mCreateButton.setEnabled(!mSubjectField.getText().isEmpty() &&
-                    // TODO
-                    mList.getSelectedContacts().length > 0);
+                    mList.getSelectedContacts().length > 1);
         }
 
         private void createGroup() {
             mView.getControl().createGroupChat(mList.getSelectedContacts(),
                     mSubjectField.getText());
+
+            mSubjectField.setText("");
         }
 
         @Override
