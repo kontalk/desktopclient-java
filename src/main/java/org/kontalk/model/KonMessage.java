@@ -18,6 +18,8 @@
 
 package org.kontalk.model;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -349,6 +351,52 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             return 0;
 
         return Integer.compare(mID, o.getID());
+    }
+
+    static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
+        int id = messageRS.getInt("_id");
+
+        String xmppID = Database.getString(messageRS, KonMessage.COL_XMPP_ID);
+
+        Date date = new Date(messageRS.getLong(KonMessage.COL_DATE));
+
+        int statusIndex = messageRS.getInt(KonMessage.COL_STATUS);
+        KonMessage.Status status = KonMessage.Status.values()[statusIndex];
+
+        String jsonContent = messageRS.getString(KonMessage.COL_CONTENT);
+
+        MessageContent content = MessageContent.fromJSONString(jsonContent);
+
+        int encryptionIndex = messageRS.getInt(KonMessage.COL_ENCR_STAT);
+        Coder.Encryption encryption = Coder.Encryption.values()[encryptionIndex];
+
+        int signingIndex = messageRS.getInt(KonMessage.COL_SIGN_STAT);
+        Coder.Signing signing = Coder.Signing.values()[signingIndex];
+
+        int errorFlags = messageRS.getInt(KonMessage.COL_COD_ERR);
+        EnumSet<Coder.Error> coderErrors = EncodingUtils.intToEnumSet(
+                Coder.Error.class, errorFlags);
+
+        CoderStatus coderStatus = new CoderStatus(encryption, signing, coderErrors);
+
+        String jsonServerError = messageRS.getString(KonMessage.COL_SERV_ERR);
+        KonMessage.ServerError serverError =
+                KonMessage.ServerError.fromJSON(jsonServerError);
+
+        long sDate = messageRS.getLong(KonMessage.COL_SERV_DATE);
+        Date serverDate = sDate == 0 ? null : new Date(sDate);
+
+        KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date);
+        builder.xmppID(xmppID);
+        // TODO one SQL SELECT for each message, performance?
+        builder.transmissions(Transmission.load(id));
+        if (serverDate != null)
+            builder.serverDate(serverDate);
+        builder.content(content);
+        builder.coderStatus(coderStatus);
+        builder.serverError(serverError);
+
+        return builder.build();
     }
 
     public static final class ServerError {

@@ -21,12 +21,9 @@ package org.kontalk.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
@@ -53,43 +50,13 @@ public final class ChatList extends Observable implements Observer {
     public void load() {
         assert mMap.isEmpty();
 
-        ContactList contactList = ContactList.getInstance();
         Database db = Database.getInstance();
         try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
-            // now, create chats
             while (chatRS.next()) {
-                // TODO move to chat class
-                int id = chatRS.getInt("_id");
+                Chat chat = Chat.load(chatRS);
+                this.putSilent(chat);
 
-                String jsonGID = Database.getString(chatRS, Chat.COL_GID);
-                Optional<GID> optGID = Optional.ofNullable(jsonGID.isEmpty() ?
-                        null :
-                        GID.fromJSONOrNull(jsonGID));
-
-                String xmppThreadID = Database.getString(chatRS, Chat.COL_XMPPID);
-
-                // get contacts for chats
-                Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
-                Set<Contact> contacts = new HashSet<>();
-                for (int conID: dbReceiver.keySet()) {
-                    Optional<Contact> optCon = contactList.get(conID);
-                    if (optCon.isPresent())
-                        contacts.add(optCon.get());
-                    else
-                        LOGGER.warning("can't find contact");
-                }
-
-                String subject = Database.getString(chatRS, Chat.COL_SUBJ);
-
-                boolean read = chatRS.getBoolean(Chat.COL_READ);
-
-                String jsonViewSettings = Database.getString(chatRS,
-                        Chat.COL_VIEW_SET);
-
-                this.putSilent(new Chat(id, contacts, optGID, xmppThreadID, subject, read,
-                        jsonViewSettings));
-                if (!read)
-                    mUnread = true;
+                mUnread |= !chat.isRead();
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load chats from db", ex);

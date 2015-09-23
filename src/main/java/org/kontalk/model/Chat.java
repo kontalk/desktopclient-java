@@ -363,6 +363,37 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return Integer.compare(this.mID, o.mID);
     }
 
+    static Chat load(ResultSet rs) throws SQLException {
+        int id = rs.getInt("_id");
+
+        String jsonGID = Database.getString(rs, Chat.COL_GID);
+        Optional<GID> optGID = Optional.ofNullable(jsonGID.isEmpty() ?
+                null :
+                GID.fromJSONOrNull(jsonGID));
+
+        String xmppThreadID = Database.getString(rs, Chat.COL_XMPPID);
+
+        // get contacts for chats
+        Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
+        Set<Contact> contacts = new HashSet<>();
+        for (int conID: dbReceiver.keySet()) {
+            Optional<Contact> optCon = ContactList.getInstance().get(conID);
+            if (optCon.isPresent())
+                contacts.add(optCon.get());
+            else
+                LOGGER.warning("can't find contact");
+        }
+
+        String subject = Database.getString(rs, Chat.COL_SUBJ);
+
+        boolean read = rs.getBoolean(Chat.COL_READ);
+
+        String jsonViewSettings = Database.getString(rs,
+                Chat.COL_VIEW_SET);
+
+        return new Chat(id, contacts, optGID, xmppThreadID, subject, read, jsonViewSettings);
+    }
+
     static Map<Integer, Integer> loadReceiver(int chatID) {
         Database db = Database.getInstance();
         String where = COL_REC_CHAT_ID + " == " + chatID;
