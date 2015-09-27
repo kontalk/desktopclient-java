@@ -237,7 +237,7 @@ final class ContactDetails extends WebPanel implements Observer {
         if (name.equals(mContact.getName()))
             return;
 
-        mContact.setName(name);
+        mView.getControl().changeName(mContact, name);
     }
 
     private void saveJID(String jid) {
