@@ -54,12 +54,12 @@ import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Chat;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
-import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.Preview;
 import org.kontalk.model.Transmission;
 import org.kontalk.system.Control;
+import org.kontalk.system.RosterHandler;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -120,7 +120,8 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
         // packet listeners
-        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), mControl);
+        RosterHandler rosterSyncer = mControl.getRosterHandler();
+        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), rosterSyncer);
         Roster.getInstanceFor(mConn).addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
@@ -136,7 +137,7 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-        mConn.addAsyncStanzaListener(new PresenceListener(Roster.getInstanceFor(mConn), mControl), presenceFilter);
+        mConn.addAsyncStanzaListener(new PresenceListener(Roster.getInstanceFor(mConn), rosterSyncer), presenceFilter);
 
          // fallback listener
         mConn.addAsyncStanzaListener(this,
@@ -211,7 +212,7 @@ public final class Client implements StanzaListener, Runnable {
         return !this.isConnected() ? "" : mConn.getUser();
     }
 
-    public void sendMessage(OutMessage message) {
+    public void sendMessage(OutMessage message, boolean sendChatState) {
         // check for correct receipt status and reset it
         Status status = message.getStatus();
         assert status == Status.PENDING || status == Status.ERROR;
@@ -250,7 +251,7 @@ public final class Client implements StanzaListener, Runnable {
         if (!chat.isGroupChat())
             protoMessage.addExtension(new DeliveryReceiptRequest());
 
-        if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
+        if (sendChatState)
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
 
         if (encrypted) {
@@ -377,9 +378,6 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendChatState(String jid, String threadID, ChatState state) {
-        if (!Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
-            return;
-
         Message message = new Message(jid, Message.Type.chat);
         if (!threadID.isEmpty())
             message.setThread(threadID);
@@ -407,18 +405,18 @@ public final class Client implements StanzaListener, Runnable {
         LOGGER.config("unhandled: "+packet);
     }
 
-    public boolean addToRoster(Contact contact) {
+    public boolean addToRoster(String jid, String name) {
         if (!this.isConnected()) {
-            LOGGER.info("can't add contact to roster, not connected");
+            LOGGER.info("not connected");
             return false;
         }
 
-        String rosterName = contact.getName();
+        String rosterName = name;
         if (rosterName.isEmpty())
             rosterName = XmppStringUtils.parseLocalpart(rosterName);
         try {
             // also sends presence subscription request
-            Roster.getInstanceFor(mConn).createEntry(contact.getJID(), rosterName,
+            Roster.getInstanceFor(mConn).createEntry(jid, rosterName,
                     null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
@@ -430,15 +428,15 @@ public final class Client implements StanzaListener, Runnable {
         return true;
     }
 
-    public boolean removeFromRoster(Contact contact) {
+    public boolean removeFromRoster(String jid) {
         if (!this.isConnected()) {
             LOGGER.info("not connected");
             return false;
         }
         Roster roster = Roster.getInstanceFor(mConn);
-        RosterEntry entry = roster.getEntry(contact.getJID());
+        RosterEntry entry = roster.getEntry(jid);
         if (entry == null) {
-            LOGGER.warning("can't find roster entry for contact: "+contact);
+            LOGGER.warning("can't find roster entry for jid: "+jid);
             return true;
         }
         try {

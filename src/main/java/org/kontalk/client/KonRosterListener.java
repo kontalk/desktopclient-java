@@ -25,7 +25,7 @@ import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.packet.Presence;
-import org.kontalk.system.Control;
+import org.kontalk.system.RosterHandler;
 
 /**
  * Listener for events in the roster (a server-side contact list in XMPP).
@@ -35,11 +35,11 @@ final class KonRosterListener implements RosterListener {
     private static final Logger LOGGER = Logger.getLogger(KonRosterListener.class.getName());
 
     private final Roster mRoster;
-    private final Control mControl;
+    private final RosterHandler mHandler;
 
-    KonRosterListener(Roster roster, Control control) {
+    KonRosterListener(Roster roster, RosterHandler handler) {
         mRoster = roster;
-        mControl = control;
+        mHandler = handler;
     }
 
     /**
@@ -58,7 +58,7 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.config("entry: "+entry.toString());
-            mControl.addContactFromRoster(entry.getUser(),
+            mHandler.onEntryAdded(entry.getUser(),
                     entry.getName(),
                     entry.getType(),
                     entry.getStatus());
@@ -67,6 +67,7 @@ final class KonRosterListener implements RosterListener {
 
     @Override
     public void entriesUpdated(Collection<String> addresses) {
+        // note: we don't know what exactly changed here
         for (String jid: addresses) {
             RosterEntry entry = mRoster.getEntry(jid);
             if (entry == null) {
@@ -75,7 +76,7 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.info("entry: "+entry.toString());
-            mControl.setSubscriptionStatus(entry.getUser(),
+            mHandler.onSubcriptionUpdate(entry.getUser(),
                     entry.getType(),
                     entry.getStatus());
         }
@@ -83,7 +84,9 @@ final class KonRosterListener implements RosterListener {
 
     @Override
     public void entriesDeleted(Collection<String> addresses) {
-        LOGGER.info("ignored");
+        for (String jid: addresses) {
+            mHandler.onEntryDeleted(jid);
+        }
     }
 
     @Override

@@ -104,7 +104,8 @@ final class ChatStateManager {
             if (contact == null || contact.isMe() || contact.isBlocked() || contact.isDeleted())
                 return;
 
-            mClient.sendChatState(contact.getJID(), mChat.getXMPPID(), state);
+            if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))
+                mClient.sendChatState(contact.getJID(), mChat.getXMPPID(), state);
         }
     }
 
