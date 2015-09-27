@@ -254,6 +254,11 @@ public final class Control {
         }
         PGPCoderKey key = optKey.get();
 
+        if (!key.userID.contains("<"+contact.getJID()+">")) {
+            LOGGER.warning("UID does not contain contact JID");
+            return;
+        }
+
         if (key.fingerprint.equals(contact.getFingerprint()))
             // same key
             return;
