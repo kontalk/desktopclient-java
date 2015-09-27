@@ -85,4 +85,13 @@ public class ViewEvent {
             this.key = key;
         }
     }
+
+    /** Contact was deleted in roster (ask whattodo). */
+    public static class ContactDeleted extends ViewEvent {
+        public final Contact contact;
+
+        public ContactDeleted(Contact contact) {
+            this.contact = contact;
+        }
+    }
 }

@@ -29,11 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
-import org.jivesoftware.smack.roster.packet.RosterPacket;
-import org.jivesoftware.smack.roster.packet.RosterPacket.ItemStatus;
-import org.jivesoftware.smack.roster.packet.RosterPacket.ItemType;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.Kontalk;
@@ -82,17 +78,27 @@ public final class Control {
     private final Client mClient;
     private final ChatStateManager mChatStateManager;
     private final AttachmentManager mAttachmentManager;
+    private final RosterHandler mRosterHandler;
 
     private final ViewControl mViewControl;
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
     private Control(Path appDir) {
+        mViewControl = new ViewControl();
+
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
         mAttachmentManager = AttachmentManager.create(appDir, this);
+        mRosterHandler = new RosterHandler(this, mClient);
+    }
 
-        mViewControl = new ViewControl();
+    public RosterHandler getRosterHandler() {
+        return mRosterHandler;
+    }
+
+    ViewControl getViewControl() {
+        return mViewControl;
     }
 
     /* events from network client */
@@ -212,7 +218,7 @@ public final class Control {
     /**
      * Inform model (and view) about a received chat state notification.
      */
-    public void processChatState(String from,
+    public void processChatState(String jid,
             String xmppThreadID,
             Optional<Date> serverDate,
             ChatState chatState) {
@@ -223,7 +229,6 @@ public final class Control {
                 return;
             }
         }
-        String jid = XmppStringUtils.parseBareJid(from);
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (!optContact.isPresent()) {
             LOGGER.info("can't find contact with jid: "+jid);
@@ -232,75 +237,6 @@ public final class Control {
         Contact contact = optContact.get();
         Chat chat = getChat(xmppThreadID, contact);
         chat.setChatState(contact, chatState);
-    }
-
-    public void addContactFromRoster(String jid,
-        String rosterName,
-        ItemType type,
-        ItemStatus itemStatus) {
-        if (ContactList.getInstance().contains(jid)) {
-            this.setSubscriptionStatus(jid, type, itemStatus);
-            return;
-        }
-
-        LOGGER.info("adding contact from roster, jid: "+jid);
-
-        String name = rosterName == null ? "" : rosterName;
-        if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
-                XMPPUtils.isHash(jid)) {
-            // this must be the hash string, don't use it as name
-            name = "";
-        }
-
-        Optional<Contact> optNewContact = ContactList.getInstance().createContact(jid, name);
-        if (!optNewContact.isPresent())
-            return;
-        Contact newContact = optNewContact.get();
-
-        Contact.Subscription status = rosterToModelSubscription(itemStatus, type);
-        newContact.setSubScriptionStatus(status);
-
-        if (status == Contact.Subscription.UNSUBSCRIBED)
-            mClient.sendPresenceSubscriptionRequest(jid);
-
-        this.sendKeyRequest(newContact);
-    }
-
-    public void setSubscriptionStatus(String jid, ItemType type, ItemStatus itemStatus) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
-            LOGGER.warning("(subscription) can't find contact with jid: "+jid);
-            return;
-        }
-        optContact.get().setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
-    }
-
-    public void setPresence(String jid, Presence.Type type, String status) {
-        if (this.isMe(jid) && !ContactList.getInstance().contains(jid))
-            // don't wanna see myself
-            return;
-
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
-            LOGGER.warning("(presence) can't find contact with jid: "+jid);
-            return;
-        }
-        optContact.get().setOnline(type, status);
-    }
-
-    public void checkFingerprint(String jid, String fingerprint) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
-            if (!this.isMe(jid))
-                LOGGER.warning("can't find contact with jid:" + jid);
-            return;
-        }
-
-        Contact contact = optContact.get();
-        if (!contact.getFingerprint().equals(fingerprint)) {
-            LOGGER.info("detected public key change, requesting new key...");
-            this.sendKeyRequest(contact);
-        }
     }
 
     public void handlePGPKey(String jid, byte[] rawKey) {
@@ -377,15 +313,24 @@ public final class Control {
             return;
         }
 
-        mClient.sendMessage(message);
+        mClient.sendMessage(message,
+                Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE));
         mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
     }
 
-    /* private */
+    void sendKeyRequest(Contact contact) {
+        if (!XMPPUtils.isKontalkContact(contact))
+            return;
 
-    private boolean isMe(String jid) {
-        return XMPPUtils.isBarelyEqual(jid, mClient.getOwnJID());
+        if (contact.getSubScription() == Contact.Subscription.UNSUBSCRIBED ||
+                contact.getSubScription() == Contact.Subscription.PENDING) {
+            LOGGER.info("no presence subscription, not sending key request, contact: "+contact);
+            return;
+        }
+        mClient.sendPublicKeyRequest(contact.getJID());
     }
+
+    /* private */
 
     private Optional<Contact> createNewContact(String jid, String name, boolean encrypted) {
         if (!mClient.isConnected()) {
@@ -404,24 +349,15 @@ public final class Control {
         newContact.setEncrypted(encrypted);
 
         if (!newContact.isMe()) {
-            boolean succ = mClient.addToRoster(newContact);
+            String rosterName = Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE) ?
+                    newContact.getName() :
+                    "";
+            boolean succ = mClient.addToRoster(newContact.getJID(), rosterName);
             if (!succ)
                 LOGGER.warning("can't add new contact to roster: "+newContact);
         }
 
         return Optional.of(newContact);
-    }
-
-    private void sendKeyRequest(Contact contact) {
-        if (!XMPPUtils.isKontalkContact(contact))
-            return;
-
-        if (contact.getSubScription() == Contact.Subscription.UNSUBSCRIBED ||
-                contact.getSubScription() == Contact.Subscription.PENDING) {
-            LOGGER.info("no presence subscription, not sending key request, contact: "+contact);
-            return;
-        }
-        mClient.sendPublicKeyRequest(contact.getJID());
     }
 
     /**
@@ -484,19 +420,6 @@ public final class Control {
 
         LOGGER.warning("can't find message by IDs: "+ids);
         return Optional.empty();
-    }
-
-    private static Contact.Subscription rosterToModelSubscription(
-            RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
-        if (type == RosterPacket.ItemType.both ||
-                type == RosterPacket.ItemType.to ||
-                type == RosterPacket.ItemType.remove)
-            return Contact.Subscription.SUBSCRIBED;
-
-        if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
-            return Contact.Subscription.PENDING;
-
-        return Contact.Subscription.UNSUBSCRIBED;
     }
 
     /* commands from view */
@@ -575,12 +498,12 @@ public final class Control {
         }
 
         public void deleteContact(Contact contact) {
-            boolean succ = mClient.removeFromRoster(contact);
-            if (!succ)
-                // only delete if not in roster
-                return;
-
             ContactList.getInstance().remove(contact);
+
+            boolean succ = mClient.removeFromRoster(contact.getJID());
+            if (!succ) {
+                LOGGER.warning("could not remove contact from roster");
+            }
 
             contact.setDeleted();
         }
@@ -744,7 +667,7 @@ public final class Control {
             Control.this.sendMessage(newMessage);
         }
 
-        private void changed(ViewEvent event) {
+        void changed(ViewEvent event) {
             this.setChanged();
             this.notifyObservers(event);
         }

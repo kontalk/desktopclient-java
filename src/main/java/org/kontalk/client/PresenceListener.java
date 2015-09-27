@@ -26,7 +26,7 @@ import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.system.Control;
+import org.kontalk.system.RosterHandler;
 
 /**
  * Listen for presence packets. They also may include a custom Kontalk extension
@@ -37,11 +37,11 @@ public class PresenceListener implements StanzaListener {
     private static final Logger LOGGER = Logger.getLogger(PresenceListener.class.getName());
 
     private final Roster mRoster;
-    private final Control mControl;
+    private final RosterHandler mHandler;
 
-    public PresenceListener(Roster roster, Control control) {
+    public PresenceListener(Roster roster, RosterHandler handler) {
         mRoster = roster;
-        mControl = control;
+        mHandler = handler;
 
         ProviderManager.addExtensionProvider(
                 PublicKeyPresence.ELEMENT_NAME,
@@ -55,12 +55,17 @@ public class PresenceListener implements StanzaListener {
 
         Presence presence = (Presence) packet;
 
+        if (presence.getType() == Presence.Type.error) {
+            LOGGER.warning("ignoring presence error");
+            return;
+        }
+
         String jid = XmppStringUtils.parseBareJid(presence.getFrom());
         Presence bestPresence = mRoster.getPresence(jid);
 
         // NOTE: a delay extension is sometimes included, don't know why
         // ignoring mode, always null anyway
-        mControl.setPresence(bestPresence.getFrom(),
+        mHandler.onPresenceChange(bestPresence.getFrom(),
                 bestPresence.getType(),
                 bestPresence.getStatus());
 
@@ -79,6 +84,6 @@ public class PresenceListener implements StanzaListener {
             return;
         }
 
-        mControl.checkFingerprint(jid, fingerprint);
+        mHandler.onFingerprintPresence(jid, fingerprint);
     }
 }
