@@ -18,7 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
@@ -26,14 +25,8 @@ import com.alee.laf.label.WebLabel;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
-import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebPasswordField;
-import com.alee.laf.text.WebTextArea;
-import com.alee.managers.notification.NotificationIcon;
-import com.alee.managers.notification.NotificationListener;
 import com.alee.managers.notification.NotificationManager;
-import com.alee.managers.notification.NotificationOption;
-import com.alee.managers.notification.WebNotificationPopup;
 import java.awt.Color;
 import java.awt.event.*;
 import java.util.Observable;
@@ -44,17 +37,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.Icon;
 import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
 import org.kontalk.system.Config;
-import org.kontalk.misc.KonException;
-import org.kontalk.crypto.Coder;
-import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.ViewEvent;
-import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
@@ -87,6 +75,8 @@ public final class View implements Observer {
     static final Color LIGHT_GREY = new Color(240, 240, 240);
     static final Color GREEN = new Color(83, 196, 46);
     static final Color DARK_GREEN = new Color(0, 100, 0);
+
+    static final String REMOVE_CONTACT_NOTE = Tr.tr("Chats and messages will not be deleted.");
 
     private final ViewControl mControl;
     private final TrayManager mTrayManager;
@@ -203,16 +193,19 @@ public final class View implements Observer {
            this.showImportWizard(missAccount.connect);
        } else if (arg instanceof ViewEvent.Exception) {
            ViewEvent.Exception exception = (ViewEvent.Exception) arg;
-           this.showException(exception.exception);
+           mNotifier.showException(exception.exception);
        } else if (arg instanceof ViewEvent.SecurityError) {
            ViewEvent.SecurityError error = (ViewEvent.SecurityError) arg;
-           this.showSecurityErrors(error.message);
+           mNotifier.showSecurityErrors(error.message);
        } else if (arg instanceof ViewEvent.NewMessage) {
            ViewEvent.NewMessage newMessage = (ViewEvent.NewMessage) arg;
            mNotifier.onNewMessage(newMessage.message);
        } else if (arg instanceof ViewEvent.NewKey) {
            ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
-           this.confirmNewKey(newKey.contact, newKey.key);
+           mNotifier.confirmNewKey(newKey.contact, newKey.key);
+       } else if (arg instanceof ViewEvent.ContactDeleted) {
+           ViewEvent.ContactDeleted contactDeleted = (ViewEvent.ContactDeleted) arg;
+           mNotifier.confirmContactDeletion(contactDeleted.contact);
        } else {
            LOGGER.warning("unexpected argument");
        }
@@ -290,92 +283,6 @@ public final class View implements Observer {
     void showImportWizard(boolean connect) {
         WebDialog importFrame = new ImportDialog(this, connect);
         importFrame.setVisible(true);
-    }
-
-    private void showException(KonException ex) {
-        if (ex.getError() == KonException.Error.LOAD_KEY_DECRYPT) {
-            this.showPasswordDialog(true);
-            return;
-        }
-        String errorText = Utils.getErrorText(ex);
-        Icon icon = NotificationIcon.error.getIcon();
-        NotificationManager.showNotification(mContent, errorText, icon);
-    }
-
-    // TODO more information for message exs
-    private void showSecurityErrors(KonMessage message) {
-        String errorText = "<html>";
-
-        boolean isOut = !message.isInMessage();
-        errorText += isOut ? Tr.tr("Encryption error") : Tr.tr("Decryption error");
-        errorText += ":";
-
-        for (Coder.Error error : message.getCoderStatus().getErrors()) {
-            errorText += "<br>";
-            switch (error) {
-                case UNKNOWN_ERROR:
-                    errorText += Tr.tr("Unknown error");
-                    break;
-                case KEY_UNAVAILABLE:
-                    errorText += Tr.tr("Key for receiver not found.");
-                    break;
-                case INVALID_PRIVATE_KEY:
-                    errorText += Tr.tr("This message was encrypted with an old or invalid key");
-                    break;
-                default:
-                    errorText += Tr.tr("Unusual coder error")+": " + error.toString();
-            }
-        }
-
-        errorText += "</html>";
-
-        // TODO too intrusive for user, but use the explanation above for message view
-        //NotificationManager.showNotification(mChatView, errorText);
-    }
-
-    private void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {
-        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
-        panel.setOpaque(false);
-
-        panel.add(new WebLabel(Tr.tr("Received new key for contact")).setBoldFont());
-        panel.add(new WebSeparator(true, true));
-
-        panel.add(new WebLabel(Tr.tr("Contact:")));
-        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
-        panel.add(new WebLabel(contactText).setBoldFont());
-
-        panel.add(new WebLabel(Tr.tr("Key fingerprint:")));
-        WebTextArea fpArea = Utils.createFingerprintArea();
-        fpArea.setText(Utils.fingerprint(key.fingerprint));
-        panel.add(fpArea);
-
-        String expl = Tr.tr("When declining the key further communication to and from this contact will be blocked.");
-        WebTextArea explArea = new WebTextArea(expl, 3, 30);
-        explArea.setEditable(false);
-        explArea.setLineWrap(true);
-        explArea.setWrapStyleWord(true);
-        panel.add(explArea);
-
-        WebNotificationPopup popup = NotificationManager.showNotification(panel,
-                NotificationOption.accept, NotificationOption.decline,
-                NotificationOption.cancel);
-        popup.setClickToClose(false);
-        popup.addNotificationListener(new NotificationListener() {
-            @Override
-            public void optionSelected(NotificationOption option) {
-                switch (option) {
-                    case accept :
-                        mControl.acceptKey(contact, key);
-                        break;
-                    case decline :
-                        mControl.declineKey(contact);
-                }
-            }
-            @Override
-            public void accepted() {}
-            @Override
-            public void closed() {}
-        });
     }
 
     /* view to control */

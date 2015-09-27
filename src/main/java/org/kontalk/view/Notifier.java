@@ -18,10 +18,14 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.panel.GroupPanel;
 import com.alee.global.StyleConstants;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.text.WebTextArea;
+import com.alee.managers.notification.NotificationIcon;
 import com.alee.managers.notification.NotificationListener;
 import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.notification.NotificationOption;
@@ -34,11 +38,18 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
 import javax.swing.Icon;
+import org.kontalk.crypto.Coder;
+import org.kontalk.crypto.PGPUtils;
+import org.kontalk.misc.KonException;
+import org.kontalk.model.Contact;
 import org.kontalk.model.InMessage;
+import org.kontalk.model.KonMessage;
 import org.kontalk.util.MediaUtils;
+import org.kontalk.util.Tr;
+import static org.kontalk.view.View.GAP_DEFAULT;
 
 /**
- * Inform contact about events.
+ * Inform user about events.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class Notifier {
@@ -51,11 +62,134 @@ final class Notifier {
         mView = view;
     }
 
-    public void onNewMessage(InMessage newMessage) {
+    void onNewMessage(InMessage newMessage) {
         if (newMessage.getChat() == mView.getCurrentShownChat().orElse(null) &&
                 mView.mainFrameIsFocused())
             return;
         MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);
+    }
+
+    void showException(KonException ex) {
+        if (ex.getError() == KonException.Error.LOAD_KEY_DECRYPT) {
+            mView.showPasswordDialog(true);
+            return;
+        }
+        String errorText = Utils.getErrorText(ex);
+        Icon icon = NotificationIcon.error.getIcon();
+        NotificationManager.showNotification(errorText, icon);
+    }
+
+    // TODO more information for message exs
+    void showSecurityErrors(KonMessage message) {
+        String errorText = "<html>";
+
+        boolean isOut = !message.isInMessage();
+        errorText += isOut ? Tr.tr("Encryption error") : Tr.tr("Decryption error");
+        errorText += ":";
+
+        for (Coder.Error error : message.getCoderStatus().getErrors()) {
+            errorText += "<br>";
+            switch (error) {
+                case UNKNOWN_ERROR:
+                    errorText += Tr.tr("Unknown error");
+                    break;
+                case KEY_UNAVAILABLE:
+                    errorText += Tr.tr("Key for receiver not found.");
+                    break;
+                case INVALID_PRIVATE_KEY:
+                    errorText += Tr.tr("This message was encrypted with an old or invalid key");
+                    break;
+                default:
+                    errorText += Tr.tr("Unusual coder error")+": " + error.toString();
+            }
+        }
+
+        errorText += "</html>";
+
+        // TODO too intrusive for user, but use the explanation above for message view
+        //NotificationManager.showNotification(mChatView, errorText);
+    }
+
+    void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {
+        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
+        panel.setOpaque(false);
+
+        panel.add(new WebLabel(Tr.tr("Received new key for contact")).setBoldFont());
+        panel.add(new WebSeparator(true, true));
+
+        panel.add(new WebLabel(Tr.tr("Contact:")));
+        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
+        panel.add(new WebLabel(contactText).setBoldFont());
+
+        panel.add(new WebLabel(Tr.tr("Key fingerprint:")));
+        WebTextArea fpArea = Utils.createFingerprintArea();
+        fpArea.setText(Utils.fingerprint(key.fingerprint));
+        panel.add(fpArea);
+
+        String expl = Tr.tr("When declining the key further communication to and from this contact will be blocked.");
+        WebTextArea explArea = new WebTextArea(expl, 3, 30);
+        explArea.setEditable(false);
+        explArea.setLineWrap(true);
+        explArea.setWrapStyleWord(true);
+        panel.add(explArea);
+
+        WebNotificationPopup popup = NotificationManager.showNotification(panel,
+                NotificationOption.accept, NotificationOption.decline,
+                NotificationOption.cancel);
+        popup.setClickToClose(false);
+        popup.addNotificationListener(new NotificationListener() {
+            @Override
+            public void optionSelected(NotificationOption option) {
+                switch (option) {
+                    case accept :
+                        mView.getControl().acceptKey(contact, key);
+                        break;
+                    case decline :
+                        mView.getControl().declineKey(contact);
+                }
+            }
+            @Override
+            public void accepted() {}
+            @Override
+            public void closed() {}
+        });
+    }
+
+    void confirmContactDeletion(final Contact contact) {
+        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
+        panel.setOpaque(false);
+
+        panel.add(new WebLabel(Tr.tr("Contact was deleted on server")).setBoldFont());
+        panel.add(new WebSeparator(true, true));
+
+        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
+        panel.add(new WebLabel(contactText).setBoldFont());
+
+        String expl = Tr.tr("Remove this contact from your contact list?") + "\n" +
+                View.REMOVE_CONTACT_NOTE;
+        WebTextArea explArea = new WebTextArea(expl, 3, 30);
+        explArea.setEditable(false);
+        explArea.setLineWrap(true);
+        explArea.setWrapStyleWord(true);
+        panel.add(explArea);
+
+        WebNotificationPopup popup = NotificationManager.showNotification(panel,
+                NotificationOption.yes, NotificationOption.no,
+                NotificationOption.cancel);
+        popup.setClickToClose(false);
+        popup.addNotificationListener(new NotificationListener() {
+            @Override
+            public void optionSelected(NotificationOption option) {
+                switch (option) {
+                    case yes :
+                        mView.getControl().deleteContact(contact);
+                }
+            }
+            @Override
+            public void accepted() {}
+            @Override
+            public void closed() {}
+        });
     }
 
     // TODO not used
