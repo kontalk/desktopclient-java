@@ -343,6 +343,10 @@ public final class Control {
             return Optional.empty();
         }
 
+        if (name.isEmpty() && !XMPPUtils.isHash(jid)){
+            name = XmppStringUtils.parseLocalpart(jid);
+        }
+
         Optional<Contact> optNewContact = ContactList.getInstance().createContact(jid, name);
         if (!optNewContact.isPresent()) {
             LOGGER.warning("can't create new contact");
