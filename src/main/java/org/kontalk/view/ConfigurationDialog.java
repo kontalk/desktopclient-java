@@ -127,38 +127,35 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebLabel(Tr.tr("Main Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
-            mConnectStartupBox = new WebCheckBox(Tr.tr("Connect on startup"));
-            mConnectStartupBox.setAnimated(false);
-            mConnectStartupBox.setSelected(mConf.getBoolean(Config.MAIN_CONNECT_STARTUP));
+            mConnectStartupBox = createCheckBox(Tr.tr("Connect on startup"),
+                    "",
+                    mConf.getBoolean(Config.MAIN_CONNECT_STARTUP));
             groupPanel.add(mConnectStartupBox);
 
-            mTrayBox = new WebCheckBox(Tr.tr("Show tray icon"));
-            mTrayBox.setAnimated(false);
-            mTrayBox.setSelected(mConf.getBoolean(Config.MAIN_TRAY));
+            mTrayBox = createCheckBox(Tr.tr("Show tray icon"),
+                    "",
+                    mConf.getBoolean(Config.MAIN_TRAY));
             mTrayBox.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {
                     mCloseTrayBox.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
                 }
             });
-            mCloseTrayBox = new WebCheckBox(Tr.tr("Close to tray"));
-            mCloseTrayBox.setAnimated(false);
-            mCloseTrayBox.setSelected(mConf.getBoolean(Config.MAIN_TRAY_CLOSE));
+            mCloseTrayBox = createCheckBox(Tr.tr("Close to tray"),
+                    "",
+                    mConf.getBoolean(Config.MAIN_TRAY_CLOSE));
             mCloseTrayBox.setEnabled(mTrayBox.isSelected());
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT, mTrayBox, mCloseTrayBox));
 
-            mEnterSendsBox = new WebCheckBox(Tr.tr("Enter key sends"));
-            mEnterSendsBox.setAnimated(false);
-            mEnterSendsBox.setSelected(mConf.getBoolean(Config.MAIN_ENTER_SENDS));
-            String enterSendsToolText =
-                    Tr.tr("Enter key sends text, Control+Enter adds new line - or vice versa");
-            TooltipManager.addTooltip(mEnterSendsBox, enterSendsToolText);
+            mEnterSendsBox = createCheckBox(Tr.tr("Enter key sends"),
+                    Tr.tr("Enter key sends text, Control+Enter adds new line - or vice versa"),
+                    mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
-            mBGBox = new WebCheckBox(Tr.tr("Custom background:")+" ");
-            mBGBox.setAnimated(false);
             String bgPath = mConf.getString(Config.VIEW_CHAT_BG);
-            mBGBox.setSelected(!bgPath.isEmpty());
+            mBGBox = createCheckBox(Tr.tr("Custom background:")+" ",
+                    "",
+                    !bgPath.isEmpty());
             mBGBox.addItemListener(new ItemListener() {
                 @Override
                 public void itemStateChanged(ItemEvent e) {
@@ -228,11 +225,9 @@ final class ConfigurationDialog extends WebDialog {
             serverPanel.add(new GroupPanel(new WebLabel("  "+Tr.tr("Port:")), mPortField),
                     BorderLayout.EAST);
             groupPanel.add(serverPanel);
-            mDisableCertBox = new WebCheckBox(Tr.tr("Disable certificate validation"));
-            mDisableCertBox.setAnimated(false);
-            mDisableCertBox.setSelected(!mConf.getBoolean(Config.SERV_CERT_VALIDATION));
-            String disableCertText = Tr.tr("Disable SSL certificate server validation");
-            TooltipManager.addTooltip(mDisableCertBox, disableCertText);
+            mDisableCertBox = createCheckBox(Tr.tr("Disable certificate validation"),
+                    Tr.tr("Disable SSL certificate server validation"),
+                    !mConf.getBoolean(Config.SERV_CERT_VALIDATION));
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
             groupPanel.add(new WebSeparator(true, true));
@@ -301,6 +296,7 @@ final class ConfigurationDialog extends WebDialog {
     private class PrivacyPanel extends WebPanel {
 
         private final WebCheckBox mChatStateBox;
+        private final WebCheckBox mRosterNameBox;
 
         PrivacyPanel() {
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
@@ -309,19 +305,33 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebLabel(Tr.tr("Privacy Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
-            mChatStateBox = new WebCheckBox(Tr.tr("Send chatstate notification"));
-            mChatStateBox.setAnimated(false);
-            mChatStateBox.setSelected(mConf.getBoolean(Config.NET_SEND_CHAT_STATE));
-            String chatStateText = Tr.tr("Send chat activity (typing,...) to other user");
-            TooltipManager.addTooltip(mChatStateBox, chatStateText);
+            mChatStateBox = createCheckBox(Tr.tr("Send chatstate notification"),
+                    Tr.tr("Send chat activity (typing,...) to other user"),
+                    mConf.getBoolean(Config.NET_SEND_CHAT_STATE));
             groupPanel.add(new GroupPanel(mChatStateBox, new WebSeparator()));
+
+            mRosterNameBox = createCheckBox(Tr.tr("Upload contact names"),
+                    Tr.tr("Upload your contact names to server for client synchronization"),
+                    mConf.getBoolean(Config.NET_SEND_ROSTER_NAME));
+            groupPanel.add(new GroupPanel(mRosterNameBox, new WebSeparator()));
 
             this.add(groupPanel);
         }
 
         private void saveConfiguration() {
             mConf.setProperty(Config.NET_SEND_CHAT_STATE, mChatStateBox.isSelected());
+            mConf.setProperty(Config.NET_SEND_ROSTER_NAME, mRosterNameBox.isSelected());
         }
+    }
+
+    private static WebCheckBox createCheckBox(String title, String tooltip, boolean selected) {
+        WebCheckBox checkBox = new WebCheckBox(Tr.tr(title));
+        checkBox.setAnimated(false);
+        checkBox.setSelected(selected);
+        String rosterNameText = Tr.tr(tooltip);
+        if (!tooltip.isEmpty())
+            TooltipManager.addTooltip(checkBox, rosterNameText);
+        return checkBox;
     }
 
     private static String getPassTitle() {
