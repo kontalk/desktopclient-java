@@ -406,7 +406,7 @@ final class ComponentUtils {
                 }
             });
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
-                    new WebLabel(Tr.tr("Subject:"+" ")), mSubjectField));
+                    new WebLabel(Tr.tr("Subject:")+" "), mSubjectField));
 
             mList = new ContactSelectionList();
             mList.setVisibleRowCount(10);
