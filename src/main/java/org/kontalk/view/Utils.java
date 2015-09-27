@@ -242,7 +242,7 @@ final class Utils {
 
     static String mainStatus(Contact u, boolean pre) {
         Contact.Subscription subStatus = u.getSubScription();
-        return u.isMe() ? Tr.tr("Me myself") :
+        return u.isMe() ? Tr.tr("Myself") :
                     u.isBlocked() ? Tr.tr("Blocked") :
                     u.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
                     subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
