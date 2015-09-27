@@ -357,6 +357,11 @@ final class ComponentUtils {
             mView.getControl().createContact(jid,
                     mNameField.getText(),
                     mEncryptionBox.isSelected());
+
+            // reset fields
+            mNameField.setText("");
+            mJIDField.setText("");
+            mNumberField.setText("");
         }
 
         private static void addListener(final AddContactPanel panel,
