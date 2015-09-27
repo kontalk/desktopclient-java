@@ -452,6 +452,27 @@ public final class Client implements StanzaListener, Runnable {
         return true;
     }
 
+    public boolean updateRosterEntry(String jid, String newName) {
+        if (!this.isConnected()) {
+            LOGGER.info("not connected");
+            return false;
+        }
+        Roster roster = Roster.getInstanceFor(mConn);
+        RosterEntry entry = roster.getEntry(jid);
+        if (entry == null) {
+            LOGGER.warning("can't find roster entry for jid: "+jid);
+            return true;
+        }
+        try {
+            entry.setName(newName);
+        } catch (SmackException.NotConnectedException |
+                SmackException.NoResponseException |
+                XMPPException.XMPPErrorException ex) {
+            LOGGER.log(Level.WARNING, "can't set name for entry", ex);
+        }
+        return true;
+    }
+
     @Override
     public void run() {
         while (true) {

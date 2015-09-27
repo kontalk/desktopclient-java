@@ -520,6 +520,14 @@ public final class Control {
             ContactList.getInstance().changeJID(contact, jid);
         }
 
+        public void changeName(Contact contact, String name) {
+            if (Config.getInstance().getBoolean(Config.NET_SEND_ROSTER_NAME))
+                // TODO care about success?
+                mClient.updateRosterEntry(contact.getJID(), name);
+
+            contact.setName(name);
+        }
+
         public void requestKey(Contact contact) {
             Control.this.sendKeyRequest(contact);
         }
