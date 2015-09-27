@@ -349,7 +349,7 @@ public final class Control {
         newContact.setEncrypted(encrypted);
 
         if (!newContact.isMe()) {
-            String rosterName = Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE) ?
+            String rosterName = Config.getInstance().getBoolean(Config.NET_SEND_ROSTER_NAME) ?
                     newContact.getName() :
                     "";
             boolean succ = mClient.addToRoster(newContact.getJID(), rosterName);
