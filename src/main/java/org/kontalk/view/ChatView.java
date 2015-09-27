@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
+import java.util.Set;
 import javax.swing.Box;
 import javax.swing.JFileChooser;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
@@ -168,7 +169,7 @@ final class ChatView extends WebPanel implements Observer {
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
             public void documentChanged(DocumentEvent e) {
-                ChatView.this.handleKeyTypeEvent(e.getDocument().getLength() == 0);
+                ChatView.this.onKeyTypeEvent(e.getDocument().getLength() == 0);
             }
         });
         EventQueue.invokeLater(new Runnable() {
@@ -277,6 +278,7 @@ final class ChatView extends WebPanel implements Observer {
         mCurrentChat.addObserver(this);
 
         this.updateTitles();
+        this.checkDisabled();
         if (!mChatCache.containsKey(mCurrentChat.getID())) {
             MessageList newMessageList = new MessageList(mView, this, mCurrentChat);
             mCurrentChat.addObserver(newMessageList);
@@ -390,6 +392,9 @@ final class ChatView extends WebPanel implements Observer {
         if (arg instanceof String || arg instanceof Contact) {
             this.updateTitles();
         }
+        if(arg instanceof Contact) {
+            this.checkDisabled();
+        }
     }
 
     private void updateTitles() {
@@ -418,7 +423,7 @@ final class ChatView extends WebPanel implements Observer {
         mPopup.showPopup();
     }
 
-    private void handleKeyTypeEvent(boolean empty) {
+    private void onKeyTypeEvent(boolean empty) {
         mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
 
         Optional<Chat> optChat = this.getCurrentChat();
@@ -428,6 +433,27 @@ final class ChatView extends WebPanel implements Observer {
         // workaround: clearing the text area is not a key event
         if (!empty)
             mView.getControl().handleOwnChatStateEvent(optChat.get(), ChatState.composing);
+    }
+
+    private void checkDisabled() {
+        boolean disable = false;
+        if (mCurrentChat == null) {
+            disable = true;
+        } else {
+            Set<Contact> contacts = mCurrentChat.getContacts();
+            if (contacts.isEmpty()) {
+                disable = true;
+            } else {
+                for (Contact c : contacts)
+                    disable |= (c.isBlocked() || c.isDeleted());
+            }
+        }
+
+        // TODO: also disable if user not in group member list
+
+        mSendButton.setEnabled(!disable);
+        mSendTextArea.setEnabled(!disable);
+        mSendTextArea.setBackground(disable ? Color.LIGHT_GRAY : Color.WHITE);
     }
 
     private void sendMsg() {
