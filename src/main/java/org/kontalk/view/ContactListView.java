@@ -261,7 +261,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
                 @Override
                 public void actionPerformed(ActionEvent event) {
                     String text = Tr.tr("Permanently delete this contact?") + "\n" +
-                            Tr.tr("Chats and messages will not be deleted.");
+                            View.REMOVE_CONTACT_NOTE;
                     if (!Utils.confirmDeletion(ContactListView.this, text))
                         return;
                     mView.getControl().deleteContact(mItem.mValue);
