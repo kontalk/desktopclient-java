@@ -357,14 +357,7 @@ public final class Control {
 
         newContact.setEncrypted(encrypted);
 
-        if (!newContact.isMe()) {
-            String rosterName = Config.getInstance().getBoolean(Config.NET_SEND_ROSTER_NAME) ?
-                    newContact.getName() :
-                    "";
-            boolean succ = mClient.addToRoster(newContact.getJID(), rosterName);
-            if (!succ)
-                LOGGER.warning("can't add new contact to roster: "+newContact);
-        }
+        this.addToRoster(newContact);
 
         return Optional.of(newContact);
     }
@@ -390,6 +383,25 @@ public final class Control {
 
     private void download(InMessage message){
         mAttachmentManager.queueDownload(message);
+    }
+
+    private void addToRoster(Contact contact) {
+        if (contact.isMe())
+            return;
+
+        String rosterName = Config.getInstance().getBoolean(Config.NET_SEND_ROSTER_NAME) ?
+                contact.getName() :
+                "";
+        boolean succ = mClient.addToRoster(contact.getJID(), rosterName);
+        if (!succ)
+            LOGGER.warning("can't add new contact to roster: "+contact);
+    }
+
+    private void removeFromRoster(Contact contact) {
+        boolean succ = mClient.removeFromRoster(contact.getJID());
+        if (!succ) {
+            LOGGER.warning("could not remove contact from roster");
+        }
     }
 
     /* static */
@@ -509,10 +521,7 @@ public final class Control {
         public void deleteContact(Contact contact) {
             ContactList.getInstance().remove(contact);
 
-            boolean succ = mClient.removeFromRoster(contact.getJID());
-            if (!succ) {
-                LOGGER.warning("could not remove contact from roster");
-            }
+            Control.this.removeFromRoster(contact);
 
             contact.setDeleted();
         }
@@ -526,7 +535,9 @@ public final class Control {
             if (contact.getJID().equals(jid))
                 return;
 
+            Control.this.removeFromRoster(contact);
             ContactList.getInstance().changeJID(contact, jid);
+            Control.this.addToRoster(contact);
         }
 
         public void changeName(Contact contact, String name) {
