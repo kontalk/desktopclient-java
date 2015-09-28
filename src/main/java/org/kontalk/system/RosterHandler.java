@@ -21,6 +21,7 @@ package org.kontalk.system;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.client.Client;
@@ -38,6 +39,10 @@ public final class RosterHandler {
 
     private final Control mControl;
     private final Client mClient;
+
+    public enum Error {
+        SERVER_NOT_FOUND
+    }
 
     RosterHandler(Control control, Client client) {
         mControl = control;
@@ -132,6 +137,38 @@ public final class RosterHandler {
             LOGGER.info("detected public key change, requesting new key...");
             mControl.sendKeyRequest(contact);
         }
+    }
+
+    public void onPresenceError(String jid, XMPPError.Type type, XMPPError.Condition condition) {
+        if (type != XMPPError.Type.CANCEL)
+            // it can't be that bad)
+            return;
+
+        Error error = null;
+        switch (condition) {
+            case remote_server_not_found:
+                error = Error.SERVER_NOT_FOUND;
+        }
+        if (error == null) {
+            LOGGER.warning("unhandled error condition: "+condition);
+            return;
+        }
+
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (!optContact.isPresent()) {
+            if (!this.isMe(jid))
+                LOGGER.warning("can't find contact with jid:" + jid);
+            return;
+        }
+        Contact contact = optContact.get();
+
+        if (contact.getOnline() == Contact.Online.ERROR)
+            // we already know this
+            return;
+
+        contact.setOnlineError();
+
+        mControl.getViewControl().changed(new ViewEvent.PresenceError(contact, error));
     }
 
     /* private */

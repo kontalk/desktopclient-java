@@ -22,6 +22,7 @@ import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Contact;
+import org.kontalk.system.RosterHandler;
 
 /**
  * Events passed from controller to view.
@@ -92,6 +93,17 @@ public class ViewEvent {
 
         public ContactDeleted(Contact contact) {
             this.contact = contact;
+        }
+    }
+
+    /** A presence error. */
+    public static class PresenceError extends ViewEvent {
+        public final Contact contact;
+        public final RosterHandler.Error error;
+
+        public PresenceError(Contact contact, RosterHandler.Error error) {
+            this.contact = contact;
+            this.error = error;
         }
     }
 }

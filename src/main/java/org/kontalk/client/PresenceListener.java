@@ -56,7 +56,12 @@ public class PresenceListener implements StanzaListener {
         Presence presence = (Presence) packet;
 
         if (presence.getType() == Presence.Type.error) {
-            LOGGER.warning("ignoring presence error");
+            XMPPError error = presence.getError();
+            if (error == null) {
+                LOGGER.warning("error presence does not contain error");
+                return;
+            }
+            mHandler.onPresenceError(presence.getFrom(), error.getType(), error.getCondition());
             return;
         }
 

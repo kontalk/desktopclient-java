@@ -45,7 +45,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
      * Online status of one contact.
      * Not saved to database.
      */
-    public static enum Online {UNKNOWN, YES, NO};
+    public static enum Online {UNKNOWN, YES, NO, ERROR};
 
     /**
      * XMPP subscription status in roster.
@@ -195,6 +195,11 @@ public final class Contact extends Observable implements Comparable<Contact> {
         }
     }
 
+    public void setOnlineError() {
+        mAvailable = Online.ERROR;
+        this.changed(mAvailable);
+    }
+
     /**
      * Reset online status when client is disconnected.
      */
@@ -248,7 +253,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
 
     public boolean isMe() {
         return !mJID.isEmpty() &&
-                mJID.equals(Config.getInstance().getProperty(Config.ACC_JID));
+                mJID.equals(Config.getInstance().getString(Config.ACC_JID));
     }
 
     /**
