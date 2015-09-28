@@ -232,17 +232,11 @@ final class Decryptor {
         PGPObjectFactory plainFactory = new PGPObjectFactory(clear, PGPUtils.FP_CALC);
 
         Object object = plainFactory.nextObject(); // nullable
-
-        if (!(object instanceof PGPCompressedData)) {
-            LOGGER.warning("data packet not compressed");
-            result.errors.add(Coder.Error.INVALID_DATA);
-            return result;
+        if (object instanceof PGPCompressedData) {
+            PGPCompressedData cData = (PGPCompressedData) object;
+            plainFactory = new PGPObjectFactory(cData.getDataStream(), PGPUtils.FP_CALC);
+            object = plainFactory.nextObject(); // nullable
         }
-
-        PGPCompressedData cData = (PGPCompressedData) object;
-        PGPObjectFactory pgpFact = new PGPObjectFactory(cData.getDataStream(), PGPUtils.FP_CALC);
-
-        object = pgpFact.nextObject(); // nullable
 
         // the first object could be the signature list
         // get signature from it
@@ -266,7 +260,7 @@ final class Decryptor {
                     ops = null;
                 }
             }
-            object = pgpFact.nextObject(); // nullable
+            object = plainFactory.nextObject(); // nullable
         } else {
             LOGGER.warning("signature list not found");
             result.signing = Coder.Signing.NOT;
@@ -288,7 +282,7 @@ final class Decryptor {
         }
 
         if (ops != null) {
-            result = verifySignature(result, pgpFact, ops);
+            result = verifySignature(result, plainFactory, ops);
         }
 
         // verify message integrity
