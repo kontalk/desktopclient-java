@@ -47,17 +47,16 @@ public final class RosterHandler {
     /* from client */
 
     public void onEntryAdded(String jid,
-        String rosterName,
-        RosterPacket.ItemType type,
-        RosterPacket.ItemStatus itemStatus) {
+            String name,
+            RosterPacket.ItemType type,
+            RosterPacket.ItemStatus itemStatus) {
         if (ContactList.getInstance().contains(jid)) {
-            this.onSubcriptionUpdate(jid, type, itemStatus);
+            this.onEntryUpdate(jid, name, type, itemStatus);
             return;
         }
 
         LOGGER.info("adding contact from roster, jid: "+jid);
 
-        String name = rosterName == null ? "" : rosterName;
         if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
                 XMPPUtils.isHash(jid)) {
             // this must be the hash string, don't use it as name
@@ -88,7 +87,8 @@ public final class RosterHandler {
         mControl.getViewControl().changed(new ViewEvent.ContactDeleted(optContact.get()));
     }
 
-    public void onSubcriptionUpdate(String jid,
+    public void onEntryUpdate(String jid,
+            String name,
             RosterPacket.ItemType type,
             RosterPacket.ItemStatus itemStatus) {
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
@@ -96,7 +96,14 @@ public final class RosterHandler {
             LOGGER.warning("can't find contact with jid: "+jid);
             return;
         }
-        optContact.get().setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
+        Contact contact = optContact.get();
+        // subcription may have changed
+        contact.setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
+
+        // name may have changed
+        if (contact.getName().isEmpty() &&
+                !name.equals(XmppStringUtils.parseLocalpart(jid)))
+            contact.setName(name);
     }
 
     public void onPresenceChange(String jid, Presence.Type type, String status) {

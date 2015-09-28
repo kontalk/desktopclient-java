@@ -20,6 +20,7 @@ package org.kontalk.client;
 
 import java.util.Collection;
 import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
 
 import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
@@ -59,7 +60,7 @@ final class KonRosterListener implements RosterListener {
 
             LOGGER.config("entry: "+entry.toString());
             mHandler.onEntryAdded(entry.getUser(),
-                    entry.getName(),
+                    StringUtils.defaultString(entry.getName()),
                     entry.getType(),
                     entry.getStatus());
         }
@@ -76,7 +77,8 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.info("entry: "+entry.toString());
-            mHandler.onSubcriptionUpdate(entry.getUser(),
+            mHandler.onEntryUpdate(entry.getUser(),
+                    StringUtils.defaultString(entry.getName()),
                     entry.getType(),
                     entry.getStatus());
         }
