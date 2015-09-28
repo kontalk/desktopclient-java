@@ -19,18 +19,24 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
+import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.RosterHandler;
 
 /**
- * Listen for presence packets. They also may include a custom Kontalk extension
- * for the public key fingerprint of a contact.
+ * Listen for presence packets.
+ *
+ * The presence stanza also may include a public key fingerprint
+ * extension (custom Kontalk extension, based on XEP-0189) and/or a signature
+ * extension for signing the status element (XEP-0027).
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class PresenceListener implements StanzaListener {
@@ -47,6 +53,11 @@ public class PresenceListener implements StanzaListener {
                 PublicKeyPresence.ELEMENT_NAME,
                 PublicKeyPresence.NAMESPACE,
                 new PublicKeyPresence.Provider());
+
+        ProviderManager.addExtensionProvider(
+                PresenceSignature.ELEMENT_NAME,
+                PresenceSignature.NAMESPACE,
+                new PresenceSignature.Provider());
     }
 
     @Override
@@ -70,25 +81,34 @@ public class PresenceListener implements StanzaListener {
 
         // NOTE: a delay extension is sometimes included, don't know why
         // ignoring mode, always null anyway
-        mHandler.onPresenceChange(bestPresence.getFrom(),
+        mHandler.onPresenceUpdate(bestPresence.getFrom(),
                 bestPresence.getType(),
                 bestPresence.getStatus());
 
         ExtensionElement publicKeyExt = presence.getExtension(
                 PublicKeyPresence.ELEMENT_NAME,
                 PublicKeyPresence.NAMESPACE);
-
-        if (publicKeyExt == null || !(publicKeyExt instanceof PublicKeyPresence))
-            // nothing more to do
-            return;
-
-        PublicKeyPresence publicKeyPresence = (PublicKeyPresence) publicKeyExt;
-        String fingerprint = publicKeyPresence.getFingerprint();
-        if (fingerprint == null || fingerprint.isEmpty()) {
-            LOGGER.warning("no fingerprint in public key presence extension");
-            return;
+        if (publicKeyExt instanceof PublicKeyPresence) {
+            PublicKeyPresence pubKey = (PublicKeyPresence) publicKeyExt;
+            String fingerprint = StringUtils.defaultString(pubKey.getFingerprint());
+            if (!fingerprint.isEmpty()) {
+                mHandler.onFingerprintPresence(jid, fingerprint);
+            } else {
+                LOGGER.warning("no fingerprint in public key presence extension");
+            }
         }
 
-        mHandler.onFingerprintPresence(jid, fingerprint);
+        ExtensionElement signatureExt = presence.getExtension(
+                PresenceSignature.ELEMENT_NAME,
+                PresenceSignature.NAMESPACE);
+        if (signatureExt instanceof PresenceSignature) {
+            PresenceSignature signing = (PresenceSignature) signatureExt;
+            String signature = StringUtils.defaultString(signing.getSignature());
+            if (!signature.isEmpty()) {
+                mHandler.onSignaturePresence(jid, signature);
+            } else {
+                LOGGER.warning("no signature in signed presence extension");
+            }
+        }
     }
 }
