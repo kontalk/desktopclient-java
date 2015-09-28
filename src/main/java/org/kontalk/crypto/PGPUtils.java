@@ -31,8 +31,10 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.io.IOUtils;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPEncryptedData;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyFlags;
@@ -44,7 +46,10 @@ import org.bouncycastle.openpgp.PGPPublicKeyRingCollection;
 import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
 import org.bouncycastle.openpgp.PGPSignature;
+import org.bouncycastle.openpgp.PGPSignatureList;
 import org.bouncycastle.openpgp.PGPSignatureSubpacketVector;
+import org.bouncycastle.openpgp.PGPUtil;
+import org.bouncycastle.openpgp.jcajce.JcaPGPObjectFactory;
 import org.bouncycastle.openpgp.operator.KeyFingerPrintCalculator;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
 import org.bouncycastle.openpgp.operator.PBESecretKeyEncryptor;
@@ -104,34 +109,27 @@ public final class PGPUtils {
      * Read a public key from key ring data.
      */
     public static Optional<PGPCoderKey> readPublicKey(byte[] publicKeyring) {
-        PGPPublicKeyRingCollection pgpPub;
-        try {
-            pgpPub = new PGPPublicKeyRingCollection(publicKeyring, FP_CALC);
-        } catch (IOException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't read public key ring", ex);
-            return Optional.empty();
-        }
-        Iterator<?> keyRingIter = pgpPub.getKeyRings();
-        if (!keyRingIter.hasNext()) {
-            LOGGER.warning("no key ring in key ring collection");
-            return Optional.empty();
-        }
         PGPPublicKey encryptKey = null;
         PGPPublicKey signKey = null;
         // for legacy keyring
         PGPPublicKey authKey = null;
         String uid = null;
         String fp = null;
-        PGPPublicKeyRing keyRing = (PGPPublicKeyRing) keyRingIter.next();
-        Iterator<?> keyIter = keyRing.getPublicKeys();
+
+        PGPPublicKeyRing keyRing = keyRingOrNull(publicKeyring);
+        if (keyRing == null)
+            return Optional.empty();
+
+        Iterator<PGPPublicKey> keyIter = keyRing.getPublicKeys();
         while (keyIter.hasNext()) {
-            PGPPublicKey key = (PGPPublicKey) keyIter.next();
+            PGPPublicKey key = keyIter.next();
             if (key.isMasterKey()) {
                 authKey = key;
                 fp = EncodingUtils.bytesToHex(key.getFingerprint());
                 Iterator<?> uidIt = key.getUserIDs();
                 if (uidIt.hasNext())
                     uid = (String) uidIt.next();
+                // TODO if more than one UID?
             } else if (isSigningKey(key)) {
                 signKey = key;
             } else if (key.isEncryptionKey()) {
@@ -213,5 +211,58 @@ public final class PGPUtils {
             // treat this special, cause most like the decryption password was wrong
             throw new KonException(KonException.Error.CHANGE_PASS_COPY, ex);
         }
+    }
+
+    public static String parseKeyIDFromSignature(String signatureData) {
+        Object o;
+        try {
+            JcaPGPObjectFactory pgpFact = new JcaPGPObjectFactory(
+                    PGPUtil.getDecoderStream(IOUtils.toInputStream(signatureData, "UTF-8")));
+            o = pgpFact.nextObject();
+            if (o instanceof PGPCompressedData) {
+                PGPCompressedData data = (PGPCompressedData) o;
+                pgpFact = new JcaPGPObjectFactory(data.getDataStream());
+                o = pgpFact.nextObject();
+            }
+        } catch (IOException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't get signature object", ex);
+            return "";
+        }
+
+        if (!(o instanceof PGPSignatureList)) {
+            LOGGER.warning("object not signature list");
+            return "";
+        }
+        PGPSignatureList signList = (PGPSignatureList) o;
+        if (signList.size() > 1) {
+            LOGGER.warning("more than one signature in signature list");
+        }
+        if (signList.isEmpty()) {
+            LOGGER.warning("signature list is empty");
+            return "";
+        }
+
+        return Long.toHexString(signList.get(0).getKeyID());
+    }
+
+    private static PGPPublicKeyRing keyRingOrNull(byte[] keyData) {
+        PGPPublicKeyRingCollection keyRingCollection;
+        try {
+            keyRingCollection = new PGPPublicKeyRingCollection(keyData, FP_CALC);
+        } catch (IOException | PGPException ex) {
+            LOGGER.log(Level.WARNING, "can't read public key ring", ex);
+            return null;
+        }
+
+        if (keyRingCollection.size() > 1) {
+            LOGGER.warning("more than one key ring in collection");
+        }
+
+        Iterator<PGPPublicKeyRing> keyRingIter = keyRingCollection.getKeyRings();
+        if (!keyRingIter.hasNext()) {
+            LOGGER.warning("no key ring in collection");
+            return null;
+        }
+        return keyRingIter.next();
     }
 }

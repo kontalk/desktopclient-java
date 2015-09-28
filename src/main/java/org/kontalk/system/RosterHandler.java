@@ -25,6 +25,7 @@ import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.client.Client;
+import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
@@ -111,7 +112,7 @@ public final class RosterHandler {
             contact.setName(name);
     }
 
-    public void onPresenceChange(String jid, Presence.Type type, String status) {
+    public void onPresenceUpdate(String jid, Presence.Type type, String status) {
         if (this.isMe(jid) && !ContactList.getInstance().contains(jid))
             // don't wanna see myself
             return;
@@ -137,6 +138,14 @@ public final class RosterHandler {
             LOGGER.info("detected public key change, requesting new key...");
             mControl.sendKeyRequest(contact);
         }
+    }
+
+    public void onSignaturePresence(String jid, String signature) {
+        String keyID = PGPUtils.parseKeyIDFromSignature(signature);
+        if (keyID.isEmpty())
+            return;
+
+        // TODO and now?
     }
 
     public void onPresenceError(String jid, XMPPError.Type type, XMPPError.Condition condition) {
