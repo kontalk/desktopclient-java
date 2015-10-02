@@ -18,7 +18,6 @@
 
 package org.kontalk.system;
 
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -33,7 +32,6 @@ import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import org.apache.commons.io.IOUtils;
-import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.util.StringUtils;
@@ -97,7 +95,7 @@ public final class AccountLoader {
         PersonalKey key;
         byte[] encodedPrivateKey;
         try {
-            encodedPrivateKey = disarm(privateKeyData);
+            encodedPrivateKey = PGPUtils.disarm(privateKeyData);
             key = PersonalKey.load(encodedPrivateKey,
                     password,
                     bridgeCertData);
@@ -160,7 +158,7 @@ public final class AccountLoader {
 
     private byte[] readArmoredFile(String filename) throws KonException {
         try {
-            return disarm(this.readFile(filename));
+            return PGPUtils.disarm(this.readFile(filename));
         } catch (IOException ex) {
              LOGGER.warning("can't read armored key file: "+ex.getLocalizedMessage());
             throw new KonException(KonException.Error.READ_FILE, ex);
@@ -205,10 +203,6 @@ public final class AccountLoader {
             throw new KonException(KonException.Error.IMPORT_READ_FILE, ex);
         }
         return bytes;
-    }
-
-    private static byte[] disarm(byte[] key) throws IOException {
-        return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
     }
 
     public synchronized static void initialize(Path keyDir)  {
