@@ -96,11 +96,11 @@ public final class Coder {
         return optMyKey.get();
     }
 
-    static PGPCoderKey contactkeyOrNull(Contact contact) {
+    public static Optional<PGPCoderKey> contactkey(Contact contact) {
         if (KEY_MAP.containsKey(contact)) {
             PGPCoderKey key = KEY_MAP.get(contact);
             if (key.fingerprint.equals(contact.getFingerprint()))
-                return key;
+                return Optional.of(key);
         }
 
         byte[] rawKey = contact.getKey();
@@ -108,12 +108,12 @@ public final class Coder {
             Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
             if (optKey.isPresent()) {
                 KEY_MAP.put(contact, optKey.get());
-                return optKey.get();
+                return optKey;
             }
         }
 
         LOGGER.warning("key not found for contact: "+contact);
-        return null;
+        return Optional.empty();
     }
 
     /**

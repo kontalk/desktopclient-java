@@ -101,7 +101,7 @@ final class Decryptor {
         ByteArrayOutputStream plainOut = new ByteArrayOutputStream();
         DecryptionResult decResult;
         try {
-            decResult = decryptAndVerify(encryptedIn, plainOut, myKey, senderKey.signKey);
+            decResult = decryptAndVerify(encryptedIn, plainOut, myKey.getPrivateEncryptionKey(), senderKey.signKey);
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't decrypt message", ex);
             return;
@@ -156,7 +156,7 @@ final class Decryptor {
         DecryptionResult decResult;
         try (FileInputStream encryptedIn = new FileInputStream(inFile);
                 FileOutputStream plainOut = new FileOutputStream(outFile)) {
-            decResult = decryptAndVerify(encryptedIn, plainOut, myKey, senderKey.signKey);
+            decResult = decryptAndVerify(encryptedIn, plainOut, myKey.getPrivateEncryptionKey(), senderKey.signKey);
         } catch (IOException | PGPException ex){
             LOGGER.log(Level.WARNING, "can't decrypt attachment", ex);
             message.setAttachmentErrors(EnumSet.of(Coder.Error.UNKNOWN_ERROR));
@@ -176,8 +176,11 @@ final class Decryptor {
             message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
             return false;
         }
-        senderKey = Coder.contactkeyOrNull(message.getContact());
-        if (senderKey == null) {
+        Optional<PGPUtils.PGPCoderKey> optKey = Coder.contactkey(message.getContact());
+
+        if (optKey.isPresent()) {
+            senderKey = optKey.get();
+        } else {
             message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
             return false;
         }
@@ -187,7 +190,7 @@ final class Decryptor {
     /** Decrypt, verify and write input stream data to output stream. */
     private static DecryptionResult decryptAndVerify(
             InputStream encryptedInput, OutputStream plainOutput,
-            PersonalKey myKey, PGPPublicKey senderSigningKey)
+            PGPPrivateKey myKey, PGPPublicKey senderSigningKey)
             throws PGPException, IOException {
         // note: the signature is inside the encrypted data
 
@@ -212,14 +215,14 @@ final class Decryptor {
         Iterator<?> it = encDataList.getEncryptedDataObjects();
         PGPPrivateKey sKey = null;
         PGPPublicKeyEncryptedData pbe = null;
-        long myKeyID = myKey.getPrivateEncryptionKey().getKeyID();
+        long myKeyID = myKey.getKeyID();
         while (sKey == null && it.hasNext()) {
             Object i = it.next();
             if (!(i instanceof PGPPublicKeyEncryptedData))
                 continue;
             pbe = (PGPPublicKeyEncryptedData) i;
             if (pbe.getKeyID() == myKeyID)
-                sKey = myKey.getPrivateEncryptionKey();
+                sKey = myKey;
         }
         if (sKey == null || pbe == null) {
             LOGGER.warning("private key for message not found");
@@ -317,6 +320,7 @@ final class Decryptor {
         }
 
         PGPSignature signature = signatureList.get(0);
+        // TODO signature.getCreationTime()
         if (ops.verify(signature)) {
             // signature verification successful!
             result.signing = Coder.Signing.VERIFIED;
