@@ -18,6 +18,8 @@
 
 package org.kontalk.system;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
@@ -25,6 +27,8 @@ import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.client.Client;
+import org.kontalk.client.HKPClient;
+import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Contact;
@@ -32,6 +36,7 @@ import org.kontalk.model.ContactList;
 import org.kontalk.util.XMPPUtils;
 
 /**
+ * Process incoming roster and presence changes.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -40,6 +45,12 @@ public final class RosterHandler {
 
     private final Control mControl;
     private final Client mClient;
+
+    private static final List<String> KEY_SERVERS = Arrays.asList(
+            "pgp.mit.edu"
+            // TODO: add CA for this
+            //"pool.sks-keyservers.net"
+            );
 
     public enum Error {
         SERVER_NOT_FOUND
@@ -140,12 +151,50 @@ public final class RosterHandler {
         }
     }
 
+    // TODO key IDs can be forged, searching by it is defective by design
     public void onSignaturePresence(String jid, String signature) {
-        String keyID = PGPUtils.parseKeyIDFromSignature(signature);
-        if (keyID.isEmpty())
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (!optContact.isPresent()) {
+            if (!this.isMe(jid))
+                LOGGER.warning("can't find contact with jid:" + jid);
+            return;
+        }
+        Contact contact = optContact.get();
+
+        long keyID = PGPUtils.parseKeyIDFromSignature(signature);
+        if (keyID == 0)
             return;
 
-        // TODO and now?
+        if (contact.hasKey()) {
+            Optional<PGPUtils.PGPCoderKey> optKey = Coder.contactkey(contact);
+            if (optKey.isPresent() && optKey.get().signKey.getKeyID() == keyID)
+                // already have this key
+                return;
+        }
+
+        String id = Long.toHexString(keyID);
+        HKPClient hkpClient = new HKPClient();
+        String foundKey = "";
+        for (String server: KEY_SERVERS) {
+            foundKey = hkpClient.search(server, id);
+            if (!foundKey.isEmpty())
+                break;
+        }
+        if (foundKey.isEmpty())
+            return;
+
+        Optional<PGPUtils.PGPCoderKey> optKey = PGPUtils.readPublicKey(foundKey);
+        if (!optKey.isPresent())
+            return;
+
+        PGPUtils.PGPCoderKey key = optKey.get();
+
+        if (key.signKey.getKeyID() != keyID) {
+            LOGGER.warning("key ID is not what we were searching for");
+            return;
+        }
+
+        mControl.getViewControl().changed(new ViewEvent.NewKey(optContact.get(), key));
     }
 
     public void onPresenceError(String jid, XMPPError.Type type, XMPPError.Condition condition) {
