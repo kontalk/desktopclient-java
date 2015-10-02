@@ -49,7 +49,6 @@ import org.bouncycastle.openpgp.PGPSignatureSubpacketGenerator;
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
-import static org.kontalk.crypto.Coder.contactkeyOrNull;
 import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
@@ -175,10 +174,10 @@ final class Encryptor {
     private static PGPUtils.PGPCoderKey[] receiverKeysOrNull(Contact[] contacts) {
         List<PGPUtils.PGPCoderKey> keys = new ArrayList<>(contacts.length);
         for (Contact c : contacts) {
-            PGPUtils.PGPCoderKey k = contactkeyOrNull(c);
-            if (k == null)
+            Optional<PGPUtils.PGPCoderKey> optKey = Coder.contactkey(c);
+            if (!optKey.isPresent())
                 return null;
-            keys.add(k);
+            keys.add(optKey.get());
         }
         return keys.toArray(new PGPUtils.PGPCoderKey[0]);
     }
