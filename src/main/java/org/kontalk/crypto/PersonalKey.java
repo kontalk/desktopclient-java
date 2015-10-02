@@ -32,11 +32,10 @@ import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
-import org.bouncycastle.openpgp.operator.PGPDigestCalculatorProvider;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
+import org.bouncycastle.util.encoders.Hex;
 import org.kontalk.misc.KonException;
-import org.kontalk.util.EncodingUtils;
 
 /**
  * Personal asymmetric encryption key.
@@ -97,7 +96,7 @@ public final class PersonalKey {
     }
 
     public String getFingerprint() {
-    	return EncodingUtils.bytesToHex(mAuthKey.getPublicKey().getFingerprint());
+    	return Hex.toHexString(mAuthKey.getPublicKey().getFingerprint());
     }
 
     /** Creates a {@link PersonalKey} from private and public key byte buffers. */
@@ -136,11 +135,13 @@ public final class PersonalKey {
             throw new KonException(KonException.Error.LOAD_KEY,
                     new PGPException("could not find all keys in key data"));
 
-        // decrypt private
-        PGPDigestCalculatorProvider calcProv = new JcaPGPDigestCalculatorProviderBuilder().build();
-        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(calcProv)
-            .setProvider(PGPUtils.PROVIDER)
-            .build(passphrase);
+        // decrypt private keys
+        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(
+                // TODO need this?
+                new JcaPGPDigestCalculatorProviderBuilder().build()
+        )
+                .setProvider(PGPUtils.PROVIDER)
+                .build(passphrase);
         PGPKeyPair authKeyPair = PGPUtils.decrypt(authKey, decryptor);
         PGPKeyPair signKeyPair = PGPUtils.decrypt(signKey, decryptor);
         PGPKeyPair encryptKeyPair = PGPUtils.decrypt(encrKey, decryptor);
