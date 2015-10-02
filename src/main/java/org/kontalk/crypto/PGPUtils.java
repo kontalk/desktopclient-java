@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.IOUtils;
+import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPCompressedData;
@@ -60,8 +61,8 @@ import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBu
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPKeyConverter;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyEncryptorBuilder;
+import org.bouncycastle.util.encoders.Hex;
 import org.kontalk.misc.KonException;
-import org.kontalk.util.EncodingUtils;
 
 /** Some PGP utility method, mainly for use by {@link PersonalKey}. */
 public final class PGPUtils {
@@ -85,7 +86,7 @@ public final class PGPUtils {
      */
     public static final class PGPCoderKey {
         final PGPPublicKey encryptKey;
-        final PGPPublicKey signKey;
+        public final PGPPublicKey signKey;
         public final String userID;
         public final String fingerprint;
         public final byte[] rawKey;
@@ -105,8 +106,25 @@ public final class PGPUtils {
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
     }
 
+    public static byte[] disarm(byte[] key) throws IOException {
+        return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
+    }
+
     /**
-     * Read a public key from key ring data.
+     * Read a public key from ASCII armored key ring data.
+     */
+    public static Optional<PGPCoderKey> readPublicKey(String armoredInput) {
+        try {
+            return readPublicKey(IOUtils.toByteArray(
+                    PGPUtil.getDecoderStream(IOUtils.toInputStream(armoredInput, "UTF-8"))));
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't read armored input", ex);
+            return Optional.empty();
+        }
+    }
+
+    /**
+     * Read a public key from key ring byte data.
      */
     public static Optional<PGPCoderKey> readPublicKey(byte[] publicKeyring) {
         PGPPublicKey encryptKey = null;
@@ -125,7 +143,7 @@ public final class PGPUtils {
             PGPPublicKey key = keyIter.next();
             if (key.isMasterKey()) {
                 authKey = key;
-                fp = EncodingUtils.bytesToHex(key.getFingerprint());
+                fp = Hex.toHexString(key.getFingerprint());
                 Iterator<?> uidIt = key.getUserIDs();
                 if (uidIt.hasNext())
                     uid = (String) uidIt.next();
@@ -178,7 +196,7 @@ public final class PGPUtils {
     }
 
     static boolean isSigningKey(PGPPublicKey key) {
-        int keyFlags = PGPUtils.getKeyFlags(key);
+        int keyFlags = getKeyFlags(key);
         return (keyFlags & PGPKeyFlags.CAN_SIGN) == PGPKeyFlags.CAN_SIGN;
     }
 
@@ -213,7 +231,7 @@ public final class PGPUtils {
         }
     }
 
-    public static String parseKeyIDFromSignature(String signatureData) {
+    public static long parseKeyIDFromSignature(String signatureData) {
         Object o;
         try {
             JcaPGPObjectFactory pgpFact = new JcaPGPObjectFactory(
@@ -226,12 +244,12 @@ public final class PGPUtils {
             }
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't get signature object", ex);
-            return "";
+            return 0;
         }
 
         if (!(o instanceof PGPSignatureList)) {
             LOGGER.warning("object not signature list");
-            return "";
+            return 0;
         }
         PGPSignatureList signList = (PGPSignatureList) o;
         if (signList.size() > 1) {
@@ -239,10 +257,10 @@ public final class PGPUtils {
         }
         if (signList.isEmpty()) {
             LOGGER.warning("signature list is empty");
-            return "";
+            return 0;
         }
 
-        return Long.toHexString(signList.get(0).getKeyID());
+        return signList.get(0).getKeyID();
     }
 
     private static PGPPublicKeyRing keyRingOrNull(byte[] keyData) {

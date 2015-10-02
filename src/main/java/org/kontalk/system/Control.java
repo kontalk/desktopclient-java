@@ -273,6 +273,9 @@ public final class Control {
     public void setKey(Contact contact, PGPCoderKey key) {
         contact.setKey(key.rawKey, key.fingerprint);
 
+        // enable encryption without asking
+        contact.setEncrypted(true);
+
         // if not set, use uid in key for contact name
         LOGGER.info("full UID in key: '" + key.userID + "'");
         if (contact.getName().isEmpty() && key.userID != null) {
