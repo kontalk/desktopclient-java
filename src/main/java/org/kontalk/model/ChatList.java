@@ -78,7 +78,7 @@ public final class ChatList extends Observable implements Observer {
      * Get a chat with only the contact as additional member.
      * Creates a new chat if necessary.
      */
-    public Chat get(Contact contact) {
+    public Chat getOrCreate(Contact contact) {
         Chat chat = this.getOrNull(contact);
         if (chat != null)
             return chat;
@@ -86,8 +86,20 @@ public final class ChatList extends Observable implements Observer {
         return this.createNew(contact);
     }
 
+    public Chat getOrCreate(String xmppThreadID, Contact contact) {
+        Optional<Chat> optChat = this.get(xmppThreadID);
+        if (optChat.isPresent())
+            return optChat.get();
+
+        return this.createNew(contact, xmppThreadID);
+    }
+
     public Chat createNew(Contact contact) {
-        Chat newChat = new Chat(contact);
+        return this.createNew(contact, "");
+    }
+
+    private Chat createNew(Contact contact, String xmppThreadID) {
+        Chat newChat = new Chat(contact, xmppThreadID);
         this.putSilent(newChat);
         this.changed(newChat);
         return newChat;
