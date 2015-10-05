@@ -77,23 +77,12 @@ public final class ContactList extends Observable {
     }
 
     /**
-     * Return all but deleted contacts.
-     */
-    public synchronized SortedSet<Contact> getAll() {
-        SortedSet<Contact> contact = new TreeSet<>();
-        for (Contact u : mJIDMap.values())
-            if (!u.isDeleted())
-                contact.add(u);
-        return contact;
-    }
-
-    /**
      * Create and add a new contact.
      * @param jid JID of new contact
      * @param name nickname of new contact, use an empty string if not known
      * @return the newly created contact, if one was created
      */
-    public synchronized Optional<Contact> createContact(String jid, String name) {
+    public synchronized Optional<Contact> create(String jid, String name) {
         if (!this.isValid(jid))
             return Optional.empty();
 
@@ -108,6 +97,68 @@ public final class ContactList extends Observable {
         return Optional.of(newContact);
     }
 
+    Contact getOrCreate(String jid) {
+        if (this.contains(jid))
+            return mJIDMap.get(jid);
+
+        // TODO creation without any safety checks
+        Contact newContact = new Contact(jid, "");
+
+        mJIDMap.put(newContact.getJID(), newContact);
+        mIDMap.put(newContact.getID(), newContact);
+
+        this.changed(newContact);
+        return newContact;
+    }
+
+    synchronized Optional<Contact> get(int id) {
+        Optional<Contact> optContact = Optional.ofNullable(mIDMap.get(id));
+        if (!optContact.isPresent())
+            LOGGER.warning("can't find contact with ID: "+id);
+        return optContact;
+    }
+
+    /**
+     * Get the contact for a JID (if the JID is in the list).
+     * Resource is removed for lookup.
+     * @param jid
+     * @return
+     */
+    public synchronized Optional<Contact> get(String jid) {
+        jid = XmppStringUtils.parseBareJid(jid);
+        return Optional.ofNullable(mJIDMap.get(jid));
+    }
+
+    /**
+     * Return all but deleted contacts.
+     */
+    public synchronized SortedSet<Contact> getAll() {
+        SortedSet<Contact> contact = new TreeSet<>();
+        for (Contact u : mJIDMap.values())
+            if (!u.isDeleted())
+                contact.add(u);
+        return contact;
+    }
+
+    public synchronized void remove(Contact contact) {
+        boolean removed = mJIDMap.remove(contact.getJID(), contact);
+        if (!removed) {
+            LOGGER.warning("can't find contact to remove: "+contact);
+        }
+        mIDMap.remove(contact.getID());
+        this.changed(contact);
+    }
+
+    /**
+     * Return whether a contact with a specified JID exists.
+     * Resource is removed for lookup.
+     * @param jid
+     * @return
+     */
+    public synchronized boolean contains(String jid) {
+        return mJIDMap.containsKey(XmppStringUtils.parseBareJid(jid));
+    }
+
     public synchronized void changeJID(Contact contact, String jid) {
         if (!this.isValid(jid))
             return;
@@ -120,7 +171,6 @@ public final class ContactList extends Observable {
     }
 
     private boolean isValid(String jid) {
-        jid = XmppStringUtils.parseBareJid(jid);
         if (!XMPPUtils.isValid(jid)) {
             LOGGER.warning("invalid jid: "+jid);
             return false;
@@ -138,44 +188,6 @@ public final class ContactList extends Observable {
         for (Contact contact: mJIDMap.values()) {
             contact.save();
         }
-    }
-
-    synchronized Optional<Contact> get(int id) {
-        Optional<Contact> optContact = Optional.ofNullable(mIDMap.get(id));
-        if (!optContact.isPresent())
-            LOGGER.warning("can't find contact with ID: "+id);
-        return optContact;
-    }
-
-    public synchronized void remove(Contact contact) {
-        boolean removed = mJIDMap.remove(contact.getJID(), contact);
-        if (!removed) {
-            LOGGER.warning("can't find contact to remove: "+contact);
-        }
-        mIDMap.remove(contact.getID());
-        this.changed(contact);
-    }
-
-    /**
-     * Get the contact for a JID (if the JID is in the list).
-     * Resource is removed for lookup.
-     * @param jid
-     * @return
-     */
-    public synchronized Optional<Contact> get(String jid) {
-        jid = XmppStringUtils.parseBareJid(jid);
-        return Optional.ofNullable(mJIDMap.get(jid));
-    }
-
-    /**
-     * Return whether a contact with a specified JID exists.
-     * Resource is removed for lookup.
-     * @param jid
-     * @return
-     */
-    public synchronized boolean contains(String jid) {
-        jid = XmppStringUtils.parseBareJid(jid);
-        return mJIDMap.containsKey(jid);
     }
 
     private synchronized void changed(Object arg) {

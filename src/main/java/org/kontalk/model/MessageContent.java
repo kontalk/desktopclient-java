@@ -31,6 +31,7 @@ import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.Chat.GID;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -481,36 +482,46 @@ public class MessageContent {
             LEAVE
         }
 
+        private final Optional<GID> mOptGID;
         private final OP mOP;
         private final String[] mJIDsAdded;
         private final String[] mJIDsRemoved;
         private final String mSubject;
 
         /** Group creation. */
-        public GroupCommand(String[] added) {
-            this(OP.CREATE, added, new String[0], "");
+        public GroupCommand(GID gid, String[] added) {
+            this(gid, OP.CREATE, added, new String[0], "");
         }
 
         /** Group creation with subject. */
         public GroupCommand(String[] added, String subject) {
-            this(OP.CREATE, added, new String[0], subject);
+            this(null, OP.CREATE, added, new String[0], subject);
+        }
+
+        public GroupCommand(GID gid, String[] added, String subject) {
+            this(gid, OP.CREATE, added, new String[0], subject);
         }
 
         /** Member list changed. */
-        public GroupCommand(String[] added, String[] removed) {
-            this(OP.SET, added, removed, "");
+        public GroupCommand(GID gid, String[] added, String[] removed) {
+            this(gid, OP.SET, added, removed, "");
         }
 
         /** Member left. Identified by sender JID */
-        public GroupCommand() {
-            this(OP.LEAVE, new String[0], new String[0], "");
+        public GroupCommand(GID gid) {
+            this(gid, OP.LEAVE, new String[0], new String[0], "");
         }
 
-        private GroupCommand(OP operation, String[] added, String[] removed, String subject) {
+        private GroupCommand(GID gid, OP operation, String[] added, String[] removed, String subject) {
+            mOptGID = Optional.ofNullable(gid);
             mOP = operation;
             mJIDsAdded = added;
             mJIDsRemoved = removed;
             mSubject = subject;
+        }
+
+        public Optional<GID> getGID() {
+            return mOptGID;
         }
 
         public OP getOperation() {
@@ -558,7 +569,7 @@ public class MessageContent {
 
                 String subj = EncodingUtils.getJSONString(map, JSON_SUBJECT);
 
-                return new GroupCommand(op, added, removed, subj);
+                return new GroupCommand(null, op, added, removed, subj);
              }  catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON group command", ex);
                 return null;

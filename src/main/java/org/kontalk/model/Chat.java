@@ -21,7 +21,6 @@ package org.kontalk.model;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,8 +37,10 @@ import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
+import org.kontalk.util.XMPPUtils;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
@@ -86,10 +87,10 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
 
     private final int mID;
     private final HashMap<Contact, KonChatState> mContactMap = new HashMap<>();
-    private final Optional<GID> mOptGID;
     private final String mXMPPID;
     private final ChatMessages mMessages;
 
+    private Optional<GID> mOptGID;
     private String mSubject;
     private boolean mRead;
     private ViewSettings mViewSettings;
@@ -107,7 +108,8 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     private Chat(Contact[] contacts, String xmppID, GID gid, String subject) {
         assert contacts != null;
         assert xmppID.isEmpty() || gid == null;
-        this.setContactMap(new HashSet<>(Arrays.asList(contacts)));
+        for (Contact contact: contacts)
+            this.addContactSilent(contact);
         // Kontalk Android client is ignoring the chat id
         // were using it for group chat identification
         mXMPPID = gid != null ? gid.id : xmppID;
@@ -148,7 +150,8 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             ) {
         assert contacts != null;
         mID = id;
-        this.setContactMap(contacts);
+        for (Contact contact: contacts)
+            this.addContactSilent(contact);
         mOptGID = optGID;
         mXMPPID = xmppID;
         mSubject = subject;
@@ -197,15 +200,6 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return mContactMap.keySet().size() == 1 ?
                 Optional.of(mContactMap.keySet().iterator().next()) :
                 Optional.<Contact>empty();
-    }
-
-    // TODO unused
-    public void setContacts(Set<Contact> contacts) {
-        if (contacts.equals(mContactMap.keySet()))
-            return;
-
-        this.setContactMap(contacts);
-        this.changed(contacts);
     }
 
     /**
@@ -275,6 +269,74 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         this.changed(state);
     }
 
+    public void applyGroupCommand(GroupCommand command, Contact sender) {
+        // validation checks
+        Optional<GID> optComGID = command.getGID();
+        if (optComGID.isPresent()) {
+            GID comGID = optComGID.get();
+            if (command.getOperation() != GroupCommand.OP.LEAVE) {
+                // sender must be owner
+                if (!comGID.ownerJID.equals(sender.getJID())) {
+                    LOGGER.warning("sender not owner");
+                    return;
+                }
+            }
+            if (mOptGID.isPresent()) {
+                GID gid = mOptGID.get();
+                // gid must match
+                if (!gid.equals(comGID)) {
+                    LOGGER.warning("group IDs do not match");
+                    return;
+                }
+            } else {
+                // must be create command
+                if (command.getOperation() != GroupCommand.OP.CREATE) {
+                    LOGGER.warning("chat withoud gid and not create command");
+                    return;
+                }
+            }
+        }
+
+        switch(command.getOperation()) {
+            case CREATE:
+                if (!optComGID.isPresent()) {
+                    LOGGER.warning("create command without group ID");
+                    return;
+                }
+                if (mOptGID.isPresent()) {
+                    LOGGER.warning("group chat already created");
+                    return;
+                }
+                mOptGID = optComGID;
+
+                assert mContactMap.size() == 1;
+                assert mContactMap.containsKey(sender);
+
+                for (String jid: command.getAdded()) {
+                    if (!XMPPUtils.isValid(jid)) {
+                        LOGGER.warning("ignoring invalid JID: "+jid);
+                        continue;
+                    }
+                    this.addContact(ContactList.getInstance().getOrCreate(jid));
+                    this.changed(command);
+                }
+                mSubject = command.getSubject();
+                this.changed(command);
+                break;
+            case LEAVE:
+                this.removeContact(sender);
+                this.changed(command);
+                break;
+            // TODO
+            //case SET:
+                //this.changed(command);
+            //    this.save();
+            //    break;
+            default:
+                LOGGER.warning("unhandled operation: "+command.getOperation());
+        }
+    }
+
     void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
@@ -336,16 +398,31 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         }
     }
 
-    private void setContactMap(Set<Contact> contacts){
-        // TODO only apply differences to preserve chat states
-        for (Contact contact: mContactMap.keySet())
-            contact.deleteObserver(this);
+    private void addContact(Contact contact) {
+        this.addContactSilent(contact);
+        this.save();
+    }
 
-        mContactMap.clear();
-        for (Contact contact : contacts) {
-            contact.addObserver(this);
-            mContactMap.put(contact, new KonChatState(contact));
+    private void addContactSilent(Contact contact) {
+        if (mContactMap.containsKey(contact)) {
+            LOGGER.warning("contact already in chat: "+contact);
+            return;
         }
+
+        contact.addObserver(this);
+        mContactMap.put(contact, new KonChatState(contact));
+    }
+
+    private void removeContact(Contact contact) {
+        if (!mContactMap.containsKey(contact)) {
+            LOGGER.warning("contact not in chat: "+contact);
+            return;
+        }
+
+        contact.deleteObserver(this);
+        mContactMap.remove(contact);
+        this.save();
+        this.changed(contact);
     }
 
     private synchronized void changed(Object arg) {
@@ -567,6 +644,26 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                 LOGGER.log(Level.WARNING, "can't parse JSON preview", ex);
                 return null;
             }
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (!(o instanceof GID))
+                return false;
+
+            GID oGID = (GID) o;
+            return ownerJID.equals(oGID.ownerJID) && id.equals(oGID.id);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 37 * hash + Objects.hashCode(this.ownerJID);
+            hash = 37 * hash + Objects.hashCode(this.id);
+            return hash;
         }
     }
 }

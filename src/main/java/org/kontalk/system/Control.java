@@ -350,7 +350,7 @@ public final class Control {
             name = XmppStringUtils.parseLocalpart(jid);
         }
 
-        Optional<Contact> optNewContact = ContactList.getInstance().createContact(jid, name);
+        Optional<Contact> optNewContact = ContactList.getInstance().create(jid, name);
         if (!optNewContact.isPresent()) {
             LOGGER.warning("can't create new contact");
             // TODO tell view
