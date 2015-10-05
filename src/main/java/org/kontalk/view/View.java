@@ -206,6 +206,9 @@ public final class View implements Observer {
        } else if (arg instanceof ViewEvent.ContactDeleted) {
            ViewEvent.ContactDeleted contactDeleted = (ViewEvent.ContactDeleted) arg;
            mNotifier.confirmContactDeletion(contactDeleted.contact);
+       } else if (arg instanceof ViewEvent.PresenceError) {
+           ViewEvent.PresenceError presenceError = (ViewEvent.PresenceError) arg;
+           mNotifier.showPresenceError(presenceError.contact, presenceError.error);
        } else {
            LOGGER.warning("unexpected argument");
        }

@@ -44,6 +44,7 @@ import org.kontalk.misc.KonException;
 import org.kontalk.model.Contact;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
+import org.kontalk.system.RosterHandler;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import static org.kontalk.view.View.GAP_DEFAULT;
@@ -108,6 +109,34 @@ final class Notifier {
 
         // TODO too intrusive for user, but use the explanation above for message view
         //NotificationManager.showNotification(mChatView, errorText);
+    }
+
+    void showPresenceError(Contact contact, RosterHandler.Error error) {
+        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
+        panel.setOpaque(false);
+
+        panel.add(new WebLabel(Tr.tr("Contact error")).setBoldFont());
+        panel.add(new WebSeparator(true, true));
+
+        panel.add(new WebLabel(Tr.tr("Contact:")));
+        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
+        panel.add(new WebLabel(contactText));
+
+        panel.add(new WebLabel(Tr.tr("Error:")).setBoldFont());
+        String errorText = Tr.tr(error.toString());
+        switch (error) {
+            case SERVER_NOT_FOUND:
+                errorText = Tr.tr("Server not found");
+                break;
+        }
+
+        WebTextArea explArea = new WebTextArea(errorText, 3, 30);
+        explArea.setEditable(false);
+        explArea.setLineWrap(true);
+        explArea.setWrapStyleWord(true);
+        panel.add(explArea);
+
+        NotificationManager.showNotification(panel, NotificationOption.cancel);
     }
 
     void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {

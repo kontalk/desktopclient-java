@@ -240,14 +240,15 @@ final class Utils {
         return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
     }
 
-    static String mainStatus(Contact u, boolean pre) {
-        Contact.Subscription subStatus = u.getSubScription();
-        return u.isMe() ? Tr.tr("Myself") :
-                    u.isBlocked() ? Tr.tr("Blocked") :
-                    u.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
+    static String mainStatus(Contact c, boolean pre) {
+        Contact.Subscription subStatus = c.getSubScription();
+        return c.isMe() ? Tr.tr("Myself") :
+                    c.isBlocked() ? Tr.tr("Blocked") :
+                    c.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
+                    c.getOnline() == Contact.Online.ERROR ? Tr.tr("Not reachable") :
                     subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
                     subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    lastSeen(u, true, pre);
+                    lastSeen(c, true, pre);
     }
 
     static String lastSeen(Contact contact, boolean pretty, boolean pre) {
