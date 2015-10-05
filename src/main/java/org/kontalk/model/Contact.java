@@ -36,8 +36,6 @@ import org.kontalk.util.EncodingUtils;
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
  *
- * TODO creating contacts, we need to do something with persistency, jid, and more stuff...
- *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Contact extends Observable implements Comparable<Contact> {
