@@ -50,6 +50,7 @@ import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
 
@@ -369,10 +370,15 @@ public final class Control {
      * Decrypt an incoming message and download attachment if present.
      */
     private void decryptAndDownload(InMessage message) {
-        Coder.decryptMessage(message);
+        boolean decrypted = Coder.decryptMessage(message);
 
         if (!message.getCoderStatus().getErrors().isEmpty()) {
             this.handleSecurityErrors(message);
+        }
+
+        Optional<GroupCommand> optCom = message.getContent().getGroupCommand();
+        if (decrypted && optCom.isPresent()) {
+            message.getChat().applyGroupCommand(optCom.get(), message.getContact());
         }
 
         if (message.getContent().getPreview().isPresent()) {
