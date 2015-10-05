@@ -232,6 +232,7 @@ final public class KonMessageListener implements StanzaListener {
         ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE);
         if (groupExt instanceof GroupExtension) {
             GroupExtension group = (GroupExtension) groupExt;
+            group.getOwner();
             groupCommand = ClientUtils.groupExtensionToGroupCommand(
                     group.getOwner(), group.getID(), group.getCommand(), group.getMember());
         }

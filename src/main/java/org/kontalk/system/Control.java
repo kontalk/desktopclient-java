@@ -472,6 +472,7 @@ public final class Control {
             LOGGER.info("Shutting down...");
             mCurrentStatus = Status.SHUTTING_DOWN;
             this.changed(new ViewEvent.StatusChanged());
+            // TODO slow shutdown, do we need this
             ContactList.getInstance().save();
             ChatList.getInstance().save();
             try {
