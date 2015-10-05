@@ -80,7 +80,7 @@ public final class RosterHandler {
             name = "";
         }
 
-        Optional<Contact> optNewContact = ContactList.getInstance().createContact(jid, name);
+        Optional<Contact> optNewContact = ContactList.getInstance().create(jid, name);
         if (!optNewContact.isPresent())
             return;
         Contact newContact = optNewContact.get();

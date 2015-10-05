@@ -130,19 +130,22 @@ public final class ClientUtils {
         }
     }
 
-    public static GroupCommand groupExtensionToGroupCommand(Chat chat,
+    public static GroupCommand groupExtensionToGroupCommand(String ownerJID,
+            String id,
             Command com,
             Member[] members) {
+        GID gid = new GID(ownerJID, id);
+
         if (com == GroupExtension.Command.CREATE) {
             List<String> jids = new ArrayList<>(members.length);
             for (Member m: members)
                 jids.add(m.jid);
-            return new GroupCommand(jids.toArray(new String[0]));
+            return new GroupCommand(gid, jids.toArray(new String[0]));
         } else if (com == GroupExtension.Command.LEAVE) {
-            return new GroupCommand();
+            return new GroupCommand(gid);
         }
 
         // TODO
-        return new GroupCommand(new String[0], new String[0]);
+        return new GroupCommand(gid, new String[0], new String[0]);
     }
 }
