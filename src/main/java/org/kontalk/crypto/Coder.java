@@ -120,8 +120,8 @@ public final class Coder {
      * Decrypt and verify the body of a message. Sets the encryption and signing
      * status of the message and errors that may occur are saved to the message.
      */
-    public static void decryptMessage(InMessage message) {
-        new Decryptor(message).decryptMessage();
+    public static boolean decryptMessage(InMessage message) {
+        return new Decryptor(message).decryptMessage();
     }
 
     /**

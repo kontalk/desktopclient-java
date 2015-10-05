@@ -300,7 +300,7 @@ public final class View implements Observer {
     /* view internal */
 
     void showChat(Contact contact) {
-        Chat chat = ChatList.getInstance().get(contact);
+        Chat chat = ChatList.getInstance().getOrCreate(contact);
         this.selectChat(chat);
     }
 

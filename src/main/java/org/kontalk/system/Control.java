@@ -50,6 +50,7 @@ import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
 
@@ -350,7 +351,7 @@ public final class Control {
             name = XmppStringUtils.parseLocalpart(jid);
         }
 
-        Optional<Contact> optNewContact = ContactList.getInstance().createContact(jid, name);
+        Optional<Contact> optNewContact = ContactList.getInstance().create(jid, name);
         if (!optNewContact.isPresent()) {
             LOGGER.warning("can't create new contact");
             // TODO tell view
@@ -369,10 +370,15 @@ public final class Control {
      * Decrypt an incoming message and download attachment if present.
      */
     private void decryptAndDownload(InMessage message) {
-        Coder.decryptMessage(message);
+        boolean decrypted = Coder.decryptMessage(message);
 
         if (!message.getCoderStatus().getErrors().isEmpty()) {
             this.handleSecurityErrors(message);
+        }
+
+        Optional<GroupCommand> optCom = message.getContent().getGroupCommand();
+        if (decrypted && optCom.isPresent()) {
+            message.getChat().applyGroupCommand(optCom.get(), message.getContact());
         }
 
         if (message.getContent().getPreview().isPresent()) {
@@ -414,29 +420,27 @@ public final class Control {
     }
 
     private static Chat getChat(String xmppThreadID, Contact contact) {
-        ChatList chatList = ChatList.getInstance();
-        Optional<Chat> optChat = chatList.get(xmppThreadID);
-        return optChat.orElse(chatList.get(contact));
+        return ChatList.getInstance().getOrCreate(xmppThreadID, contact);
     }
 
     private static Optional<OutMessage> findMessage(MessageIDs ids) {
         // get chat by thread ID
-        ChatList tl = ChatList.getInstance();
-        Optional<Chat> optChat = tl.get(ids.xmppThreadID);
+        ChatList cl = ChatList.getInstance();
+        Optional<Chat> optChat = cl.get(ids.xmppThreadID);
         if (optChat.isPresent()) {
             return optChat.get().getMessages().getLast(ids.xmppID);
         }
 
         // get chat by jid
         Optional<Contact> optContact = ContactList.getInstance().get(ids.jid);
-        if (optContact.isPresent() && tl.contains(optContact.get())) {
-            Optional<OutMessage> optM = tl.get(optContact.get()).getMessages().getLast(ids.xmppID);
+        if (optContact.isPresent() && cl.contains(optContact.get())) {
+            Optional<OutMessage> optM = cl.getOrCreate(optContact.get()).getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
         }
 
         // fallback: search everywhere
-        for (Chat chat: tl.getAll()) {
+        for (Chat chat: cl.getAll()) {
             Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;

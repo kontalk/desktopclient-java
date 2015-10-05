@@ -79,16 +79,16 @@ final class Decryptor {
         this.message = message;
     }
 
-    void decryptMessage() {
+    boolean decryptMessage() {
         // signing requires also encryption
         if (!message.getCoderStatus().isEncrypted()) {
             LOGGER.warning("message not encrypted");
-            return;
+            return false;
         }
 
         boolean loaded = this.loadKeys();
         if (!loaded)
-            return;
+            return false;
 
         // decrypt
         String encryptedContent = message.getContent().getEncryptedContent();
@@ -104,7 +104,7 @@ final class Decryptor {
             decResult = decryptAndVerify(encryptedIn, plainOut, myKey.getPrivateEncryptionKey(), senderKey.signKey);
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't decrypt message", ex);
-            return;
+            return false;
         }
         EnumSet<Coder.Error> allErrors = decResult.errors;
         message.setSigning(decResult.signing);
@@ -124,8 +124,10 @@ final class Decryptor {
             // everything went better than expected
             LOGGER.info("message decryption successful");
             message.setDecryptedContent(content);
+            return true;
         } else {
             LOGGER.warning("message decryption failed");
+            return false;
         }
     }
 
