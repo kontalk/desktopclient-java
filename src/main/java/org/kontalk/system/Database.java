@@ -252,12 +252,10 @@ public final class Database {
 
     /**
      * Update values (at most one row)
-     * @param table
-     * @param set
-     * @param id
      * @return id value of updated row, 0 if something went wrong
      */
     public synchronized int execUpdate(String table, Map<String, Object> set, int id) {
+        LOGGER.config("table: "+table);
         String update = "UPDATE OR FAIL " + table + " SET ";
 
         List<String> keyList = new ArrayList<>(set.keySet());

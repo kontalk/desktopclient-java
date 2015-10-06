@@ -227,6 +227,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             return;
 
         mRead = true;
+        this.save();
         this.changed(mRead);
     }
 
@@ -250,8 +251,9 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     public boolean addMessage(KonMessage message) {
         boolean added = mMessages.add(message);
         if (added) {
-            if (message.isInMessage()) {
+            if (message.isInMessage() && mRead) {
                 mRead = false;
+                this.save();
                 this.changed(mRead);
             }
             this.changed(message);
@@ -321,10 +323,12 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                     this.changed(command);
                 }
                 mSubject = command.getSubject();
+                this.save();
                 this.changed(command);
                 break;
             case LEAVE:
                 this.removeContact(sender);
+                this.save();
                 this.changed(command);
                 break;
             // TODO
@@ -337,10 +341,13 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         }
     }
 
-    void save() {
+    private void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(mSubject));
+        set.put(COL_GID, Database.setString(mOptGID.isPresent() ?
+                mOptGID.get().toJSON() :
+                ""));
         set.put(COL_READ, mRead);
         set.put(COL_VIEW_SET, mViewSettings.toJSONString());
 

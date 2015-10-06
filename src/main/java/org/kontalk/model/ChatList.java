@@ -68,12 +68,6 @@ public final class ChatList extends Observable implements Observer {
         return new TreeSet<>(mMap.values());
     }
 
-    public synchronized void save() {
-        for (Chat chat: mMap.values()) {
-            chat.save();
-        }
-    }
-
     /**
      * Get a chat with only the contact as additional member.
      * Creates a new chat if necessary.

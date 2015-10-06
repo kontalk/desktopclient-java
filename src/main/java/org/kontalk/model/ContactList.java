@@ -121,8 +121,6 @@ public final class ContactList extends Observable {
     /**
      * Get the contact for a JID (if the JID is in the list).
      * Resource is removed for lookup.
-     * @param jid
-     * @return
      */
     public synchronized Optional<Contact> get(String jid) {
         jid = XmppStringUtils.parseBareJid(jid);
@@ -182,12 +180,6 @@ public final class ContactList extends Observable {
         }
 
         return true;
-    }
-
-    public synchronized void save() {
-        for (Contact contact: mJIDMap.values()) {
-            contact.save();
-        }
     }
 
     private synchronized void changed(Object arg) {

@@ -472,8 +472,6 @@ public final class Control {
             LOGGER.info("Shutting down...");
             mCurrentStatus = Status.SHUTTING_DOWN;
             this.changed(new ViewEvent.StatusChanged());
-            ContactList.getInstance().save();
-            ChatList.getInstance().save();
             try {
                 Database.getInstance().close();
             } catch (RuntimeException ex) {

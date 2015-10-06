@@ -275,7 +275,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
         return mJID.equals(Integer.toString(mID));
     }
 
-    void save() {
+    private void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
