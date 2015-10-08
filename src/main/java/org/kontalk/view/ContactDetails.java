@@ -41,10 +41,12 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.logging.Logger;
 import javax.swing.Box;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 
@@ -54,6 +56,7 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ContactDetails extends WebPanel implements Observer {
+    private static final Logger LOGGER = Logger.getLogger(ContactDetails.class.getName());
 
     private final View mView;
     private final Contact mContact;
@@ -106,11 +109,11 @@ final class ContactDetails extends WebPanel implements Observer {
             }
             @Override
             protected String editText() {
-                return mContact.getJID();
+                return mContact.getJID().string();
             }
             @Override
             protected void onFocusLost() {
-                ContactDetails.this.saveJID(this.getText().trim());
+                ContactDetails.this.saveJID(JID.bare(this.getText().trim()));
             }
         };
         jidField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_JID_LENGTH));
@@ -240,8 +243,9 @@ final class ContactDetails extends WebPanel implements Observer {
         mView.getControl().changeName(mContact, name);
     }
 
-    private void saveJID(String jid) {
-        if (jid.isEmpty() || jid.equals(mContact.getJID()))
+    private void saveJID(JID jid) {
+        if (!jid.isValid() || jid.equals(mContact.getJID()))
+            // TODO feedback for invalid jid
             return;
 
         String warningText =

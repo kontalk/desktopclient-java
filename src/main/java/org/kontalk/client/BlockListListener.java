@@ -18,10 +18,13 @@
 
 package org.kontalk.client;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.kontalk.misc.JID;
 import org.kontalk.system.Control;
 
 /**
@@ -46,8 +49,12 @@ final class BlockListListener implements StanzaListener {
         BlockingCommand p = (BlockingCommand) packet;
         LOGGER.config("blocking command: "+p);
 
-        if (p.getItems() != null) {
-            mControl.setBlockedContacts(p.getItems());
+        List<String> items = p.getItems();
+        if (items != null) {
+            List<JID> jids = new ArrayList<>(items.size());
+            for (String s : items)
+                jids.add(JID.full(s));
+            mControl.setBlockedContacts(jids.toArray(new JID[0]));
         }
     }
 }

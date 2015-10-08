@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -28,7 +29,6 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
@@ -75,7 +75,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
             ")";
 
     private final int mID;
-    private String mJID;
+    private JID mJID;
     private String mName;
     private String mStatus = "";
     private Optional<Date> mLastSeen = Optional.empty();
@@ -88,10 +88,9 @@ public final class Contact extends Observable implements Comparable<Contact> {
     //private ItemType mType;
 
     // used for creating new contacts (eg from roster)
-    Contact(String jid, String name) {
-        mJID = XmppStringUtils.parseBareJid(jid);
+    Contact(JID jid, String name) {
+        mJID = jid;
         mName = name;
-
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
         values.add(mJID);
@@ -108,7 +107,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
 
     // used for loading contacts from database
     Contact(int id,
-            String jid,
+            JID jid,
             String name,
             String status,
             Optional<Date> lastSeen,
@@ -125,14 +124,18 @@ public final class Contact extends Observable implements Comparable<Contact> {
         mFingerprint = fingerprint;
     }
 
-    public String getJID() {
+    public JID getJID() {
         return mJID;
     }
 
-    void setJID(String jid) {
-        jid = XmppStringUtils.parseBareJid(jid);
+    void setJID(JID jid) {
         if (jid.equals(mJID))
             return;
+
+        if (!jid.isValid()) {
+            LOGGER.warning("jid is not valid: "+jid);
+            return;
+        }
 
         mJID = jid;
         this.save();
@@ -252,15 +255,17 @@ public final class Contact extends Observable implements Comparable<Contact> {
     }
 
     public boolean isMe() {
-        return !mJID.isEmpty() &&
-                mJID.equals(Config.getInstance().getString(Config.ACC_JID));
+        JID myJID = JID.bare(Config.getInstance().getString(Config.ACC_JID));
+        if (!myJID.isValid())
+            return false;
+        return mJID.equals(myJID);
     }
 
     /**
      * 'Delete' this contact: faked by resetting all values.
      */
     public void setDeleted() {
-        mJID = Integer.toString(mID);
+        mJID = JID.deleted(mID);
         mName = "";
         mStatus = "";
         mLastSeen = Optional.empty();
@@ -272,7 +277,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
     }
 
     public boolean isDeleted() {
-        return mJID.equals(Integer.toString(mID));
+        return mJID.string().equals(Integer.toString(mID));
     }
 
     private void save() {

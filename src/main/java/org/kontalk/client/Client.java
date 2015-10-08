@@ -52,6 +52,7 @@ import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Chat;
+import org.kontalk.misc.JID;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.MessageContent;
@@ -62,7 +63,6 @@ import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
-import org.kontalk.util.XMPPUtils;
 
 /**
  * Network client for an XMPP Kontalk Server.
@@ -204,12 +204,13 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     /**
-     * The JID of the user currently logged in.
-     * @return the full JID of the user logged in or an empty string if not
-     * logged in
+     * The full JID of the user currently logged in.
      */
-    public String getOwnJID() {
-        return !this.isConnected() ? "" : mConn.getUser();
+    public Optional<JID> getOwnJID() {
+        String user = mConn.getUser();
+        if (user == null)
+            return Optional.empty();
+        return Optional.of(JID.full(user));
     }
 
     public void sendMessage(OutMessage message, boolean sendChatState) {
@@ -275,12 +276,12 @@ public final class Client implements StanzaListener, Runnable {
         ArrayList<Message> sendMessages = new ArrayList<>(transmissions.length);
         for (Transmission transmission: message.getTransmissions()) {
             Message sendMessage = protoMessage.clone();
-            String toJID = transmission.getJID();
-            if (!XMPPUtils.isValid(toJID)) {
-                LOGGER.warning("invalid JID: "+toJID);
+            JID to = transmission.getJID();
+            if (!to.isValid()) {
+                LOGGER.warning("invalid JID: "+to);
                 return;
             }
-            sendMessage.setTo(toJID);
+            sendMessage.setTo(to.string());
             sendMessages.add(sendMessage);
         }
 
@@ -334,10 +335,10 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(vcard);
     }
 
-    public void sendPublicKeyRequest(String jid) {
+    public void sendPublicKeyRequest(JID jid) {
         LOGGER.info("to "+jid);
         PublicKeyPublish publicKeyRequest = new PublicKeyPublish();
-        publicKeyRequest.setTo(jid);
+        publicKeyRequest.setTo(jid.string());
         this.sendPacket(publicKeyRequest);
     }
 
@@ -345,11 +346,11 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(BlockingCommand.blocklist());
     }
 
-    public void sendBlockingCommand(String jid, boolean blocking) {
+    public void sendBlockingCommand(JID jid, boolean blocking) {
         LOGGER.info("jid: "+jid+" blocking="+blocking);
 
         String command = blocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
-        BlockingCommand blockingCommand = new BlockingCommand(command, jid);
+        BlockingCommand blockingCommand = new BlockingCommand(command, jid.string());
 
         // add response listener
         StanzaListener blockResponseListener = new BlockResponseListener(mControl, mConn, blocking, jid);
@@ -370,15 +371,15 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(presence);
     }
 
-    public void sendPresenceSubscriptionRequest(String jid) {
+    public void sendPresenceSubscriptionRequest(JID jid) {
         LOGGER.info("to "+jid);
         Presence subscribeRequest = new Presence(Presence.Type.subscribe);
-        subscribeRequest.setTo(jid);
+        subscribeRequest.setTo(jid.string());
         this.sendPacket(subscribeRequest);
     }
 
-    public void sendChatState(String jid, String threadID, ChatState state) {
-        Message message = new Message(jid, Message.Type.chat);
+    public void sendChatState(JID jid, String threadID, ChatState state) {
+        Message message = new Message(jid.string(), Message.Type.chat);
         if (!threadID.isEmpty())
             message.setThread(threadID);
         message.addExtension(new ChatStateExtension(state));
@@ -405,7 +406,7 @@ public final class Client implements StanzaListener, Runnable {
         LOGGER.config("unhandled: "+packet);
     }
 
-    public boolean addToRoster(String jid, String name) {
+    public boolean addToRoster(JID jid, String name) {
         if (!this.isConnected()) {
             LOGGER.info("not connected");
             return false;
@@ -416,7 +417,7 @@ public final class Client implements StanzaListener, Runnable {
             rosterName = XmppStringUtils.parseLocalpart(rosterName);
         try {
             // also sends presence subscription request
-            Roster.getInstanceFor(mConn).createEntry(jid, rosterName,
+            Roster.getInstanceFor(mConn).createEntry(jid.string(), rosterName,
                     null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
@@ -428,13 +429,13 @@ public final class Client implements StanzaListener, Runnable {
         return true;
     }
 
-    public boolean removeFromRoster(String jid) {
+    public boolean removeFromRoster(JID jid) {
         if (!this.isConnected()) {
             LOGGER.info("not connected");
             return false;
         }
         Roster roster = Roster.getInstanceFor(mConn);
-        RosterEntry entry = roster.getEntry(jid);
+        RosterEntry entry = roster.getEntry(jid.string());
         if (entry == null) {
             LOGGER.warning("can't find roster entry for jid: "+jid);
             return true;
@@ -452,13 +453,13 @@ public final class Client implements StanzaListener, Runnable {
         return true;
     }
 
-    public boolean updateRosterEntry(String jid, String newName) {
+    public boolean updateRosterEntry(JID jid, String newName) {
         if (!this.isConnected()) {
             LOGGER.info("not connected");
             return false;
         }
         Roster roster = Roster.getInstanceFor(mConn);
-        RosterEntry entry = roster.getEntry(jid);
+        RosterEntry entry = roster.getEntry(jid.string());
         if (entry == null) {
             LOGGER.warning("can't find roster entry for jid: "+jid);
             return true;

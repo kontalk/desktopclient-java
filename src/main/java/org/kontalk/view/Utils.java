@@ -55,11 +55,11 @@ import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
-import org.kontalk.util.XMPPUtils;
 import org.ocpsoft.prettytime.PrettyTime;
 
 /**
@@ -190,9 +190,9 @@ final class Utils {
     }
 
     private static String hashOrJID(Contact contact, int maxLength) {
-        String jid = contact.getJID();
-        return XMPPUtils.isHash(jid) && jid.length() >= 10 ?
-                "[" + jid.substring(0, 10) + "]" :
+        JID jid = contact.getJID();
+        return jid.isHash() && jid.string().length() >= 10 ?
+                "[" + jid.string().substring(0, 10) + "]" :
                 jid(contact, maxLength, true);
     }
 
@@ -205,19 +205,19 @@ final class Utils {
     }
 
     static String jid(Contact contact, int maxLength, boolean brackets) {
-        String jid = contact.getJID();
+        JID jid = contact.getJID();
         if (brackets)
             maxLength -= 2;
-        if (jid.length() > maxLength) {
-            String local = XmppStringUtils.parseLocalpart(jid);
-            local = StringUtils.abbreviate(local, (int) (maxLength * 0.4));
-            String domain = XmppStringUtils.parseDomain(jid);
-            domain = StringUtils.abbreviate(domain, (int) (maxLength * 0.6));
-            jid = XmppStringUtils.completeJidFrom(local, domain);
+        String s = jid.string();
+        if (s.length() > maxLength) {
+            String local = StringUtils.abbreviate(jid.local(), (int) (maxLength * 0.4));
+            String domain = StringUtils.abbreviate(jid.domain(), (int) (maxLength * 0.6));
+            // not precise, adding a character here
+            s = XmppStringUtils.completeJidFrom(local, domain);
         }
         if (brackets)
-            jid = "<" + jid + ">";
-        return jid;
+            s = "<" + s + ">";
+        return s;
     }
 
     static String chatTitle(Chat chat) {

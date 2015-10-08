@@ -24,6 +24,7 @@ import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Stanza;
+import org.kontalk.misc.JID;
 import org.kontalk.system.Control;
 
 /**
@@ -36,12 +37,12 @@ final class BlockResponseListener implements StanzaListener {
     private final Control mControl;
     private final XMPPConnection mConn;
     private final boolean mBlocking;
-    private final String mJID;
+    private final JID mJID;
 
     BlockResponseListener(Control control,
             XMPPConnection conn,
             boolean blocking,
-            String jid){
+            JID jid){
         mControl = control;
         mConn = conn;
         mBlocking = blocking;

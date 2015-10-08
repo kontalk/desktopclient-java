@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.net.URI;
 import java.util.Date;
 import java.util.HashMap;
@@ -36,7 +37,7 @@ public final class OutMessage extends KonMessage {
         super(builder);
     }
 
-    public void setReceived(String jid) {
+    public void setReceived(JID jid) {
         Transmission transmission = null;
             for (Transmission t: mTransmissions) {
                 if (t.getContact().getJID().equals(jid)) {

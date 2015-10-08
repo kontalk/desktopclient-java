@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -47,7 +48,7 @@ public final class InMessage extends KonMessage {
         return mTransmissions[0].getContact();
     }
 
-    public String getJID() {
+    public JID getJID() {
         assert mTransmissions.length == 1;
         return mTransmissions[0].getJID();
     }
@@ -118,11 +119,11 @@ public final class InMessage extends KonMessage {
 
     public static class Builder extends KonMessage.Builder {
 
-        public Builder(Chat chat, Contact contact, String jid) {
+        public Builder(Chat chat, Contact contact, JID from) {
             super(-1, chat, Status.IN, new Date());
 
             mContacts = new HashMap<>();
-            mContacts.put(contact, jid);
+            mContacts.put(contact, from);
         }
 
         @Override

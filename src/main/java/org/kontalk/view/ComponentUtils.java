@@ -84,6 +84,7 @@ import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Config;
@@ -330,30 +331,16 @@ final class ComponentUtils {
         }
 
         private void checkSaveButton() {
-            boolean enable;
-            if (mTabbedPane.getSelectedIndex() == 0) {
-                enable = !XMPPUtils.phoneNumberToKontalkLocal(
-                        mPrefixField.getText()+mNumberField.getText()).isEmpty() &&
-                        !mServerField.getText().isEmpty();
-            } else {
-                enable = XMPPUtils.isValid(mJIDField.getText());
-            }
-            mSaveButton.setEnabled(enable);
+            mSaveButton.setEnabled(this.inputToJID().isValid());
         }
 
         private void saveContact() {
-            String jid;
-            if (mTabbedPane.getSelectedIndex() == 0) {
-                String kontalkLocal = XMPPUtils.phoneNumberToKontalkLocal(
-                    mPrefixField.getText()+mNumberField.getText());
-                if (kontalkLocal.isEmpty()) {
-                    // huh?
-                    return;
-                }
-                jid = kontalkLocal + "@" + mServerField.getText();
-            } else {
-                jid = mJIDField.getText();
-            }
+            JID jid = this.inputToJID();
+
+            if (!jid.isValid())
+                // this shouldnt happen
+                return;
+
             mView.getControl().createContact(jid,
                     mNameField.getText(),
                     mEncryptionBox.isSelected());
@@ -362,6 +349,14 @@ final class ComponentUtils {
             mNameField.setText("");
             mJIDField.setText("");
             mNumberField.setText("");
+        }
+
+        private JID inputToJID() {
+            return mTabbedPane.getSelectedIndex() == 0 ?
+                    JID.bare(XMPPUtils.phoneNumberToKontalkLocal(
+                            mPrefixField.getText()+mNumberField.getText()),
+                            mServerField.getText()) :
+                    JID.bare(mJIDField.getText());
         }
 
         private static void addListener(final AddContactPanel panel,

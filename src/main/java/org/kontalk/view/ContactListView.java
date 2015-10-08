@@ -183,7 +183,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         @Override
         protected boolean contains(String search) {
             return mValue.getName().toLowerCase().contains(search) ||
-                    mValue.getJID().toLowerCase().contains(search);
+                    mValue.getJID().string().toLowerCase().contains(search);
         }
 
         @Override

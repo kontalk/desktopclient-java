@@ -32,6 +32,7 @@ import org.kontalk.client.GroupExtension.Member;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Chat.GID;
 import org.kontalk.model.Contact;
+import org.kontalk.misc.JID;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.GroupCommand.OP;
 
@@ -46,12 +47,12 @@ public final class ClientUtils {
      * Message attributes to identify the chat for a message.
      */
     public static class MessageIDs {
-        public final String jid;
+        public final JID jid;
         public final String xmppID;
         public final String xmppThreadID;
         //public final Optional<GroupID> groupID;
 
-        private MessageIDs(String jid, String xmppID, String threadID) {
+        private MessageIDs(JID jid, String xmppID, String threadID) {
             this.jid = jid;
             this.xmppID = xmppID;
             this.xmppThreadID = threadID;
@@ -63,7 +64,8 @@ public final class ClientUtils {
 
         public static MessageIDs from(Message m, String receiptID) {
             return new MessageIDs(
-                    StringUtils.defaultString(m.getFrom()),
+                    // TODO
+                    JID.full(StringUtils.defaultString(m.getFrom())),
                     !receiptID.isEmpty() ? receiptID :
                             StringUtils.defaultString(m.getStanzaId()),
                     StringUtils.defaultString(m.getThread()));
@@ -97,25 +99,25 @@ public final class ClientUtils {
                 Command command;
                 if (op == OP.CREATE) {
                     command = Command.CREATE;
-                    for (String jid : groupCommand.getAdded())
-                        member.add(new Member(jid));
+                    for (JID added : groupCommand.getAdded())
+                        member.add(new Member(added.string()));
                 } else {
                     command = Command.SET;
-                    Set<String> incl = new HashSet<>();
-                    for (String jid : groupCommand.getAdded()) {
-                        incl.add(jid);
-                        member.add(new Member(jid, Member.Type.ADD));
+                    Set<JID> incl = new HashSet<>();
+                    for (JID added : groupCommand.getAdded()) {
+                        incl.add(added);
+                        member.add(new Member(added.string(), Member.Type.ADD));
                     }
-                    for (String jid : groupCommand.getRemoved()) {
-                        incl.add(jid);
-                        member.add(new Member(jid, Member.Type.REMOVE));
+                    for (JID removed : groupCommand.getRemoved()) {
+                        incl.add(removed);
+                        member.add(new Member(removed.string(), Member.Type.REMOVE));
                     }
                     if (groupCommand.getAdded().length > 0) {
                         // list all remaining member for the new member
                         for (Contact c : chat.getContacts()) {
-                            String jid = c.getJID();
-                            if (!incl.contains(jid))
-                                member.add(new Member(jid));
+                            JID old = c.getJID();
+                            if (!incl.contains(old))
+                                member.add(new Member(old.string()));
                         }
                     }
                 }
@@ -137,15 +139,15 @@ public final class ClientUtils {
         GID gid = new GID(ownerJID, id);
 
         if (com == GroupExtension.Command.CREATE) {
-            List<String> jids = new ArrayList<>(members.length);
+            List<JID> jids = new ArrayList<>(members.length);
             for (Member m: members)
-                jids.add(m.jid);
-            return new GroupCommand(gid, jids.toArray(new String[0]));
+                jids.add(JID.bare(m.jid));
+            return new GroupCommand(gid, jids.toArray(new JID[0]));
         } else if (com == GroupExtension.Command.LEAVE) {
             return new GroupCommand(gid);
         }
 
         // TODO
-        return new GroupCommand(gid, new String[0], new String[0]);
+        return new GroupCommand(gid, new JID[0], new JID[0]);
     }
 }

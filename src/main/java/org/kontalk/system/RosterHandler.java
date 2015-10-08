@@ -25,7 +25,6 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.client.Client;
 import org.kontalk.client.HKPClient;
 import org.kontalk.crypto.Coder;
@@ -33,7 +32,7 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
-import org.kontalk.util.XMPPUtils;
+import org.kontalk.misc.JID;
 
 /**
  * Process incoming roster and presence changes.
@@ -63,7 +62,7 @@ public final class RosterHandler {
 
     /* from client */
 
-    public void onEntryAdded(String jid,
+    public void onEntryAdded(JID jid,
             String name,
             RosterPacket.ItemType type,
             RosterPacket.ItemStatus itemStatus) {
@@ -74,8 +73,7 @@ public final class RosterHandler {
 
         LOGGER.info("adding contact from roster, jid: "+jid);
 
-        if (name.equals(XmppStringUtils.parseLocalpart(jid)) &&
-                XMPPUtils.isHash(jid)) {
+        if (name.equals(jid.local()) && jid.isHash()) {
             // this must be the hash string, don't use it as name
             name = "";
         }
@@ -94,7 +92,8 @@ public final class RosterHandler {
         mControl.sendKeyRequest(newContact);
     }
 
-    public void onEntryDeleted(String jid) {
+    public void onEntryDeleted(JID jid) {
+        // note: also called on rename
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (!optContact.isPresent()) {
             LOGGER.info("can't find contact with jid: "+jid);
@@ -104,7 +103,7 @@ public final class RosterHandler {
         mControl.getViewControl().changed(new ViewEvent.ContactDeleted(optContact.get()));
     }
 
-    public void onEntryUpdate(String jid,
+    public void onEntryUpdate(JID jid,
             String name,
             RosterPacket.ItemType type,
             RosterPacket.ItemStatus itemStatus) {
@@ -118,12 +117,11 @@ public final class RosterHandler {
         contact.setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
 
         // name may have changed
-        if (contact.getName().isEmpty() &&
-                !name.equals(XmppStringUtils.parseLocalpart(jid)))
+        if (contact.getName().isEmpty() && !name.equals(jid.local()))
             contact.setName(name);
     }
 
-    public void onPresenceUpdate(String jid, Presence.Type type, String status) {
+    public void onPresenceUpdate(JID jid, Presence.Type type, String status) {
         if (this.isMe(jid) && !ContactList.getInstance().contains(jid))
             // don't wanna see myself
             return;
@@ -136,7 +134,7 @@ public final class RosterHandler {
         optContact.get().setOnline(type, status);
     }
 
-    public void onFingerprintPresence(String jid, String fingerprint) {
+    public void onFingerprintPresence(JID jid, String fingerprint) {
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (!optContact.isPresent()) {
             if (!this.isMe(jid))
@@ -152,7 +150,7 @@ public final class RosterHandler {
     }
 
     // TODO key IDs can be forged, searching by it is defective by design
-    public void onSignaturePresence(String jid, String signature) {
+    public void onSignaturePresence(JID jid, String signature) {
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (!optContact.isPresent()) {
             if (!this.isMe(jid))
@@ -197,7 +195,7 @@ public final class RosterHandler {
         mControl.getViewControl().changed(new ViewEvent.NewKey(optContact.get(), key));
     }
 
-    public void onPresenceError(String jid, XMPPError.Type type, XMPPError.Condition condition) {
+    public void onPresenceError(JID jid, XMPPError.Type type, XMPPError.Condition condition) {
         if (type != XMPPError.Type.CANCEL)
             // it can't be that bad)
             return;
@@ -231,8 +229,9 @@ public final class RosterHandler {
 
     /* private */
 
-    private boolean isMe(String jid) {
-        return XMPPUtils.isBarelyEqual(jid, mClient.getOwnJID());
+    private boolean isMe(JID jid) {
+        Optional<JID> optMyJID = mClient.getOwnJID();
+        return optMyJID.isPresent() ? optMyJID.get().equals(jid) : false;
     }
 
     private static Contact.Subscription rosterToModelSubscription(

@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -155,7 +156,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             mTransmissions = builder.mTransmissions;
         } else {
             Set<Transmission> t = new HashSet<>();
-            for (Entry<Contact,String> e : builder.mContacts.entrySet()) {
+            for (Entry<Contact,JID> e : builder.mContacts.entrySet()) {
                 t.add(new Transmission(e.getKey(), e.getValue(), mID));
             }
             mTransmissions = t.toArray(new Transmission[0]);
@@ -412,7 +413,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         private final Status mStatus;
         private final Date mDate;
 
-        protected Map<Contact, String> mContacts = null;
+        protected Map<Contact, JID> mContacts = null;
         protected Transmission[] mTransmissions = null;
 
         protected String mXMPPID = null;

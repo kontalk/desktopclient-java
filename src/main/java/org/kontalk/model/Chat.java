@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -40,7 +41,6 @@ import org.json.simple.JSONValue;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
-import org.kontalk.util.XMPPUtils;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
@@ -314,8 +314,8 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                 assert mContactMap.size() == 1;
                 assert mContactMap.containsKey(sender);
 
-                for (String jid: command.getAdded()) {
-                    if (!XMPPUtils.isValid(jid)) {
+                for (JID jid: command.getAdded()) {
+                    if (!jid.isValid()) {
                         LOGGER.warning("ignoring invalid JID: "+jid);
                         continue;
                     }

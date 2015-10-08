@@ -26,6 +26,7 @@ import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.packet.Presence;
+import org.kontalk.misc.JID;
 import org.kontalk.system.RosterHandler;
 
 /**
@@ -59,7 +60,7 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.config("entry: "+entry.toString());
-            mHandler.onEntryAdded(entry.getUser(),
+            mHandler.onEntryAdded(JID.bare(entry.getUser()),
                     StringUtils.defaultString(entry.getName()),
                     entry.getType(),
                     entry.getStatus());
@@ -77,7 +78,7 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.info("entry: "+entry.toString());
-            mHandler.onEntryUpdate(entry.getUser(),
+            mHandler.onEntryUpdate(JID.bare(entry.getUser()),
                     StringUtils.defaultString(entry.getName()),
                     entry.getType(),
                     entry.getStatus());
@@ -87,7 +88,8 @@ final class KonRosterListener implements RosterListener {
     @Override
     public void entriesDeleted(Collection<String> addresses) {
         for (String jid: addresses) {
-            mHandler.onEntryDeleted(jid);
+            LOGGER.info("address: "+jid);
+            mHandler.onEntryDeleted(JID.bare(jid));
         }
     }
 

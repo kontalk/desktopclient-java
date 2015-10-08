@@ -261,7 +261,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
             for (Contact contact: mValue.getContacts()) {
                 if (contact.getName().toLowerCase().contains(search) ||
-                        contact.getJID().toLowerCase().contains(search))
+                        contact.getJID().string().toLowerCase().contains(search))
                     return true;
             }
             return mValue.getSubject().toLowerCase().contains(search);
