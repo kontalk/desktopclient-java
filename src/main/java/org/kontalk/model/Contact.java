@@ -18,6 +18,8 @@
 
 package org.kontalk.model;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.HashMap;
@@ -142,7 +144,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
         this.changed(mJID);
     }
 
-    public int getID() {
+    int getID() {
         return mID;
     }
 
@@ -307,5 +309,21 @@ public final class Contact extends Observable implements Comparable<Contact> {
     @Override
     public int compareTo(Contact o) {
         return Integer.compare(this.mID, o.mID);
+    }
+
+    static Contact load(ResultSet rs) throws SQLException {
+        int id = rs.getInt("_id");
+        JID jid = JID.bare(rs.getString(Contact.COL_JID));
+
+        String name = rs.getString(Contact.COL_NAME);
+        String status = rs.getString(Contact.COL_STAT);
+        long l = rs.getLong(Contact.COL_LAST_SEEN);
+        Optional<Date> lastSeen = l == 0 ?
+                Optional.<Date>empty() :
+                Optional.<Date>of(new Date(l));
+        boolean encr = rs.getBoolean(Contact.COL_ENCR);
+        String key = Database.getString(rs, Contact.COL_PUB_KEY);
+        String fp = Database.getString(rs, Contact.COL_KEY_FP);
+        return new Contact(id, jid, name, status, lastSeen, encr, key, fp);
     }
 }

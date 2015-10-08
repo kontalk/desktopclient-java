@@ -21,7 +21,6 @@ package org.kontalk.model;
 import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Observable;
 import java.util.Optional;
@@ -52,27 +51,16 @@ public final class ContactList extends Observable {
         Database db = Database.getInstance();
         try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
-                // TODO move to class
-                int id = resultSet.getInt("_id");
-                JID jid = JID.bare(resultSet.getString(Contact.COL_JID));
+                Contact contact = Contact.load(resultSet);
+                JID jid = contact.getJID();
+
                 if (mJIDMap.containsKey(jid)) {
                     LOGGER.warning("contacts with equal JIDs: "+jid);
-                    return;
+                    continue;
                 }
-
-                String name = resultSet.getString(Contact.COL_NAME);
-                String status = resultSet.getString(Contact.COL_STAT);
-                long l = resultSet.getLong(Contact.COL_LAST_SEEN);
-                Optional<Date> lastSeen = l == 0 ?
-                        Optional.<Date>empty() :
-                        Optional.<Date>of(new Date(l));
-                boolean encr = resultSet.getBoolean(Contact.COL_ENCR);
-                String key = Database.getString(resultSet, Contact.COL_PUB_KEY);
-                String fp = Database.getString(resultSet, Contact.COL_KEY_FP);
-                Contact newContact = new Contact(id, jid, name, status, lastSeen, encr, key, fp);
                 synchronized (this) {
-                    mJIDMap.put(jid, newContact);
-                    mIDMap.put(id, newContact);
+                    mJIDMap.put(jid, contact);
+                    mIDMap.put(contact.getID(), contact);
                 }
             }
         } catch (SQLException ex) {
