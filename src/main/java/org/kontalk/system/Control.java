@@ -164,7 +164,7 @@ public final class Control {
             return false;
         }
         Contact contact = optContact.get();
-        Chat chat = getChat(ids.xmppThreadID, contact);
+        Chat chat = ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
         InMessage.Builder builder = new InMessage.Builder(chat, contact, ids.jid);
         builder.xmppID(ids.xmppID);
         if (serverDate.isPresent())
@@ -236,8 +236,11 @@ public final class Control {
             return;
         }
         Contact contact = optContact.get();
-        Chat chat = getChat(xmppThreadID, contact);
-        chat.setChatState(contact, chatState);
+        Optional<Chat> optChat = ChatList.getInstance().get(contact, xmppThreadID);
+        if (!optChat.isPresent())
+            return;
+
+        optChat.get().setChatState(contact, chatState);
     }
 
     public void handlePGPKey(String jid, byte[] rawKey) {
@@ -419,27 +422,22 @@ public final class Control {
         return new Control(appDir).mViewControl;
     }
 
-    private static Chat getChat(String xmppThreadID, Contact contact) {
-        return ChatList.getInstance().getOrCreate(xmppThreadID, contact);
-    }
-
     private static Optional<OutMessage> findMessage(MessageIDs ids) {
-        // get chat by thread ID
         ChatList cl = ChatList.getInstance();
-        Optional<Chat> optChat = cl.get(ids.xmppThreadID);
-        if (optChat.isPresent()) {
-            return optChat.get().getMessages().getLast(ids.xmppID);
-        }
 
-        // get chat by jid
+        // get chat by jid -> thread ID -> message id
         Optional<Contact> optContact = ContactList.getInstance().get(ids.jid);
-        if (optContact.isPresent() && cl.contains(optContact.get())) {
-            Optional<OutMessage> optM = cl.getOrCreate(optContact.get()).getMessages().getLast(ids.xmppID);
-            if (optM.isPresent())
-                return optM;
+        if (optContact.isPresent()) {
+            Optional<Chat> optChat = cl.get(optContact.get(), ids.xmppThreadID);
+            if (optChat.isPresent()) {
+                Optional<OutMessage> optM = optChat.get().getMessages().getLast(ids.xmppID);
+                if (optM.isPresent())
+                    return optM;
+            }
         }
 
         // fallback: search everywhere
+        LOGGER.info("fallback search, IDs: "+ids);
         for (Chat chat: cl.getAll()) {
             Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
@@ -567,8 +565,8 @@ public final class Control {
 
         /* chats */
 
-        public void createSingleChat(Contact contact) {
-            ChatList.getInstance().createNew(contact);
+        public Chat createSingleChat(Contact contact) {
+            return ChatList.getInstance().createNew(contact);
         }
 
         public void createGroupChat(Contact[] contacts, String subject) {
