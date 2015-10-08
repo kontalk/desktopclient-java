@@ -82,6 +82,10 @@ public final class ChatList extends Observable implements Observer {
         return Optional.empty();
     }
 
+    public Chat getOrCreate(Contact contact) {
+        return this.getOrCreate(contact, "");
+    }
+
     /**
      * Find chat for contact and XMPP ID or creates a new chat.
      */

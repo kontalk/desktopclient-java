@@ -571,8 +571,8 @@ public final class Control {
 
         /* chats */
 
-        public Chat createSingleChat(Contact contact) {
-            return ChatList.getInstance().createNew(contact);
+        public Chat getOrCreateSingleChat(Contact contact) {
+            return ChatList.getInstance().getOrCreate(contact);
         }
 
         public void createGroupChat(Contact[] contacts, String subject) {
