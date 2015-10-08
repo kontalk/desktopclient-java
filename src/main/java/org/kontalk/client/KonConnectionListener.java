@@ -22,7 +22,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.XMPPConnection;
-import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.system.Config;
 import org.kontalk.system.Control;
@@ -47,9 +47,9 @@ final class KonConnectionListener implements ConnectionListener {
 
     @Override
     public void authenticated(XMPPConnection connection, boolean resumed) {
-        LOGGER.info("as "+connection.getUser());
-        String jid = XmppStringUtils.parseBareJid(connection.getUser());
-        Config.getInstance().setProperty(Config.ACC_JID, jid);
+        JID jid = JID.bare(connection.getUser());
+        LOGGER.info("as "+jid);
+        Config.getInstance().setProperty(Config.ACC_JID, jid.string());
     }
 
     @Override

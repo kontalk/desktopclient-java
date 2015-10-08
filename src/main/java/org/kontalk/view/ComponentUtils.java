@@ -83,7 +83,6 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
@@ -288,8 +287,7 @@ final class ComponentUtils {
             addListener(this, mNumberField);
             kontalkPanel.add(mNumberField);
             kontalkPanel.add(new WebLabel("Server:"));
-            String serverText = XmppStringUtils.parseDomain(
-                    Config.getInstance().getString(Config.SERV_HOST));
+            String serverText = Config.getInstance().getString(Config.SERV_HOST);
             mServerField = new WebTextField(serverText, 16);
             mServerField.setInputPrompt(serverText);
             addListener(this, mServerField);

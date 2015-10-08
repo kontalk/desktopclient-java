@@ -46,7 +46,6 @@ import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.Coder;
@@ -368,6 +367,10 @@ public final class Client implements StanzaListener, Runnable {
                 presence.setStatus(stat);
         }
         // note: not setting priority, according to anti-dicrimination rules;)
+
+        // for testing
+        //presence.addExtension(new PresenceSignature(""));
+
         this.sendPacket(presence);
     }
 
@@ -412,12 +415,9 @@ public final class Client implements StanzaListener, Runnable {
             return false;
         }
 
-        String rosterName = name;
-        if (rosterName.isEmpty())
-            rosterName = XmppStringUtils.parseLocalpart(rosterName);
         try {
             // also sends presence subscription request
-            Roster.getInstanceFor(mConn).createEntry(jid.string(), rosterName,
+            Roster.getInstanceFor(mConn).createEntry(jid.string(), name,
                     null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |

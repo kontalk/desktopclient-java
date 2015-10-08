@@ -27,7 +27,6 @@ import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.misc.JID;
 import org.kontalk.system.RosterHandler;
 
@@ -67,19 +66,20 @@ public class PresenceListener implements StanzaListener {
 
         Presence presence = (Presence) packet;
 
+        JID jid = JID.bare(presence.getFrom());
+
         if (presence.getType() == Presence.Type.error) {
             XMPPError error = presence.getError();
             if (error == null) {
                 LOGGER.warning("error presence does not contain error");
                 return;
             }
-            mHandler.onPresenceError(JID.bare(presence.getFrom()), error.getType(),
+            mHandler.onPresenceError(jid, error.getType(),
                     error.getCondition());
             return;
         }
 
-        String jid = XmppStringUtils.parseBareJid(presence.getFrom());
-        Presence bestPresence = mRoster.getPresence(jid);
+        Presence bestPresence = mRoster.getPresence(jid.string());
 
         // NOTE: a delay extension is sometimes included, don't know why;
         // ignoring mode, always null anyway
@@ -95,7 +95,7 @@ public class PresenceListener implements StanzaListener {
             PublicKeyPresence pubKey = (PublicKeyPresence) publicKeyExt;
             String fingerprint = StringUtils.defaultString(pubKey.getFingerprint());
             if (!fingerprint.isEmpty()) {
-                mHandler.onFingerprintPresence(JID.bare(jid), fingerprint);
+                mHandler.onFingerprintPresence(jid, fingerprint);
             } else {
                 LOGGER.warning("no fingerprint in public key presence extension");
             }
@@ -108,7 +108,7 @@ public class PresenceListener implements StanzaListener {
             PresenceSignature signing = (PresenceSignature) signatureExt;
             String signature = StringUtils.defaultString(signing.getSignature());
             if (!signature.isEmpty()) {
-                mHandler.onSignaturePresence(JID.bare(jid), signature);
+                mHandler.onSignaturePresence(jid, signature);
             } else {
                 LOGGER.warning("no signature in signed presence extension");
             }

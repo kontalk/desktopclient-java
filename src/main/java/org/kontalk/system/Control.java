@@ -400,9 +400,12 @@ public final class Control {
         if (contact.isMe())
             return;
 
-        String rosterName = Config.getInstance().getBoolean(Config.NET_SEND_ROSTER_NAME) ?
-                contact.getName() :
-                "";
+        String contactName = contact.getName();
+        String rosterName =
+                Config.getInstance().getBoolean(Config.NET_SEND_ROSTER_NAME) &&
+                !contactName.isEmpty() ?
+                contactName :
+                contact.getJID().local();
         boolean succ = mClient.addToRoster(contact.getJID(), rosterName);
         if (!succ)
             LOGGER.warning("can't add contact to roster: "+contact);
