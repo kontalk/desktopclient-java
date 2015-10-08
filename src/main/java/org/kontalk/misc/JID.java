@@ -66,7 +66,8 @@ public final class JID {
     }
 
     /**
-     * Comparing only bare JIDs. TODO case sensitive!?
+     * Comparing only bare JIDs.
+     * Case-insensitive (local and domain part, resource is case-sensitive).
      */
     @Override
     public boolean equals(Object o) {
@@ -77,14 +78,15 @@ public final class JID {
            return false;
 
        JID oJID = (JID) o;
-       return mLocal.equals(oJID.mLocal) && mDomain.equals(oJID.mDomain);
+       return mLocal.equalsIgnoreCase(oJID.mLocal) &&
+               mDomain.equalsIgnoreCase(oJID.mDomain);
     }
 
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 17 * hash + Objects.hashCode(this.mLocal);
-        hash = 17 * hash + Objects.hashCode(this.mDomain);
+        hash = 17 * hash + Objects.hashCode(this.mLocal.toLowerCase());
+        hash = 17 * hash + Objects.hashCode(this.mDomain.toLowerCase());
         return hash;
     }
 
