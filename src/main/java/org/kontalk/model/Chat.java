@@ -319,6 +319,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                         LOGGER.warning("ignoring invalid JID: "+jid);
                         continue;
                     }
+
                     this.addContact(ContactList.getInstance().getOrCreate(jid));
                     this.changed(command);
                 }
@@ -623,10 +624,10 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         private static final String JSON_OWNER_JID = "jid";
         private static final String JSON_ID = "id";
 
-        public final String ownerJID;
+        public final JID ownerJID;
         public final String id;
 
-        public GID(String ownerJID, String id) {
+        public GID(JID ownerJID, String id) {
             this.ownerJID = ownerJID;
             this.id = id;
         }
@@ -635,7 +636,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         @SuppressWarnings("unchecked")
         private String toJSON() {
             JSONObject json = new JSONObject();
-            EncodingUtils.putJSON(json, JSON_OWNER_JID, ownerJID);
+            EncodingUtils.putJSON(json, JSON_OWNER_JID, ownerJID.string());
             EncodingUtils.putJSON(json, JSON_ID, id);
             return json.toJSONString();
         }
@@ -644,7 +645,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             Object obj = JSONValue.parse(json);
             try {
                 Map<?, ?> map = (Map) obj;
-                String jid = (String) map.get(JSON_OWNER_JID);
+                JID jid = JID.bare((String) map.get(JSON_OWNER_JID));
                 String id = (String) map.get(JSON_ID);
                 return new GID(jid, id);
             }  catch (NullPointerException | ClassCastException ex) {

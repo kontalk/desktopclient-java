@@ -92,7 +92,7 @@ public final class ClientUtils {
         switch (op) {
             case LEAVE:
                 // weare leaving
-                return new GroupExtension(gid.id, gid.ownerJID, Command.LEAVE);
+                return new GroupExtension(gid.id, gid.ownerJID.string(), Command.LEAVE);
             case CREATE:
             case SET:
                 Set<Member> member = new HashSet<>();
@@ -123,7 +123,7 @@ public final class ClientUtils {
                 }
 
                 return new GroupExtension(gid.id,
-                        gid.ownerJID,
+                        gid.ownerJID.string(),
                         command,
                         member.toArray(new Member[0]));
             default:
@@ -132,11 +132,11 @@ public final class ClientUtils {
         }
     }
 
-    public static GroupCommand groupExtensionToGroupCommand(String ownerJID,
+    public static GroupCommand groupExtensionToGroupCommand(JID owner,
             String id,
             Command com,
             Member[] members) {
-        GID gid = new GID(ownerJID, id);
+        GID gid = new GID(owner, id);
 
         if (com == GroupExtension.Command.CREATE) {
             List<JID> jids = new ArrayList<>(members.length);

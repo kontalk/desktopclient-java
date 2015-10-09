@@ -576,13 +576,13 @@ public final class Control {
         }
 
         public void createGroupChat(Contact[] contacts, String subject) {
-            String jid = Config.getInstance().getString(Config.ACC_JID);
-            if (jid.isEmpty()) {
-                LOGGER.warning("can't create group, no JID");
+            JID jid = JID.bare(Config.getInstance().getString(Config.ACC_JID));
+            if (!jid.isValid()) {
+                LOGGER.warning("can't create group, invalid JID");
                 return;
             }
             Chat chat = ChatList.getInstance().createNew(contacts,
-                    new GID(jid ,
+                    new GID(jid,
                             org.jivesoftware.smack.util.StringUtils.randomString(8)),
                     subject);
 

@@ -320,7 +320,7 @@ public final class Client implements StanzaListener, Runnable {
             Optional<MessageContent.GroupCommand> optGroupCommand = content.getGroupCommand();
             smackMessage.addExtension(optGroupCommand.isPresent() ?
                     ClientUtils.groupCommandToGroupExtension(chat, optGroupCommand.get()) :
-                    new GroupExtension(gid.id, gid.ownerJID));
+                    new GroupExtension(gid.id, gid.ownerJID.string()));
         }
 
         return smackMessage;
