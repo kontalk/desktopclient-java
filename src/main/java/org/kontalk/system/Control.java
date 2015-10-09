@@ -61,8 +61,6 @@ import org.kontalk.util.XMPPUtils;
 public final class Control {
     private static final Logger LOGGER = Logger.getLogger(Control.class.getName());
 
-    private static final String LEGACY_CUT_FROM_ID = " (NO COMMENT)";
-
     /** The current application state. */
     public enum Status {
         DISCONNECTING,
@@ -280,13 +278,9 @@ public final class Control {
         contact.setEncrypted(true);
 
         // if not set, use uid in key for contact name
-        LOGGER.info("full UID in key: '" + key.userID + "'");
         if (contact.getName().isEmpty() && key.userID != null) {
-            String contactName = key.userID.replaceFirst(" <[a-f0-9]+@.+>$", "");
-            if (contactName.endsWith(LEGACY_CUT_FROM_ID))
-                contactName = contactName.substring(0,
-                        contactName.length() - LEGACY_CUT_FROM_ID.length());
-            LOGGER.info("contact name from key: '" + contactName + "'");
+            LOGGER.info("full UID in key: '" + key.userID + "'");
+            String contactName = PGPUtils.parseUID(key.userID)[0];
             if (!contactName.isEmpty())
                 contact.setName(contactName);
         }
