@@ -92,8 +92,7 @@ final class Encryptor {
         if (!loaded)
             return Optional.empty();
 
-        // secure the message against the most basic attacks using Message/CPIM
-        // [for Android client - dont know if its useful, but doesnt hurt]
+        // secure the message against replay attacks using Message/CPIM
         String from = myKey.getUserId();
         StringBuilder to = new StringBuilder();
         for (PGPUtils.PGPCoderKey k : receiverKeys)
