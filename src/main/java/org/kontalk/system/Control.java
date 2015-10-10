@@ -115,7 +115,7 @@ public final class Control {
             // send public key requests for Kontalk contacts with missing key
             for (Contact contact : ContactList.getInstance().getAll())
                 if (contact.getFingerprint().isEmpty())
-                    Control.this.sendKeyRequest(contact);
+                    this.maySendKeyRequest(contact);
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
             for (Contact contact : ContactList.getInstance().getAll())
                 contact.setOffline();
@@ -133,7 +133,7 @@ public final class Control {
                 errors.contains(Coder.Error.INVALID_SIGNATURE) ||
                 errors.contains(Coder.Error.INVALID_SENDER)) {
             // maybe there is something wrong with the senders key
-            this.sendKeyRequest(contact);
+            this.maySendKeyRequest(contact);
         }
         this.handleSecurityErrors(message);
     }
@@ -155,7 +155,7 @@ public final class Control {
         ContactList contactList = ContactList.getInstance();
         Optional<Contact> optContact = contactList.contains(ids.jid) ?
                 contactList.get(ids.jid) :
-                this.createNewContact(ids.jid, "", true);
+                this.createContact(ids.jid, "");
         if (!optContact.isPresent()) {
             LOGGER.warning("can't get contact for message");
             return false;
@@ -323,8 +323,8 @@ public final class Control {
         mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
     }
 
-    void sendKeyRequest(Contact contact) {
-        if (!XMPPUtils.isKontalkContact(contact))
+    void maySendKeyRequest(Contact contact) {
+        if (!contact.isKontalkUser())
             return;
 
         if (contact.getSubScription() == Contact.Subscription.UNSUBSCRIBED ||
@@ -335,9 +335,11 @@ public final class Control {
         mClient.sendPublicKeyRequest(contact.getJID());
     }
 
-    /* private */
+    Optional<Contact> createContact(JID jid, String name) {
+        return this.createContact(jid, name, XMPPUtils.isKontalkJID(jid));
+    }
 
-    private Optional<Contact> createNewContact(JID jid, String name, boolean encrypted) {
+    Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
         if (!mClient.isConnected()) {
             // workaround: create only if contact can be added to roster
             return Optional.empty();
@@ -359,8 +361,12 @@ public final class Control {
 
         this.addToRoster(newContact);
 
+        this.maySendKeyRequest(newContact);
+
         return Optional.of(newContact);
     }
+
+    /* private */
 
     /**
      * Decrypt an incoming message and download attachment if present.
@@ -374,7 +380,7 @@ public final class Control {
 
         Optional<GroupCommand> optCom = message.getContent().getGroupCommand();
         if (decrypted && optCom.isPresent()) {
-            message.getChat().applyGroupCommand(optCom.get(), message.getContact());
+            this.processGroupCommand(optCom.get(), message.getChat(), message.getContact());
         }
 
         if (message.getContent().getPreview().isPresent()) {
@@ -410,6 +416,51 @@ public final class Control {
         if (!succ) {
             LOGGER.warning("could not remove contact from roster");
         }
+    }
+
+    // warning: call this only once for each group command!
+    private void processGroupCommand(GroupCommand command, Chat chat, Contact sender) {
+        // validation checks
+        Optional<GID> optComGID = command.getGID();
+        Optional<GID> chatGID = chat.getGID();
+        if (optComGID.isPresent()) {
+            GID comGID = optComGID.get();
+            if (command.getOperation() != GroupCommand.OP.LEAVE) {
+                // sender must be owner
+                if (!comGID.ownerJID.equals(sender.getJID())) {
+                    LOGGER.warning("sender not owner");
+                    return;
+                }
+            }
+            if (chatGID.isPresent()) {
+                GID gid = chatGID.get();
+                // gids must match
+                if (!gid.equals(comGID)) {
+                    LOGGER.warning("group IDs do not match");
+                    return;
+                }
+            } else {
+                // must be create command
+                if (command.getOperation() != GroupCommand.OP.CREATE) {
+                    LOGGER.warning("chat withoud gid and not create command");
+                    return;
+                }
+            }
+        }
+
+        // add contacts if necessary
+        // TODO design problem here: we need at least the public keys, but user
+        // might dont wanna have group members in contact list
+        ContactList contactList = ContactList.getInstance();
+        for (JID jid : command.getAdded()) {
+            if (!contactList.contains(jid)) {
+                boolean succ = this.createContact(jid, "").isPresent();
+                if (!succ)
+                    LOGGER.warning("can't create contact, JID: "+jid);
+            }
+        }
+
+        chat.applyGroupCommand(command, sender);
     }
 
     /* static */
@@ -514,7 +565,7 @@ public final class Control {
         /* contact */
 
         public Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
-            return Control.this.createNewContact(jid, name, encrypted);
+            return Control.this.createContact(jid, name, encrypted);
         }
 
         public void deleteContact(Contact contact) {
@@ -552,7 +603,7 @@ public final class Control {
         }
 
         public void requestKey(Contact contact) {
-            Control.this.sendKeyRequest(contact);
+            Control.this.maySendKeyRequest(contact);
         }
 
         public void acceptKey(Contact contact, PGPCoderKey key) {
@@ -672,12 +723,6 @@ public final class Control {
             LOGGER.config("chat: "+chat+" content: "+content);
 
             Set<Contact> contacts = chat.getContacts();
-
-            boolean encrypted = false;
-            for (Contact c: contacts) {
-                    encrypted |= c.getEncrypted();
-            }
-
             if (contacts.isEmpty()) {
                 LOGGER.warning("can't send message, no (valid) contact(s)");
                 return;
@@ -685,7 +730,7 @@ public final class Control {
 
             OutMessage.Builder builder = new OutMessage.Builder(chat,
                     contacts.toArray(new Contact[0]),
-                    encrypted);
+                    chat.sendEncrypted());
             builder.content(content);
             OutMessage newMessage = builder.build();
             if (newMessage.getContent().getAttachment().isPresent())

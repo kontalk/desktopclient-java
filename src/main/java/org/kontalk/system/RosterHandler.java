@@ -78,18 +78,15 @@ public final class RosterHandler {
             name = "";
         }
 
-        Optional<Contact> optNewContact = ContactList.getInstance().create(jid, name);
+        Optional<Contact> optNewContact = mControl.createContact(jid, name);
         if (!optNewContact.isPresent())
             return;
-        Contact newContact = optNewContact.get();
 
         Contact.Subscription status = rosterToModelSubscription(itemStatus, type);
-        newContact.setSubScriptionStatus(status);
+        optNewContact.get().setSubScriptionStatus(status);
 
         if (status == Contact.Subscription.UNSUBSCRIBED)
             mClient.sendPresenceSubscriptionRequest(jid);
-
-        mControl.sendKeyRequest(newContact);
     }
 
     public void onEntryDeleted(JID jid) {
@@ -145,7 +142,7 @@ public final class RosterHandler {
         Contact contact = optContact.get();
         if (!contact.getFingerprint().equals(fingerprint)) {
             LOGGER.info("detected public key change, requesting new key...");
-            mControl.sendKeyRequest(contact);
+            mControl.maySendKeyRequest(contact);
         }
     }
 

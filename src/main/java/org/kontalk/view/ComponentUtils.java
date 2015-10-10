@@ -477,7 +477,7 @@ final class ComponentUtils {
             Set<Contact> allContacts = ContactList.getInstance().getAll();
             List<Contact> contacts = new LinkedList<>();
             for (Contact c : allContacts) {
-                if (XMPPUtils.isKontalkContact(c))
+                if (c.isKontalkUser())
                     contacts.add(c);
             }
 

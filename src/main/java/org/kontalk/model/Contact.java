@@ -34,6 +34,7 @@ import org.jivesoftware.smack.packet.Presence;
 import org.kontalk.system.Config;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
+import org.kontalk.util.XMPPUtils;
 
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
@@ -261,6 +262,10 @@ public final class Contact extends Observable implements Comparable<Contact> {
         if (!myJID.isValid())
             return false;
         return mJID.equals(myJID);
+    }
+
+    public boolean isKontalkUser(){
+        return XMPPUtils.isKontalkJID(mJID);
     }
 
     /**

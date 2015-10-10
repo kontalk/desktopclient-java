@@ -296,33 +296,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     }
 
     public void applyGroupCommand(GroupCommand command, Contact sender) {
-        // validation checks
         Optional<GID> optComGID = command.getGID();
-        if (optComGID.isPresent()) {
-            GID comGID = optComGID.get();
-            if (command.getOperation() != GroupCommand.OP.LEAVE) {
-                // sender must be owner
-                if (!comGID.ownerJID.equals(sender.getJID())) {
-                    LOGGER.warning("sender not owner");
-                    return;
-                }
-            }
-            if (mOptGID.isPresent()) {
-                GID gid = mOptGID.get();
-                // gid must match
-                if (!gid.equals(comGID)) {
-                    LOGGER.warning("group IDs do not match");
-                    return;
-                }
-            } else {
-                // must be create command
-                if (command.getOperation() != GroupCommand.OP.CREATE) {
-                    LOGGER.warning("chat withoud gid and not create command");
-                    return;
-                }
-            }
-        }
-
         switch(command.getOperation()) {
             case CREATE:
                 if (!optComGID.isPresent()) {
@@ -339,13 +313,12 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                 assert mContactMap.containsKey(sender);
 
                 for (JID jid: command.getAdded()) {
-                    if (!jid.isValid()) {
-                        LOGGER.warning("ignoring invalid JID: "+jid);
+                    Optional<Contact> optContact = ContactList.getInstance().get(jid);
+                    if (!optContact.isPresent()) {
+                        LOGGER.warning("can't find contact, jid: "+jid);
                         continue;
                     }
-
-                    this.addContact(ContactList.getInstance().getOrCreate(jid));
-                    this.changed(command);
+                    this.addContact(optContact.get());
                 }
                 mSubject = command.getSubject();
                 this.save();
