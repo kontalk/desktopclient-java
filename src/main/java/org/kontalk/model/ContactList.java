@@ -15,7 +15,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.kontalk.model;
 
 import org.kontalk.misc.JID;
@@ -36,12 +35,14 @@ import org.kontalk.system.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class ContactList extends Observable {
+
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
     private static final ContactList INSTANCE = new ContactList();
 
     /** JID to contact. */
     private final HashMap<JID, Contact> mJIDMap = new HashMap<>();
+
     /** Database ID to contact. */
     private final HashMap<Integer, Contact> mIDMap = new HashMap<>();
 
@@ -54,11 +55,11 @@ public final class ContactList extends Observable {
                 Contact contact = Contact.load(resultSet);
                 JID jid = contact.getJID();
 
-                if (mJIDMap.containsKey(jid)) {
-                    LOGGER.warning("contacts with equal JIDs: "+jid);
-                    continue;
-                }
                 synchronized (this) {
+                    if (mJIDMap.containsKey(jid)) {
+                        LOGGER.warning("contacts with equal JIDs: " + jid);
+                        continue;
+                    }
                     mJIDMap.put(jid, contact);
                     mIDMap.put(contact.getID(), contact);
                 }
@@ -71,11 +72,8 @@ public final class ContactList extends Observable {
 
     /**
      * Create and add a new contact.
-     * @param jid JID of new contact
-     * @param name nickname of new contact, use an empty string if not known
-     * @return the newly created contact, if one was created
      */
-    public synchronized Optional<Contact> create(JID jid, String name) {
+    public Optional<Contact> create(JID jid, String name) {
         if (!this.isValid(jid))
             return Optional.empty();
 
@@ -83,31 +81,20 @@ public final class ContactList extends Observable {
         if (newContact.getID() < 1)
             return Optional.empty();
 
-        mJIDMap.put(newContact.getJID(), newContact);
-        mIDMap.put(newContact.getID(), newContact);
+        synchronized (this) {
+            mJIDMap.put(newContact.getJID(), newContact);
+            mIDMap.put(newContact.getID(), newContact);
+        }
 
         this.changed(newContact);
         return Optional.of(newContact);
     }
 
-    Contact getOrCreate(JID jid) {
-        if (this.contains(jid))
-            return mJIDMap.get(jid);
-
-        // TODO creation without any safety checks
-        Contact newContact = new Contact(jid, "");
-
-        mJIDMap.put(newContact.getJID(), newContact);
-        mIDMap.put(newContact.getID(), newContact);
-
-        this.changed(newContact);
-        return newContact;
-    }
-
     synchronized Optional<Contact> get(int id) {
         Optional<Contact> optContact = Optional.ofNullable(mIDMap.get(id));
-        if (!optContact.isPresent())
-            LOGGER.warning("can't find contact with ID: "+id);
+        if (!optContact.isPresent()) {
+            LOGGER.warning("can't find contact with ID: " + id);
+        }
         return optContact;
     }
 
@@ -123,19 +110,22 @@ public final class ContactList extends Observable {
      * Return all but deleted contacts.
      */
     public synchronized SortedSet<Contact> getAll() {
-        SortedSet<Contact> contact = new TreeSet<>();
+        SortedSet<Contact> contacts = new TreeSet<>();
         for (Contact u : mJIDMap.values())
             if (!u.isDeleted())
-                contact.add(u);
-        return contact;
+                contacts.add(u);
+
+        return contacts;
     }
 
-    public synchronized void remove(Contact contact) {
-        boolean removed = mJIDMap.remove(contact.getJID(), contact);
-        if (!removed) {
-            LOGGER.warning("can't find contact to remove: "+contact);
+    public void remove(Contact contact) {
+        synchronized (this) {
+            boolean removed = mJIDMap.remove(contact.getJID(), contact);
+            if (!removed) {
+                LOGGER.warning("can't find contact to remove: "+contact);
+            }
+            mIDMap.remove(contact.getID());
         }
-        mIDMap.remove(contact.getID());
         this.changed(contact);
     }
 
@@ -146,21 +136,23 @@ public final class ContactList extends Observable {
         return mJIDMap.containsKey(jid);
     }
 
-    public synchronized boolean changeJID(Contact contact, JID jid) {
+    public boolean changeJID(Contact contact, JID jid) {
         if (!this.isValid(jid))
             return false;
 
-        mJIDMap.put(jid, contact);
-        mJIDMap.remove(contact.getJID());
+        synchronized (this) {
+            mJIDMap.put(jid, contact);
+            mJIDMap.remove(contact.getJID());
+        }
         contact.setJID(jid);
 
         this.changed(contact);
         return true;
     }
 
-    private boolean isValid(JID jid) {
+    private synchronized boolean isValid(JID jid) {
         if (!jid.isValid()) {
-            LOGGER.warning("invalid jid: "+jid);
+            LOGGER.warning("invalid jid: " + jid);
             return false;
         }
 
@@ -172,6 +164,7 @@ public final class ContactList extends Observable {
         return true;
     }
 
+    // TODO test without synchronized
     private synchronized void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
