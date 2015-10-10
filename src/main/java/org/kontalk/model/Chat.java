@@ -235,6 +235,30 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return mOptGID.isPresent();
     }
 
+    /**
+     * Return if new outgoing messages in chat will be encrypted.
+     * True if encryption is turned on for at least one chat contact.
+     */
+    public boolean sendEncrypted() {
+        boolean encrypted = false;
+        for (Contact c: mContactMap.keySet()) {
+            encrypted |= c.getEncrypted();
+        }
+        return encrypted;
+    }
+
+    /**
+     * Return if new outgoing messages could be send encrypted.
+     * True if all chat contacts have a key.
+     */
+    public boolean canSendEncrypted() {
+        boolean encrypted = !mContactMap.keySet().isEmpty();
+        for (Contact c: mContactMap.keySet()) {
+            encrypted &= c.hasKey();
+        }
+        return encrypted;
+    }
+
     public ViewSettings getViewSettings() {
         return mViewSettings;
     }
