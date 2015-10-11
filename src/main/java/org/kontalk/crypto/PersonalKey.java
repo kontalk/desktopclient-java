@@ -95,7 +95,7 @@ public final class PersonalKey {
     }
 
     public String getFingerprint() {
-        return Hex.toHexString(mAuthKey.getPublicKey().getFingerprint());
+        return Hex.toHexString(mAuthKey.getPublicKey().getFingerprint()).toUpperCase();
     }
 
     /** Creates a {@link PersonalKey} from private keyring data. */

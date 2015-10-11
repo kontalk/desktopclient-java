@@ -27,6 +27,7 @@ import com.alee.laf.text.WebTextField;
 import com.alee.utils.filefilter.ImageFilesFilter;
 import java.awt.Component;
 import java.awt.Desktop;
+import java.awt.Font;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -136,6 +137,7 @@ final class Utils {
         WebTextArea area = new WebTextArea();
         area.setEditable(false);
         area.setOpaque(false);
+        area.setFontName(Font.MONOSPACED);
         area.setFontSizeAndStyle(13, true, false);
         return area;
     }
