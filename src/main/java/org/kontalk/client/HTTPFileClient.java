@@ -54,6 +54,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
+import org.kontalk.misc.KonException;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.TrustUtils;
 
@@ -107,11 +108,11 @@ public class HTTPFileClient {
      * @return the absolute path of the downloaded file, empty if the file could
      * not be downloaded
      */
-    public Path download(URI url, Path base, ProgressListener listener) {
+    public Path download(URI url, Path base, ProgressListener listener) throws KonException {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
-                return Paths.get("");
+                throw new KonException(KonException.Error.DOWNLOAD_CREATE);
         }
 
         LOGGER.info("from URL=" + url+ "...");
@@ -124,20 +125,20 @@ public class HTTPFileClient {
             response = mHTTPClient.execute(mCurrentRequest);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't execute request", ex);
-            return Paths.get("");
+            throw new KonException(KonException.Error.DOWNLOAD_EXECUTE);
         }
 
         try {
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
                 LOGGER.warning("unexpected response code: " + code);
-                return Paths.get("");
+                throw new KonException(KonException.Error.DOWNLOAD_RESPONSE);
             }
 
             HttpEntity entity = response.getEntity();
             if (entity == null) {
                 LOGGER.warning("no download response entity");
-                return Paths.get("");
+                throw new KonException(KonException.Error.DOWNLOAD_RESPONSE);
             }
 
             // get filename
@@ -197,7 +198,7 @@ public class HTTPFileClient {
                 entity.writeTo(cOut);
             } catch (IOException ex) {
                 LOGGER.log(Level.WARNING, "can't download file", ex);
-                return Paths.get("");
+                throw new KonException(KonException.Error.DOWNLOAD_WRITE);
             }
 
             // release http connection resource
@@ -226,11 +227,11 @@ public class HTTPFileClient {
      * @param encrypted is the file encrypted?
      * @return the URL the file can be downloaded with.
      */
-    public URI upload(File file, URI url, String mime, boolean encrypted) {
+    public URI upload(File file, URI url, String mime, boolean encrypted) throws KonException {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
-                return URI.create("");
+                throw new KonException(KonException.Error.UPLOAD_CREATE);
         }
 
         // request type
@@ -250,7 +251,7 @@ public class HTTPFileClient {
             response = mHTTPClient.execute(mCurrentRequest);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't upload file", ex);
-            return URI.create("");
+            throw new KonException(KonException.Error.UPLOAD_EXECUTE);
         }
 
         // get URL from response entity
@@ -259,13 +260,13 @@ public class HTTPFileClient {
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
                 LOGGER.warning("unexpected response code: " + code);
-                return URI.create("");
+                throw new KonException(KonException.Error.UPLOAD_RESPONSE);
             }
 
             HttpEntity entity = response.getEntity();
             if (entity == null) {
                 LOGGER.warning("no upload response entity");
-                return URI.create("");
+                throw new KonException(KonException.Error.UPLOAD_RESPONSE);
             }
 
             downloadURL = EntityUtils.toString(entity);
@@ -274,7 +275,7 @@ public class HTTPFileClient {
             EntityUtils.consume(entity);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't get url from response", ex);
-            return URI.create("");
+            throw new KonException(KonException.Error.UPLOAD_RESPONSE);
         } finally {
            try {
                 response.close();
@@ -287,14 +288,13 @@ public class HTTPFileClient {
             return new URI(downloadURL);
         } catch (URISyntaxException ex) {
             LOGGER.log(Level.WARNING, "can't parse URI", ex);
-            return URI.create("");
+            throw new KonException(KonException.Error.UPLOAD_RESPONSE);
         }
     }
 
     private static CloseableHttpClient httpClientOrNull(PrivateKey privateKey,
             X509Certificate certificate,
             boolean validateCertificate) {
-        //HttpClientBuilder clientBuilder = HttpClientBuilder.create();
         HttpClientBuilder clientBuilder = HttpClients.custom();
         try {
             SSLContext sslContext = TrustUtils.getCustomSSLContext(privateKey,
@@ -314,7 +314,7 @@ public class HTTPFileClient {
         }
 
         RequestConfig requestConfig = RequestConfig.custom()
-                // handle redirects :)
+                // handle redirects :) TODO ?
                 .setRedirectsEnabled(true)
                 // HttpClient bug caused by Lighttpd
                 .setExpectContinueEnabled(false)

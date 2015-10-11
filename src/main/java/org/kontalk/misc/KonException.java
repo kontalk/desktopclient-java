@@ -38,16 +38,29 @@ public final class KonException extends Exception {
         CLIENT_CONNECTION,
         CLIENT_CONNECT,
         CLIENT_LOGIN,
-        CLIENT_ERROR
+        CLIENT_ERROR,
+        DOWNLOAD_CREATE,
+        DOWNLOAD_RESPONSE,
+        DOWNLOAD_EXECUTE,
+        DOWNLOAD_WRITE,
+        UPLOAD_CREATE,
+        UPLOAD_RESPONSE,
+        UPLOAD_EXECUTE,
     }
 
     private final Error mError;
     private final Class<?> mExceptionClass;
 
-    public KonException(Error error, java.lang.Exception ex) {
+    public KonException(Error error, Exception ex) {
         super();
         mError = error;
         mExceptionClass = ex.getClass();
+    }
+
+    public KonException(Error error) {
+        super();
+        mError = error;
+        mExceptionClass = this.getClass();
     }
 
     public Class<?> getExceptionClass() {
