@@ -18,6 +18,9 @@
 
 package org.kontalk.model;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -28,10 +31,10 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
+import org.kontalk.util.XMPPUtils;
 
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
@@ -75,7 +78,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
             ")";
 
     private final int mID;
-    private String mJID;
+    private JID mJID;
     private String mName;
     private String mStatus = "";
     private Optional<Date> mLastSeen = Optional.empty();
@@ -88,10 +91,9 @@ public final class Contact extends Observable implements Comparable<Contact> {
     //private ItemType mType;
 
     // used for creating new contacts (eg from roster)
-    Contact(String jid, String name) {
-        mJID = XmppStringUtils.parseBareJid(jid);
+    Contact(JID jid, String name) {
+        mJID = jid;
         mName = name;
-
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
         values.add(mJID);
@@ -108,7 +110,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
 
     // used for loading contacts from database
     Contact(int id,
-            String jid,
+            JID jid,
             String name,
             String status,
             Optional<Date> lastSeen,
@@ -125,21 +127,25 @@ public final class Contact extends Observable implements Comparable<Contact> {
         mFingerprint = fingerprint;
     }
 
-    public String getJID() {
+    public JID getJID() {
         return mJID;
     }
 
-    void setJID(String jid) {
-        jid = XmppStringUtils.parseBareJid(jid);
+    void setJID(JID jid) {
         if (jid.equals(mJID))
             return;
+
+        if (!jid.isValid()) {
+            LOGGER.warning("jid is not valid: "+jid);
+            return;
+        }
 
         mJID = jid;
         this.save();
         this.changed(mJID);
     }
 
-    public int getID() {
+    int getID() {
         return mID;
     }
 
@@ -252,15 +258,21 @@ public final class Contact extends Observable implements Comparable<Contact> {
     }
 
     public boolean isMe() {
-        return !mJID.isEmpty() &&
-                mJID.equals(Config.getInstance().getString(Config.ACC_JID));
+        JID myJID = JID.bare(Config.getInstance().getString(Config.ACC_JID));
+        if (!myJID.isValid())
+            return false;
+        return mJID.equals(myJID);
+    }
+
+    public boolean isKontalkUser(){
+        return XMPPUtils.isKontalkJID(mJID);
     }
 
     /**
      * 'Delete' this contact: faked by resetting all values.
      */
     public void setDeleted() {
-        mJID = Integer.toString(mID);
+        mJID = JID.deleted(mID);
         mName = "";
         mStatus = "";
         mLastSeen = Optional.empty();
@@ -272,10 +284,10 @@ public final class Contact extends Observable implements Comparable<Contact> {
     }
 
     public boolean isDeleted() {
-        return mJID.equals(Integer.toString(mID));
+        return mJID.string().equals(Integer.toString(mID));
     }
 
-    void save() {
+    private void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
@@ -302,5 +314,21 @@ public final class Contact extends Observable implements Comparable<Contact> {
     @Override
     public int compareTo(Contact o) {
         return Integer.compare(this.mID, o.mID);
+    }
+
+    static Contact load(ResultSet rs) throws SQLException {
+        int id = rs.getInt("_id");
+        JID jid = JID.bare(rs.getString(Contact.COL_JID));
+
+        String name = rs.getString(Contact.COL_NAME);
+        String status = rs.getString(Contact.COL_STAT);
+        long l = rs.getLong(Contact.COL_LAST_SEEN);
+        Optional<Date> lastSeen = l == 0 ?
+                Optional.<Date>empty() :
+                Optional.<Date>of(new Date(l));
+        boolean encr = rs.getBoolean(Contact.COL_ENCR);
+        String key = Database.getString(rs, Contact.COL_PUB_KEY);
+        String fp = Database.getString(rs, Contact.COL_KEY_FP);
+        return new Contact(id, jid, name, status, lastSeen, encr, key, fp);
     }
 }

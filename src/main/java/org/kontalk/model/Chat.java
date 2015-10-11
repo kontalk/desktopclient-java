@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -40,7 +41,6 @@ import org.json.simple.JSONValue;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
-import org.kontalk.util.XMPPUtils;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
@@ -227,11 +227,36 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             return;
 
         mRead = true;
+        this.save();
         this.changed(mRead);
     }
 
     public boolean isGroupChat() {
         return mOptGID.isPresent();
+    }
+
+    /**
+     * Return if new outgoing messages in chat will be encrypted.
+     * True if encryption is turned on for at least one chat contact.
+     */
+    public boolean sendEncrypted() {
+        boolean encrypted = false;
+        for (Contact c: mContactMap.keySet()) {
+            encrypted |= c.getEncrypted();
+        }
+        return encrypted;
+    }
+
+    /**
+     * Return if new outgoing messages could be send encrypted.
+     * True if all chat contacts have a key.
+     */
+    public boolean canSendEncrypted() {
+        boolean encrypted = !mContactMap.keySet().isEmpty();
+        for (Contact c: mContactMap.keySet()) {
+            encrypted &= c.hasKey();
+        }
+        return encrypted;
     }
 
     public ViewSettings getViewSettings() {
@@ -250,8 +275,9 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     public boolean addMessage(KonMessage message) {
         boolean added = mMessages.add(message);
         if (added) {
-            if (message.isInMessage()) {
+            if (message.isInMessage() && mRead) {
                 mRead = false;
+                this.save();
                 this.changed(mRead);
             }
             this.changed(message);
@@ -270,33 +296,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     }
 
     public void applyGroupCommand(GroupCommand command, Contact sender) {
-        // validation checks
         Optional<GID> optComGID = command.getGID();
-        if (optComGID.isPresent()) {
-            GID comGID = optComGID.get();
-            if (command.getOperation() != GroupCommand.OP.LEAVE) {
-                // sender must be owner
-                if (!comGID.ownerJID.equals(sender.getJID())) {
-                    LOGGER.warning("sender not owner");
-                    return;
-                }
-            }
-            if (mOptGID.isPresent()) {
-                GID gid = mOptGID.get();
-                // gid must match
-                if (!gid.equals(comGID)) {
-                    LOGGER.warning("group IDs do not match");
-                    return;
-                }
-            } else {
-                // must be create command
-                if (command.getOperation() != GroupCommand.OP.CREATE) {
-                    LOGGER.warning("chat withoud gid and not create command");
-                    return;
-                }
-            }
-        }
-
         switch(command.getOperation()) {
             case CREATE:
                 if (!optComGID.isPresent()) {
@@ -312,19 +312,21 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                 assert mContactMap.size() == 1;
                 assert mContactMap.containsKey(sender);
 
-                for (String jid: command.getAdded()) {
-                    if (!XMPPUtils.isValid(jid)) {
-                        LOGGER.warning("ignoring invalid JID: "+jid);
+                for (JID jid: command.getAdded()) {
+                    Optional<Contact> optContact = ContactList.getInstance().get(jid);
+                    if (!optContact.isPresent()) {
+                        LOGGER.warning("can't find contact, jid: "+jid);
                         continue;
                     }
-                    this.addContact(ContactList.getInstance().getOrCreate(jid));
-                    this.changed(command);
+                    this.addContact(optContact.get());
                 }
                 mSubject = command.getSubject();
+                this.save();
                 this.changed(command);
                 break;
             case LEAVE:
                 this.removeContact(sender);
+                this.save();
                 this.changed(command);
                 break;
             // TODO
@@ -337,10 +339,13 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         }
     }
 
-    void save() {
+    private void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(mSubject));
+        set.put(COL_GID, Database.setString(mOptGID.isPresent() ?
+                mOptGID.get().toJSON() :
+                ""));
         set.put(COL_READ, mRead);
         set.put(COL_VIEW_SET, mViewSettings.toJSONString());
 
@@ -616,10 +621,10 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         private static final String JSON_OWNER_JID = "jid";
         private static final String JSON_ID = "id";
 
-        public final String ownerJID;
+        public final JID ownerJID;
         public final String id;
 
-        public GID(String ownerJID, String id) {
+        public GID(JID ownerJID, String id) {
             this.ownerJID = ownerJID;
             this.id = id;
         }
@@ -628,7 +633,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         @SuppressWarnings("unchecked")
         private String toJSON() {
             JSONObject json = new JSONObject();
-            EncodingUtils.putJSON(json, JSON_OWNER_JID, ownerJID);
+            EncodingUtils.putJSON(json, JSON_OWNER_JID, ownerJID.string());
             EncodingUtils.putJSON(json, JSON_ID, id);
             return json.toJSONString();
         }
@@ -637,7 +642,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             Object obj = JSONValue.parse(json);
             try {
                 Map<?, ?> map = (Map) obj;
-                String jid = (String) map.get(JSON_OWNER_JID);
+                JID jid = JID.bare((String) map.get(JSON_OWNER_JID));
                 String id = (String) map.get(JSON_ID);
                 return new GID(jid, id);
             }  catch (NullPointerException | ClassCastException ex) {

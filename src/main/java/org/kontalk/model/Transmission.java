@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -60,10 +61,10 @@ final public class Transmission {
     private final int mID;
 
     private final Contact mContact;
-    private final String mJID;
+    private final JID mJID;
     protected Optional<Date> mReceivedDate;
 
-    Transmission(Contact contact, String jid, int messageID) {
+    Transmission(Contact contact, JID jid, int messageID) {
         mContact = contact;
         mJID = jid;
         mReceivedDate = Optional.empty();
@@ -71,7 +72,7 @@ final public class Transmission {
         mID = this.insert(messageID);
     }
 
-    private Transmission(int id, Contact contact, String jid, Date receivedDate) {
+    private Transmission(int id, Contact contact, JID jid, Date receivedDate) {
         mID = id;
         mContact = contact;
         mJID = jid;
@@ -82,7 +83,7 @@ final public class Transmission {
         return mContact;
     }
 
-    public String getJID() {
+    public JID getJID() {
         return mJID;
     }
 
@@ -154,7 +155,7 @@ final public class Transmission {
             LOGGER.warning("can't find contact in db, id: "+contactID);
             return null;
         }
-        String jid = resultSet.getString(COL_JID);
+        JID jid = JID.full(resultSet.getString(COL_JID));
         long rDate = resultSet.getLong(COL_REC_DATE);
         Date receivedDate = rDate == 0 ? null : new Date(rDate);
 

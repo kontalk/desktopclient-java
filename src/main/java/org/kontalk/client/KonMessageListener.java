@@ -37,6 +37,7 @@ import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
+import org.kontalk.misc.JID;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
@@ -148,7 +149,7 @@ final public class KonMessageListener implements StanzaListener {
         ChatState chatState = null;
         if (csExt != null) {
             chatState = ((ChatStateExtension) csExt).getChatState();
-            mControl.processChatState(m.getFrom(),
+            mControl.processChatState(JID.bare(m.getFrom()),
                     threadID,
                     optServerDate,
                     chatState);
@@ -233,7 +234,8 @@ final public class KonMessageListener implements StanzaListener {
         if (groupExt instanceof GroupExtension) {
             GroupExtension group = (GroupExtension) groupExt;
             groupCommand = ClientUtils.groupExtensionToGroupCommand(
-                    group.getOwner(), group.getID(), group.getCommand(), group.getMember());
+                    JID.bare(group.getOwner()), group.getID(),
+                    group.getCommand(), group.getMember());
         }
 
         return new MessageContent(plainText, encrypted, attachment, preview, groupCommand);

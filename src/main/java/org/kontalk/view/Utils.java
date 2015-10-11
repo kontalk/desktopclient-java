@@ -27,6 +27,7 @@ import com.alee.laf.text.WebTextField;
 import com.alee.utils.filefilter.ImageFilesFilter;
 import java.awt.Component;
 import java.awt.Desktop;
+import java.awt.Font;
 import java.awt.Image;
 import java.awt.Toolkit;
 import java.awt.datatransfer.Clipboard;
@@ -55,11 +56,11 @@ import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
-import org.kontalk.util.XMPPUtils;
 import org.ocpsoft.prettytime.PrettyTime;
 
 /**
@@ -136,6 +137,7 @@ final class Utils {
         WebTextArea area = new WebTextArea();
         area.setEditable(false);
         area.setOpaque(false);
+        area.setFontName(Font.MONOSPACED);
         area.setFontSizeAndStyle(13, true, false);
         return area;
     }
@@ -190,9 +192,9 @@ final class Utils {
     }
 
     private static String hashOrJID(Contact contact, int maxLength) {
-        String jid = contact.getJID();
-        return XMPPUtils.isHash(jid) && jid.length() >= 10 ?
-                "[" + jid.substring(0, 10) + "]" :
+        JID jid = contact.getJID();
+        return jid.isHash() && jid.string().length() >= 10 ?
+                "[" + jid.string().substring(0, 10) + "]" :
                 jid(contact, maxLength, true);
     }
 
@@ -205,19 +207,19 @@ final class Utils {
     }
 
     static String jid(Contact contact, int maxLength, boolean brackets) {
-        String jid = contact.getJID();
+        JID jid = contact.getJID();
         if (brackets)
             maxLength -= 2;
-        if (jid.length() > maxLength) {
-            String local = XmppStringUtils.parseLocalpart(jid);
-            local = StringUtils.abbreviate(local, (int) (maxLength * 0.4));
-            String domain = XmppStringUtils.parseDomain(jid);
-            domain = StringUtils.abbreviate(domain, (int) (maxLength * 0.6));
-            jid = XmppStringUtils.completeJidFrom(local, domain);
+        String s = jid.string();
+        if (s.length() > maxLength) {
+            String local = StringUtils.abbreviate(jid.local(), (int) (maxLength * 0.4));
+            String domain = StringUtils.abbreviate(jid.domain(), (int) (maxLength * 0.6));
+            // not precise, adding a character here
+            s = XmppStringUtils.completeJidFrom(local, domain);
         }
         if (brackets)
-            jid = "<" + jid + ">";
-        return jid;
+            s = "<" + s + ">";
+        return s;
     }
 
     static String chatTitle(Chat chat) {
@@ -240,14 +242,15 @@ final class Utils {
         return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
     }
 
-    static String mainStatus(Contact u, boolean pre) {
-        Contact.Subscription subStatus = u.getSubScription();
-        return u.isMe() ? Tr.tr("Myself") :
-                    u.isBlocked() ? Tr.tr("Blocked") :
-                    u.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
+    static String mainStatus(Contact c, boolean pre) {
+        Contact.Subscription subStatus = c.getSubScription();
+        return c.isMe() ? Tr.tr("Myself") :
+                    c.isBlocked() ? Tr.tr("Blocked") :
+                    c.getOnline() == Contact.Online.YES ? Tr.tr("Online") :
+                    c.getOnline() == Contact.Online.ERROR ? Tr.tr("Not reachable") :
                     subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
                     subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    lastSeen(u, true, pre);
+                    lastSeen(c, true, pre);
     }
 
     static String lastSeen(Contact contact, boolean pretty, boolean pre) {
@@ -259,7 +262,7 @@ final class Utils {
 
     static String getErrorText(KonException ex) {
         String eol = " " + System.getProperty("line.separator");
-        String errorText = Tr.tr("Unknown error!?");
+        String errorText;
         switch (ex.getError()) {
             case IMPORT_ARCHIVE:
                 errorText = Tr.tr("Can't open key archive.");
@@ -284,6 +287,7 @@ final class Utils {
                 break;
             case READ_FILE:
             case LOAD_KEY:
+                errorText = "";
                 switch (ex.getError()) {
                     case READ_FILE:
                         errorText = Tr.tr("Can't read key files from configuration directory.");
@@ -322,7 +326,23 @@ final class Utils {
                 errorText = Tr.tr("Connection to server closed on error.");
                 // TODO more details
                 break;
+            case DOWNLOAD_CREATE:
+            case DOWNLOAD_EXECUTE:
+            case DOWNLOAD_RESPONSE:
+            case DOWNLOAD_WRITE:
+                errorText = Tr.tr("Downloading file failed");
+                // TODO more details
+                break;
+            case UPLOAD_CREATE:
+            case UPLOAD_EXECUTE:
+            case UPLOAD_RESPONSE:
+                errorText = Tr.tr("Uploading file failed");
+                // TODO more details
+                break;
+            default:
+                errorText = Tr.tr("Unusual error:")+" "+ex.getError();
         }
+        errorText.chars();
         return errorText;
     }
 

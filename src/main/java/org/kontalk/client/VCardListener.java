@@ -11,6 +11,7 @@ import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.kontalk.misc.JID;
 import org.kontalk.system.Control;
 
 /**
@@ -47,7 +48,7 @@ final class VCardListener implements StanzaListener {
                 LOGGER.warning("got vcard without pgp key included");
                 return;
             }
-            mControl.handlePGPKey(p.getFrom(), publicKey);
+            mControl.handlePGPKey(JID.bare(p.getFrom()), publicKey);
         }
     }
 }

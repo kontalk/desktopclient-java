@@ -57,7 +57,6 @@ import javax.swing.text.ParagraphView;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledEditorKit;
 import javax.swing.text.ViewFactory;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
@@ -597,7 +596,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 return true;
             for (Transmission t: mValue.getTransmissions()) {
                 if (t.getContact().getName().toLowerCase().contains(search) ||
-                        t.getContact().getJID().toLowerCase().contains(search))
+                        t.getContact().getJID().string().toLowerCase().contains(search))
                     return true;
             }
 
@@ -643,7 +642,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         if (!message.getContact().getName().isEmpty()) {
             from = message.getContact().getName();
         } else {
-            from = XmppStringUtils.parseBareJid(message.getJID());
+            from = message.getJID().local();
             if (from.length() > 40)
                 from = from.substring(0, 8) + "...";
         }

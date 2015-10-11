@@ -183,7 +183,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         @Override
         protected boolean contains(String search) {
             return mValue.getName().toLowerCase().contains(search) ||
-                    mValue.getJID().toLowerCase().contains(search);
+                    mValue.getJID().string().toLowerCase().contains(search);
         }
 
         @Override
@@ -230,7 +230,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             mNewMenuItem.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent event) {
-                    mView.getControl().createSingleChat(mItem.mValue);
+                    mView.getControl().getOrCreateSingleChat(mItem.mValue);
                 }
             });
             this.add(mNewMenuItem);

@@ -68,26 +68,29 @@ public final class ChatList extends Observable implements Observer {
         return new TreeSet<>(mMap.values());
     }
 
-    public synchronized void save() {
-        for (Chat chat: mMap.values()) {
-            chat.save();
+    /**
+     * Get chat with contact and XMPPID.
+     */
+    public synchronized Optional<Chat> get(Contact contact, String xmmpThreadID) {
+        for (Chat chat : mMap.values()) {
+            if (chat.getXMPPID().equals(xmmpThreadID)
+                    // TODO
+                    //&& !chat.isGroupChat()
+                    && chat.getAllContacts().contains(contact))
+                return Optional.of(chat);
         }
+        return Optional.empty();
+    }
+
+    public Chat getOrCreate(Contact contact) {
+        return this.getOrCreate(contact, "");
     }
 
     /**
-     * Get a chat with only the contact as additional member.
-     * Creates a new chat if necessary.
+     * Find chat for contact and XMPP ID or creates a new chat.
      */
-    public Chat getOrCreate(Contact contact) {
-        Chat chat = this.getOrNull(contact);
-        if (chat != null)
-            return chat;
-
-        return this.createNew(contact);
-    }
-
-    public Chat getOrCreate(String xmppThreadID, Contact contact) {
-        Optional<Chat> optChat = this.get(xmppThreadID);
+    public Chat getOrCreate(Contact contact, String xmppThreadID) {
+        Optional<Chat> optChat = this.get(contact, xmppThreadID);
         if (optChat.isPresent())
             return optChat.get();
 
@@ -100,6 +103,7 @@ public final class ChatList extends Observable implements Observer {
 
     private Chat createNew(Contact contact, String xmppThreadID) {
         Chat newChat = new Chat(contact, xmppThreadID);
+        LOGGER.config("created new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
         return newChat;
@@ -107,6 +111,7 @@ public final class ChatList extends Observable implements Observer {
 
     public Chat createNew(Contact[] contacts, GID gid, String subject) {
         Chat newChat = new Chat(contacts, gid, subject);
+        LOGGER.config("created new group chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
         return newChat;
@@ -114,27 +119,18 @@ public final class ChatList extends Observable implements Observer {
 
     private void putSilent(Chat chat) {
         synchronized (this) {
+            // TODO check if we already have a chat equal to this
             mMap.put(chat.getID(), chat);
         }
         chat.addObserver(this);
     }
 
-    public synchronized Optional<Chat> get(int id) {
+    // TODO unused
+    private synchronized Optional<Chat> get(int id) {
         Chat chat = mMap.get(id);
         if (chat == null)
             LOGGER.warning("can't find chat with id: "+id);
         return Optional.ofNullable(chat);
-    }
-
-    public synchronized Optional<Chat> get(String xmppThreadID) {
-        if (xmppThreadID == null || xmppThreadID.isEmpty()) {
-            return Optional.empty();
-        }
-        for (Chat chat : mMap.values()) {
-            if (xmppThreadID.equals(chat.getXMPPID()))
-                return Optional.of(chat);
-        }
-        return Optional.empty();
     }
 
     public boolean contains(int id) {
@@ -142,7 +138,7 @@ public final class ChatList extends Observable implements Observer {
     }
 
     public boolean contains(Contact contact) {
-        return this.getOrNull(contact) != null;
+        return this.get(contact, "").isPresent();
     }
 
     public synchronized void delete(int id) {
@@ -161,14 +157,6 @@ public final class ChatList extends Observable implements Observer {
      */
     public boolean isUnread() {
         return mUnread;
-    }
-
-    private synchronized Chat getOrNull(Contact contact) {
-        for (Chat chat : mMap.values()) {
-            if (!chat.isGroupChat() && chat.getAllContacts().contains(contact))
-                return chat;
-        }
-        return null;
     }
 
     private synchronized void changed(Object arg) {

@@ -93,6 +93,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
     private final WebTextArea mSendTextArea;
+    private final WebLabel mEncryptionStatus;
     private final WebButton mSendButton;
     private final WebFileChooser fileChooser;
 
@@ -179,6 +180,9 @@ final class ChatView extends WebPanel implements Observer {
             }
         });
 
+
+        // bottom panel...
+
         WebPanel bottomPanel = new WebPanel();
         bottomPanel.setMinimumSize(new Dimension(0, 64));
 
@@ -200,6 +204,7 @@ final class ChatView extends WebPanel implements Observer {
                 ChatView.this.sendMsg();
             }
         });
+        // file chooser button
         fileChooser = new WebFileChooser();
         fileChooser.setMultiSelectionEnabled(false);
         fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
@@ -226,9 +231,12 @@ final class ChatView extends WebPanel implements Observer {
                 ChatView.this.showFileDialog();
             }
         });
+        // encryption status label
+        mEncryptionStatus = new WebLabel();
 
         WebPanel textBarPanel = new GroupPanel(GroupingType.fillMiddle, 0,
-                fileButton, Box.createGlue(), mSendButton)
+                fileButton, Box.createGlue(), new GroupPanel(View.GAP_DEFAULT,
+                        mEncryptionStatus, mSendButton))
                 .setUndecorated(false)
                 .setWebColoredBackground(false)
                 .setShadeWidth(0);
@@ -277,8 +285,8 @@ final class ChatView extends WebPanel implements Observer {
         mCurrentChat = chat;
         mCurrentChat.addObserver(this);
 
-        this.updateTitles();
-        this.checkDisabled();
+        this.onChatChange();
+
         if (!mChatCache.containsKey(mCurrentChat.getID())) {
             MessageList newMessageList = new MessageList(mView, this, mCurrentChat);
             mCurrentChat.addObserver(newMessageList);
@@ -379,10 +387,12 @@ final class ChatView extends WebPanel implements Observer {
             if (!ChatList.getInstance().contains(chat.getID())) {
                 // chat was deleted
                 MessageList viewList = mChatCache.get(chat.getID());
-                if (viewList != null)
+                if (viewList != null) {
                     viewList.clearItems();
-                chat.deleteObserver(viewList);
+                    chat.deleteObserver(viewList);
+                }
                 mChatCache.remove(chat.getID());
+                mCurrentChat = null;
                 if(this.getCurrentChat().orElse(null) == chat) {
                     mScrollPane.setViewportView(null);
                 }
@@ -390,16 +400,16 @@ final class ChatView extends WebPanel implements Observer {
         }
 
         if (arg instanceof String || arg instanceof Contact) {
-            this.updateTitles();
-        }
-        if(arg instanceof Contact) {
-            this.checkDisabled();
+            this.onChatChange();
         }
     }
 
-    private void updateTitles() {
+    private void onChatChange() {
         if (mCurrentChat == null)
             return;
+        // update if chat changes...
+
+        // chat titles
         mTitleLabel.setText(Utils.chatTitle(mCurrentChat));
         if (mCurrentChat.isGroupChat()) {
             mSubTitleLabel.setText(Utils.contactNameList(mCurrentChat.getAllContacts()));
@@ -409,7 +419,40 @@ final class ChatView extends WebPanel implements Observer {
                     Utils.mainStatus(optContact.get(), true) :
                     "--no subtitle--");
         }
+
+        // text area
+        boolean chatDisabled = false;
+        Set<Contact> contacts = mCurrentChat.getContacts();
+        if (contacts.isEmpty()) {
+            chatDisabled = true;
+        } else {
+            for (Contact c : contacts)
+                chatDisabled |= (c.isBlocked() || c.isDeleted());
+        }
+
+        // TODO: also disable if user not in group member list
+
+        mSendTextArea.setEnabled(!chatDisabled);
+        mSendTextArea.setBackground(chatDisabled ? Color.LIGHT_GRAY : Color.WHITE);
+
+        // send button
+        this.updateSendButton();
+
+        // encryption status
+        boolean isEncrypted = mCurrentChat.sendEncrypted();
+        String encryption = isEncrypted ?
+                Tr.tr("Encrypted") :
+                Tr.tr("Not encrypted");
+
+        mEncryptionStatus.setText(encryption);
+        mEncryptionStatus.setForeground(isEncrypted !=mCurrentChat.canSendEncrypted() ?
+                Color.RED :
+                Color.BLACK);
+
+        // TODO set tooltip
     }
+
+
 
     private void showPopup(final WebToggleButton invoker) {
         Optional<Chat> optChat = ChatView.this.getCurrentChat();
@@ -424,7 +467,7 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void onKeyTypeEvent(boolean empty) {
-        mSendButton.setEnabled(!mSendTextArea.getText().trim().isEmpty());
+        this.updateSendButton();
 
         Optional<Chat> optChat = this.getCurrentChat();
         if (!optChat.isPresent())
@@ -435,25 +478,13 @@ final class ChatView extends WebPanel implements Observer {
             mView.getControl().handleOwnChatStateEvent(optChat.get(), ChatState.composing);
     }
 
-    private void checkDisabled() {
-        boolean disable = false;
-        if (mCurrentChat == null) {
-            disable = true;
-        } else {
-            Set<Contact> contacts = mCurrentChat.getContacts();
-            if (contacts.isEmpty()) {
-                disable = true;
-            } else {
-                for (Contact c : contacts)
-                    disable |= (c.isBlocked() || c.isDeleted());
-            }
-        }
-
-        // TODO: also disable if user not in group member list
-
-        mSendButton.setEnabled(!disable);
-        mSendTextArea.setEnabled(!disable);
-        mSendTextArea.setBackground(disable ? Color.LIGHT_GRAY : Color.WHITE);
+    private void updateSendButton() {
+        // enable if text area is enabled...
+        mSendButton.setEnabled(mSendTextArea.isEnabled() &&
+                // ...and there is text to send...
+                !mSendTextArea.getText().trim().isEmpty() &&
+                // ...encrypted message can be send
+                (!mCurrentChat.sendEncrypted() || mCurrentChat.canSendEncrypted()));
     }
 
     private void sendMsg() {

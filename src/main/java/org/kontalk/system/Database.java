@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
@@ -252,12 +253,10 @@ public final class Database {
 
     /**
      * Update values (at most one row)
-     * @param table
-     * @param set
-     * @param id
      * @return id value of updated row, 0 if something went wrong
      */
     public synchronized int execUpdate(String table, Map<String, Object> set, int id) {
+        LOGGER.config("table: "+table);
         String update = "UPDATE OR FAIL " + table + " SET ";
 
         List<String> keyList = new ArrayList<>(set.keySet());
@@ -328,6 +327,8 @@ public final class Database {
             } else if (value instanceof Optional) {
                 Optional<?> o = (Optional) value;
                 setValue(stat, i, o.orElse(null));
+            } else if (value instanceof JID) {
+                stat.setString(i+1, ((JID) value).string());
             } else if (value == null) {
                 stat.setNull(i+1, Types.NULL);
             } else {

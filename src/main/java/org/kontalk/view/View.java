@@ -202,10 +202,16 @@ public final class View implements Observer {
            mNotifier.onNewMessage(newMessage.message);
        } else if (arg instanceof ViewEvent.NewKey) {
            ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
+           if (!newKey.contact.hasKey())
+               // TODO webkey, disabling for now
+               return;
            mNotifier.confirmNewKey(newKey.contact, newKey.key);
        } else if (arg instanceof ViewEvent.ContactDeleted) {
            ViewEvent.ContactDeleted contactDeleted = (ViewEvent.ContactDeleted) arg;
            mNotifier.confirmContactDeletion(contactDeleted.contact);
+       } else if (arg instanceof ViewEvent.PresenceError) {
+           ViewEvent.PresenceError presenceError = (ViewEvent.PresenceError) arg;
+           mNotifier.showPresenceError(presenceError.contact, presenceError.error);
        } else {
            LOGGER.warning("unexpected argument");
        }
@@ -273,6 +279,7 @@ public final class View implements Observer {
             }
         });
         // blocking
+        LOGGER.info("asking for password...");
         dialog.setVisible(true);
 
         Object value = passPane.getValue();
@@ -300,8 +307,7 @@ public final class View implements Observer {
     /* view internal */
 
     void showChat(Contact contact) {
-        Chat chat = ChatList.getInstance().getOrCreate(contact);
-        this.selectChat(chat);
+        this.selectChat(mControl.getOrCreateSingleChat(contact));
     }
 
     private void selectChat(Chat chat) {

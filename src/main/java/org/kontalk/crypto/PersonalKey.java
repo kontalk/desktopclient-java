@@ -38,7 +38,7 @@ import org.bouncycastle.util.encoders.Hex;
 import org.kontalk.misc.KonException;
 
 /**
- * Personal asymmetric encryption key.
+ * Personal PGP key(s).
  */
 public final class PersonalKey {
     private static final Logger LOGGER = Logger.getLogger(PersonalKey.class.getName());
@@ -86,20 +86,19 @@ public final class PersonalKey {
     	return PGPUtils.convertPrivateKey(mAuthKey.getPrivateKey());
     }
 
-    /** Returns the first user ID on the key that matches the given network. */
+    /** Returns the first user ID in the key. */
     public String getUserId() {
-        PGPPublicKey key = mAuthKey.getPublicKey();
-        Iterator<?> uidIt = key.getUserIDs();
+        Iterator<?> uidIt = mAuthKey.getPublicKey().getUserIDs();
         if (!uidIt.hasNext())
             throw new IllegalStateException("no UID in personal key");
         return (String) uidIt.next();
     }
 
     public String getFingerprint() {
-    	return Hex.toHexString(mAuthKey.getPublicKey().getFingerprint());
+        return Hex.toHexString(mAuthKey.getPublicKey().getFingerprint()).toUpperCase();
     }
 
-    /** Creates a {@link PersonalKey} from private and public key byte buffers. */
+    /** Creates a {@link PersonalKey} from private keyring data. */
     @SuppressWarnings("unchecked")
     public static PersonalKey load(byte[] privateKeyData,
             char[] passphrase,

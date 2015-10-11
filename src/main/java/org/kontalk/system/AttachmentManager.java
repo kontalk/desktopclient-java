@@ -41,6 +41,7 @@ import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.misc.KonException;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.MessageContent;
@@ -157,19 +158,25 @@ public class AttachmentManager implements Runnable {
         if (client == null)
             return;
 
-        URI url = client.upload(file, URI.create(UPLOAD_URL),
-                // this isn't correct, but the server can't handle the truth
-                /*encrypt ? "application/octet-stream" :*/ attachment.getMimeType(),
-                encrypt);
+        URI url;
+        try {
+            url = client.upload(file, URI.create(UPLOAD_URL),
+                    // this isn't correct, but the server can't handle the truth
+                    /*encrypt ? "application/octet-stream" :*/ attachment.getMimeType(),
+                    encrypt);
+        } catch (KonException ex) {
+            LOGGER.warning("upload failed, attachment: "+attachment);
+            message.setStatus(KonMessage.Status.ERROR);
+            mControl.handleException(ex);
+            return;
+        }
 
         // delete temp file
         if (encrypt)
             file.delete();
 
         if (url.toString().isEmpty()) {
-            LOGGER.warning("upload failed, attachment: "+attachment);
-            message.setStatus(KonMessage.Status.ERROR);
-            // TODO tell view
+            LOGGER.warning("url empty: "+attachment);
             return;
         }
 
@@ -201,9 +208,17 @@ public class AttachmentManager implements Runnable {
             }
         };
 
-        Path path = client.download(attachment.getURL(), mAttachmentDir, listener);
-        if (path.toString().isEmpty()) {
+        Path path;
+        try {
+            path = client.download(attachment.getURL(), mAttachmentDir, listener);
+        } catch (KonException ex) {
             LOGGER.warning("download failed, URL="+attachment.getURL());
+            mControl.handleException(ex);
+            return;
+        }
+        
+        if (path.toString().isEmpty()) {
+            LOGGER.warning("file path is empty");
             return;
         }
 

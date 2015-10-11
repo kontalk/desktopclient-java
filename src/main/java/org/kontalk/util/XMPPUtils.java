@@ -28,8 +28,7 @@ import org.apache.commons.codec.digest.DigestUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.util.PacketParserUtils;
-import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.model.Contact;
+import org.kontalk.misc.JID;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParserFactory;
@@ -44,7 +43,7 @@ public final class XMPPUtils {
     public static final String XML_XMPP_TYPE = "application/xmpp+xml";
 
     // TODO do not hardcode, maybe download
-    private static final List<String> KONTALK_SERVER = Arrays.asList("beta.kontalk.net");
+    private static final List<String> KONTALK_DOMAINS = Arrays.asList("beta.kontalk.net");
 
     private XMPPUtils() {
         throw new AssertionError();
@@ -93,20 +92,6 @@ public final class XMPPUtils {
         return msg;
     }
 
-    public static boolean isHash(String jid) {
-        return XmppStringUtils.parseLocalpart(jid).matches("[0-9a-f]{40}");
-    }
-
-    public static boolean isValid(String jid) {
-        return !XmppStringUtils.parseLocalpart(jid).isEmpty() &&
-                !XmppStringUtils.parseDomain(jid).isEmpty();
-    }
-
-    public static boolean isBarelyEqual(String jid1, String jid2) {
-        return XmppStringUtils.parseBareJid(jid1).equals(
-                XmppStringUtils.parseBareJid(jid2));
-    }
-
     public static String phoneNumberToKontalkLocal(String number) {
         PhoneNumberUtil pnUtil = PhoneNumberUtil.getInstance();
         PhoneNumber n;
@@ -124,7 +109,7 @@ public final class XMPPUtils {
                 PhoneNumberUtil.PhoneNumberFormat.E164));
     }
 
-    public static boolean isKontalkContact(Contact contact){
-        return KONTALK_SERVER.contains(XmppStringUtils.parseDomain(contact.getJID()));
+    public static boolean isKontalkJID(JID jid) {
+        return KONTALK_DOMAINS.contains(jid.domain());
     }
 }

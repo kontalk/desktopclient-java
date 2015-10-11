@@ -27,7 +27,7 @@ import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
-import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.misc.JID;
 import org.kontalk.system.RosterHandler;
 
 /**
@@ -66,22 +66,25 @@ public class PresenceListener implements StanzaListener {
 
         Presence presence = (Presence) packet;
 
+        JID jid = JID.bare(presence.getFrom());
+
         if (presence.getType() == Presence.Type.error) {
             XMPPError error = presence.getError();
             if (error == null) {
                 LOGGER.warning("error presence does not contain error");
                 return;
             }
-            mHandler.onPresenceError(presence.getFrom(), error.getType(), error.getCondition());
+            mHandler.onPresenceError(jid, error.getType(),
+                    error.getCondition());
             return;
         }
 
-        String jid = XmppStringUtils.parseBareJid(presence.getFrom());
-        Presence bestPresence = mRoster.getPresence(jid);
+        Presence bestPresence = mRoster.getPresence(jid.string());
 
-        // NOTE: a delay extension is sometimes included, don't know why
+        // NOTE: a delay extension is sometimes included, don't know why;
         // ignoring mode, always null anyway
-        mHandler.onPresenceUpdate(bestPresence.getFrom(),
+
+        mHandler.onPresenceUpdate(JID.bare(bestPresence.getFrom()),
                 bestPresence.getType(),
                 bestPresence.getStatus());
 

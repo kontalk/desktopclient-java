@@ -31,7 +31,10 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -282,5 +285,24 @@ public final class PGPUtils {
             return null;
         }
         return keyRingIter.next();
+    }
+
+    private static final Pattern UID_PATTERN =
+            Pattern.compile("(^.+?)( \\((.+)\\))?( <([A-Za-z0-9\\._%+-]+@[A-Za-z0-9\\.-]+)>$)?");
+
+    /**
+     * Parses a PGP user id string and returns exactly three strings (in this
+     * order): (1) user name, (2) comment and (3) email address.
+     * All strings are optional and empty if not found in user id.
+     * Email address maybe invalid to RFC-standards.
+     */
+    public static String[] parseUID(String userID) {
+        Matcher matcher = UID_PATTERN.matcher(userID);
+        if (!matcher.matches() || matcher.groupCount() < 5)
+            return new String[]{"", "", ""};
+
+        return new String[]{StringUtils.defaultString(matcher.group(1)),
+            StringUtils.defaultString(matcher.group(3)),
+            StringUtils.defaultString(matcher.group(5))};
     }
 }

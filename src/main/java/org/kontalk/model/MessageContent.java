@@ -18,9 +18,11 @@
 
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
@@ -484,35 +486,35 @@ public class MessageContent {
 
         private final Optional<GID> mOptGID;
         private final OP mOP;
-        private final String[] mJIDsAdded;
-        private final String[] mJIDsRemoved;
+        private final JID[] mJIDsAdded;
+        private final JID[] mJIDsRemoved;
         private final String mSubject;
 
         /** Group creation. */
-        public GroupCommand(GID gid, String[] added) {
-            this(gid, OP.CREATE, added, new String[0], "");
+        public GroupCommand(GID gid, JID[] added) {
+            this(gid, OP.CREATE, added, new JID[0], "");
         }
 
         /** Group creation with subject. */
-        public GroupCommand(String[] added, String subject) {
-            this(null, OP.CREATE, added, new String[0], subject);
+        public GroupCommand(JID[] added, String subject) {
+            this(null, OP.CREATE, added, new JID[0], subject);
         }
 
-        public GroupCommand(GID gid, String[] added, String subject) {
-            this(gid, OP.CREATE, added, new String[0], subject);
+        public GroupCommand(GID gid, JID[] added, String subject) {
+            this(gid, OP.CREATE, added, new JID[0], subject);
         }
 
         /** Member list changed. */
-        public GroupCommand(GID gid, String[] added, String[] removed) {
+        public GroupCommand(GID gid, JID[] added, JID[] removed) {
             this(gid, OP.SET, added, removed, "");
         }
 
         /** Member left. Identified by sender JID */
         public GroupCommand(GID gid) {
-            this(gid, OP.LEAVE, new String[0], new String[0], "");
+            this(gid, OP.LEAVE, new JID[0], new JID[0], "");
         }
 
-        private GroupCommand(GID gid, OP operation, String[] added, String[] removed, String subject) {
+        private GroupCommand(GID gid, OP operation, JID[] added, JID[] removed, String subject) {
             mOptGID = Optional.ofNullable(gid);
             mOP = operation;
             mJIDsAdded = added;
@@ -528,11 +530,11 @@ public class MessageContent {
             return mOP;
         }
 
-        public String[] getAdded() {
+        public JID[] getAdded() {
             return mJIDsAdded;
         }
 
-        public String[] getRemoved() {
+        public JID[] getRemoved() {
             return mJIDsRemoved;
         }
 
@@ -562,14 +564,20 @@ public class MessageContent {
                 OP op = OP.values()[o.intValue()];
 
                 List<String> a = (List<String>) map.get(JSON_ADDED);
-                String[] added = a.toArray(new String[0]);
+                List<JID> added = new ArrayList<>(a.size());
+                for (String s: a)
+                    added.add(JID.bare(s));
 
                 List<String> r = (List<String>) map.get(JSON_REMOVED);
-                String[] removed = r.toArray(new String[0]);
+                List<JID> removed = new ArrayList<>(r.size());
+                for (String s: r)
+                    removed.add(JID.bare(s));
 
                 String subj = EncodingUtils.getJSONString(map, JSON_SUBJECT);
 
-                return new GroupCommand(null, op, added, removed, subj);
+                return new GroupCommand(null, op,
+                        added.toArray(new JID[0]), removed.toArray(new JID[0]),
+                        subj);
              }  catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON group command", ex);
                 return null;

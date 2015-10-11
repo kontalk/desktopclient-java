@@ -15,12 +15,11 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.kontalk.model;
 
+import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Observable;
 import java.util.Optional;
@@ -28,9 +27,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Database;
-import org.kontalk.util.XMPPUtils;
 
 /**
  * Global list of all contacts.
@@ -38,12 +35,14 @@ import org.kontalk.util.XMPPUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class ContactList extends Observable {
+
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
     private static final ContactList INSTANCE = new ContactList();
 
     /** JID to contact. */
-    private final HashMap<String, Contact> mJIDMap = new HashMap<>();
+    private final HashMap<JID, Contact> mJIDMap = new HashMap<>();
+
     /** Database ID to contact. */
     private final HashMap<Integer, Contact> mIDMap = new HashMap<>();
 
@@ -53,21 +52,16 @@ public final class ContactList extends Observable {
         Database db = Database.getInstance();
         try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
-                int id = resultSet.getInt("_id");
-                String jid = resultSet.getString(Contact.COL_JID);
-                String name = resultSet.getString(Contact.COL_NAME);
-                String status = resultSet.getString(Contact.COL_STAT);
-                long l = resultSet.getLong(Contact.COL_LAST_SEEN);
-                Optional<Date> lastSeen = l == 0 ?
-                        Optional.<Date>empty() :
-                        Optional.<Date>of(new Date(l));
-                boolean encr = resultSet.getBoolean(Contact.COL_ENCR);
-                String key = Database.getString(resultSet, Contact.COL_PUB_KEY);
-                String fp = Database.getString(resultSet, Contact.COL_KEY_FP);
-                Contact newContact = new Contact(id, jid, name, status, lastSeen, encr, key, fp);
+                Contact contact = Contact.load(resultSet);
+                JID jid = contact.getJID();
+
                 synchronized (this) {
-                    mJIDMap.put(jid, newContact);
-                    mIDMap.put(id, newContact);
+                    if (mJIDMap.containsKey(jid)) {
+                        LOGGER.warning("contacts with equal JIDs: " + jid);
+                        continue;
+                    }
+                    mJIDMap.put(jid, contact);
+                    mIDMap.put(contact.getID(), contact);
                 }
             }
         } catch (SQLException ex) {
@@ -78,11 +72,8 @@ public final class ContactList extends Observable {
 
     /**
      * Create and add a new contact.
-     * @param jid JID of new contact
-     * @param name nickname of new contact, use an empty string if not known
-     * @return the newly created contact, if one was created
      */
-    public synchronized Optional<Contact> create(String jid, String name) {
+    public Optional<Contact> create(JID jid, String name) {
         if (!this.isValid(jid))
             return Optional.empty();
 
@@ -90,42 +81,28 @@ public final class ContactList extends Observable {
         if (newContact.getID() < 1)
             return Optional.empty();
 
-        mJIDMap.put(newContact.getJID(), newContact);
-        mIDMap.put(newContact.getID(), newContact);
+        synchronized (this) {
+            mJIDMap.put(newContact.getJID(), newContact);
+            mIDMap.put(newContact.getID(), newContact);
+        }
 
         this.changed(newContact);
         return Optional.of(newContact);
     }
 
-    Contact getOrCreate(String jid) {
-        if (this.contains(jid))
-            return mJIDMap.get(jid);
-
-        // TODO creation without any safety checks
-        Contact newContact = new Contact(jid, "");
-
-        mJIDMap.put(newContact.getJID(), newContact);
-        mIDMap.put(newContact.getID(), newContact);
-
-        this.changed(newContact);
-        return newContact;
-    }
-
     synchronized Optional<Contact> get(int id) {
         Optional<Contact> optContact = Optional.ofNullable(mIDMap.get(id));
-        if (!optContact.isPresent())
-            LOGGER.warning("can't find contact with ID: "+id);
+        if (!optContact.isPresent()) {
+            LOGGER.warning("can't find contact with ID: " + id);
+        }
         return optContact;
     }
 
     /**
      * Get the contact for a JID (if the JID is in the list).
      * Resource is removed for lookup.
-     * @param jid
-     * @return
      */
-    public synchronized Optional<Contact> get(String jid) {
-        jid = XmppStringUtils.parseBareJid(jid);
+    public synchronized Optional<Contact> get(JID jid) {
         return Optional.ofNullable(mJIDMap.get(jid));
     }
 
@@ -133,46 +110,49 @@ public final class ContactList extends Observable {
      * Return all but deleted contacts.
      */
     public synchronized SortedSet<Contact> getAll() {
-        SortedSet<Contact> contact = new TreeSet<>();
+        SortedSet<Contact> contacts = new TreeSet<>();
         for (Contact u : mJIDMap.values())
             if (!u.isDeleted())
-                contact.add(u);
-        return contact;
+                contacts.add(u);
+
+        return contacts;
     }
 
-    public synchronized void remove(Contact contact) {
-        boolean removed = mJIDMap.remove(contact.getJID(), contact);
-        if (!removed) {
-            LOGGER.warning("can't find contact to remove: "+contact);
+    public void remove(Contact contact) {
+        synchronized (this) {
+            boolean removed = mJIDMap.remove(contact.getJID(), contact);
+            if (!removed) {
+                LOGGER.warning("can't find contact to remove: "+contact);
+            }
+            mIDMap.remove(contact.getID());
         }
-        mIDMap.remove(contact.getID());
         this.changed(contact);
     }
 
     /**
      * Return whether a contact with a specified JID exists.
-     * Resource is removed for lookup.
-     * @param jid
-     * @return
      */
-    public synchronized boolean contains(String jid) {
-        return mJIDMap.containsKey(XmppStringUtils.parseBareJid(jid));
+    public synchronized boolean contains(JID jid) {
+        return mJIDMap.containsKey(jid);
     }
 
-    public synchronized void changeJID(Contact contact, String jid) {
+    public boolean changeJID(Contact contact, JID jid) {
         if (!this.isValid(jid))
-            return;
+            return false;
 
-        mJIDMap.put(jid, contact);
-        mJIDMap.remove(contact.getJID());
+        synchronized (this) {
+            mJIDMap.put(jid, contact);
+            mJIDMap.remove(contact.getJID());
+        }
         contact.setJID(jid);
 
         this.changed(contact);
+        return true;
     }
 
-    private boolean isValid(String jid) {
-        if (!XMPPUtils.isValid(jid)) {
-            LOGGER.warning("invalid jid: "+jid);
+    private synchronized boolean isValid(JID jid) {
+        if (!jid.isValid()) {
+            LOGGER.warning("invalid jid: " + jid);
             return false;
         }
 
@@ -184,12 +164,7 @@ public final class ContactList extends Observable {
         return true;
     }
 
-    public synchronized void save() {
-        for (Contact contact: mJIDMap.values()) {
-            contact.save();
-        }
-    }
-
+    // TODO test without synchronized
     private synchronized void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);

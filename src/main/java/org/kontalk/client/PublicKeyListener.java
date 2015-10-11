@@ -24,6 +24,7 @@ import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.kontalk.misc.JID;
 import org.kontalk.system.Control;
 
 /**
@@ -60,7 +61,7 @@ public class PublicKeyListener implements StanzaListener {
                 LOGGER.warning("got public key packet without public key");
                 return;
             }
-            mControl.handlePGPKey(publicKeyPacket.getFrom(), keyData);
+            mControl.handlePGPKey(JID.bare(publicKeyPacket.getFrom()), keyData);
         }
     }
 
