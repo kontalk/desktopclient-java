@@ -260,7 +260,7 @@ final class Utils {
 
     static String getErrorText(KonException ex) {
         String eol = " " + System.getProperty("line.separator");
-        String errorText = Tr.tr("Unknown error!?");
+        String errorText;
         switch (ex.getError()) {
             case IMPORT_ARCHIVE:
                 errorText = Tr.tr("Can't open key archive.");
@@ -285,6 +285,7 @@ final class Utils {
                 break;
             case READ_FILE:
             case LOAD_KEY:
+                errorText = "";
                 switch (ex.getError()) {
                     case READ_FILE:
                         errorText = Tr.tr("Can't read key files from configuration directory.");
@@ -323,7 +324,23 @@ final class Utils {
                 errorText = Tr.tr("Connection to server closed on error.");
                 // TODO more details
                 break;
+            case DOWNLOAD_CREATE:
+            case DOWNLOAD_EXECUTE:
+            case DOWNLOAD_RESPONSE:
+            case DOWNLOAD_WRITE:
+                errorText = Tr.tr("Downloading file failed");
+                // TODO more details
+                break;
+            case UPLOAD_CREATE:
+            case UPLOAD_EXECUTE:
+            case UPLOAD_RESPONSE:
+                errorText = Tr.tr("Uploading file failed");
+                // TODO more details
+                break;
+            default:
+                errorText = Tr.tr("Unusual error:")+" "+ex.getError();
         }
+        errorText.chars();
         return errorText;
     }
 
