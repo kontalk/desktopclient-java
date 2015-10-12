@@ -95,8 +95,9 @@ public final class ClientUtils {
                 return new GroupExtension(gid.id, gid.ownerJID.string(), Command.LEAVE);
             case CREATE:
             case SET:
-                Set<Member> member = new HashSet<>();
                 Command command;
+                Set<Member> member = new HashSet<>();
+                String subject = groupCommand.getSubject();
                 if (op == OP.CREATE) {
                     command = Command.CREATE;
                     for (JID added : groupCommand.getAdded())
@@ -125,7 +126,8 @@ public final class ClientUtils {
                 return new GroupExtension(gid.id,
                         gid.ownerJID.string(),
                         command,
-                        member.toArray(new Member[0]));
+                        member.toArray(new Member[0]),
+                        subject);
             default:
                 // can not happen
                 return null;
@@ -135,14 +137,15 @@ public final class ClientUtils {
     public static GroupCommand groupExtensionToGroupCommand(JID owner,
             String id,
             Command com,
-            Member[] members) {
+            Member[] members,
+            String subject) {
         GID gid = new GID(owner, id);
 
         if (com == GroupExtension.Command.CREATE) {
             List<JID> jids = new ArrayList<>(members.length);
             for (Member m: members)
                 jids.add(JID.bare(m.jid));
-            return new GroupCommand(gid, jids.toArray(new JID[0]));
+            return new GroupCommand(gid, jids.toArray(new JID[0]), subject);
         } else if (com == GroupExtension.Command.LEAVE) {
             return new GroupCommand(gid);
         }
