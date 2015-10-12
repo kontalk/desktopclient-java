@@ -41,6 +41,7 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.Chat.KonChatState;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatListView.ChatItem;
 
@@ -168,8 +169,6 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
             mTitleLabel = new WebLabel();
             mTitleLabel.setFontSize(14);
-            if (chat.isGroupChat())
-                mTitleLabel.setForeground(View.DARK_GREEN);
             this.add(mTitleLabel, BorderLayout.NORTH);
 
             mStatusLabel = new WebLabel();
@@ -212,8 +211,11 @@ final class ChatListView extends Table<ChatItem, Chat> {
         }
 
         private void updateView(Object arg) {
-            if (arg == null || arg instanceof Contact || arg instanceof String) {
+            if (arg == null || arg instanceof Contact ||
+                    arg instanceof String || arg instanceof GroupCommand) {
                 mTitleLabel.setText(Utils.chatTitle(mValue));
+                if (mValue.isGroupChat())
+                    mTitleLabel.setForeground(View.DARK_GREEN);
             }
 
             if (arg == null || arg instanceof KonMessage) {

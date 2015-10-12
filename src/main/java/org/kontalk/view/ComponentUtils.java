@@ -401,6 +401,8 @@ final class ComponentUtils {
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
                     new WebLabel(Tr.tr("Subject:")+" "), mSubjectField));
 
+            groupPanel.add(new WebLabel(Tr.tr("Select participants:")+" "));
+
             mList = new ContactSelectionList();
             mList.setVisibleRowCount(10);
             mList.addListSelectionListener(new ListSelectionListener() {
