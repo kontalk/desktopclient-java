@@ -285,9 +285,10 @@ public final class Database {
     }
 
     public boolean execDeleteWhereInsecure(String table, String where) {
+        LOGGER.info("deleting from table "+table+" where "+where);
         try (Statement stat = mConn.createStatement()) {
             int c = stat.executeUpdate("DELETE FROM " + table + " WHERE " + where);
-            LOGGER.info("deleted "+c+" rows from table "+table+" where "+where);
+            LOGGER.config("...deleted "+c+" rows");
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't delete", ex);
             return false;

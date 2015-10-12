@@ -375,7 +375,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
 
         // transmissions
         db.execDeleteWhereInsecure(Transmission.TABLE,
-                Transmission.COL_MESSAGE_ID + " == (SELECT _id FROM " +
+                Transmission.COL_MESSAGE_ID + " IN (SELECT _id FROM " +
                         KonMessage.TABLE + " WHERE " + whereMessages + ")");
 
         // messages
