@@ -23,7 +23,6 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -548,8 +547,17 @@ public class MessageContent {
             JSONObject json = new JSONObject();
             json.put(JSON_OP, mOP.ordinal());
             EncodingUtils.putJSON(json, JSON_SUBJECT, mSubject);
-            json.put(JSON_ADDED, Arrays.asList(mJIDsAdded));
-            json.put(JSON_REMOVED, Arrays.asList(mJIDsRemoved));
+
+            List<String> added = new ArrayList(mJIDsAdded.length);
+            for (JID jid: mJIDsAdded)
+                added.add(jid.string());
+            json.put(JSON_ADDED, added);
+
+            List<String> removed = new ArrayList(mJIDsRemoved.length);
+            for (JID jid: mJIDsAdded)
+                removed.add(jid.string());
+            json.put(JSON_REMOVED, removed);
+
             return json.toJSONString();
         }
 
@@ -580,6 +588,7 @@ public class MessageContent {
                         subj);
              }  catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON group command", ex);
+                LOGGER.log(Level.WARNING, "JSON='"+json+"'");
                 return null;
             }
         }
