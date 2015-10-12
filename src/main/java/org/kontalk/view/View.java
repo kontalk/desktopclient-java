@@ -325,6 +325,10 @@ public final class View implements Observer {
         mContent.showChat(chat);
     }
 
+    void showNothing() {
+        mContent.showNothing();
+    }
+
     void clearSearch() {
         mSearchPanel.clear();
     }
@@ -362,6 +366,8 @@ public final class View implements Observer {
         mTrayManager.setTray();
     }
 
+    /* static */
+
     public static Optional<View> create(final ViewControl control) {
         Optional<View> optView = invokeAndWait(new Callable<View>() {
             @Override
@@ -377,7 +383,7 @@ public final class View implements Observer {
         return optView;
     }
 
-    static <T> Optional<T> invokeAndWait(Callable<T> callable) {
+    private static <T> Optional<T> invokeAndWait(Callable<T> callable) {
         try {
             FutureTask<T> task = new FutureTask<>(callable);
             SwingUtilities.invokeLater(task);

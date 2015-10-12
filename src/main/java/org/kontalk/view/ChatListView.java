@@ -82,9 +82,12 @@ final class ChatListView extends Table<ChatItem, Chat> {
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
+
                 Optional<Chat> optChat = ChatListView.this.getSelectedValue();
-                if (!optChat.isPresent())
+                if (!optChat.isPresent()) {
+                    // note: this happens also on righ-click for some reason
                     return;
+                }
 
                 // if event is caused by filtering, dont do anything
                 if (lastChat == optChat.get())
