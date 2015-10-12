@@ -318,7 +318,12 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                         LOGGER.warning("can't find contact, jid: "+jid);
                         continue;
                     }
-                    this.addContact(optContact.get());
+                    Contact contact = optContact.get();
+                    if (this.getContacts().contains(contact)) {
+                        LOGGER.warning("contact already in chat: "+contact);
+                        continue;
+                    }
+                    this.addContact(contact);
                 }
                 mSubject = command.getSubject();
                 this.save();

@@ -61,7 +61,11 @@ public final class ChatMessages {
         try (ResultSet messageRS = db.execSelectWhereInsecure(KonMessage.TABLE,
                 KonMessage.COL_CHAT_ID + " == " + mChat.getID())) {
             while (messageRS.next()) {
-                this.addSilent(KonMessage.load(messageRS, mChat));
+                KonMessage message = KonMessage.load(messageRS, mChat);
+                if (message.getTransmissions().length == 0)
+                    // ignore broken message
+                    continue;
+                this.addSilent(message);
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load messages from db", ex);
@@ -78,7 +82,6 @@ public final class ChatMessages {
     }
 
     private boolean addSilent(KonMessage message) {
-        // see KonMessage.equals()
         if (mSet.contains(message)) {
             LOGGER.warning("message already in chat: " + message);
             return false;
