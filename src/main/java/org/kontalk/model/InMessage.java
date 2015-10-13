@@ -62,7 +62,7 @@ public final class InMessage extends KonMessage {
         mContent.setDecryptedContent(decryptedContent);
         mCoderStatus.setDecrypted();
         this.save();
-        this.changed(null);
+        this.changed(decryptedContent);
     }
 
     public void setAttachmentFileName(String fileName) {

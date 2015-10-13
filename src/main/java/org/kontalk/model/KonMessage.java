@@ -239,6 +239,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {
         mCoderStatus.setSecurityErrors(errors);
         this.save();
+        this.changed(mCoderStatus);
     }
 
     public ServerError getServerError() {

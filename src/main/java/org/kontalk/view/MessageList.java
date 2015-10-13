@@ -61,9 +61,11 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
+import org.kontalk.model.CoderStatus;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.Transmission;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
@@ -214,6 +216,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
      */
     final class MessageItem extends Table<MessageItem, KonMessage>.TableItem {
 
+        private WebPanel mPanel;
         private WebLabel mFromLabel = null;
         private WebPanel mContentPanel;
         private WebTextPane mTextPane;
@@ -236,13 +239,13 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 return;
             mCreated = true;
 
-            WebPanel messagePanel = new WebPanel(true);
-            messagePanel.setWebColoredBackground(false);
-            messagePanel.setMargin(2);
+            mPanel = new WebPanel(true);
+            mPanel.setWebColoredBackground(false);
+            mPanel.setMargin(2);
             if (mValue.isInMessage())
-                messagePanel.setBackground(Color.WHITE);
+                mPanel.setBackground(Color.WHITE);
             else
-                messagePanel.setBackground(View.LIGHT_BLUE);
+                mPanel.setBackground(View.LIGHT_BLUE);
 
             // from label
             if (mValue.isInMessage()) {
@@ -250,7 +253,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 mFromLabel.setFontSize(12);
                 mFromLabel.setForeground(Color.BLUE);
                 mFromLabel.setItalicFont();
-                messagePanel.add(mFromLabel, BorderLayout.NORTH);
+                mPanel.add(mFromLabel, BorderLayout.NORTH);
             }
 
             mContentPanel = new WebPanel();
@@ -270,7 +273,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             // fix word wrap for long words
             mTextPane.setEditorKit(FIX_WRAP_KIT);
             mContentPanel.add(mTextPane, BorderLayout.CENTER);
-            messagePanel.add(mContentPanel, BorderLayout.CENTER);
+            mPanel.add(mContentPanel, BorderLayout.CENTER);
 
             mStatusPanel = new WebPanel();
             mStatusPanel.setOpaque(false);
@@ -302,12 +305,12 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             WebPanel southPanel = new WebPanel();
             southPanel.setOpaque(false);
             southPanel.add(mStatusPanel, BorderLayout.EAST);
-            messagePanel.add(southPanel, BorderLayout.SOUTH);
+            mPanel.add(southPanel, BorderLayout.SOUTH);
 
             if (mValue.isInMessage()) {
-                this.add(messagePanel, BorderLayout.WEST);
+                this.add(mPanel, BorderLayout.WEST);
             } else {
-                this.add(messagePanel, BorderLayout.EAST);
+                this.add(mPanel, BorderLayout.EAST);
             }
 
             for (Transmission t: mValue.getTransmissions()) {
@@ -334,14 +337,15 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             if (!mCreated)
                 return;
 
-            if ((arg == null || arg instanceof Contact) && mFromLabel != null &&
-                    mValue instanceof InMessage)
-                mFromLabel.setText(" "+getFromString((InMessage) mValue));
+            if (arg == null || arg instanceof Contact ||
+                    arg instanceof MessageContent)
+                this.updateTitle();
 
-            if (arg == null || arg instanceof String)
+            if (arg == null || arg instanceof MessageContent)
                 this.updateText();
 
-            if (arg == null || arg instanceof KonMessage.Status)
+            if (arg == null || arg instanceof KonMessage.Status ||
+                    arg instanceof CoderStatus)
                 this.updateStatus();
 
             if (arg == null || arg instanceof MessageContent.Attachment ||
@@ -353,19 +357,48 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             MessageList.this.repaint();
         }
 
+        private void updateTitle() {
+            if (mFromLabel == null)
+                return;
+
+            mFromLabel.setText(!mValue.getContent().getGroupCommand().isPresent() &&
+                    mValue instanceof InMessage ?
+                    " "+getFromString((InMessage) mValue) :
+                    "");
+        }
+
         // text in text area, before/after encryption
         private void updateText() {
             boolean encrypted = mValue.getCoderStatus().isEncrypted();
-            String text = encrypted ?
-                    Tr.tr("[encrypted]") :
-                    // removing whitespace (Pidgin adds weird tab characters)
-                    mValue.getContent().getText().trim();
-            // TODO this could look A BIT nicer
-            if (mValue.getContent().getGroupCommand().isPresent())
-                text += " "+ mValue.getContent().getGroupCommand().get();
-            mTextPane.setFontStyle(false, encrypted);
-            //mTextPane.setText(text);
-            LinkUtils.linkify(mTextPane.getStyledDocument(), text);
+            String text;
+            if (mValue.getContent().getGroupCommand().isPresent()) {
+                GroupCommand com = mValue.getContent().getGroupCommand().get();
+                text = mValue instanceof InMessage ?
+                        getFromString((InMessage) mValue)+" " :
+                        Tr.tr("You")+" ";
+                switch(com.getOperation()) {
+                    case CREATE:
+                        text += Tr.tr("created this group");
+                        break;
+                    case LEAVE:
+                        text += Tr.tr("left this group");
+                        break;
+                    case SET:
+                        text += Tr.tr("changed the group");
+                        break;
+                }
+                mTextPane.setText(text);
+                mTextPane.setFontStyle(false, true);
+                mPanel.setBackground(View.LIGHT_GREEN);
+            } else {
+                text = encrypted ?
+                        Tr.tr("[encrypted]") :
+                        // removing whitespace (Pidgin adds weird tab characters)
+                        mValue.getContent().getText().trim();
+                mTextPane.setFontStyle(false, encrypted);
+                LinkUtils.linkify(mTextPane.getStyledDocument(), text);
+            }
+
             // hide area if there is no text
             mTextPane.setVisible(!text.isEmpty());
         }
