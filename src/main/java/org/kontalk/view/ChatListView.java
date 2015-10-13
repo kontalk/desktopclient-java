@@ -150,6 +150,8 @@ final class ChatListView extends Table<ChatItem, Chat> {
         ChatItem t = this.getSelectedItem();
         if (t.mValue.getMessages().getAll().size() != 0) {
             String text = Tr.tr("Permanently delete all messages in this chat?");
+            if (t.mValue.isGroupChat())
+                text += "\n\n"+Tr.tr("You will automatically leave this group.");
             if (!Utils.confirmDeletion(this, text))
                 return;
         }

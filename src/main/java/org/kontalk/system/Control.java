@@ -310,17 +310,18 @@ public final class Control {
 
     /* package */
 
-    void sendMessage(OutMessage message) {
+    boolean sendMessage(OutMessage message) {
         if (message.getContent().getAttachment().isPresent() &&
                 !message.getContent().getAttachment().get().hasURL()) {
             // continue later...
             mAttachmentManager.queueUpload(message);
-            return;
+            return false;
         }
 
-        mClient.sendMessage(message,
+        boolean sent = mClient.sendMessage(message,
                 Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE));
         mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
+        return sent;
     }
 
     void maySendKeyRequest(Contact contact) {
@@ -635,7 +636,6 @@ public final class Control {
             List<JID> jids = new ArrayList<>(contacts.length);
             for (Contact c: contacts)
                 jids.add(c.getJID());
-
             this.createAndSendMessage(chat,
                     new MessageContent(
                             new MessageContent.GroupCommand(
@@ -647,7 +647,14 @@ public final class Control {
         }
 
         public void deleteChat(Chat chat) {
-            // TODO "delete" group
+            if (chat.isGroupChat() && !chat.getContacts().isEmpty()) {
+                //note: group chats are not 'deleted', were just leaving them
+                boolean sent = this.createAndSendMessage(chat,
+                        new MessageContent(new GroupCommand()));
+                if (!sent)
+                    // TODO tell view
+                    return;
+            }
 
             ChatList.getInstance().delete(chat.getID());
         }
@@ -667,16 +674,16 @@ public final class Control {
         }
 
         public void sendText(Chat chat, String text) {
-            this.sendMessage(chat, text, Paths.get(""));
+            this.sendTextMessage(chat, text, Paths.get(""));
         }
 
         public void sendAttachment(Chat chat, Path file){
-            this.sendMessage(chat, "", file);
+            this.sendTextMessage(chat, "", file);
         }
 
         /* private */
 
-        private void sendMessage(Chat chat, String text, Path file) {
+        private void sendTextMessage(Chat chat, String text, Path file) {
             Attachment attachment = null;
             if (!file.toString().isEmpty()) {
                 attachment = AttachmentManager.attachmentOrNull(file);
@@ -718,14 +725,14 @@ public final class Control {
          * All-in-one method for a new outgoing message: Create,
          * save, process and send message.
          */
-        private void createAndSendMessage(Chat chat, MessageContent content) {
+        private boolean createAndSendMessage(Chat chat, MessageContent content) {
 
             LOGGER.config("chat: "+chat+" content: "+content);
 
             Set<Contact> contacts = chat.getContacts();
             if (contacts.isEmpty()) {
                 LOGGER.warning("can't send message, no (valid) contact(s)");
-                return;
+                return false;
             }
 
             OutMessage.Builder builder = new OutMessage.Builder(chat,
@@ -740,7 +747,7 @@ public final class Control {
                 LOGGER.warning("could not add outgoing message to chat");
             }
 
-            Control.this.sendMessage(newMessage);
+            return Control.this.sendMessage(newMessage);
         }
 
         void changed(ViewEvent event) {

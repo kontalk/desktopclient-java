@@ -212,7 +212,7 @@ public final class Client implements StanzaListener, Runnable {
         return Optional.of(JID.full(user));
     }
 
-    public void sendMessage(OutMessage message, boolean sendChatState) {
+    public boolean sendMessage(OutMessage message, boolean sendChatState) {
         // check for correct receipt status and reset it
         Status status = message.getStatus();
         assert status == Status.PENDING || status == Status.ERROR;
@@ -220,7 +220,7 @@ public final class Client implements StanzaListener, Runnable {
 
         if (!this.isConnected()) {
             LOGGER.info("not sending message(s), not connected");
-            return;
+            return false;
         }
 
         MessageContent content = message.getContent();
@@ -228,7 +228,7 @@ public final class Client implements StanzaListener, Runnable {
         if (optAtt.isPresent() && !optAtt.get().hasURL()) {
             LOGGER.warning("attachment not uploaded");
             message.setStatus(Status.ERROR);
-            return;
+            return false;
         }
 
         boolean encrypted =
@@ -265,7 +265,7 @@ public final class Client implements StanzaListener, Runnable {
                 LOGGER.warning("encryption failed");
                 message.setStatus(Status.ERROR);
                 mControl.handleSecurityErrors(message);
-                return;
+                return false;
             }
             protoMessage.addExtension(new E2EEncryption(encryptedData.get()));
         }
@@ -278,13 +278,13 @@ public final class Client implements StanzaListener, Runnable {
             JID to = transmission.getJID();
             if (!to.isValid()) {
                 LOGGER.warning("invalid JID: "+to);
-                return;
+                return false;
             }
             sendMessage.setTo(to.string());
             sendMessages.add(sendMessage);
         }
 
-        this.sendPackets(sendMessages.toArray(new Message[0]));
+        return this.sendPackets(sendMessages.toArray(new Message[0]));
     }
 
     private static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
@@ -390,18 +390,22 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(message);
     }
 
-    private synchronized void sendPackets(Stanza[] stanzas) {
+    private synchronized boolean sendPackets(Stanza[] stanzas) {
+        boolean sent = true;
         for (Stanza s: stanzas)
-            this.sendPacket(s);
+            sent &= this.sendPacket(s);
+        return sent;
     }
 
-    synchronized void sendPacket(Stanza p) {
+    synchronized boolean sendPacket(Stanza p) {
         try {
             mConn.sendStanza(p);
         } catch (SmackException.NotConnectedException ex) {
             LOGGER.info("can't send packet, not connected.");
+            return false;
         }
         LOGGER.config("packet: "+p);
+        return true;
     }
 
     @Override

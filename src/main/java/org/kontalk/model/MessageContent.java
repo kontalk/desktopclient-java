@@ -483,22 +483,19 @@ public class MessageContent {
             LEAVE
         }
 
+        // group id, only present for incoming commands, not saved to db
         private final Optional<GID> mOptGID;
         private final OP mOP;
         private final JID[] mJIDsAdded;
         private final JID[] mJIDsRemoved;
         private final String mSubject;
 
-        /** Group creation. */
-        public GroupCommand(GID gid, JID[] added) {
-            this(gid, OP.CREATE, added, new JID[0], "");
-        }
-
-        /** Group creation with subject. */
+        /** User creates group. */
         public GroupCommand(JID[] added, String subject) {
             this(null, OP.CREATE, added, new JID[0], subject);
         }
 
+        /** Incoming group creation. */
         public GroupCommand(GID gid, JID[] added, String subject) {
             this(gid, OP.CREATE, added, new JID[0], subject);
         }
@@ -511,6 +508,11 @@ public class MessageContent {
         /** Member left. Identified by sender JID */
         public GroupCommand(GID gid) {
             this(gid, OP.LEAVE, new JID[0], new JID[0], "");
+        }
+
+        /** User left. */
+        public GroupCommand() {
+            this(null, OP.LEAVE, new JID[0], new JID[0], "");
         }
 
         private GroupCommand(GID gid, OP operation, JID[] added, JID[] removed, String subject) {
