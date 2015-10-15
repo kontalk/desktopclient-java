@@ -165,7 +165,8 @@ public class MessageContent {
                 mEncryptedContent.isEmpty() &&
                 !mOptAttachment.isPresent() &&
                 !mOptPreview.isPresent() &&
-                !mOptDecryptedContent.isPresent();
+                !mOptDecryptedContent.isPresent() &&
+                !mOptGroupCommand.isPresent();
     }
 
     public boolean isComplex() {
