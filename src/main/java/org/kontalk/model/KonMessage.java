@@ -252,6 +252,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         this.changed(preview);
     }
 
+    public boolean isEncrypted() {
+        return mCoderStatus.isEncrypted();
+    }
+
     /**
      * Save (or insert) this message to/into the database.
      */

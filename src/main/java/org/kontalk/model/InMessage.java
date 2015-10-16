@@ -32,7 +32,7 @@ import org.kontalk.model.MessageContent.Preview;
  * Model for a XMPP message that was sent to us.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class InMessage extends KonMessage {
+public final class InMessage extends KonMessage implements DecryptMessage {
     private static final Logger LOGGER = Logger.getLogger(InMessage.class.getName());
 
     /**
@@ -43,6 +43,7 @@ public final class InMessage extends KonMessage {
         super(builder);
     }
 
+    @Override
     public Contact getContact() {
         assert mTransmissions.length == 1;
         return mTransmissions[0].getContact();
@@ -53,11 +54,13 @@ public final class InMessage extends KonMessage {
         return mTransmissions[0].getJID();
     }
 
+    @Override
     public void setSigning(Coder.Signing signing) {
         mCoderStatus.setSigning(signing);
         this.save();
     }
 
+    @Override
     public void setDecryptedContent(MessageContent decryptedContent) {
         mContent.setDecryptedContent(decryptedContent);
         mCoderStatus.setDecrypted();

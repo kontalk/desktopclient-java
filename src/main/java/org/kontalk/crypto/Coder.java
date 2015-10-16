@@ -26,8 +26,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.Contact;
-import org.kontalk.model.InMessage;
 import org.kontalk.model.OutMessage;
+import org.kontalk.model.DecryptMessage;
+import org.kontalk.model.InMessage;
 import org.kontalk.system.AccountLoader;
 
 /**
@@ -120,7 +121,7 @@ public final class Coder {
      * Decrypt and verify the body of a message. Sets the encryption and signing
      * status of the message and errors that may occur are saved to the message.
      */
-    public static boolean decryptMessage(InMessage message) {
+    public static boolean decryptMessage(DecryptMessage message) {
         return new Decryptor(message).decryptMessage();
     }
 
