@@ -82,8 +82,35 @@ public final class ChatList extends Observable implements Observer {
         return Optional.empty();
     }
 
+    /**
+     *
+     */
+    public synchronized Optional<Chat> get(GID gid, Contact contact) {
+        for (Chat chat : mMap.values()) {
+            Optional<GID> optGID = chat.getGID();
+            if (optGID.isPresent() &&
+                    optGID.get().equals(gid) &&
+                    chat.getAllContacts().contains(contact)) {
+                return Optional.of(chat);
+            }
+        }
+
+        return Optional.empty();
+    }
+
     public Chat getOrCreate(Contact contact) {
         return this.getOrCreate(contact, "");
+    }
+
+    /**
+     * Find chat by GID or create a new chat.
+     */
+    public Chat getOrCreate(GID gid, Contact contact) {
+        Optional<Chat> optChat = this.get(gid, contact);
+        if (optChat.isPresent())
+            return optChat.get();
+
+        return this.createNew(new Contact[]{contact}, gid, "");
     }
 
     /**
