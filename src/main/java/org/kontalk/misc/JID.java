@@ -21,6 +21,7 @@ package org.kontalk.misc;
 import java.util.Objects;
 import org.apache.commons.lang.StringUtils;
 import org.jxmpp.util.XmppStringUtils;
+import org.kontalk.system.Config;
 
 /**
  * A Jabber ID (the address of an XMPP client or user). Immutable.
@@ -63,6 +64,11 @@ public final class JID {
 
     public boolean isFull() {
         return !mResource.isEmpty();
+    }
+
+    public boolean isMe() {
+        return this.isValid() &&
+                this.equals(JID.me());
     }
 
     /**
@@ -116,4 +122,9 @@ public final class JID {
     public static JID deleted(int id) {
         return new JID("", Integer.toString(id), "");
     }
+
+    public static JID me() {
+        return JID.bare(Config.getInstance().getString(Config.ACC_JID));
+    }
+
 }

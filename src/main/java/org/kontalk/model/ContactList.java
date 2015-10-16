@@ -42,7 +42,6 @@ public final class ContactList extends Observable {
 
     /** JID to contact. */
     private final HashMap<JID, Contact> mJIDMap = new HashMap<>();
-
     /** Database ID to contact. */
     private final HashMap<Integer, Contact> mIDMap = new HashMap<>();
 
@@ -104,6 +103,19 @@ public final class ContactList extends Observable {
      */
     public synchronized Optional<Contact> get(JID jid) {
         return Optional.ofNullable(mJIDMap.get(jid));
+    }
+
+    /**
+     * Get the contact that represents the user itself. It is created and added
+     * if not yet in the list.
+     */
+    public Optional<Contact> getMe() {
+        JID myJID = JID.me();
+        Optional<Contact> optContact = this.get(myJID);
+        if (optContact.isPresent())
+            return optContact;
+
+        return this.create(myJID, "");
     }
 
     /**

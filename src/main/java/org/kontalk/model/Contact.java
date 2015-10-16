@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
-import org.kontalk.system.Config;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -258,10 +257,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
     }
 
     public boolean isMe() {
-        JID myJID = JID.bare(Config.getInstance().getString(Config.ACC_JID));
-        if (!myJID.isValid())
-            return false;
-        return mJID.equals(myJID);
+        return mJID.isMe();
     }
 
     public boolean isKontalkUser(){
