@@ -134,23 +134,24 @@ public final class ClientUtils {
         }
     }
 
-    public static GroupCommand groupExtensionToGroupCommand(JID owner,
-            String id,
+    public static Optional<GroupCommand> groupExtensionToGroupCommand(
             Command com,
             Member[] members,
             String subject) {
-        GID gid = new GID(owner, id);
 
-        if (com == GroupExtension.Command.CREATE) {
-            List<JID> jids = new ArrayList<>(members.length);
-            for (Member m: members)
-                jids.add(JID.bare(m.jid));
-            return new GroupCommand(gid, jids.toArray(new JID[0]), subject);
-        } else if (com == GroupExtension.Command.LEAVE) {
-            return new GroupCommand(gid);
+        switch (com) {
+            case NONE:
+                return Optional.empty();
+            case CREATE:
+                List<JID> jids = new ArrayList<>(members.length);
+                for (Member m: members)
+                    jids.add(JID.bare(m.jid));
+                return Optional.of(GroupCommand.create(jids.toArray(new JID[0]), subject));
+            case LEAVE:
+                return Optional.of(GroupCommand.leave());
+            default:
+                // TODO
+                return Optional.empty();
         }
-
-        // TODO
-        return new GroupCommand(gid, new JID[0], new JID[0]);
     }
 }

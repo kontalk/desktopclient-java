@@ -296,19 +296,8 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     }
 
     public void applyGroupCommand(GroupCommand command, Contact sender) {
-        Optional<GID> optComGID = command.getGID();
         switch(command.getOperation()) {
             case CREATE:
-                if (!optComGID.isPresent()) {
-                    LOGGER.warning("create command without group ID");
-                    return;
-                }
-                if (mOptGID.isPresent()) {
-                    LOGGER.warning("group chat already created");
-                    return;
-                }
-                mOptGID = optComGID;
-
                 assert mContactMap.size() == 1;
                 assert mContactMap.containsKey(sender);
 

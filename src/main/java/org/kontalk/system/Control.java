@@ -51,6 +51,8 @@ import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
+import org.kontalk.model.MessageContent.GroupCommand.OP;
+import org.kontalk.model.ProtoMessage;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
 
@@ -421,43 +423,37 @@ public final class Control {
 
     // warning: call this only once for each group command!
     private void processGroupCommand(GroupCommand command, Chat chat, Contact sender) {
-        // validation checks
-        Optional<GID> optComGID = command.getGID();
-        Optional<GID> chatGID = chat.getGID();
-        if (optComGID.isPresent()) {
-            GID comGID = optComGID.get();
-            if (command.getOperation() != GroupCommand.OP.LEAVE) {
-                // sender must be owner
-                if (!comGID.ownerJID.equals(sender.getJID())) {
-                    LOGGER.warning("sender not owner");
-                    return;
-                }
-            }
-            if (chatGID.isPresent()) {
-                GID gid = chatGID.get();
-                // gids must match
-                if (!gid.equals(comGID)) {
-                    LOGGER.warning("group IDs do not match");
-                    return;
-                }
-            } else {
-                // must be create command
-                if (command.getOperation() != GroupCommand.OP.CREATE) {
-                    LOGGER.warning("chat withoud gid and not create command");
-                    return;
-                }
+        // note: chat was selected/created by GID so we can be sure message and
+        // chat GIDs match
+        Optional<GID> optGID = chat.getGID();
+        if (!optGID.isPresent()) {
+            LOGGER.warning("no GID for chat!?");
+            return;
+        }
+        GID gid = optGID.get();
+
+        OP op = command.getOperation();
+
+        // validation check
+        if (op != OP.LEAVE) {
+            // sender must be owner
+            if (!gid.ownerJID.equals(sender.getJID())) {
+                LOGGER.warning("sender not owner");
+                return;
             }
         }
 
-        // add contacts if necessary
-        // TODO design problem here: we need at least the public keys, but user
-        // might dont wanna have group members in contact list
-        ContactList contactList = ContactList.getInstance();
-        for (JID jid : command.getAdded()) {
-            if (!contactList.contains(jid)) {
-                boolean succ = this.createContact(jid, "").isPresent();
-                if (!succ)
-                    LOGGER.warning("can't create contact, JID: "+jid);
+        if (op == OP.CREATE || op == OP.SET) {
+            // add contacts if necessary
+            // TODO design problem here: we need at least the public keys, but user
+            // might dont wanna have group members in contact list
+            ContactList contactList = ContactList.getInstance();
+            for (JID jid : command.getAdded()) {
+                if (!contactList.contains(jid)) {
+                    boolean succ = this.createContact(jid, "").isPresent();
+                    if (!succ)
+                        LOGGER.warning("can't create contact, JID: "+jid);
+                }
             }
         }
 
@@ -638,10 +634,7 @@ public final class Control {
                 jids.add(c.getJID());
             this.createAndSendMessage(chat,
                     new MessageContent(
-                            new MessageContent.GroupCommand(
-                                    jids.toArray(new JID[0]),
-                                    subject
-                            )
+                            GroupCommand.create(jids.toArray(new JID[0]),subject)
                     )
             );
         }
@@ -650,7 +643,7 @@ public final class Control {
             if (chat.isGroupChat() && !chat.getContacts().isEmpty()) {
                 //note: group chats are not 'deleted', were just leaving them
                 boolean sent = this.createAndSendMessage(chat,
-                        new MessageContent(new GroupCommand()));
+                        new MessageContent(GroupCommand.leave()));
                 if (!sent)
                     // TODO tell view
                     return;
