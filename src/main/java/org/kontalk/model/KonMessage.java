@@ -133,9 +133,10 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         mChat = builder.mChat;
         mXMPPID = builder.mXMPPID;
         mDate = builder.mDate;
+        mContent = builder.mContent;
+
         mServerDate = builder.mServerDate;
         mStatus = builder.mStatus;
-        mContent = builder.mContent;
         mCoderStatus = builder.mCoderStatus;
         mServerError = builder.mServerError;
 
@@ -361,13 +362,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         long sDate = messageRS.getLong(KonMessage.COL_SERV_DATE);
         Date serverDate = sDate == 0 ? null : new Date(sDate);
 
-        KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date);
+        KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date, content);
         builder.xmppID(xmppID);
         // TODO one SQL SELECT for each message, performance?
         builder.transmissions(Transmission.load(id));
         if (serverDate != null)
             builder.serverDate(serverDate);
-        builder.content(content);
         builder.coderStatus(coderStatus);
         builder.serverError(serverError);
 
@@ -417,6 +417,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         private final Chat mChat;
         private final Status mStatus;
         private final Date mDate;
+        private final MessageContent mContent;
 
         protected Map<Contact, JID> mContacts = null;
         protected Transmission[] mTransmissions = null;
@@ -424,7 +425,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         protected String mXMPPID = null;
 
         protected Optional<Date> mServerDate = Optional.empty();
-        protected MessageContent mContent = null;
 
         protected CoderStatus mCoderStatus = null;
 
@@ -434,11 +434,13 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         Builder(int id,
                 Chat chat,
                 Status status,
-                Date date) {
+                Date date,
+                MessageContent content) {
             mID = id;
             mChat = chat;
             mStatus = status;
             mDate = date;
+            mContent = content;
         }
 
         void transmissions(Transmission[] transmission) { mTransmissions = transmission; }
@@ -446,7 +448,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         public void xmppID(String xmppID) { mXMPPID = xmppID; }
 
         public void serverDate(Date date) { mServerDate = Optional.of(date); }
-        public void content(MessageContent content) { mContent = content; }
 
         void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
         void serverError(ServerError error) { mServerError = error; }

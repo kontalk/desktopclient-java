@@ -20,7 +20,6 @@ package org.kontalk.model;
 
 import org.kontalk.misc.JID;
 import java.util.Date;
-import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -122,27 +121,13 @@ public final class InMessage extends KonMessage implements DecryptMessage {
 
     public static class Builder extends KonMessage.Builder {
 
-        public Builder(Chat chat, Contact contact, JID from) {
-            super(-1, chat, Status.IN, new Date());
+        public Builder(ProtoMessage proto, Chat chat, JID from) {
+            super(-1, chat, Status.IN, new Date(), proto.getContent());
 
             mContacts = new HashMap<>();
-            mContacts.put(contact, from);
-        }
+            mContacts.put(proto.getContact(), from);
 
-        @Override
-        public void content(MessageContent content) {
-            super.content(content);
-
-            boolean encrypted = !content.getEncryptedContent().isEmpty();
-
-            mCoderStatus = new CoderStatus(
-                // no decryption attempt yet
-                encrypted ? Coder.Encryption.ENCRYPTED : Coder.Encryption.NOT,
-                // if encrypted we don't know yet
-                encrypted ? Coder.Signing.UNKNOWN : Coder.Signing.NOT,
-                // no errors
-                EnumSet.noneOf(Coder.Error.class)
-            );
+            mCoderStatus = proto.getCoderStatus();
         }
 
         @Override

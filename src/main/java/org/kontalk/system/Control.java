@@ -26,7 +26,6 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
@@ -163,12 +162,23 @@ public final class Control {
             return false;
         }
         Contact contact = optContact.get();
-        Chat chat = ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
-        InMessage.Builder builder = new InMessage.Builder(chat, contact, ids.jid);
+
+        // decrypt message now to get group id
+        ProtoMessage protoMessage = new ProtoMessage(contact, content);
+        if (protoMessage.isEncrypted()) {
+            Coder.decryptMessage(protoMessage);
+        }
+
+        Optional<GID> optGID = protoMessage.getContent().getGID();
+
+        Chat chat = optGID.isPresent() ?
+                ChatList.getInstance().getOrCreate(optGID.get(), contact) :
+                ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
+        InMessage.Builder builder = new InMessage.Builder(protoMessage,
+                chat, ids.jid);
         builder.xmppID(ids.xmppID);
         if (serverDate.isPresent())
             builder.serverDate(serverDate.get());
-        builder.content(content);
         InMessage newMessage = builder.build();
 
         // TODO always false
@@ -185,7 +195,12 @@ public final class Control {
 
         newMessage.save();
 
-        this.decryptAndDownload(newMessage);
+        Optional<GroupCommand> optCom = newMessage.getContent().getGroupCommand();
+        if (optCom.isPresent()) {
+            this.processGroupCommand(optCom.get(), chat, contact);
+        }
+
+        this.processContent(newMessage);
 
         mViewControl.changed(new ViewEvent.NewMessage(newMessage));
 
@@ -371,19 +386,22 @@ public final class Control {
 
     /* private */
 
-    /**
-     * Decrypt an incoming message and download attachment if present.
-     */
-    private void decryptAndDownload(InMessage message) {
-        boolean decrypted = Coder.decryptMessage(message);
-
-        if (!message.getCoderStatus().getErrors().isEmpty()) {
-            this.handleSecurityErrors(message);
+    private void decryptAndProcess(InMessage message) {
+        if (!message.isEncrypted()) {
+            LOGGER.info("message not encrypted");
+        } else {
+            Coder.decryptMessage(message);
         }
 
-        Optional<GroupCommand> optCom = message.getContent().getGroupCommand();
-        if (decrypted && optCom.isPresent()) {
-            this.processGroupCommand(optCom.get(), message.getChat(), message.getContact());
+        this.processContent(message);
+    }
+
+    /**
+     * Download attachment for incoming message if present.
+     */
+    private void processContent(InMessage message) {
+        if (!message.getCoderStatus().getErrors().isEmpty()) {
+            this.handleSecurityErrors(message);
         }
 
         if (message.getContent().getPreview().isPresent()) {
@@ -659,7 +677,7 @@ public final class Control {
         /* messages */
 
         public void decryptAgain(InMessage message) {
-            Control.this.decryptAndDownload(message);
+            Control.this.decryptAndProcess(message);
         }
 
         public void downloadAgain(InMessage message) {
@@ -719,19 +737,31 @@ public final class Control {
          * save, process and send message.
          */
         private boolean createAndSendMessage(Chat chat, MessageContent content) {
-
             LOGGER.config("chat: "+chat+" content: "+content);
 
-            Set<Contact> contacts = chat.getContacts();
-            if (contacts.isEmpty()) {
+            if (chat.isGroupChat() && !chat.containsMe()) {
+                    LOGGER.warning("user not included in group chat");
+                    return false;
+                }
+
+            Contact[] contacts = null;
+            if (chat.isGroupChat()) {
+                contacts = chat.getContacts().toArray(new Contact[0]);
+            } else {
+                Optional<Contact> optContact = chat.getSingleContact();
+                if (optContact.isPresent())
+                    contacts = new Contact[]{optContact.get()};
+            }
+
+            if (contacts == null || contacts.length == 0) {
                 LOGGER.warning("can't send message, no (valid) contact(s)");
                 return false;
             }
 
             OutMessage.Builder builder = new OutMessage.Builder(chat,
-                    contacts.toArray(new Contact[0]),
+                    contacts,
+                    content,
                     chat.sendEncrypted());
-            builder.content(content);
             OutMessage newMessage = builder.build();
             if (newMessage.getContent().getAttachment().isPresent())
                 mAttachmentManager.createImagePreview(newMessage);

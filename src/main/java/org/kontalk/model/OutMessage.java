@@ -95,8 +95,8 @@ public final class OutMessage extends KonMessage {
 
 public static class Builder extends KonMessage.Builder {
 
-        public Builder(Chat chat, Contact[] contacts, boolean encrypted) {
-            super(-1, chat, Status.PENDING, new Date());
+        public Builder(Chat chat, Contact[] contacts, MessageContent content, boolean encrypted) {
+            super(-1, chat, Status.PENDING, new Date(), content);
 
             mContacts = new HashMap<>();
             for (Contact c: contacts)
