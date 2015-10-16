@@ -33,6 +33,7 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -89,8 +90,8 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     private final HashMap<Contact, KonChatState> mContactMap = new HashMap<>();
     private final String mXMPPID;
     private final ChatMessages mMessages;
+    private final Optional<GID> mOptGID;
 
-    private Optional<GID> mOptGID;
     private String mSubject;
     private boolean mRead;
     private ViewSettings mViewSettings;
@@ -108,11 +109,20 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     private Chat(Contact[] contacts, String xmppID, GID gid, String subject) {
         assert contacts != null;
         assert xmppID.isEmpty() || gid == null;
+
         for (Contact contact: contacts)
             this.addContactSilent(contact);
-        // Kontalk Android client is ignoring the chat id
-        // were using it for group chat identification
-        mXMPPID = gid != null ? gid.id : xmppID;
+        // group chats also include the user itself
+        if (gid != null) {
+            Optional<Contact> optMe = ContactList.getInstance().getMe();
+            if (!optMe.isPresent())
+                LOGGER.warning("can't add user to group chat");
+            else
+                this.addContactSilent(optMe.get());
+        }
+
+        // note: Kontalk Android client is ignoring the chat id
+        mXMPPID = xmppID;
         mOptGID = Optional.ofNullable(gid);
         mSubject = subject;
 
@@ -176,17 +186,17 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return mXMPPID;
     }
 
-    /** Get all contacts (including deleted). */
+    /** Get all contacts (including deleted and user contact). */
     public Set<Contact> getAllContacts() {
         return mContactMap.keySet();
     }
 
-    /** Get contacts (without deleted). */
+    /** Get contacts (without deleted and user contact). */
     public Set<Contact> getContacts() {
         //chat.getContacts().stream().filter(c -> !c.isDeleted());
         Set<Contact> contacts = new HashSet<>();
         for (Contact c : this.getAllContacts()) {
-            if (!c.isDeleted()) {
+            if (!c.isDeleted() && !c.isMe()) {
                 contacts.add(c);
             }
         }
@@ -235,13 +245,24 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return mOptGID.isPresent();
     }
 
+    public boolean containsMe() {
+        return mContactMap.keySet().parallelStream().anyMatch(
+                new Predicate<Contact>() {
+                    @Override
+                    public boolean test(Contact t) {
+                        return t.isMe();
+                    }
+                }
+        );
+    }
+
     /**
      * Return if new outgoing messages in chat will be encrypted.
      * True if encryption is turned on for at least one chat contact.
      */
     public boolean sendEncrypted() {
         boolean encrypted = false;
-        for (Contact c: mContactMap.keySet()) {
+        for (Contact c: this.getContacts()) {
             encrypted |= c.getEncrypted();
         }
         return encrypted;
@@ -252,8 +273,9 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
      * True if all chat contacts have a key.
      */
     public boolean canSendEncrypted() {
-        boolean encrypted = !mContactMap.keySet().isEmpty();
-        for (Contact c: mContactMap.keySet()) {
+        Set<Contact> contacts = this.getContacts();
+        boolean encrypted = !contacts.isEmpty();
+        for (Contact c: contacts) {
             encrypted &= c.hasKey();
         }
         return encrypted;
@@ -301,6 +323,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                 assert mContactMap.size() == 1;
                 assert mContactMap.containsKey(sender);
 
+                boolean meIn = false;
                 for (JID jid: command.getAdded()) {
                     Optional<Contact> optContact = ContactList.getInstance().get(jid);
                     if (!optContact.isPresent()) {
@@ -308,12 +331,17 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                         continue;
                     }
                     Contact contact = optContact.get();
-                    if (this.getContacts().contains(contact)) {
+                    if (this.getAllContacts().contains(contact)) {
                         LOGGER.warning("contact already in chat: "+contact);
                         continue;
                     }
+                    meIn |= contact.isMe();
                     this.addContact(contact);
                 }
+
+                if (!meIn)
+                    LOGGER.warning("user JID not included");
+
                 mSubject = command.getSubject();
                 this.save();
                 this.changed(command);
@@ -337,9 +365,6 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(mSubject));
-        set.put(COL_GID, Database.setString(mOptGID.isPresent() ?
-                mOptGID.get().toJSON() :
-                ""));
         set.put(COL_READ, mRead);
         set.put(COL_VIEW_SET, mViewSettings.toJSONString());
 
