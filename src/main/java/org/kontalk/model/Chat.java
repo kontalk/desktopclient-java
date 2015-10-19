@@ -128,7 +128,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
 
         mRead = true;
         mViewSettings = new ViewSettings();
-        mMessages = new ChatMessages(this);
+        mMessages = new ChatMessages(this, true);
 
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
@@ -167,7 +167,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         mSubject = subject;
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
-        mMessages = new ChatMessages(this);
+        mMessages = new ChatMessages(this, false);
     }
 
     public ChatMessages getMessages() {

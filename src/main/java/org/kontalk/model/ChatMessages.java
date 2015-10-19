@@ -41,10 +41,12 @@ public final class ChatMessages {
     private final NavigableSet<KonMessage> mSet =
         Collections.synchronizedNavigableSet(new TreeSet<KonMessage>());
 
-    private boolean mLoaded = false;
+    private boolean mLoaded;
 
-    public ChatMessages(Chat chat) {
+    ChatMessages(Chat chat, boolean newChat) {
         mChat = chat;
+        // don't load from db if chat is just created
+        mLoaded = newChat;
     }
 
     private void ensureLoaded() {
@@ -56,6 +58,7 @@ public final class ChatMessages {
     }
 
     private void loadMessages() {
+        LOGGER.config("loading messages for chat, id="+mChat.getID());
         Database db = Database.getInstance();
 
         try (ResultSet messageRS = db.execSelectWhereInsecure(KonMessage.TABLE,
