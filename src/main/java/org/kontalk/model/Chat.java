@@ -50,7 +50,7 @@ import org.kontalk.util.EncodingUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Chat extends Observable implements Comparable<Chat>, Observer {
+public final class Chat extends Observable implements Observer {
     private static final Logger LOGGER = Logger.getLogger(Chat.class.getName());
 
     public static final String TABLE = "threads";
@@ -462,11 +462,6 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     @Override
     public void update(Observable o, Object arg) {
         this.changed(o);
-    }
-
-    @Override
-    public int compareTo(Chat o) {
-        return Integer.compare(this.mID, o.mID);
     }
 
     static Chat load(ResultSet rs) throws SQLException {

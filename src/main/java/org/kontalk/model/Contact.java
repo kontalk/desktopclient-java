@@ -40,7 +40,7 @@ import org.kontalk.util.XMPPUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Contact extends Observable implements Comparable<Contact> {
+public final class Contact extends Observable {
     private static final Logger LOGGER = Logger.getLogger(Contact.class.getName());
 
     /**
@@ -305,11 +305,6 @@ public final class Contact extends Observable implements Comparable<Contact> {
     public String toString() {
         return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
                 +",subsc="+mSubStatus;
-    }
-
-    @Override
-    public int compareTo(Contact o) {
-        return Integer.compare(this.mID, o.mID);
     }
 
     static Contact load(ResultSet rs) throws SQLException {

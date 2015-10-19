@@ -21,10 +21,10 @@ import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Observable;
 import java.util.Optional;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.system.Database;
@@ -121,8 +121,8 @@ public final class ContactList extends Observable {
     /**
      * Return all but deleted contacts.
      */
-    public synchronized SortedSet<Contact> getAll() {
-        SortedSet<Contact> contacts = new TreeSet<>();
+    public synchronized Set<Contact> getAll() {
+        Set<Contact> contacts = new HashSet<>();
         for (Contact u : mJIDMap.values())
             if (!u.isDeleted())
                 contacts.add(u);

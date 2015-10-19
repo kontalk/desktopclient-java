@@ -21,11 +21,11 @@ package org.kontalk.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.model.Chat.GID;
@@ -64,8 +64,8 @@ public final class ChatList extends Observable implements Observer {
         this.changed(null);
     }
 
-    public synchronized SortedSet<Chat> getAll() {
-        return new TreeSet<>(mMap.values());
+    public synchronized Set<Chat> getAll() {
+        return new HashSet<>(mMap.values());
     }
 
     /**
