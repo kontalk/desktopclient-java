@@ -27,6 +27,7 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.SingleChat;
 
 /**
  * Manager handling own chat status for all chats.
@@ -95,13 +96,13 @@ final class ChatStateManager {
             // currently set states from XEP-0085: active, inactive, composing
             mCurrentState = state;
 
-            if (mChat.isGroupChat() || state == ChatState.active)
+            if (state == ChatState.active || !(mChat instanceof SingleChat))
                 // don't send for groups (TODO (?))
                 // 'active' is send inside a message
                 return;
 
-            Contact contact = mChat.getSingleContact().orElse(null);
-            if (contact == null || contact.isMe() || contact.isBlocked() || contact.isDeleted())
+            Contact contact = ((SingleChat) mChat).getContact();
+            if (contact.isMe() || contact.isBlocked() || contact.isDeleted())
                 return;
 
             if (Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE))

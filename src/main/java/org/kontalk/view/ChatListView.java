@@ -266,7 +266,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
             if (optChat.isPresent() && optChat.get() == mValue)
                 return true;
 
-            for (Contact contact: mValue.getContacts()) {
+            for (Contact contact: mValue.getAllContacts()) {
                 if (contact.getName().toLowerCase().contains(search) ||
                         contact.getJID().string().toLowerCase().contains(search))
                     return true;

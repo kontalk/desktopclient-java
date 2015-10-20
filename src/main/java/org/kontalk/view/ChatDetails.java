@@ -41,6 +41,7 @@ import java.util.Optional;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.kontalk.model.Chat;
+import org.kontalk.model.GroupChat;
 import org.kontalk.util.Tr;
 
 /**
@@ -51,6 +52,7 @@ final class ChatDetails extends WebPanel {
 
     private static final Color DEFAULT_BG = Color.WHITE;
 
+    private final View mView;
     private final Chat mChat;
     private final WebTextField mSubjectField;
     private final WebRadioButton mColorOpt;
@@ -60,7 +62,8 @@ final class ChatDetails extends WebPanel {
     // TODO group chat
     //WebCheckBoxList mParticipantsList;
 
-    ChatDetails(final ComponentUtils.ModalPopup popup, Chat chat) {
+    ChatDetails(View view, final ComponentUtils.ModalPopup popup, Chat chat) {
+        mView = view;
         mChat = chat;
 
         GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
@@ -195,8 +198,10 @@ final class ChatDetails extends WebPanel {
     private void save() {
         if (mSubjectField != null) {
             String subj = mSubjectField.getText();
-            if (subj.length() > 0 && !mSubjectField.getText().equals(mChat.getSubject()))
-                mChat.setSubject(mSubjectField.getText());
+            if (subj.length() > 0 &&
+                    !mSubjectField.getText().equals(mChat.getSubject()) &&
+                    mChat instanceof GroupChat)
+                mView.getControl().setChatSubject((GroupChat) mChat, mSubjectField.getText());
         }
 //        List<?> participants = mParticipantsList.getCheckedValues();
 //        Set<Contact> chatContact = new HashSet<>();

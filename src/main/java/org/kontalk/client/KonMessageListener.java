@@ -38,7 +38,7 @@ import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.misc.JID;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;

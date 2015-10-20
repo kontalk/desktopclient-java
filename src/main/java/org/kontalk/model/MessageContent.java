@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -510,9 +510,9 @@ public class MessageContent {
             return new GroupCommand(OP.CREATE, added, new JID[0], subject);
         }
 
-        /** Member list change. */
-        public static GroupCommand set(GID gid, JID[] added, JID[] removed) {
-            return new GroupCommand(OP.SET, added, removed, "");
+        /** Group changed. */
+        public static GroupCommand set(JID[] added, JID[] removed, String subject) {
+            return new GroupCommand(OP.SET, added, removed, subject);
         }
 
         /** Member left. Identified by sender JID */

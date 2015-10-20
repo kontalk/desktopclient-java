@@ -41,17 +41,19 @@ import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
+import org.kontalk.model.GroupChat;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.GroupCommand.OP;
 import org.kontalk.model.ProtoMessage;
+import org.kontalk.model.SingleChat;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
 
@@ -169,6 +171,7 @@ public final class Control {
             Coder.decryptMessage(protoMessage);
         }
 
+        // note: decryption must be successful to select group chat
         Optional<GID> optGID = protoMessage.getContent().getGID();
 
         Chat chat = optGID.isPresent() ?
@@ -197,7 +200,10 @@ public final class Control {
 
         Optional<GroupCommand> optCom = newMessage.getContent().getGroupCommand();
         if (optCom.isPresent()) {
-            this.processGroupCommand(optCom.get(), chat, contact);
+            if (chat instanceof GroupChat)
+                this.processGroupCommand(optCom.get(), (GroupChat) chat, contact);
+            else
+                LOGGER.warning("group command for non-group chat");
         }
 
         this.processContent(newMessage);
@@ -250,7 +256,8 @@ public final class Control {
             return;
         }
         Contact contact = optContact.get();
-        Optional<Chat> optChat = ChatList.getInstance().get(contact, xmppThreadID);
+        // TODO chat states for group chats?
+        Optional<SingleChat> optChat = ChatList.getInstance().get(contact, xmppThreadID);
         if (!optChat.isPresent())
             return;
 
@@ -440,16 +447,10 @@ public final class Control {
     }
 
     // warning: call this only once for each group command!
-    private void processGroupCommand(GroupCommand command, Chat chat, Contact sender) {
+    private void processGroupCommand(GroupCommand command, GroupChat chat, Contact sender) {
         // note: chat was selected/created by GID so we can be sure message and
         // chat GIDs match
-        Optional<GID> optGID = chat.getGID();
-        if (!optGID.isPresent()) {
-            LOGGER.warning("no GID for chat!?");
-            return;
-        }
-        GID gid = optGID.get();
-
+        GID gid = chat.getGID();
         OP op = command.getOperation();
 
         // validation check
@@ -490,7 +491,7 @@ public final class Control {
         // get chat by jid -> thread ID -> message id
         Optional<Contact> optContact = ContactList.getInstance().get(ids.jid);
         if (optContact.isPresent()) {
-            Optional<Chat> optChat = cl.get(optContact.get(), ids.xmppThreadID);
+            Optional<? extends Chat> optChat = cl.get(optContact.get(), ids.xmppThreadID);
             if (optChat.isPresent()) {
                 Optional<OutMessage> optM = optChat.get().getMessages().getLast(ids.xmppID);
                 if (optM.isPresent())
@@ -636,7 +637,7 @@ public final class Control {
         }
 
         public void createGroupChat(Contact[] contacts, String subject) {
-            JID jid = JID.bare(Config.getInstance().getString(Config.ACC_JID));
+            JID jid = JID.me();
             if (!jid.isValid()) {
                 LOGGER.warning("can't create group, invalid JID");
                 return;
@@ -658,16 +659,24 @@ public final class Control {
         }
 
         public void deleteChat(Chat chat) {
-            if (chat.isGroupChat() && !chat.getContacts().isEmpty()) {
-                //note: group chats are not 'deleted', were just leaving them
+            if (chat.isGroupChat() && chat.isValid()) {
+                // note: group chats are not 'deleted', were just leaving them
                 boolean sent = this.createAndSendMessage(chat,
                         new MessageContent(GroupCommand.leave()));
+
                 if (!sent)
-                    // TODO tell view
+                    // TODO tell view (and/or delete chat when message was sent)
                     return;
             }
 
             ChatList.getInstance().delete(chat.getID());
+        }
+
+        public void setChatSubject(GroupChat chat, String subject) {
+            this.createAndSendMessage(chat, new MessageContent(
+                    GroupCommand.set(new JID[0], new JID[0], subject)));
+
+            chat.setSubject(subject);
         }
 
         public void handleOwnChatStateEvent(Chat chat, ChatState state) {
@@ -739,21 +748,13 @@ public final class Control {
         private boolean createAndSendMessage(Chat chat, MessageContent content) {
             LOGGER.config("chat: "+chat+" content: "+content);
 
-            if (chat.isGroupChat() && !chat.containsMe()) {
-                    LOGGER.warning("user not included in group chat");
+            if (!chat.isValid()) {
+                    LOGGER.warning("invalid chat");
                     return false;
-                }
-
-            Contact[] contacts = null;
-            if (chat.isGroupChat()) {
-                contacts = chat.getContacts().toArray(new Contact[0]);
-            } else {
-                Optional<Contact> optContact = chat.getSingleContact();
-                if (optContact.isPresent())
-                    contacts = new Contact[]{optContact.get()};
             }
 
-            if (contacts == null || contacts.length == 0) {
+            Contact[] contacts = chat.getValidContacts();
+            if (contacts.length == 0) {
                 LOGGER.warning("can't send message, no (valid) contact(s)");
                 return false;
             }
@@ -761,7 +762,7 @@ public final class Control {
             OutMessage.Builder builder = new OutMessage.Builder(chat,
                     contacts,
                     content,
-                    chat.sendEncrypted());
+                    chat.isSendEncrypted());
             OutMessage newMessage = builder.build();
             if (newMessage.getContent().getAttachment().isPresent())
                 mAttachmentManager.createImagePreview(newMessage);

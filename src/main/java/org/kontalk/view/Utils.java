@@ -45,7 +45,6 @@ import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -60,6 +59,7 @@ import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.SingleChat;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
 
@@ -223,13 +223,11 @@ final class Utils {
     }
 
     static String chatTitle(Chat chat) {
-        if (chat.isGroupChat()) {
+        if (chat instanceof SingleChat) {
+            return Utils.nameOrJID(((SingleChat) chat).getContact());
+        } else {
             String subj = chat.getSubject();
             return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
-        } else {
-            Optional<Contact> optContact = chat.getSingleContact();
-            return optContact.isPresent() ? Utils.nameOrJID(optContact.get()) :
-                    "--no title--";
         }
     }
 

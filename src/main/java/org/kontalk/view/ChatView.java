@@ -60,7 +60,6 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.Set;
 import javax.swing.Box;
 import javax.swing.JFileChooser;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
@@ -73,6 +72,7 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Chat;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
+import org.kontalk.model.SingleChat;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Config;
 import org.kontalk.util.MediaUtils;
@@ -411,26 +411,15 @@ final class ChatView extends WebPanel implements Observer {
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
-        if (chat.isGroupChat()) {
-            mSubTitleLabel.setText(Utils.contactNameList(chat.getAllContacts()));
+        if (chat instanceof SingleChat) {
+            Contact contact = ((SingleChat) chat).getContact();
+            mSubTitleLabel.setText(Utils.mainStatus(contact, true));
         } else {
-            Optional<Contact> optContact = chat.getSingleContact();
-            mSubTitleLabel.setText(optContact.isPresent() ?
-                    Utils.mainStatus(optContact.get(), true) :
-                    "--no subtitle--");
+            mSubTitleLabel.setText(Utils.contactNameList(chat.getAllContacts()));
         }
 
         // text area
-        boolean chatDisabled = false;
-        Set<Contact> contacts = chat.getContacts();
-        if (contacts.isEmpty()) {
-            chatDisabled = true;
-        } else {
-            for (Contact c : contacts)
-                chatDisabled |= (c.isBlocked() || c.isDeleted());
-        }
-
-        // TODO: also disable if user not in group member list
+        boolean chatDisabled = !chat.isValid();
 
         mSendTextArea.setEnabled(!chatDisabled);
         mSendTextArea.setBackground(chatDisabled ? Color.LIGHT_GRAY : Color.WHITE);
@@ -439,13 +428,13 @@ final class ChatView extends WebPanel implements Observer {
         this.updateSendButton();
 
         // encryption status
-        boolean isEncrypted = chat.sendEncrypted();
+        boolean isEncrypted = chat.isSendEncrypted();
         String encryption = isEncrypted ?
                 Tr.tr("Encrypted") :
                 Tr.tr("Not encrypted");
 
         mEncryptionStatus.setText(encryption);
-        mEncryptionStatus.setForeground(isEncrypted !=chat.canSendEncrypted() ?
+        mEncryptionStatus.setForeground(isEncrypted != chat.canSendEncrypted() ?
                 Color.RED :
                 Color.BLACK);
 
@@ -460,7 +449,7 @@ final class ChatView extends WebPanel implements Observer {
             mPopup = new ComponentUtils.ModalPopup(invoker);
 
         mPopup.removeAll();
-        mPopup.add(new ChatDetails(mPopup, optChat.get()));
+        mPopup.add(new ChatDetails(mView, mPopup, optChat.get()));
         mPopup.showPopup();
     }
 
@@ -482,12 +471,12 @@ final class ChatView extends WebPanel implements Observer {
             return;
         Chat chat = optChat.get();
 
-        // enable if text area is enabled...
-        mSendButton.setEnabled(mSendTextArea.isEnabled() &&
+        // enable if chat is valid...
+        mSendButton.setEnabled(chat.isValid() &&
                 // ...and there is text to send...
                 !mSendTextArea.getText().trim().isEmpty() &&
-                // ...encrypted message can be send
-                (!chat.sendEncrypted() || chat.canSendEncrypted()));
+                // ...and encrypted messages can be send
+                (!chat.isSendEncrypted() || chat.canSendEncrypted()));
     }
 
     private void sendMsg() {

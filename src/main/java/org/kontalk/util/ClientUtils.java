@@ -29,10 +29,10 @@ import org.jivesoftware.smack.packet.Message;
 import org.kontalk.client.GroupExtension;
 import org.kontalk.client.GroupExtension.Command;
 import org.kontalk.client.GroupExtension.Member;
-import org.kontalk.model.Chat;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
+import org.kontalk.model.GroupChat;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.GroupCommand.OP;
 
@@ -77,17 +77,11 @@ public final class ClientUtils {
         }
     }
 
-    public static GroupExtension groupCommandToGroupExtension(Chat chat,
+    public static GroupExtension groupCommandToGroupExtension(GroupChat chat,
         GroupCommand groupCommand) {
         assert chat.isGroupChat();
 
-        Optional<GID> optGID = chat.getGID();
-        if (!optGID.isPresent()) {
-            LOGGER.warning("no GID");
-            return new GroupExtension("", "");
-        }
-        GID gid = optGID.get();
-
+        GID gid = chat.getGID();
         OP op = groupCommand.getOperation();
         switch (op) {
             case LEAVE:
@@ -115,7 +109,7 @@ public final class ClientUtils {
                     }
                     if (groupCommand.getAdded().length > 0) {
                         // list all remaining member for the new member
-                        for (Contact c : chat.getContacts()) {
+                        for (Contact c : chat.getValidContacts()) {
                             JID old = c.getJID();
                             if (!incl.contains(old))
                                 member.add(new Member(old.string()));

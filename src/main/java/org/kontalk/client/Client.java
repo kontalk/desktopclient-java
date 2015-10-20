@@ -52,6 +52,8 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.model.Chat;
 import org.kontalk.misc.JID;
+import org.kontalk.model.GroupChat;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.MessageContent;
@@ -314,12 +316,12 @@ public final class Client implements StanzaListener, Runnable {
         }
 
         // group command
-        Optional<Chat.GID> optGID = chat.getGID();
-        if (optGID.isPresent()) {
-            Chat.GID gid = optGID.get();
+        if (chat instanceof GroupChat) {
+            GroupChat groupChat = (GroupChat) chat;
+            GID gid = groupChat.getGID();
             Optional<MessageContent.GroupCommand> optGroupCommand = content.getGroupCommand();
             smackMessage.addExtension(optGroupCommand.isPresent() ?
-                    ClientUtils.groupCommandToGroupExtension(chat, optGroupCommand.get()) :
+                    ClientUtils.groupCommandToGroupExtension(groupChat, optGroupCommand.get()) :
                     new GroupExtension(gid.id, gid.ownerJID.string()));
         }
 

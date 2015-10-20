@@ -28,7 +28,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.system.Database;
 
 /**
@@ -53,7 +53,9 @@ public final class ChatList extends Observable implements Observer {
         Database db = Database.getInstance();
         try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
             while (chatRS.next()) {
-                Chat chat = Chat.load(chatRS);
+                Chat chat = Chat.loadOrNull(chatRS);
+                if (chat == null)
+                    continue;
                 this.putSilent(chat);
 
                 mUnread |= !chat.isRead();
@@ -68,30 +70,31 @@ public final class ChatList extends Observable implements Observer {
         return new HashSet<>(mMap.values());
     }
 
-    /**
-     * Get chat with contact and XMPPID.
-     */
-    public synchronized Optional<Chat> get(Contact contact, String xmmpThreadID) {
+    /** Get single chat with contact and XMPPID. */
+    public synchronized Optional<SingleChat> get(Contact contact, String xmmpThreadID) {
         for (Chat chat : mMap.values()) {
-            if (chat.getXMPPID().equals(xmmpThreadID)
-                    // TODO
-                    //&& !chat.isGroupChat()
-                    && chat.getAllContacts().contains(contact))
-                return Optional.of(chat);
+            if (!(chat instanceof SingleChat))
+                continue;
+            SingleChat singleChat = (SingleChat) chat;
+
+            if (singleChat.getXMPPID().equals(xmmpThreadID)
+                    && singleChat.getContact().equals(contact))
+                return Optional.of(singleChat);
         }
         return Optional.empty();
     }
 
-    /**
-     *
-     */
-    public synchronized Optional<Chat> get(GID gid, Contact contact) {
+    /** Get group chat with gid containing contact. */
+    public synchronized Optional<GroupChat> get(GID gid, Contact contact) {
         for (Chat chat : mMap.values()) {
-            Optional<GID> optGID = chat.getGID();
-            if (optGID.isPresent() &&
-                    optGID.get().equals(gid) &&
-                    chat.getAllContacts().contains(contact)) {
-                return Optional.of(chat);
+            if (!(chat instanceof GroupChat))
+                continue;
+
+            GroupChat groupChat = (GroupChat) chat;
+            GID chatGID = groupChat.getGID();
+            if (chatGID.equals(gid) &&
+                    groupChat.getAllContacts().contains(contact)) {
+                return Optional.of(groupChat);
             }
         }
 
@@ -102,22 +105,18 @@ public final class ChatList extends Observable implements Observer {
         return this.getOrCreate(contact, "");
     }
 
-    /**
-     * Find chat by GID or create a new chat.
-     */
-    public Chat getOrCreate(GID gid, Contact contact) {
-        Optional<Chat> optChat = this.get(gid, contact);
+    /** Find group chat by GID or create a new chat. */
+    public GroupChat getOrCreate(GID gid, Contact contact) {
+        Optional<GroupChat> optChat = this.get(gid, contact);
         if (optChat.isPresent())
             return optChat.get();
 
         return this.createNew(new Contact[]{contact}, gid, "");
     }
 
-    /**
-     * Find chat for contact and XMPP ID or creates a new chat.
-     */
-    public Chat getOrCreate(Contact contact, String xmppThreadID) {
-        Optional<Chat> optChat = this.get(contact, xmppThreadID);
+    /** Find single chat for contact and XMPP ID or creates a new chat. */
+    public SingleChat getOrCreate(Contact contact, String xmppThreadID) {
+        Optional<SingleChat> optChat = this.get(contact, xmppThreadID);
         if (optChat.isPresent())
             return optChat.get();
 
@@ -128,16 +127,16 @@ public final class ChatList extends Observable implements Observer {
         return this.createNew(contact, "");
     }
 
-    private Chat createNew(Contact contact, String xmppThreadID) {
-        Chat newChat = new Chat(contact, xmppThreadID);
+    private SingleChat createNew(Contact contact, String xmppThreadID) {
+        SingleChat newChat = new SingleChat(contact, xmppThreadID);
         LOGGER.config("created new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
         return newChat;
     }
 
-    public Chat createNew(Contact[] contacts, GID gid, String subject) {
-        Chat newChat = new Chat(contacts, gid, subject);
+    public GroupChat createNew(Contact[] contacts, GID gid, String subject) {
+        GroupChat newChat = new GroupChat(contacts, gid, subject);
         LOGGER.config("created new group chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
@@ -150,14 +149,6 @@ public final class ChatList extends Observable implements Observer {
             mMap.put(chat.getID(), chat);
         }
         chat.addObserver(this);
-    }
-
-    // TODO unused
-    private synchronized Optional<Chat> get(int id) {
-        Chat chat = mMap.get(id);
-        if (chat == null)
-            LOGGER.warning("can't find chat with id: "+id);
-        return Optional.ofNullable(chat);
     }
 
     public boolean contains(int id) {
