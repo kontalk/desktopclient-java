@@ -275,20 +275,6 @@ public abstract class Chat extends Observable implements Observer {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-
-        if (!(o instanceof Chat)) {
-            return false;
-        }
-        Chat oChat = (Chat) o;
-
-        return false;
-    }
-
-    @Override
     public void update(Observable o, Object arg) {
         this.changed(o);
     }

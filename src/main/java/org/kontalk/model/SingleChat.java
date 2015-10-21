@@ -19,6 +19,7 @@
 package org.kontalk.model;
 
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -119,6 +120,24 @@ public final class SingleChat extends Chat {
     @Override
     void save() {
         super.save(new Contact[]{mContact}, "");
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (!(o instanceof SingleChat)) return false;
+
+        SingleChat oChat = (SingleChat) o;
+        return mContact.equals(oChat.mContact) && mXMPPID.equals(oChat.mXMPPID);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 41 * hash + Objects.hashCode(this.mContact);
+        hash = 41 * hash + Objects.hashCode(this.mXMPPID);
+        return hash;
     }
 
     @Override

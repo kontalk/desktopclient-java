@@ -73,13 +73,15 @@ public final class GroupChat extends Chat {
             ) {
         super(id, read, jsonViewSettings);
 
-        for (Contact contact: contacts)
-            this.addContactSilent(contact);
         mGID = gid;
         mSubject = subject;
+
+        for (Contact contact: contacts)
+            this.addContactSilent(contact);
     }
 
     /** Get all contacts (including deleted and user contact). */
+    @Override
     public Set<Contact> getAllContacts() {
         return mContactMap.keySet();
     }
@@ -242,6 +244,23 @@ public final class GroupChat extends Chat {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (!(o instanceof GroupChat)) return false;
+
+        GroupChat oChat = (GroupChat) o;
+        return mGID.equals(oChat.mGID);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 79 * hash + Objects.hashCode(this.mGID);
+        return hash;
+    }
+
+    @Override
     public String toString() {
         return "GC:id="+mID+",gid="+mGID+",subject="+mSubject;
     }
@@ -283,11 +302,9 @@ public final class GroupChat extends Chat {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o)
-                return true;
+            if (this == o) return true;
 
-            if (!(o instanceof GID))
-                return false;
+            if (!(o instanceof GID)) return false;
 
             GID oGID = (GID) o;
             return ownerJID.equals(oGID.ownerJID) && id.equals(oGID.id);
