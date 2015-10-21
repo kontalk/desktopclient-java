@@ -369,7 +369,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         // text in text area, before/after encryption
         private void updateText() {
-            boolean encrypted = mValue.getCoderStatus().isEncrypted();
+            boolean encrypted = mValue.isEncrypted();
             String text;
             if (mValue.getContent().getGroupCommand().isPresent()) {
                 GroupCommand com = mValue.getContent().getGroupCommand().get();
@@ -407,9 +407,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             boolean isOut = !mValue.isInMessage();
 
             Date deliveredDate = null;
-            Optional<Transmission> optTransmission = mValue.getSingleTransmission();
-            if (optTransmission.isPresent())
-                deliveredDate = optTransmission.get().getReceivedDate().orElse(null);
+            Transmission[] transmissions = mValue.getTransmissions();
+            if (transmissions.length == 1)
+                deliveredDate = transmissions[0].getReceivedDate().orElse(null);
 
             // status icon
             if (isOut) {
@@ -582,7 +582,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             WebPopupMenu popupMenu = new WebPopupMenu();
             final KonMessage m = MessageItem.this.mValue;
             if (m instanceof InMessage) {
-                if (m.getCoderStatus().isEncrypted()) {
+                if (m.isEncrypted()) {
                     WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
                     decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
                     decryptMenuItem.addActionListener(new ActionListener() {

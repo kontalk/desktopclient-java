@@ -20,7 +20,6 @@ package org.kontalk.model;
 
 import org.kontalk.misc.JID;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
@@ -28,29 +27,43 @@ import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.Preview;
 
 /**
- * Model for a XMPP message that was sent to us.
+ * Model for an XMPP message that was sent to us.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class InMessage extends KonMessage implements DecryptMessage {
     private static final Logger LOGGER = Logger.getLogger(InMessage.class.getName());
 
-    /**
-     * Create a new incoming message from builder.
-     * The message is not saved to database!
-     */
-    InMessage(KonMessage.Builder builder) {
+    private final Transmission mTransmission;
+
+    public InMessage(ProtoMessage proto, Chat chat, JID from, String xmppID,
+            Optional<Date> serverDate) {
+        super(chat,
+                xmppID,
+                proto.getContent(),
+                serverDate,
+                Status.IN,
+                proto.getCoderStatus());
+
+        mTransmission = new Transmission(proto.getContact(), from, mID);
+    }
+
+    // used when loading from database
+    protected InMessage(KonMessage.Builder builder) {
         super(builder);
+
+        if (builder.mTransmissions.length != 1)
+            throw new IllegalArgumentException("builder does not contain one transmission");
+
+        mTransmission = builder.mTransmissions[0];
     }
 
     @Override
     public Contact getContact() {
-        assert mTransmissions.length == 1;
-        return mTransmissions[0].getContact();
+        return mTransmission.getContact();
     }
 
     public JID getJID() {
-        assert mTransmissions.length == 1;
-        return mTransmissions[0].getJID();
+        return mTransmission.getJID();
     }
 
     @Override
@@ -119,23 +132,8 @@ public final class InMessage extends KonMessage implements DecryptMessage {
         this.changed(optPreview.get());
     }
 
-    public static class Builder extends KonMessage.Builder {
-
-        public Builder(ProtoMessage proto, Chat chat, JID from) {
-            super(-1, chat, Status.IN, new Date(), proto.getContent());
-
-            mContacts = new HashMap<>();
-            mContacts.put(proto.getContact(), from);
-
-            mCoderStatus = proto.getCoderStatus();
-        }
-
-        @Override
-        public void coderStatus(CoderStatus c) { throw new UnsupportedOperationException(); }
-
-        @Override
-        public InMessage build() {
-            return new InMessage(this);
-        }
+    @Override
+    public Transmission[] getTransmissions() {
+        return new Transmission[]{mTransmission};
     }
 }

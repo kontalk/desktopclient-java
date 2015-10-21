@@ -177,12 +177,8 @@ public final class Control {
         Chat chat = optGID.isPresent() ?
                 ChatList.getInstance().getOrCreate(optGID.get(), contact) :
                 ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
-        InMessage.Builder builder = new InMessage.Builder(protoMessage,
-                chat, ids.jid);
-        builder.xmppID(ids.xmppID);
-        if (serverDate.isPresent())
-            builder.serverDate(serverDate.get());
-        InMessage newMessage = builder.build();
+        InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
+                ids.xmppID, serverDate);
 
         // TODO always false
         if (chat.getMessages().getAll().contains(newMessage)) {
@@ -195,8 +191,6 @@ public final class Control {
             LOGGER.warning("can't add message to chat");
             return false;
         }
-
-        newMessage.save();
 
         Optional<GroupCommand> optCom = newMessage.getContent().getGroupCommand();
         if (optCom.isPresent()) {
@@ -759,11 +753,8 @@ public final class Control {
                 return false;
             }
 
-            OutMessage.Builder builder = new OutMessage.Builder(chat,
-                    contacts,
-                    content,
+            OutMessage newMessage = new OutMessage(chat, contacts, content,
                     chat.isSendEncrypted());
-            OutMessage newMessage = builder.build();
             if (newMessage.getContent().getAttachment().isPresent())
                 mAttachmentManager.createImagePreview(newMessage);
             boolean added = chat.addMessage(newMessage);
