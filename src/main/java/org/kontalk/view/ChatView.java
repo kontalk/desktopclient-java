@@ -60,6 +60,7 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
+import java.util.Set;
 import javax.swing.Box;
 import javax.swing.JFileChooser;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
@@ -72,7 +73,6 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Chat;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
-import org.kontalk.model.SingleChat;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Config;
 import org.kontalk.util.MediaUtils;
@@ -411,12 +411,10 @@ final class ChatView extends WebPanel implements Observer {
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
-        if (chat instanceof SingleChat) {
-            Contact contact = ((SingleChat) chat).getContact();
-            mSubTitleLabel.setText(Utils.mainStatus(contact, true));
-        } else {
-            mSubTitleLabel.setText(Utils.contactNameList(chat.getAllContacts()));
-        }
+        Set<Contact> contacts = chat.getAllContacts();
+        mSubTitleLabel.setText(contacts.isEmpty() ? Tr.tr("<Empty>") :
+                chat.isGroupChat() ? Utils.nameOrJID(chat.getAllContacts()) :
+                Utils.mainStatus(contacts.iterator().next(), true));
 
         // text area
         boolean chatDisabled = !chat.isValid();

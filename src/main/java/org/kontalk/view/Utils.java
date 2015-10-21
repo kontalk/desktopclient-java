@@ -59,7 +59,6 @@ import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
-import org.kontalk.model.SingleChat;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
 
@@ -191,19 +190,19 @@ final class Utils {
                 hashOrJID(contact, maxLength);
     }
 
-    private static String hashOrJID(Contact contact, int maxLength) {
-        JID jid = contact.getJID();
-        return jid.isHash() && jid.string().length() >= 10 ?
-                "[" + jid.string().substring(0, 10) + "]" :
-                jid(contact, maxLength, true);
-    }
-
-    static String contactNameList(Set<Contact> contacts) {
+    static String nameOrJID(Set<Contact> contacts) {
         List<String> nameList = new ArrayList<>(contacts.size());
         for (Contact contact : contacts) {
             nameList.add(nameOrJID(contact, 18));
         }
         return StringUtils.join(nameList, ", ");
+    }
+
+    private static String hashOrJID(Contact contact, int maxLength) {
+        JID jid = contact.getJID();
+        return jid.isHash() && jid.string().length() >= 10 ?
+                "[" + jid.string().substring(0, 10) + "]" :
+                jid(contact, maxLength, true);
     }
 
     static String jid(Contact contact, int maxLength, boolean brackets) {
@@ -223,11 +222,11 @@ final class Utils {
     }
 
     static String chatTitle(Chat chat) {
-        if (chat instanceof SingleChat) {
-            return Utils.nameOrJID(((SingleChat) chat).getContact());
-        } else {
+        if (chat.isGroupChat()) {
             String subj = chat.getSubject();
             return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
+        } else {
+            return Utils.nameOrJID(chat.getAllContacts());
         }
     }
 
