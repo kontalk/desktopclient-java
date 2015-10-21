@@ -68,15 +68,14 @@ public final class SingleChat extends Chat {
     @Override
     public Set<Contact> getAllContacts() {
         Set<Contact> contacts = new HashSet<>();
-        if (!mContact.isDeleted() && !mContact.isBlocked() && !mContact.isMe())
-            contacts.add(mContact);
+        contacts.add(mContact);
 
         return contacts;
     }
 
     @Override
     public Contact[] getValidContacts() {
-        if (mContact.isDeleted() || mContact.isBlocked())
+        if (mContact.isDeleted() || mContact.isBlocked() && !mContact.isMe())
             return new Contact[0];
 
         return new Contact[]{mContact};
