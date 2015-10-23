@@ -143,6 +143,11 @@ public final class ClientUtils {
                 return Optional.of(GroupCommand.create(jids.toArray(new JID[0]), subject));
             case LEAVE:
                 return Optional.of(GroupCommand.leave());
+            case SET:
+                // TODO
+                return Optional.of(GroupCommand.set(new JID[0], new JID[0], subject));
+            case GET:
+            case RESULT:
             default:
                 // TODO
                 return Optional.empty();

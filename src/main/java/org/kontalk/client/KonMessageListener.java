@@ -161,8 +161,11 @@ final public class KonMessageListener implements StanzaListener {
 
         // make sure not to save a message without content
         if (content.isEmpty()) {
-            if (chatState == null)
+            if (chatState == null) {
                 LOGGER.warning("can't find any content in message");
+            } else if (chatState == ChatState.active) {
+                LOGGER.info("only active chat state");
+            }
             return;
         }
 
@@ -230,7 +233,8 @@ final public class KonMessageListener implements StanzaListener {
         // group command
         Optional<GID> optGID = Optional.empty();
         Optional<GroupCommand> optCom = Optional.empty();
-        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE);
+        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME,
+                GroupExtension.NAMESPACE);
         if (groupExt instanceof GroupExtension) {
             GroupExtension group = (GroupExtension) groupExt;
             optGID = Optional.of(new GID(JID.bare(group.getOwner()), group.getID()));

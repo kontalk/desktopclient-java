@@ -113,16 +113,15 @@ public final class GroupChat extends Chat {
         mContactMap.put(contact, new KonChatState(contact));
     }
 
-    private void removeContact(Contact contact) {
+    private void removeContactSilent(Contact contact) {
+        contact.deleteObserver(this);
         if (!mContactMap.containsKey(contact)) {
             LOGGER.warning("contact not in chat: "+contact);
             return;
         }
 
-        contact.deleteObserver(this);
         mContactMap.remove(contact);
         this.save();
-        this.changed(contact);
     }
 
     public GID getGID() {
@@ -184,15 +183,31 @@ public final class GroupChat extends Chat {
                 this.changed(command);
                 break;
             case LEAVE:
-                this.removeContact(sender);
+                this.removeContactSilent(sender);
                 this.save();
                 this.changed(command);
                 break;
-            // TODO
-            //case SET:
-                //this.changed(command);
-            //    this.save();
-            //    break;
+            case SET:
+                for (JID jid : command.getAdded()) {
+                    Optional<Contact> optC = ContactList.getInstance().get(jid);
+                    if (optC.isPresent()) {
+                        LOGGER.warning("can't get added contact, jid="+jid);
+                        continue;
+                    }
+                    this.addContactSilent(optC.get());
+                }
+                for (JID jid : command.getRemoved()) {
+                    Optional<Contact> optC = ContactList.getInstance().get(jid);
+                    if (optC.isPresent()) {
+                        LOGGER.warning("can't get removed contact, jid="+jid);
+                        continue;
+                    }
+                    this.removeContactSilent(optC.get());
+                }
+                mSubject = command.getSubject();
+                this.save();
+                this.changed(command);
+                break;
             default:
                 LOGGER.warning("unhandled operation: "+command.getOperation());
         }
