@@ -203,6 +203,8 @@ public abstract class Chat extends Observable implements Observer {
     /** Return if new valid outgoing message could be send. */
     public abstract boolean isValid();
 
+    public abstract boolean isAdministratable();
+
     public abstract void setChatState(Contact contact, ChatState chatState);
 
     abstract void save();

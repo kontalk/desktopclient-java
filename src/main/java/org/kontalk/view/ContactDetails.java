@@ -41,7 +41,6 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.logging.Logger;
 import javax.swing.Box;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
@@ -56,7 +55,6 @@ import org.kontalk.util.Tr;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ContactDetails extends WebPanel implements Observer {
-    private static final Logger LOGGER = Logger.getLogger(ContactDetails.class.getName());
 
     private final View mView;
     private final Contact mContact;
@@ -81,7 +79,7 @@ final class ContactDetails extends WebPanel implements Observer {
 
         // editable fields
         mainPanel.add(new WebLabel(Tr.tr("Display Name:")));
-        mNameField = new ComponentUtils.EditableTextField(15, this) {
+        mNameField = new ComponentUtils.EditableTextField(View.MAX_NAME_LENGTH, 15, this) {
             @Override
             protected String labelText() {
                 return mContact.getName();
@@ -95,14 +93,12 @@ final class ContactDetails extends WebPanel implements Observer {
                 ContactDetails.this.saveName(this.getText().trim());
             }
         };
-        mNameField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_NAME_LENGTH));
         mNameField.setFontSizeAndStyle(14, true, false);
-        mNameField.setHideInputPromptOnFocus(false);
         mainPanel.add(mNameField);
 
         mainPanel.add(new WebLabel("Jabber ID:"));
         ComponentUtils.EditableTextField jidField =
-                new ComponentUtils.EditableTextField(20, this) {
+                new ComponentUtils.EditableTextField(View.MAX_JID_LENGTH, 20, this) {
             @Override
             protected String labelText() {
                 return Utils.jid(mContact, 28, false);
@@ -116,8 +112,6 @@ final class ContactDetails extends WebPanel implements Observer {
                 ContactDetails.this.saveJID(JID.bare(this.getText().trim()));
             }
         };
-        jidField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_JID_LENGTH));
-        jidField.setLabel();
         String jidText = Tr.tr("The unique address of this contact");
         TooltipManager.addTooltip(jidField, jidText);
         mainPanel.add(jidField);
@@ -155,6 +149,8 @@ final class ContactDetails extends WebPanel implements Observer {
         TooltipManager.addTooltip(mFPArea, fpText);
         mFPLabel.setAlignmentY(Component.TOP_ALIGNMENT);
         keyPanel.add(mFPArea);
+
+        // set everything that can change
         this.updateOnEDT();
 
         groupPanel.add(keyPanel);

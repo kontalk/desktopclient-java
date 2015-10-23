@@ -107,6 +107,11 @@ public final class SingleChat extends Chat {
     }
 
     @Override
+    public boolean isAdministratable() {
+        return false;
+    }
+
+    @Override
     public void setChatState(Contact contact, ChatState chatState) {
         if (contact != mContact) {
             LOGGER.warning("wrong contact!?");

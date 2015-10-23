@@ -227,6 +227,10 @@ public final class GroupChat extends Chat {
         return this.getValidContacts().length != 0 && this.containsMe();
     }
 
+    public boolean isAdministratable() {
+        return mGID.ownerJID.isMe();
+    }
+
     private boolean containsMe() {
         return mContactMap.keySet().parallelStream().anyMatch(
                 new Predicate<Contact>() {
