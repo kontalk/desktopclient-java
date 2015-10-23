@@ -158,8 +158,8 @@ public final class Contact extends Observable {
 
         mName = name;
         this.save();
-        // contact itself as argument for chat view items
-        this.changed(this);
+
+        this.changed(mName);
     }
 
     public String getStatus() {
@@ -232,7 +232,7 @@ public final class Contact extends Observable {
         mKey = EncodingUtils.bytesToBase64(rawKey);
         mFingerprint = fingerprint;
         this.save();
-        this.changed(null);
+        this.changed(new byte[0]);
     }
 
     public boolean isBlocked() {
@@ -267,7 +267,8 @@ public final class Contact extends Observable {
     /**
      * 'Delete' this contact: faked by resetting all values.
      */
-    public void setDeleted() {
+    void setDeleted() {
+        LOGGER.config("contact: "+this);
         mJID = JID.deleted(mID);
         mName = "";
         mStatus = "";
@@ -277,6 +278,7 @@ public final class Contact extends Observable {
         mFingerprint = "";
 
         this.save();
+        this.changed(null);
     }
 
     public boolean isDeleted() {
@@ -303,7 +305,7 @@ public final class Contact extends Observable {
 
     @Override
     public String toString() {
-        return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
+        return "C:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
                 +",subsc="+mSubStatus;
     }
 
