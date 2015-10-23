@@ -147,7 +147,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
     private void deleteSelectedChat() {
         ChatItem t = this.getSelectedItem();
-        if (t.mValue.getMessages().isEmpty()) {
+        if (!t.mValue.getMessages().isEmpty()) {
             String text = Tr.tr("Permanently delete all messages in this chat?");
             if (t.mValue.isGroupChat())
                 text += "\n\n"+Tr.tr("You will automatically leave this group.");
@@ -173,6 +173,8 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
             mTitleLabel = new WebLabel();
             mTitleLabel.setFontSize(14);
+            if (mValue.isGroupChat())
+                    mTitleLabel.setForeground(View.DARK_GREEN);
             this.add(mTitleLabel, BorderLayout.NORTH);
 
             mStatusLabel = new WebLabel();
@@ -218,13 +220,10 @@ final class ChatListView extends Table<ChatItem, Chat> {
             if (arg == null || arg instanceof Contact ||
                     arg instanceof String || arg instanceof GroupCommand) {
                 mTitleLabel.setText(Utils.chatTitle(mValue));
-                if (mValue.isGroupChat())
-                    mTitleLabel.setForeground(View.DARK_GREEN);
             }
 
             if (arg == null || arg instanceof KonMessage) {
                 this.updateBG();
-
                 mStatusLabel.setText(lastActivity(mValue, true));
                 ChatListView.this.updateSorting();
             } else if (arg instanceof Boolean) {
