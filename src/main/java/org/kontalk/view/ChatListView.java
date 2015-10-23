@@ -30,7 +30,6 @@ import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.Timer;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
@@ -148,7 +147,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
     private void deleteSelectedChat() {
         ChatItem t = this.getSelectedItem();
-        if (t.mValue.getMessages().getAll().size() != 0) {
+        if (t.mValue.getMessages().isEmpty()) {
             String text = Tr.tr("Permanently delete all messages in this chat?");
             if (t.mValue.isGroupChat())
                 text += "\n\n"+Tr.tr("You will automatically leave this group.");
@@ -276,20 +275,20 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
         @Override
         public int compareTo(TableItem o) {
-            SortedSet<KonMessage> messages = this.mValue.getMessages().getAll();
-            SortedSet<KonMessage> oMessages = o.mValue.getMessages().getAll();
-            if (!messages.isEmpty() && !oMessages.isEmpty())
-                return -messages.last().getDate().compareTo(oMessages.last().getDate());
+            Optional<KonMessage> m = this.mValue.getMessages().getLast();
+            Optional<KonMessage> oM = o.mValue.getMessages().getLast();
+            if (m.isPresent() && oM.isPresent())
+                return -m.get().getDate().compareTo(oM.get().getDate());
 
             return -Integer.compare(this.mValue.getID(), o.mValue.getID());
         }
     }
 
     private static String lastActivity(Chat chat, boolean pretty) {
-        SortedSet<KonMessage> messageSet = chat.getMessages().getAll();
-        String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
-                pretty ? Utils.PRETTY_TIME.format(messageSet.last().getDate()) :
-                Utils.MID_DATE_FORMAT.format(messageSet.last().getDate());
-        return  lastActivity;
+        Optional<KonMessage> optM = chat.getMessages().getLast();
+        String lastActivity = !optM.isPresent() ? Tr.tr("no messages yet") :
+                pretty ? Utils.PRETTY_TIME.format(optM.get().getDate()) :
+                Utils.MID_DATE_FORMAT.format(optM.get().getDate());
+        return lastActivity;
     }
 }

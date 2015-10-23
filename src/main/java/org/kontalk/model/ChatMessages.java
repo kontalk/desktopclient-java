@@ -58,7 +58,6 @@ public final class ChatMessages {
     }
 
     private void loadMessages() {
-        LOGGER.config("loading messages for chat, id="+mChat.getID());
         Database db = Database.getInstance();
 
         try (ResultSet messageRS = db.execSelectWhereInsecure(KonMessage.TABLE,
@@ -99,9 +98,7 @@ public final class ChatMessages {
         return mSet;
     }
 
-    /**
-     * Get all outgoing messages with status "PENDING" for this chat.
-     */
+    /** Get all outgoing messages with status "PENDING" for this chat. */
     public SortedSet<OutMessage> getPending() {
         this.ensureLoaded();
 
@@ -117,9 +114,7 @@ public final class ChatMessages {
         return s;
     }
 
-    /**
-     * Get the newest (ie last received) outgoing message.
-     */
+    /** Get the newest (ie last received) outgoing message. */
     public Optional<OutMessage> getLast(String xmppID) {
         this.ensureLoaded();
 
@@ -136,5 +131,27 @@ public final class ChatMessages {
         }
 
         return Optional.of(message);
+    }
+
+    /** Get the last created message. */
+    public Optional<KonMessage> getLast() {
+        return mSet.isEmpty() ?
+                Optional.<KonMessage>empty() :
+                Optional.of(mSet.last());
+    }
+
+    public boolean contains(KonMessage message) {
+        this.ensureLoaded();
+        return mSet.contains(message);
+    }
+
+    public int size() {
+        this.ensureLoaded();
+        return mSet.size();
+    }
+
+    public boolean isEmpty() {
+        this.ensureLoaded();
+        return mSet.isEmpty();
     }
 }

@@ -20,8 +20,11 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -35,17 +38,17 @@ import org.kontalk.system.Database;
  * The global list of all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class ChatList extends Observable implements Observer {
+public final class ChatList extends Observable implements Observer, Iterable<Chat> {
     private static final Logger LOGGER = Logger.getLogger(ChatList.class.getName());
 
     private static final ChatList INSTANCE = new ChatList();
 
-    private final HashMap<Integer, Chat> mMap = new HashMap<>();
+    private final Map<Integer, Chat> mMap =
+            Collections.synchronizedMap(new HashMap<Integer, Chat>());
 
     private boolean mUnread = false;
 
-    private ChatList() {
-    }
+    private ChatList() {}
 
     public void load() {
         assert mMap.isEmpty();
@@ -66,12 +69,12 @@ public final class ChatList extends Observable implements Observer {
         this.changed(null);
     }
 
-    public synchronized Set<Chat> getAll() {
+    public Set<Chat> getAll() {
         return new HashSet<>(mMap.values());
     }
 
     /** Get single chat with contact and XMPPID. */
-    public synchronized Optional<SingleChat> get(Contact contact, String xmmpThreadID) {
+    public Optional<SingleChat> get(Contact contact, String xmmpThreadID) {
         for (Chat chat : mMap.values()) {
             if (!(chat instanceof SingleChat))
                 continue;
@@ -85,7 +88,7 @@ public final class ChatList extends Observable implements Observer {
     }
 
     /** Get group chat with group ID and containing contact. */
-    public synchronized Optional<GroupChat> get(GID gid, Contact contact) {
+    public Optional<GroupChat> get(GID gid, Contact contact) {
         for (Chat chat : mMap.values()) {
             if (!(chat instanceof GroupChat))
                 continue;
@@ -139,14 +142,12 @@ public final class ChatList extends Observable implements Observer {
     }
 
     private void putSilent(Chat chat) {
-        synchronized (this) {
-            if (mMap.containsValue(chat)) {
-                LOGGER.warning("chat already in chat list");
-                return;
-            }
-
-            mMap.put(chat.getID(), chat);
+        if (mMap.containsValue(chat)) {
+            LOGGER.warning("chat already in chat list");
+            return;
         }
+
+        mMap.put(chat.getID(), chat);
         chat.addObserver(this);
     }
 
@@ -158,7 +159,11 @@ public final class ChatList extends Observable implements Observer {
         return this.get(contact, "").isPresent();
     }
 
-    public synchronized void delete(int id) {
+    public boolean isEmpty() {
+        return mMap.isEmpty();
+    }
+
+    public void delete(int id) {
         Chat chat = mMap.remove(id);
         if (chat == null) {
             LOGGER.warning("can't delete chat, not found. id: "+id);
@@ -169,20 +174,14 @@ public final class ChatList extends Observable implements Observer {
         this.changed(chat);
     }
 
-    /**
-     * Return if any chat is unread.
-     */
+    /** Return if any chat is unread. */
     public boolean isUnread() {
         return mUnread;
     }
 
-    private synchronized void changed(Object arg) {
+    private void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
-    }
-
-    public static ChatList getInstance() {
-        return INSTANCE;
     }
 
     @Override
@@ -201,14 +200,22 @@ public final class ChatList extends Observable implements Observer {
             return;
         }
 
-        synchronized (this) {
-            for (Chat chat : mMap.values()) {
-                if (!chat.isRead()) {
-                    return;
-                }
+        for (Chat chat : mMap.values()) {
+            if (!chat.isRead()) {
+                return;
             }
         }
+
         mUnread = false;
         this.changed(mUnread);
+    }
+
+    @Override
+    public Iterator<Chat> iterator() {
+        return mMap.values().iterator();
+    }
+
+    public static ChatList getInstance() {
+        return INSTANCE;
     }
 }

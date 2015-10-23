@@ -165,7 +165,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             this.insertMessage((KonMessage) arg);
         } else {
             // check for new messages to add
-            if (this.getModel().getRowCount() < mChat.getMessages().getAll().size())
+            if (this.getModel().getRowCount() < mChat.getMessages().size())
                 this.insertMessages();
         }
 
@@ -176,14 +176,15 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
     private void insertMessages() {
         Set<MessageItem> newItems = new HashSet<>();
-        for (KonMessage message: mChat.getMessages().getAll()) {
+        Set<KonMessage> messages = mChat.getMessages().getAll();
+        for (KonMessage message: messages) {
             if (!this.containsValue(message)) {
                 newItems.add(new MessageItem(message));
                 // trigger scrolling
                 mChatView.setScrolling();
             }
         }
-        this.sync(mChat.getMessages().getAll(), newItems);
+        this.sync(messages, newItems);
     }
 
     private void insertMessage(KonMessage message) {

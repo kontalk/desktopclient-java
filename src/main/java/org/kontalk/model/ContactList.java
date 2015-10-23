@@ -20,8 +20,11 @@ package org.kontalk.model;
 import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
@@ -32,18 +35,22 @@ import org.kontalk.system.Database;
 /**
  * Global list of all contacts.
  *
+ * Does not contain deleted user (only accessible by database ID).
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class ContactList extends Observable {
+public final class ContactList extends Observable implements Iterable<Contact> {
 
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
     private static final ContactList INSTANCE = new ContactList();
 
-    /** JID to contact. */
-    private final HashMap<JID, Contact> mJIDMap = new HashMap<>();
-    /** Database ID to contact. */
-    private final HashMap<Integer, Contact> mIDMap = new HashMap<>();
+    /** JID to contact. Without deleted contacts. */
+    private final Map<JID, Contact> mJIDMap =
+            Collections.synchronizedMap(new HashMap<JID, Contact>());
+    /** Database ID to contact. With deleted contacts. */
+    private final Map<Integer, Contact> mIDMap =
+            Collections.synchronizedMap(new HashMap<Integer, Contact>());
 
     private ContactList() {}
 
@@ -52,16 +59,16 @@ public final class ContactList extends Observable {
         try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
                 Contact contact = Contact.load(resultSet);
-                JID jid = contact.getJID();
 
-                synchronized (this) {
-                    if (mJIDMap.containsKey(jid)) {
-                        LOGGER.warning("contacts with equal JIDs: " + jid);
-                        continue;
-                    }
-                    mJIDMap.put(jid, contact);
-                    mIDMap.put(contact.getID(), contact);
+                JID jid = contact.getJID();
+                if (mJIDMap.containsKey(jid)) {
+                    LOGGER.warning("contacts with equal JIDs: " + jid);
+                    continue;
                 }
+                if (!contact.isDeleted())
+                    mJIDMap.put(jid, contact);
+
+                mIDMap.put(contact.getID(), contact);
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load contacts from db", ex);
@@ -80,16 +87,14 @@ public final class ContactList extends Observable {
         if (newContact.getID() < 1)
             return Optional.empty();
 
-        synchronized (this) {
-            mJIDMap.put(newContact.getJID(), newContact);
-            mIDMap.put(newContact.getID(), newContact);
-        }
+        mJIDMap.put(newContact.getJID(), newContact);
+        mIDMap.put(newContact.getID(), newContact);
 
         this.changed(newContact);
         return Optional.of(newContact);
     }
 
-    synchronized Optional<Contact> get(int id) {
+    Optional<Contact> get(int id) {
         Optional<Contact> optContact = Optional.ofNullable(mIDMap.get(id));
         if (!optContact.isPresent()) {
             LOGGER.warning("can't find contact with ID: " + id);
@@ -101,7 +106,7 @@ public final class ContactList extends Observable {
      * Get the contact for a JID (if the JID is in the list).
      * Resource is removed for lookup.
      */
-    public synchronized Optional<Contact> get(JID jid) {
+    public Optional<Contact> get(JID jid) {
         return Optional.ofNullable(mJIDMap.get(jid));
     }
 
@@ -118,33 +123,25 @@ public final class ContactList extends Observable {
         return this.create(myJID, "");
     }
 
-    /**
-     * Return all but deleted contacts.
-     */
-    public synchronized Set<Contact> getAll() {
-        Set<Contact> contacts = new HashSet<>();
-        for (Contact u : mJIDMap.values())
-            if (!u.isDeleted())
-                contacts.add(u);
-
-        return contacts;
+    public Set<Contact> getAll() {
+        return new HashSet<>(mJIDMap.values());
     }
 
-    public void remove(Contact contact) {
-        synchronized (this) {
-            boolean removed = mJIDMap.remove(contact.getJID(), contact);
-            if (!removed) {
-                LOGGER.warning("can't find contact to remove: "+contact);
-            }
-            mIDMap.remove(contact.getID());
+    public void delete(Contact contact) {
+        boolean removed = mJIDMap.remove(contact.getJID(), contact);
+        if (!removed) {
+            LOGGER.warning("can't find contact "+contact);
         }
+
+        contact.setDeleted();
+
         this.changed(contact);
     }
 
     /**
      * Return whether a contact with a specified JID exists.
      */
-    public synchronized boolean contains(JID jid) {
+    public boolean contains(JID jid) {
         return mJIDMap.containsKey(jid);
     }
 
@@ -152,17 +149,16 @@ public final class ContactList extends Observable {
         if (!this.isValid(jid))
             return false;
 
-        synchronized (this) {
-            mJIDMap.put(jid, contact);
-            mJIDMap.remove(contact.getJID());
-        }
+        mJIDMap.put(jid, contact);
+        mJIDMap.remove(contact.getJID());
+
         contact.setJID(jid);
 
         this.changed(contact);
         return true;
     }
 
-    private synchronized boolean isValid(JID jid) {
+    private boolean isValid(JID jid) {
         if (!jid.isValid()) {
             LOGGER.warning("invalid jid: " + jid);
             return false;
@@ -180,6 +176,11 @@ public final class ContactList extends Observable {
     private synchronized void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
+    }
+
+    @Override
+    public Iterator<Contact> iterator() {
+        return mJIDMap.values().iterator();
     }
 
     public static ContactList getInstance() {

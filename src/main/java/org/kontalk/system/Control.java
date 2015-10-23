@@ -111,16 +111,16 @@ public final class Control {
 
         if (status == Status.CONNECTED) {
             // send all pending messages
-            for (Chat chat: ChatList.getInstance().getAll())
+            for (Chat chat: ChatList.getInstance())
                 for (OutMessage m : chat.getMessages().getPending())
                     this.sendMessage(m);
 
             // send public key requests for Kontalk contacts with missing key
-            for (Contact contact : ContactList.getInstance().getAll())
+            for (Contact contact : ContactList.getInstance())
                 if (contact.getFingerprint().isEmpty())
                     this.maySendKeyRequest(contact);
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
-            for (Contact contact : ContactList.getInstance().getAll())
+            for (Contact contact : ContactList.getInstance())
                 contact.setOffline();
         }
     }
@@ -180,8 +180,11 @@ public final class Control {
         InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
                 ids.xmppID, serverDate);
 
-        // TODO always false
-        if (chat.getMessages().getAll().contains(newMessage)) {
+        if (newMessage.getID() <= 0)
+            return false;
+
+        // TODO implement equals()
+        if (chat.getMessages().contains(newMessage)) {
             LOGGER.info("message already in chat, dropping this one");
             return true;
         }
@@ -495,7 +498,7 @@ public final class Control {
 
         // fallback: search everywhere
         LOGGER.info("fallback search, IDs: "+ids);
-        for (Chat chat: cl.getAll()) {
+        for (Chat chat: cl) {
             Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
@@ -579,11 +582,10 @@ public final class Control {
         }
 
         public void deleteContact(Contact contact) {
-            ContactList.getInstance().remove(contact);
+            JID jid = contact.getJID();
+            ContactList.getInstance().delete(contact);
 
-            Control.this.removeFromRoster(contact.getJID());
-
-            contact.setDeleted();
+            Control.this.removeFromRoster(jid);
         }
 
         public void sendContactBlocking(Contact contact, boolean blocking) {

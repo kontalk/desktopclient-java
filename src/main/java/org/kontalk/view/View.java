@@ -153,7 +153,7 @@ public final class View implements Observer {
             public void run() {
                 View.this.mChatListView.selectLastChat();
 
-                if (ChatList.getInstance().getAll().isEmpty())
+                if (ChatList.getInstance().isEmpty())
                     mMainFrame.selectTab(MainFrame.Tab.CONTACT);
             }
         });
