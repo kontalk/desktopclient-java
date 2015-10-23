@@ -413,7 +413,7 @@ final class ChatView extends WebPanel implements Observer {
         mTitleLabel.setText(Utils.chatTitle(chat));
         Set<Contact> contacts = chat.getAllContacts();
         mSubTitleLabel.setText(contacts.isEmpty() ? Tr.tr("<Empty>") :
-                chat.isGroupChat() ? Utils.nameOrJID(chat.getAllContacts()) :
+                chat.isGroupChat() ? Utils.nameOrJID(chat.getAllContacts(), 18) :
                 Utils.mainStatus(contacts.iterator().next(), true));
 
         // text area

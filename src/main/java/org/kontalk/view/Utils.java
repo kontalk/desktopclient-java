@@ -191,9 +191,13 @@ final class Utils {
     }
 
     static String nameOrJID(Set<Contact> contacts) {
+        return nameOrJID(contacts, Integer.MAX_VALUE);
+    }
+
+    static String nameOrJID(Set<Contact> contacts, int maxLength) {
         List<String> nameList = new ArrayList<>(contacts.size());
         for (Contact contact : contacts) {
-            nameList.add(nameOrJID(contact, 18));
+            nameList.add(nameOrJID(contact, maxLength));
         }
         return StringUtils.join(nameList, ", ");
     }
