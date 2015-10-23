@@ -50,6 +50,9 @@ public final class GroupChat extends Chat {
     GroupChat(Contact[] contacts, GID gid, String subject) {
         super(contacts, "", subject, gid);
 
+        mGID = gid;
+        mSubject = subject;
+
         for (Contact contact: contacts)
             this.addContactSilent(contact);
         // group chats also include the user itself
@@ -58,9 +61,6 @@ public final class GroupChat extends Chat {
             LOGGER.warning("can't add user to group chat");
         else
             this.addContactSilent(optMe.get());
-
-        mGID = gid;
-        mSubject = subject;
     }
 
     // used when loading from database
