@@ -432,7 +432,7 @@ final class ComponentUtils {
 
         private void checkSaveButton() {
             mCreateButton.setEnabled(!mSubjectField.getText().isEmpty() &&
-                    mList.getSelectedContacts().length > 1);
+                    mList.getSelectedContacts().size() > 1);
         }
 
         private void createGroup() {
@@ -496,8 +496,8 @@ final class ComponentUtils {
         }
 
         @SuppressWarnings("unchecked")
-        Contact[] getSelectedContacts() {
-            return (Contact[]) this.getSelectedValuesList().toArray(new Contact[0]);
+        List<Contact> getSelectedContacts() {
+            return this.getSelectedValuesList();
         }
 
         private class CellRenderer extends WebLabel implements ListCellRenderer<Contact> {

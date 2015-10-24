@@ -632,19 +632,25 @@ public final class Control {
             return ChatList.getInstance().getOrCreate(contact);
         }
 
-        public void createGroupChat(Contact[] contacts, String subject) {
-            JID jid = JID.me();
-            if (!jid.isValid()) {
-                LOGGER.warning("can't create group, invalid JID");
+        public void createGroupChat(List<Contact> contacts, String subject) {
+            Optional<Contact> optMe = ContactList.getInstance().getMe();
+            if (!optMe.isPresent()) {
+                LOGGER.warning("can't find myself");
                 return;
             }
-            Chat chat = ChatList.getInstance().createNew(contacts,
-                    new GID(jid,
+            Contact me = optMe.get();
+
+            // user should be part of the group
+            List<Contact> withMe = new ArrayList<>(contacts);
+            withMe.add(me);
+
+            Chat chat = ChatList.getInstance().createNew(withMe.toArray(new Contact[0]),
+                    new GID(me.getJID(),
                             org.jivesoftware.smack.util.StringUtils.randomString(8)),
                     subject);
 
             // send create group command
-            List<JID> jids = new ArrayList<>(contacts.length);
+            List<JID> jids = new ArrayList<>(contacts.size());
             for (Contact c: contacts)
                 jids.add(c.getJID());
             this.createAndSendMessage(chat,

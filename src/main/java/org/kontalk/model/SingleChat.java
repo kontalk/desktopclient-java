@@ -36,7 +36,7 @@ public final class SingleChat extends Chat {
     private final KonChatState mChatState;
 
     SingleChat(Contact contact, String xmppID) {
-        super(new Contact[]{contact}, xmppID, "");
+        super(contact, xmppID, "");
 
         mContact = contact;
         contact.addObserver(this);

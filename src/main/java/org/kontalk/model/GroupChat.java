@@ -55,12 +55,6 @@ public final class GroupChat extends Chat {
 
         for (Contact contact: contacts)
             this.addContactSilent(contact);
-        // group chats also include the user itself
-        Optional<Contact> optMe = ContactList.getInstance().getMe();
-        if (!optMe.isPresent())
-            LOGGER.warning("can't add user to group chat");
-        else
-            this.addContactSilent(optMe.get());
     }
 
     // used when loading from database
@@ -83,14 +77,14 @@ public final class GroupChat extends Chat {
     /** Get all contacts (including deleted and user contact). */
     @Override
     public Set<Contact> getAllContacts() {
-        return mContactMap.keySet();
+        return new HashSet<>(mContactMap.keySet());
     }
 
     @Override
     public Contact[] getValidContacts() {
         //chat.getContacts().stream().filter(c -> !c.isDeleted());
         Set<Contact> contacts = new HashSet<>();
-        for (Contact c : this.getAllContacts()) {
+        for (Contact c : mContactMap.keySet()) {
             if (!c.isDeleted() && !c.isMe()) {
                 contacts.add(c);
             }
@@ -167,7 +161,7 @@ public final class GroupChat extends Chat {
                         continue;
                     }
                     Contact contact = optContact.get();
-                    if (this.getAllContacts().contains(contact)) {
+                    if (mContactMap.keySet().contains(contact)) {
                         LOGGER.warning("contact already in chat: "+contact);
                         continue;
                     }
@@ -242,6 +236,7 @@ public final class GroupChat extends Chat {
         return this.getValidContacts().length != 0 && this.containsMe();
     }
 
+    @Override
     public boolean isAdministratable() {
         return mGID.ownerJID.isMe();
     }

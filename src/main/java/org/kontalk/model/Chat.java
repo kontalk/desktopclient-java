@@ -90,8 +90,8 @@ public abstract class Chat extends Observable implements Observer {
 
     private ViewSettings mViewSettings;
 
-    protected Chat(Contact[] contacts, String xmppID, String subject) {
-        this(contacts, xmppID, subject, null);
+    protected Chat(Contact contact, String xmppID, String subject) {
+        this(new Contact[]{contact}, xmppID, subject, null);
     }
 
     protected Chat(Contact[] contacts, String xmppID, String subject, GID gid) {
