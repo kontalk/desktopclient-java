@@ -669,6 +669,10 @@ public final class Control {
         }
 
         public void setChatSubject(GroupChat chat, String subject) {
+            if (!chat.isAdministratable()) {
+                LOGGER.warning("not admin");
+                return;
+            }
             this.createAndSendMessage(chat, new MessageContent(
                     GroupCommand.set(new JID[0], new JID[0], subject)));
 
