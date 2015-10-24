@@ -75,6 +75,7 @@ public final class ProtoMessage implements DecryptMessage {
 
     @Override
     public void setSigning(Coder.Signing signing) {
+        mCoderStatus.setSigning(signing);
     }
 
     @Override
