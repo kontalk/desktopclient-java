@@ -18,7 +18,6 @@
 
 package org.kontalk.model;
 
-import org.kontalk.misc.JID;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -38,9 +37,8 @@ import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.kontalk.model.MessageContent.GroupCommand;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.system.Database;
-import org.kontalk.util.EncodingUtils;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
@@ -49,7 +47,7 @@ import org.kontalk.util.EncodingUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Chat extends Observable implements Comparable<Chat>, Observer {
+public abstract class Chat extends Observable implements Observer {
     private static final Logger LOGGER = Logger.getLogger(Chat.class.getName());
 
     public static final String TABLE = "threads";
@@ -85,50 +83,30 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             "FOREIGN KEY ("+COL_REC_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
-    private final int mID;
-    private final HashMap<Contact, KonChatState> mContactMap = new HashMap<>();
-    private final String mXMPPID;
+    protected final int mID;
     private final ChatMessages mMessages;
 
-    private Optional<GID> mOptGID;
-    private String mSubject;
     private boolean mRead;
+
     private ViewSettings mViewSettings;
 
-    /** New single user chat. */
-    Chat(Contact contact, String xmppID) {
-        this(new Contact[]{contact}, xmppID, null, "");
+    protected Chat(Contact[] contacts, String xmppID, String subject) {
+        this(contacts, xmppID, subject, null);
     }
 
-    /** New group chat. */
-    Chat(Contact[] contacts, GID gid, String subject) {
-        this(contacts, "", gid, subject);
-    }
-
-    private Chat(Contact[] contacts, String xmppID, GID gid, String subject) {
-        assert contacts != null;
-        assert xmppID.isEmpty() || gid == null;
-        for (Contact contact: contacts)
-            this.addContactSilent(contact);
-        // Kontalk Android client is ignoring the chat id
-        // were using it for group chat identification
-        mXMPPID = gid != null ? gid.id : xmppID;
-        mOptGID = Optional.ofNullable(gid);
-        mSubject = subject;
-
+    protected Chat(Contact[] contacts, String xmppID, String subject, GID gid) {
+        mMessages = new ChatMessages(this, true);
         mRead = true;
         mViewSettings = new ViewSettings();
-        mMessages = new ChatMessages(this);
 
+        // insert
         Database db = Database.getInstance();
         List<Object> values = new LinkedList<>();
-        values.add(Database.setString(mXMPPID));
-        values.add(Database.setString(mSubject));
+        values.add(Database.setString(xmppID));
+        values.add(Database.setString(subject));
         values.add(mRead);
         values.add(mViewSettings.toJSONString());
-        values.add(Database.setString(mOptGID.isPresent() ?
-                mOptGID.get().toJSON() :
-                ""));
+        values.add(Database.setString(gid == null ? "" : gid.toJSON()));
         mID = db.execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert chat");
@@ -140,136 +118,15 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
     }
 
     // used when loading from database
-    Chat(int id,
-            Set<Contact> contacts,
-            Optional<GID> optGID,
-            String xmppID,
-            String subject,
-            boolean read,
-            String jsonViewSettings
-            ) {
-        assert contacts != null;
+    protected Chat(int id, boolean read, String jsonViewSettings) {
         mID = id;
-        for (Contact contact: contacts)
-            this.addContactSilent(contact);
-        mOptGID = optGID;
-        mXMPPID = xmppID;
-        mSubject = subject;
+        mMessages = new ChatMessages(this, false);
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
-        mMessages = new ChatMessages(this);
     }
 
     public ChatMessages getMessages() {
         return mMessages;
-    }
-
-    public int getID() {
-        return mID;
-    }
-
-    public Optional<GID> getGID() {
-        return mOptGID;
-    }
-
-    public String getXMPPID() {
-        return mXMPPID;
-    }
-
-    /** Get all contacts (including deleted). */
-    public Set<Contact> getAllContacts() {
-        return mContactMap.keySet();
-    }
-
-    /** Get contacts (without deleted). */
-    public Set<Contact> getContacts() {
-        //chat.getContacts().stream().filter(c -> !c.isDeleted());
-        Set<Contact> contacts = new HashSet<>();
-        for (Contact c : this.getAllContacts()) {
-            if (!c.isDeleted()) {
-                contacts.add(c);
-            }
-        }
-        return contacts;
-    }
-
-    /**
-     * Get contact if there is only one (can be deleted).
-     */
-    public Optional<Contact> getSingleContact() {
-        return mContactMap.keySet().size() == 1 ?
-                Optional.of(mContactMap.keySet().iterator().next()) :
-                Optional.<Contact>empty();
-    }
-
-    /**
-     * Get the contact defined subject of this chat (empty string if not set).
-     */
-    public String getSubject() {
-        return mSubject;
-    }
-
-    public void setSubject(String subject) {
-        if (subject.equals(mSubject))
-            return;
-
-        mSubject = subject;
-        this.save();
-        this.changed(subject);
-    }
-
-    public boolean isRead() {
-        return mRead;
-    }
-
-    public void setRead() {
-        if (mRead)
-            return;
-
-        mRead = true;
-        this.save();
-        this.changed(mRead);
-    }
-
-    public boolean isGroupChat() {
-        return mOptGID.isPresent();
-    }
-
-    /**
-     * Return if new outgoing messages in chat will be encrypted.
-     * True if encryption is turned on for at least one chat contact.
-     */
-    public boolean sendEncrypted() {
-        boolean encrypted = false;
-        for (Contact c: mContactMap.keySet()) {
-            encrypted |= c.getEncrypted();
-        }
-        return encrypted;
-    }
-
-    /**
-     * Return if new outgoing messages could be send encrypted.
-     * True if all chat contacts have a key.
-     */
-    public boolean canSendEncrypted() {
-        boolean encrypted = !mContactMap.keySet().isEmpty();
-        for (Contact c: mContactMap.keySet()) {
-            encrypted &= c.hasKey();
-        }
-        return encrypted;
-    }
-
-    public ViewSettings getViewSettings() {
-        return mViewSettings;
-    }
-
-    public void setViewSettings(ViewSettings settings) {
-        if (settings.equals(mViewSettings))
-            return;
-
-        mViewSettings = settings;
-        this.save();
-        this.changed(mViewSettings);
     }
 
     public boolean addMessage(KonMessage message) {
@@ -285,67 +142,77 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         return added;
     }
 
-    public void setChatState(Contact contact, ChatState chatState) {
-        KonChatState state = mContactMap.get(contact);
-        if (state == null) {
-            LOGGER.warning("can't find contact in contact map!?");
+    public int getID() {
+        return mID;
+    }
+
+    public boolean isRead() {
+        return mRead;
+    }
+
+    public void setRead() {
+        if (mRead)
             return;
-        }
-        state.setState(chatState);
-        this.changed(state);
+
+        mRead = true;
+        this.save();
+        this.changed(mRead);
     }
 
-    public void applyGroupCommand(GroupCommand command, Contact sender) {
-        Optional<GID> optComGID = command.getGID();
-        switch(command.getOperation()) {
-            case CREATE:
-                if (!optComGID.isPresent()) {
-                    LOGGER.warning("create command without group ID");
-                    return;
-                }
-                if (mOptGID.isPresent()) {
-                    LOGGER.warning("group chat already created");
-                    return;
-                }
-                mOptGID = optComGID;
-
-                assert mContactMap.size() == 1;
-                assert mContactMap.containsKey(sender);
-
-                for (JID jid: command.getAdded()) {
-                    Optional<Contact> optContact = ContactList.getInstance().get(jid);
-                    if (!optContact.isPresent()) {
-                        LOGGER.warning("can't find contact, jid: "+jid);
-                        continue;
-                    }
-                    this.addContact(optContact.get());
-                }
-                mSubject = command.getSubject();
-                this.save();
-                this.changed(command);
-                break;
-            case LEAVE:
-                this.removeContact(sender);
-                this.save();
-                this.changed(command);
-                break;
-            // TODO
-            //case SET:
-                //this.changed(command);
-            //    this.save();
-            //    break;
-            default:
-                LOGGER.warning("unhandled operation: "+command.getOperation());
-        }
+    public ViewSettings getViewSettings() {
+        return mViewSettings;
     }
 
-    private void save() {
+    public void setViewSettings(ViewSettings settings) {
+        if (settings.equals(mViewSettings))
+            return;
+
+        mViewSettings = settings;
+        this.save();
+        this.changed(mViewSettings);
+    }
+
+    public boolean isGroupChat() {
+        return this instanceof GroupChat;
+    }
+
+    /** Get all contacts (including deleted, blocked and user contact). */
+    public abstract Set<Contact> getAllContacts();
+
+    /** Get valid receiver contacts (without deleted and blocked). */
+    public abstract Contact[] getValidContacts();
+
+    /** XMPP thread ID (empty string if not set). */
+    public abstract String getXMPPID();
+
+    /** Subject/title (empty string if not set). */
+    public abstract String getSubject();
+
+    /**
+     * Return if new outgoing messages in chat will be encrypted.
+     * True if encryption is turned on for at least one valid chat contact.
+     */
+    public abstract boolean isSendEncrypted();
+
+    /**
+     * Return if new outgoing messages could be send encrypted.
+     * True if all valid  chat contacts have a key.
+     */
+    public abstract boolean canSendEncrypted();
+
+    /** Return if new valid outgoing message could be send. */
+    public abstract boolean isValid();
+
+    public abstract boolean isAdministratable();
+
+    public abstract void setChatState(Contact contact, ChatState chatState);
+
+    abstract void save();
+
+    protected void save(Contact[] contacts, String subject) {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
-        set.put(COL_SUBJ, Database.setString(mSubject));
-        set.put(COL_GID, Database.setString(mOptGID.isPresent() ?
-                mOptGID.get().toJSON() :
-                ""));
+        set.put(COL_SUBJ, Database.setString(subject));
         set.put(COL_READ, mRead);
         set.put(COL_VIEW_SET, mViewSettings.toJSONString());
 
@@ -355,7 +222,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         Map<Integer, Integer> dbReceiver = loadReceiver(mID);
 
         // add missing contact
-        for (Contact contact : mContactMap.keySet()) {
+        for (Contact contact : contacts) {
             if (!dbReceiver.keySet().contains(contact.getID())) {
                 this.insertReceiver(contact);
             }
@@ -375,7 +242,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
 
         // transmissions
         db.execDeleteWhereInsecure(Transmission.TABLE,
-                Transmission.COL_MESSAGE_ID + " == (SELECT _id FROM " +
+                Transmission.COL_MESSAGE_ID + " IN (SELECT _id FROM " +
                         KonMessage.TABLE + " WHERE " + whereMessages + ")");
 
         // messages
@@ -399,45 +266,14 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         recValues.add(contact.getID());
         int id = db.execInsert(RECEIVER_TABLE, recValues);
         if (id < 1) {
-            LOGGER.warning("couldn't insert receiver");
+            LOGGER.warning("could not insert receiver");
         }
     }
 
-    private void addContact(Contact contact) {
-        this.addContactSilent(contact);
-        this.save();
-    }
-
-    private void addContactSilent(Contact contact) {
-        if (mContactMap.containsKey(contact)) {
-            LOGGER.warning("contact already in chat: "+contact);
-            return;
-        }
-
-        contact.addObserver(this);
-        mContactMap.put(contact, new KonChatState(contact));
-    }
-
-    private void removeContact(Contact contact) {
-        if (!mContactMap.containsKey(contact)) {
-            LOGGER.warning("contact not in chat: "+contact);
-            return;
-        }
-
-        contact.deleteObserver(this);
-        mContactMap.remove(contact);
-        this.save();
-        this.changed(contact);
-    }
-
-    private synchronized void changed(Object arg) {
+    // TODO try without synchronization
+    protected synchronized void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
-    }
-
-    @Override
-    public String toString() {
-        return "T:id="+mID+",xmppid="+mXMPPID+",subject="+mSubject+",gid="+mOptGID;
     }
 
     @Override
@@ -445,12 +281,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         this.changed(o);
     }
 
-    @Override
-    public int compareTo(Chat o) {
-        return Integer.compare(this.mID, o.mID);
-    }
-
-    static Chat load(ResultSet rs) throws SQLException {
+    static Chat loadOrNull(ResultSet rs) throws SQLException {
         int id = rs.getInt("_id");
 
         String jsonGID = Database.getString(rs, Chat.COL_GID);
@@ -458,7 +289,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
                 null :
                 GID.fromJSONOrNull(jsonGID));
 
-        String xmppThreadID = Database.getString(rs, Chat.COL_XMPPID);
+        String xmppID = Database.getString(rs, Chat.COL_XMPPID);
 
         // get contacts for chats
         Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
@@ -478,7 +309,15 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         String jsonViewSettings = Database.getString(rs,
                 Chat.COL_VIEW_SET);
 
-        return new Chat(id, contacts, optGID, xmppThreadID, subject, read, jsonViewSettings);
+        if (optGID.isPresent()) {
+            return new GroupChat(id, contacts, optGID.get(), subject, read, jsonViewSettings);
+        } else {
+            if (contacts.size() != 1) {
+                LOGGER.warning("not one contact for single chat, id="+id);
+                return null;
+            }
+            return new SingleChat(id, contacts.iterator().next(), xmppID, read, jsonViewSettings);
+        }
     }
 
     static Map<Integer, Integer> loadReceiver(int chatID) {
@@ -513,7 +352,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
         // TODO save last active date to DB
         private Optional<Date> mLastActive = Optional.empty();
 
-        private KonChatState(Contact contact) {
+        protected KonChatState(Contact contact) {
             mContact = contact;
         }
 
@@ -525,7 +364,7 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             return mState;
         }
 
-        private void setState(ChatState state) {
+        protected void setState(ChatState state) {
             mState = state;
             if (mState == ChatState.active || mState == ChatState.composing)
                 mLastActive = Optional.of(new Date());
@@ -612,62 +451,6 @@ public final class Chat extends Observable implements Comparable<Chat>, Observer
             int hash = 7;
             hash = 37 * hash + Objects.hashCode(this.mOptColor);
             hash = 37 * hash + Objects.hashCode(this.mImagePath);
-            return hash;
-        }
-    }
-
-    /** Group ID. */
-    public static class GID {
-        private static final String JSON_OWNER_JID = "jid";
-        private static final String JSON_ID = "id";
-
-        public final JID ownerJID;
-        public final String id;
-
-        public GID(JID ownerJID, String id) {
-            this.ownerJID = ownerJID;
-            this.id = id;
-        }
-
-        // using legacy lib, raw types extend Object
-        @SuppressWarnings("unchecked")
-        private String toJSON() {
-            JSONObject json = new JSONObject();
-            EncodingUtils.putJSON(json, JSON_OWNER_JID, ownerJID.string());
-            EncodingUtils.putJSON(json, JSON_ID, id);
-            return json.toJSONString();
-        }
-
-        static GID fromJSONOrNull(String json) {
-            Object obj = JSONValue.parse(json);
-            try {
-                Map<?, ?> map = (Map) obj;
-                JID jid = JID.bare((String) map.get(JSON_OWNER_JID));
-                String id = (String) map.get(JSON_ID);
-                return new GID(jid, id);
-            }  catch (NullPointerException | ClassCastException ex) {
-                LOGGER.log(Level.WARNING, "can't parse JSON preview", ex);
-                return null;
-            }
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o)
-                return true;
-
-            if (!(o instanceof GID))
-                return false;
-
-            GID oGID = (GID) o;
-            return ownerJID.equals(oGID.ownerJID) && id.equals(oGID.id);
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 37 * hash + Objects.hashCode(this.ownerJID);
-            hash = 37 * hash + Objects.hashCode(this.id);
             return hash;
         }
     }

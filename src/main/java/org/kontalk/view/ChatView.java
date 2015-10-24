@@ -102,7 +102,6 @@ final class ChatView extends WebPanel implements Observer {
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
-    private Chat mCurrentChat = null;
     private boolean mScrollDown = false;
 
     ChatView(View view) {
@@ -257,45 +256,44 @@ final class ChatView extends WebPanel implements Observer {
         this.loadDefaultBG();
     }
 
-    private Optional<MessageList> getCurrentList() {
+    private MessageList currentMessageListOrNull() {
         Component view = mScrollPane.getViewport().getView();
         if (view == null || !(view instanceof MessageList))
-            return Optional.empty();
-        return Optional.of((MessageList) view);
+            return null;
+        return (MessageList) view;
     }
 
     Optional<Chat> getCurrentChat() {
-        Optional<MessageList> optview = this.getCurrentList();
-        return optview.isPresent() ?
-                Optional.of(optview.get().getChat()) :
-                Optional.<Chat>empty();
+        MessageList view = this.currentMessageListOrNull();
+        return view == null ?
+                Optional.<Chat>empty() :
+                Optional.of(view.getChat());
     }
 
     void filterCurrentChat(String searchText) {
-        Optional<MessageList> optList = this.getCurrentList();
-        if (!optList.isPresent())
+        MessageList view = this.currentMessageListOrNull();
+        if (view == null)
             return;
-        optList.get().filterItems(searchText);
+        view.filterItems(searchText);
     }
 
     void showChat(Chat chat) {
-        if (mCurrentChat != null)
-            mCurrentChat.deleteObserver(this);
+        Optional<Chat> optOldChat = this.getCurrentChat();
+        if (optOldChat.isPresent())
+            optOldChat.get().deleteObserver(this);
 
-        mCurrentChat = chat;
-        mCurrentChat.addObserver(this);
+        chat.addObserver(this);
 
+        if (!mChatCache.containsKey(chat.getID())) {
+            MessageList newMessageList = new MessageList(mView, this, chat);
+            chat.addObserver(newMessageList);
+            mChatCache.put(chat.getID(), newMessageList);
+        }
+        // set to current chat
+        mScrollPane.getViewport().setView(mChatCache.get(chat.getID()));
         this.onChatChange();
 
-        if (!mChatCache.containsKey(mCurrentChat.getID())) {
-            MessageList newMessageList = new MessageList(mView, this, mCurrentChat);
-            mCurrentChat.addObserver(newMessageList);
-            mChatCache.put(mCurrentChat.getID(), newMessageList);
-        }
-        MessageList list = mChatCache.get(mCurrentChat.getID());
-        mScrollPane.getViewport().setView(list);
-
-        mCurrentChat.setRead();
+        chat.setRead();
     }
 
     void setColor(Color color) {
@@ -311,10 +309,10 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private Background getCurrentBackground() {
-        Optional<MessageList> optView = this.getCurrentList();
-        if (!optView.isPresent())
+        MessageList view = this.currentMessageListOrNull();
+        if (view == null)
             return mDefaultBG;
-        Optional<Background> optBG = optView.get().getBG();
+        Optional<Background> optBG = view.getBG();
         if (!optBG.isPresent())
             return mDefaultBG;
         return optBG.get();
@@ -392,9 +390,9 @@ final class ChatView extends WebPanel implements Observer {
                     chat.deleteObserver(viewList);
                 }
                 mChatCache.remove(chat.getID());
-                mCurrentChat = null;
                 if(this.getCurrentChat().orElse(null) == chat) {
                     mScrollPane.setViewportView(null);
+                    mView.showNothing();
                 }
             }
         }
@@ -405,32 +403,21 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void onChatChange() {
-        if (mCurrentChat == null)
+        Optional<Chat> optChat = this.getCurrentChat();
+        if (!optChat.isPresent())
             return;
+        Chat chat = optChat.get();
         // update if chat changes...
 
         // chat titles
-        mTitleLabel.setText(Utils.chatTitle(mCurrentChat));
-        if (mCurrentChat.isGroupChat()) {
-            mSubTitleLabel.setText(Utils.contactNameList(mCurrentChat.getAllContacts()));
-        } else {
-            Optional<Contact> optContact = mCurrentChat.getSingleContact();
-            mSubTitleLabel.setText(optContact.isPresent() ?
-                    Utils.mainStatus(optContact.get(), true) :
-                    "--no subtitle--");
-        }
+        mTitleLabel.setText(Utils.chatTitle(chat));
+        Set<Contact> contacts = chat.getAllContacts();
+        mSubTitleLabel.setText(contacts.isEmpty() ? Tr.tr("<Empty>") :
+                chat.isGroupChat() ? Utils.nameOrJID(chat.getAllContacts(), 18) :
+                Utils.mainStatus(contacts.iterator().next(), true));
 
         // text area
-        boolean chatDisabled = false;
-        Set<Contact> contacts = mCurrentChat.getContacts();
-        if (contacts.isEmpty()) {
-            chatDisabled = true;
-        } else {
-            for (Contact c : contacts)
-                chatDisabled |= (c.isBlocked() || c.isDeleted());
-        }
-
-        // TODO: also disable if user not in group member list
+        boolean chatDisabled = !chat.isValid();
 
         mSendTextArea.setEnabled(!chatDisabled);
         mSendTextArea.setBackground(chatDisabled ? Color.LIGHT_GRAY : Color.WHITE);
@@ -439,20 +426,18 @@ final class ChatView extends WebPanel implements Observer {
         this.updateSendButton();
 
         // encryption status
-        boolean isEncrypted = mCurrentChat.sendEncrypted();
+        boolean isEncrypted = chat.isSendEncrypted();
         String encryption = isEncrypted ?
                 Tr.tr("Encrypted") :
                 Tr.tr("Not encrypted");
 
         mEncryptionStatus.setText(encryption);
-        mEncryptionStatus.setForeground(isEncrypted !=mCurrentChat.canSendEncrypted() ?
+        mEncryptionStatus.setForeground(isEncrypted != chat.canSendEncrypted() ?
                 Color.RED :
                 Color.BLACK);
 
         // TODO set tooltip
     }
-
-
 
     private void showPopup(final WebToggleButton invoker) {
         Optional<Chat> optChat = ChatView.this.getCurrentChat();
@@ -462,7 +447,7 @@ final class ChatView extends WebPanel implements Observer {
             mPopup = new ComponentUtils.ModalPopup(invoker);
 
         mPopup.removeAll();
-        mPopup.add(new ChatDetails(mPopup, optChat.get()));
+        mPopup.add(new ChatDetails(mView, mPopup, optChat.get()));
         mPopup.showPopup();
     }
 
@@ -479,12 +464,17 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void updateSendButton() {
-        // enable if text area is enabled...
-        mSendButton.setEnabled(mSendTextArea.isEnabled() &&
+        Optional<Chat> optChat = this.getCurrentChat();
+        if (!optChat.isPresent())
+            return;
+        Chat chat = optChat.get();
+
+        // enable if chat is valid...
+        mSendButton.setEnabled(chat.isValid() &&
                 // ...and there is text to send...
                 !mSendTextArea.getText().trim().isEmpty() &&
-                // ...encrypted message can be send
-                (!mCurrentChat.sendEncrypted() || mCurrentChat.canSendEncrypted()));
+                // ...and encrypted messages can be send
+                (!chat.isSendEncrypted() || chat.canSendEncrypted()));
     }
 
     private void sendMsg() {

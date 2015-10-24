@@ -23,7 +23,6 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -33,12 +32,15 @@ import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.util.EncodingUtils;
 
 /**
  * All possible content a message can contain.
  * Recursive: A message can contain a decrypted message.
+ *
+ * TODO needs builder class
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class MessageContent {
@@ -52,6 +54,8 @@ public class MessageContent {
     private final Optional<Attachment> mOptAttachment;
     // small preview file of attachment
     private Optional<Preview> mOptPreview;
+    // group id
+    private final Optional<GID> mOptGID;
     // group command
     private final Optional<GroupCommand> mOptGroupCommand;
     // decrypted message content
@@ -67,28 +71,28 @@ public class MessageContent {
     // used for decrypted content of incoming messages, outgoing messages
     // and as fallback
     public MessageContent(String plainText) {
-        this(plainText, "", null, null, null);
+        this(plainText, "", null, null, null, null);
     }
 
     // used for outgoing messages
     public MessageContent(String plainText, Attachment attachment) {
-        this(plainText, "", attachment, null, null);
+        this(plainText, "", attachment, null, null, null);
     }
 
     // used for outgoing group commands
     public MessageContent(GroupCommand group) {
-        this("", "", null, null, group);
+        this("", "", null, null, null, group);
     }
 
     // used for incoming messages
     public MessageContent(String plainText, String encrypted,
-            Attachment attachment, Preview preview, GroupCommand group) {
-        this(plainText, encrypted, attachment, preview, group, null);
+            Attachment attachment, Preview preview, GID gid, GroupCommand group) {
+        this(plainText, encrypted, attachment, preview, gid, group, null);
     }
 
     // used when loading from db
     private MessageContent(String plainText, String encrypted,
-            Attachment attachment, Preview preview, GroupCommand group,
+            Attachment attachment, Preview preview, GID gid, GroupCommand group,
             MessageContent decryptedContent) {
         mPlainText = plainText;
         mEncryptedContent = encrypted;
@@ -96,6 +100,7 @@ public class MessageContent {
         mOptPreview = Optional.ofNullable(preview);
         mOptGroupCommand = Optional.ofNullable(group);
         mOptDecryptedContent = Optional.ofNullable(decryptedContent);
+        mOptGID = Optional.ofNullable(gid);
     }
 
     /**
@@ -149,6 +154,14 @@ public class MessageContent {
         mOptPreview = Optional.of(preview);
     }
 
+    public Optional<GID> getGID() {
+        if (mOptDecryptedContent.isPresent() &&
+                mOptDecryptedContent.get().getGID().isPresent()) {
+            return mOptDecryptedContent.get().getGID();
+        }
+        return mOptGID;
+    }
+
     public Optional<GroupCommand> getGroupCommand() {
         if (mOptDecryptedContent.isPresent() &&
                 mOptDecryptedContent.get().getGroupCommand().isPresent()) {
@@ -166,7 +179,8 @@ public class MessageContent {
                 mEncryptedContent.isEmpty() &&
                 !mOptAttachment.isPresent() &&
                 !mOptPreview.isPresent() &&
-                !mOptDecryptedContent.isPresent();
+                !mOptDecryptedContent.isPresent() &&
+                !mOptGroupCommand.isPresent();
     }
 
     public boolean isComplex() {
@@ -231,6 +245,7 @@ public class MessageContent {
                     encrypted,
                     attachment,
                     preview,
+                    null,
                     groupCommand,
                     decryptedContent);
         } catch(ClassCastException ex) {
@@ -478,52 +493,38 @@ public class MessageContent {
         private static final String JSON_REMOVED = "removed";
         private static final String JSON_SUBJECT = "subj";
 
+        // ordinals used in database
         public enum OP {
             CREATE,
             SET,
             LEAVE
         }
 
-        private final Optional<GID> mOptGID;
         private final OP mOP;
         private final JID[] mJIDsAdded;
         private final JID[] mJIDsRemoved;
         private final String mSubject;
 
         /** Group creation. */
-        public GroupCommand(GID gid, JID[] added) {
-            this(gid, OP.CREATE, added, new JID[0], "");
+        public static GroupCommand create(JID[] added, String subject) {
+            return new GroupCommand(OP.CREATE, added, new JID[0], subject);
         }
 
-        /** Group creation with subject. */
-        public GroupCommand(JID[] added, String subject) {
-            this(null, OP.CREATE, added, new JID[0], subject);
-        }
-
-        public GroupCommand(GID gid, JID[] added, String subject) {
-            this(gid, OP.CREATE, added, new JID[0], subject);
-        }
-
-        /** Member list changed. */
-        public GroupCommand(GID gid, JID[] added, JID[] removed) {
-            this(gid, OP.SET, added, removed, "");
+        /** Group changed. */
+        public static GroupCommand set(JID[] added, JID[] removed, String subject) {
+            return new GroupCommand(OP.SET, added, removed, subject);
         }
 
         /** Member left. Identified by sender JID */
-        public GroupCommand(GID gid) {
-            this(gid, OP.LEAVE, new JID[0], new JID[0], "");
+        public static GroupCommand leave() {
+            return new GroupCommand(OP.LEAVE, new JID[0], new JID[0], "");
         }
 
-        private GroupCommand(GID gid, OP operation, JID[] added, JID[] removed, String subject) {
-            mOptGID = Optional.ofNullable(gid);
+        private GroupCommand(OP operation, JID[] added, JID[] removed, String subject) {
             mOP = operation;
             mJIDsAdded = added;
             mJIDsRemoved = removed;
             mSubject = subject;
-        }
-
-        public Optional<GID> getGID() {
-            return mOptGID;
         }
 
         public OP getOperation() {
@@ -548,8 +549,17 @@ public class MessageContent {
             JSONObject json = new JSONObject();
             json.put(JSON_OP, mOP.ordinal());
             EncodingUtils.putJSON(json, JSON_SUBJECT, mSubject);
-            json.put(JSON_ADDED, Arrays.asList(mJIDsAdded));
-            json.put(JSON_REMOVED, Arrays.asList(mJIDsRemoved));
+
+            List<String> added = new ArrayList(mJIDsAdded.length);
+            for (JID jid: mJIDsAdded)
+                added.add(jid.string());
+            json.put(JSON_ADDED, added);
+
+            List<String> removed = new ArrayList(mJIDsRemoved.length);
+            for (JID jid: mJIDsAdded)
+                removed.add(jid.string());
+            json.put(JSON_REMOVED, removed);
+
             return json.toJSONString();
         }
 
@@ -563,6 +573,8 @@ public class MessageContent {
                 Number o = (Number) map.get(JSON_OP);
                 OP op = OP.values()[o.intValue()];
 
+                String subj = EncodingUtils.getJSONString(map, JSON_SUBJECT);
+
                 List<String> a = (List<String>) map.get(JSON_ADDED);
                 List<JID> added = new ArrayList<>(a.size());
                 for (String s: a)
@@ -573,13 +585,12 @@ public class MessageContent {
                 for (String s: r)
                     removed.add(JID.bare(s));
 
-                String subj = EncodingUtils.getJSONString(map, JSON_SUBJECT);
-
-                return new GroupCommand(null, op,
+                return new GroupCommand(op,
                         added.toArray(new JID[0]), removed.toArray(new JID[0]),
                         subj);
              }  catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON group command", ex);
+                LOGGER.log(Level.WARNING, "JSON='"+json+"'");
                 return null;
             }
         }

@@ -18,21 +18,17 @@
 
 package org.kontalk.model;
 
-import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Observable;
 import java.util.Optional;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
@@ -45,11 +41,9 @@ import org.kontalk.util.EncodingUtils;
 /**
  * Base class for incoming and outgoing XMMP messages.
  *
- * TODO: unique field for equal()?
- *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class KonMessage extends Observable implements Comparable<KonMessage> {
+public abstract class KonMessage extends Observable implements Comparable<KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
@@ -109,69 +103,72 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
             "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id) " +
             ")";
 
-    private int mID;
+    protected final int mID;
     private final Chat mChat;
-
-    protected final Transmission[] mTransmissions;
-
     private final String mXMPPID;
-
     // (local) creation time
     private final Date mDate;
+    protected final MessageContent mContent;
+
     // last timestamp of server transmission packet
     // incoming: (delayed) sent; outgoing: sent or error
     protected Optional<Date> mServerDate;
     protected Status mStatus;
-    protected final MessageContent mContent;
-
     protected CoderStatus mCoderStatus;
-
     protected ServerError mServerError;
 
+    protected KonMessage(Chat chat,
+            String xmppID,
+            MessageContent content,
+            Optional<Date> serverDate,
+            Status status,
+            CoderStatus coderStatus) {
+        mChat = chat;
+        mXMPPID = xmppID;
+        mDate = new Date();
+        mContent = content;
+
+        mServerDate = serverDate;
+        mStatus = status;
+        mCoderStatus = coderStatus;
+        mServerError = new ServerError();
+
+        // insert
+        Database db = Database.getInstance();
+        List<Object> values = new LinkedList<>();
+        values.add(mChat.getID());
+        values.add(Database.setString(mXMPPID));
+        values.add(mDate);
+        values.add(mStatus);
+        // i simply don't like to save all possible content explicitly in the
+        // database, so we use JSON here
+        values.add(mContent.toJSON());
+        values.add(mCoderStatus.getEncryption());
+        values.add(mCoderStatus.getSigning());
+        values.add(mCoderStatus.getErrors());
+        values.add(mServerError.toJSON());
+        values.add(mServerDate);
+
+        mID = db.execInsert(TABLE, values);
+        if (mID <= 0) {
+            LOGGER.log(Level.WARNING, "db, could not insert message");
+        }
+    }
+
+    // used when loading from database
     protected KonMessage(Builder builder) {
         mID = builder.mID;
         mChat = builder.mChat;
         mXMPPID = builder.mXMPPID;
         mDate = builder.mDate;
+        mContent = builder.mContent;
+
         mServerDate = builder.mServerDate;
         mStatus = builder.mStatus;
-        mContent = builder.mContent;
         mCoderStatus = builder.mCoderStatus;
         mServerError = builder.mServerError;
-
-        if ((builder.mContacts == null) == (builder.mTransmissions == null) ||
-                mXMPPID == null ||
-                mDate == null ||
-                mServerDate == null ||
-                mStatus == null ||
-                mContent == null ||
-                mCoderStatus == null ||
-                mServerError == null)
-            throw new IllegalStateException();
-
-        if (mID < 0)
-            this.save();
-
-        if (builder.mTransmissions != null) {
-            mTransmissions = builder.mTransmissions;
-        } else {
-            Set<Transmission> t = new HashSet<>();
-            for (Entry<Contact,JID> e : builder.mContacts.entrySet()) {
-                t.add(new Transmission(e.getKey(), e.getValue(), mID));
-            }
-            mTransmissions = t.toArray(new Transmission[0]);
-        }
-
-        if (mTransmissions.length == 0)
-            LOGGER.warning("no transmission(s) for message");
     }
 
-    /**
-     * Get the database ID. <br>
-     * -1 : message is not saved in database <br>
-     * {@literal <} -1 : unexpected error on insertion attempt
-     * @return ID of message in db
-     */
     public int getID() {
         return mID;
     }
@@ -184,15 +181,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         return mStatus == Status.IN;
     }
 
-    public Transmission[] getTransmissions() {
-        return mTransmissions;
-    }
-
-    public Optional<Transmission> getSingleTransmission() {
-        return mTransmissions.length == 1 ?
-            Optional.of(mTransmissions[0]) :
-            Optional.<Transmission>empty();
-    }
+    public abstract Transmission[] getTransmissions();
 
     public String getXMPPID() {
         return mXMPPID;
@@ -239,6 +228,7 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {
         mCoderStatus.setSecurityErrors(errors);
         this.save();
+        this.changed(mCoderStatus);
     }
 
     public ServerError getServerError() {
@@ -251,14 +241,11 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         this.changed(preview);
     }
 
-    /**
-     * Save (or insert) this message to/into the database.
-     */
-    public final void save() {
-        if (mID < 0) {
-            this.insert();
-            return;
-        }
+    public boolean isEncrypted() {
+        return mCoderStatus.isEncrypted();
+    }
+
+    public void save() {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_STATUS, mStatus);
@@ -271,36 +258,6 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         db.execUpdate(TABLE, set, mID);
     }
 
-    private void insert() {
-        if (mID >= 0) {
-            LOGGER.warning("message already in db, ID: "+mID);
-            return;
-        }
-        Database db = Database.getInstance();
-
-        List<Object> values = new LinkedList<>();
-        values.add(mChat.getID());
-        values.add(Database.setString(mXMPPID));
-        values.add(mDate);
-        values.add(mStatus);
-        // i simply don't like to save all possible content explicitly in the
-        // database, so we use JSON here
-        values.add(mContent.toJSON());
-        values.add(mCoderStatus.getEncryption());
-        values.add(mCoderStatus.getSigning());
-        values.add(mCoderStatus.getErrors());
-        values.add(mServerError.toJSON());
-        values.add(mServerDate);
-
-        int id = db.execInsert(TABLE, values);
-        if (id <= 0) {
-            LOGGER.log(Level.WARNING, "db, could not insert message");
-            mID = -2;
-            return;
-        }
-        mID = id;
-    }
-
     protected synchronized void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
@@ -308,13 +265,14 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
 
     @Override
     public String toString() {
-        return "M:id="+mID+",chat="+mChat+",xmppid="+mXMPPID
-                +",transmissions="+Arrays.toString(mTransmissions)
+        return "M:id="+mID+",status="+mStatus+",chat="+mChat+",xmppid="+mXMPPID
+                +",transmissions="+Arrays.toString(this.getTransmissions())
                 +",date="+mDate+",sdate="+mServerDate
-                +",recstat="+mStatus+",cont="+mContent
+                +",cont="+mContent
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
+    // TODO remove
     @Override
     public int compareTo(KonMessage o) {
         if (this.equals(o))
@@ -356,13 +314,12 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         long sDate = messageRS.getLong(KonMessage.COL_SERV_DATE);
         Date serverDate = sDate == 0 ? null : new Date(sDate);
 
-        KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date);
-        builder.xmppID(xmppID);
+        KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date, content);
         // TODO one SQL SELECT for each message, performance?
         builder.transmissions(Transmission.load(id));
+        builder.xmppID(xmppID);
         if (serverDate != null)
             builder.serverDate(serverDate);
-        builder.content(content);
         builder.coderStatus(coderStatus);
         builder.serverError(serverError);
 
@@ -407,46 +364,49 @@ public class KonMessage extends Observable implements Comparable<KonMessage> {
         }
     }
 
-    static class Builder {
+    protected static class Builder {
         private final int mID;
         private final Chat mChat;
         private final Status mStatus;
         private final Date mDate;
+        private final MessageContent mContent;
 
-        protected Map<Contact, JID> mContacts = null;
         protected Transmission[] mTransmissions = null;
 
-        protected String mXMPPID = null;
+        private String mXMPPID = null;
+        private Optional<Date> mServerDate = null;
+        private CoderStatus mCoderStatus = null;
+        private ServerError mServerError = null;
 
-        protected Optional<Date> mServerDate = Optional.empty();
-        protected MessageContent mContent = null;
-
-        protected CoderStatus mCoderStatus = null;
-
-        private ServerError mServerError = new ServerError();
-
-        // used by subclasses and when loading from database
-        Builder(int id,
+        private Builder(int id,
                 Chat chat,
                 Status status,
-                Date date) {
+                Date date,
+                MessageContent content) {
             mID = id;
             mChat = chat;
             mStatus = status;
             mDate = date;
+            mContent = content;
         }
 
-        void transmissions(Transmission[] transmission) { mTransmissions = transmission; }
+        private void transmissions(Transmission[] transmission) { mTransmissions = transmission; }
 
-        public void xmppID(String xmppID) { mXMPPID = xmppID; }
+        private void xmppID(String xmppID) { mXMPPID = xmppID; }
+        private void serverDate(Date date) { mServerDate = Optional.of(date); }
+        private void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
+        private void serverError(ServerError error) { mServerError = error; }
 
-        public void serverDate(Date date) { mServerDate = Optional.of(date); }
-        public void content(MessageContent content) { mContent = content; }
+        private KonMessage build() {
+            if (mServerDate == null)
+                mServerDate = Optional.empty();
 
-        void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
-        void serverError(ServerError error) { mServerError = error; }
+            if (mTransmissions == null ||
+                    mXMPPID == null ||
+                    mCoderStatus == null ||
+                    mServerError == null)
+                throw new IllegalStateException();
 
-        KonMessage build() {
             if (mStatus == Status.IN)
                 return new InMessage(this);
             else

@@ -53,8 +53,9 @@ import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
 import org.kontalk.client.KonMessageListener;
-import org.kontalk.model.InMessage;
 import org.kontalk.model.MessageContent;
+import org.kontalk.model.DecryptMessage;
+import org.kontalk.model.InMessage;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.XMPPUtils;
 import org.xmlpull.v1.XmlPullParserException;
@@ -71,17 +72,17 @@ final class Decryptor {
         Coder.Signing signing = Coder.Signing.UNKNOWN;
     }
 
-    private final InMessage message;
+    private final DecryptMessage message;
     private PersonalKey myKey = null;
-    private PGPUtils.PGPCoderKey senderKey = null;
+    private Optional<PGPUtils.PGPCoderKey> senderKey;
 
-    Decryptor(InMessage message) {
+    Decryptor(DecryptMessage message) {
         this.message = message;
     }
 
+    // note: signing requires also encryption
     boolean decryptMessage() {
-        // signing requires also encryption
-        if (!message.getCoderStatus().isEncrypted()) {
+        if (!message.isEncrypted()) {
             LOGGER.warning("message not encrypted");
             return false;
         }
@@ -101,7 +102,11 @@ final class Decryptor {
         ByteArrayOutputStream plainOut = new ByteArrayOutputStream();
         DecryptionResult decResult;
         try {
-            decResult = decryptAndVerify(encryptedIn, plainOut, myKey.getPrivateEncryptionKey(), senderKey.signKey);
+            decResult = decryptAndVerify(encryptedIn,
+                    plainOut,
+                    myKey.getPrivateEncryptionKey(),
+                    senderKey.isPresent() ? Optional.of(senderKey.get().signKey) :
+                    Optional.<PGPPublicKey>empty());
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't decrypt message", ex);
             return false;
@@ -111,7 +116,9 @@ final class Decryptor {
 
         // parse decrypted CPIM content
         String myUID = myKey.getUserId();
-        String senderUID = senderKey.userID;
+        Optional<String> senderUID = senderKey.isPresent() ?
+                Optional.of(senderKey.get().userID) :
+                Optional.<String>empty();
         String decrText = EncodingUtils.getString(
                 plainOut.toByteArray(),
                 CPIMMessage.CHARSET);
@@ -132,7 +139,13 @@ final class Decryptor {
     }
 
     void decryptAttachment(Path baseDir) {
-        Optional<MessageContent.Attachment> optAttachment = message.getContent().getAttachment();
+        if (!(message instanceof InMessage)) {
+            LOGGER.warning("message not incoming message");
+            return;
+        }
+        InMessage inMessage = (InMessage) message;
+
+        Optional<MessageContent.Attachment> optAttachment = inMessage.getContent().getAttachment();
         if (!optAttachment.isPresent()) {
             LOGGER.warning("no attachment in in-message");
             return;
@@ -158,17 +171,21 @@ final class Decryptor {
         DecryptionResult decResult;
         try (FileInputStream encryptedIn = new FileInputStream(inFile);
                 FileOutputStream plainOut = new FileOutputStream(outFile)) {
-            decResult = decryptAndVerify(encryptedIn, plainOut, myKey.getPrivateEncryptionKey(), senderKey.signKey);
+            decResult = decryptAndVerify(encryptedIn,
+                    plainOut,
+                    myKey.getPrivateEncryptionKey(),
+                    senderKey.isPresent() ? Optional.of(senderKey.get().signKey) :
+                            Optional.<PGPPublicKey>empty());
         } catch (IOException | PGPException ex){
             LOGGER.log(Level.WARNING, "can't decrypt attachment", ex);
-            message.setAttachmentErrors(EnumSet.of(Coder.Error.UNKNOWN_ERROR));
+            inMessage.setAttachmentErrors(EnumSet.of(Coder.Error.UNKNOWN_ERROR));
             return;
         }
-        message.setAttachmentErrors(decResult.errors);
-        message.setAttachmentSigning(decResult.signing);
+        inMessage.setAttachmentErrors(decResult.errors);
+        inMessage.setAttachmentSigning(decResult.signing);
 
         // set new filename
-        message.setDecryptedAttachment(outFile.getName());
+        inMessage.setDecryptedAttachment(outFile.getName());
         LOGGER.info("attachment decryption successful");
     }
 
@@ -178,21 +195,20 @@ final class Decryptor {
             message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
             return false;
         }
-        Optional<PGPUtils.PGPCoderKey> optKey = Coder.contactkey(message.getContact());
+        senderKey = Coder.contactkey(message.getContact());
 
-        if (optKey.isPresent()) {
-            senderKey = optKey.get();
-        } else {
+        // sender signing key not found -> continue decryption, siging will not
+        // be possible
+        if (senderKey.isPresent())
             message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
-            return false;
-        }
+
         return true;
     }
 
     /** Decrypt, verify and write input stream data to output stream. */
     private static DecryptionResult decryptAndVerify(
             InputStream encryptedInput, OutputStream plainOutput,
-            PGPPrivateKey myKey, PGPPublicKey senderSigningKey)
+            PGPPrivateKey myKey, Optional<PGPPublicKey> senderSigningKey)
             throws PGPException, IOException {
         // note: the signature is inside the encrypted data
 
@@ -255,10 +271,10 @@ final class Decryptor {
             if (signatureList.isEmpty()) {
                 LOGGER.warning("signature list is empty");
                 result.errors.add(Coder.Error.INVALID_SIGNATURE_DATA);
-            } else {
+            } else if (senderSigningKey.isPresent()) {
                 ops = signatureList.get(0);
                 try {
-                    ops.init(new BcPGPContentVerifierBuilderProvider(), senderSigningKey);
+                    ops.init(new BcPGPContentVerifierBuilderProvider(), senderSigningKey.get());
                 } catch (ClassCastException e) {
                     LOGGER.warning("legacy signature not supported");
                     result.errors.add(Coder.Error.INVALID_SIGNATURE_DATA);
@@ -339,7 +355,7 @@ final class Decryptor {
      * The decrypted content of a message is in CPIM format.
      */
     private MessageContent parseCPIMOrNull(String cpim,
-            String myUid, String senderKeyUID) {
+            String myUid, Optional<String> senderKeyUID) {
 
         CPIMMessage cpimMessage;
         try {
@@ -367,7 +383,8 @@ final class Decryptor {
             errors.add(Coder.Error.INVALID_RECIPIENT);
         }
         // check that the sender matches the full uid of the sender's key
-        if (!senderKeyUID.equals(cpimMessage.getFrom())) {
+        if (senderKeyUID.isPresent() &&
+                !senderKeyUID.get().equals(cpimMessage.getFrom())) {
             LOGGER.warning("sender doesn't match sender's key");
             errors.add(Coder.Error.INVALID_SENDER);
         }

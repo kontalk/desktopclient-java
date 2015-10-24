@@ -31,7 +31,6 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
-import org.kontalk.system.Config;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -41,7 +40,7 @@ import org.kontalk.util.XMPPUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Contact extends Observable implements Comparable<Contact> {
+public final class Contact extends Observable {
     private static final Logger LOGGER = Logger.getLogger(Contact.class.getName());
 
     /**
@@ -159,8 +158,8 @@ public final class Contact extends Observable implements Comparable<Contact> {
 
         mName = name;
         this.save();
-        // contact itself as argument for chat view items
-        this.changed(this);
+
+        this.changed(mName);
     }
 
     public String getStatus() {
@@ -233,7 +232,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
         mKey = EncodingUtils.bytesToBase64(rawKey);
         mFingerprint = fingerprint;
         this.save();
-        this.changed(null);
+        this.changed(new byte[0]);
     }
 
     public boolean isBlocked() {
@@ -258,10 +257,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
     }
 
     public boolean isMe() {
-        JID myJID = JID.bare(Config.getInstance().getString(Config.ACC_JID));
-        if (!myJID.isValid())
-            return false;
-        return mJID.equals(myJID);
+        return mJID.isMe();
     }
 
     public boolean isKontalkUser(){
@@ -271,7 +267,8 @@ public final class Contact extends Observable implements Comparable<Contact> {
     /**
      * 'Delete' this contact: faked by resetting all values.
      */
-    public void setDeleted() {
+    void setDeleted() {
+        LOGGER.config("contact: "+this);
         mJID = JID.deleted(mID);
         mName = "";
         mStatus = "";
@@ -281,6 +278,7 @@ public final class Contact extends Observable implements Comparable<Contact> {
         mFingerprint = "";
 
         this.save();
+        this.changed(null);
     }
 
     public boolean isDeleted() {
@@ -307,13 +305,8 @@ public final class Contact extends Observable implements Comparable<Contact> {
 
     @Override
     public String toString() {
-        return "U:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
+        return "C:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
                 +",subsc="+mSubStatus;
-    }
-
-    @Override
-    public int compareTo(Contact o) {
-        return Integer.compare(this.mID, o.mID);
     }
 
     static Contact load(ResultSet rs) throws SQLException {

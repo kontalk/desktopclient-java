@@ -21,8 +21,9 @@ package org.kontalk.model;
 import org.kontalk.misc.JID;
 import java.net.URI;
 import java.util.Date;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 
@@ -33,8 +34,30 @@ import org.jivesoftware.smack.util.StringUtils;
 public final class OutMessage extends KonMessage {
     private static final Logger LOGGER = Logger.getLogger(OutMessage.class.getName());
 
-    OutMessage(KonMessage.Builder builder) {
+    private final Transmission[] mTransmissions;
+
+    public OutMessage(Chat chat, Contact[] contacts, MessageContent content, boolean encrypted) {
+        super(chat,
+                "Kon_" + StringUtils.randomString(8),
+                content,
+                Optional.<Date>empty(),
+                Status.PENDING,
+                encrypted ?
+                        CoderStatus.createToEncrypt() :
+                        CoderStatus.createInsecure());
+
+        Set<Transmission> t = new HashSet<>();
+        for (Contact contact: contacts) {
+            t.add(new Transmission(contact, contact.getJID(), mID));
+        }
+        mTransmissions = t.toArray(new Transmission[0]);
+    }
+
+    // used when loading from database
+    protected OutMessage(KonMessage.Builder builder) {
         super(builder);
+
+        mTransmissions = builder.mTransmissions;
     }
 
     public void setReceived(JID jid) {
@@ -93,36 +116,9 @@ public final class OutMessage extends KonMessage {
         this.save();
     }
 
-public static class Builder extends KonMessage.Builder {
-
-        public Builder(Chat chat, Contact[] contacts, boolean encrypted) {
-            super(-1, chat, Status.PENDING, new Date());
-
-            mContacts = new HashMap<>();
-            for (Contact c: contacts)
-                mContacts.put(c, c.getJID());
-
-            mXMPPID = "Kon_" + StringUtils.randomString(8);
-            mServerDate = Optional.empty();
-
-            mCoderStatus = encrypted ?
-                CoderStatus.createToEncrypt() :
-                CoderStatus.createInsecure();
-        }
-
-        @Override
-        public void xmppID(String xmppID) { throw new UnsupportedOperationException(); }
-
-        @Override
-        public void serverDate(Date date) { throw new UnsupportedOperationException(); }
-
-        @Override
-        public void coderStatus(CoderStatus c) { throw new UnsupportedOperationException(); }
-
-        @Override
-        public OutMessage build() {
-            return new OutMessage(this);
-        }
+    @Override
+    public Transmission[] getTransmissions() {
+        return mTransmissions;
     }
 
 }

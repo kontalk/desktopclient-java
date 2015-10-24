@@ -401,6 +401,8 @@ final class ComponentUtils {
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
                     new WebLabel(Tr.tr("Subject:")+" "), mSubjectField));
 
+            groupPanel.add(new WebLabel(Tr.tr("Select participants:")+" "));
+
             mList = new ContactSelectionList();
             mList.setVisibleRowCount(10);
             mList.addListSelectionListener(new ListSelectionListener() {
@@ -488,9 +490,9 @@ final class ComponentUtils {
                 }
             });
 
-            for (Contact contact : contacts) {
-                mModel.addElement(contact);
-            }
+            for (Contact contact : contacts)
+                if (!contact.isMe())
+                    mModel.addElement(contact);
         }
 
         @SuppressWarnings("unchecked")
@@ -628,22 +630,32 @@ final class ComponentUtils {
         abstract void onInvalidInput();
     }
 
-    abstract static class EditableTextField extends WebTextField {
+    static class EditableTextField extends WebTextField {
 
-        public EditableTextField(int columns, final Component focusGainer) {
-            super(columns, false);
+        EditableTextField(int maxTextLength, int columns, final Component focusGainer) {
+            this("", maxTextLength, true, columns, focusGainer);
+        }
 
-            this.setMinimumHeight(20);
+        EditableTextField(String text, int maxTextLength, boolean editable,
+                int columns, final Component focusGainer) {
+            super(new ComponentUtils.TextLimitDocument(maxTextLength), text, columns);
+
+            this.setEditable(editable);
+            this.setFocusable(editable);
+
+            // edit mode is higher than label mode
+            this.setMinimumHeight(27);
+
             this.setHideInputPromptOnFocus(false);
             this.addFocusListener(new FocusListener() {
                 @Override
                 public void focusGained(FocusEvent e) {
-                    EditableTextField.this.setEdit();
+                    EditableTextField.this.switchToEditMode();
                 }
                 @Override
                 public void focusLost(FocusEvent e) {
                     EditableTextField.this.onFocusLost();
-                    EditableTextField.this.setLabel();
+                    EditableTextField.this.switchToLabelMode();
                 }
             });
             this.addActionListener(new ActionListener() {
@@ -653,26 +665,30 @@ final class ComponentUtils {
                 }
             });
 
-            this.setLabel();
+            this.switchToLabelMode();
         }
 
-        private void setEdit() {
+        private void switchToEditMode() {
             String text = this.editText();
             this.setInputPrompt(text);
             this.setText(text);
             this.setDrawBorder(true);
         }
 
-        void setLabel() {
+        private void switchToLabelMode() {
             this.setText(this.labelText());
             this.setDrawBorder(false);
         }
 
-        abstract protected String labelText();
+        protected String labelText() {
+            return this.getText();
+        }
 
-        abstract protected String editText();
+        protected String editText() {
+            return this.getText();
+        }
 
-        abstract protected void onFocusLost();
+        protected void onFocusLost() {};
     }
 
     static class ModalPopup extends WebPopup {
@@ -680,18 +696,12 @@ final class ComponentUtils {
         private final AbstractButton mInvoker;
         private final WebPanel layerPanel;
 
-        public ModalPopup(AbstractButton invokerButton) {
+        ModalPopup(AbstractButton invokerButton) {
             super();
             mInvoker = invokerButton;
 
             layerPanel = new WebPanel();
             layerPanel.setOpaque(false);
-            layerPanel.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-
-                }
-            });
 
             JRootPane rootPane = SwingUtils.getRootPane(mInvoker);
             if (rootPane == null) {
@@ -704,14 +714,16 @@ final class ComponentUtils {
                     ModalPopup.this.close();
                 }
             });
+
+            this.setRequestFocusOnShow(false);
         }
 
-        public void showPopup() {
+        void showPopup() {
             layerPanel.setVisible(true);
             this.showAsPopupMenu(mInvoker);
         }
 
-        public void close() {
+        void close() {
             this.hidePopup();
             mInvoker.setSelected(false);
             layerPanel.setVisible(false);

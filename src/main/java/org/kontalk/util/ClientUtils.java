@@ -29,10 +29,10 @@ import org.jivesoftware.smack.packet.Message;
 import org.kontalk.client.GroupExtension;
 import org.kontalk.client.GroupExtension.Command;
 import org.kontalk.client.GroupExtension.Member;
-import org.kontalk.model.Chat;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
+import org.kontalk.model.GroupChat;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.GroupCommand.OP;
 
@@ -77,17 +77,11 @@ public final class ClientUtils {
         }
     }
 
-    public static GroupExtension groupCommandToGroupExtension(Chat chat,
+    public static GroupExtension groupCommandToGroupExtension(GroupChat chat,
         GroupCommand groupCommand) {
         assert chat.isGroupChat();
 
-        Optional<GID> optGID = chat.getGID();
-        if (!optGID.isPresent()) {
-            LOGGER.warning("no GID");
-            return new GroupExtension("", "");
-        }
-        GID gid = optGID.get();
-
+        GID gid = chat.getGID();
         OP op = groupCommand.getOperation();
         switch (op) {
             case LEAVE:
@@ -95,8 +89,9 @@ public final class ClientUtils {
                 return new GroupExtension(gid.id, gid.ownerJID.string(), Command.LEAVE);
             case CREATE:
             case SET:
-                Set<Member> member = new HashSet<>();
                 Command command;
+                Set<Member> member = new HashSet<>();
+                String subject = groupCommand.getSubject();
                 if (op == OP.CREATE) {
                     command = Command.CREATE;
                     for (JID added : groupCommand.getAdded())
@@ -114,7 +109,7 @@ public final class ClientUtils {
                     }
                     if (groupCommand.getAdded().length > 0) {
                         // list all remaining member for the new member
-                        for (Contact c : chat.getContacts()) {
+                        for (Contact c : chat.getValidContacts()) {
                             JID old = c.getJID();
                             if (!incl.contains(old))
                                 member.add(new Member(old.string()));
@@ -125,29 +120,37 @@ public final class ClientUtils {
                 return new GroupExtension(gid.id,
                         gid.ownerJID.string(),
                         command,
-                        member.toArray(new Member[0]));
+                        member.toArray(new Member[0]),
+                        subject);
             default:
                 // can not happen
                 return null;
         }
     }
 
-    public static GroupCommand groupExtensionToGroupCommand(JID owner,
-            String id,
+    public static Optional<GroupCommand> groupExtensionToGroupCommand(
             Command com,
-            Member[] members) {
-        GID gid = new GID(owner, id);
+            Member[] members,
+            String subject) {
 
-        if (com == GroupExtension.Command.CREATE) {
-            List<JID> jids = new ArrayList<>(members.length);
-            for (Member m: members)
-                jids.add(JID.bare(m.jid));
-            return new GroupCommand(gid, jids.toArray(new JID[0]));
-        } else if (com == GroupExtension.Command.LEAVE) {
-            return new GroupCommand(gid);
+        switch (com) {
+            case NONE:
+                return Optional.empty();
+            case CREATE:
+                List<JID> jids = new ArrayList<>(members.length);
+                for (Member m: members)
+                    jids.add(JID.bare(m.jid));
+                return Optional.of(GroupCommand.create(jids.toArray(new JID[0]), subject));
+            case LEAVE:
+                return Optional.of(GroupCommand.leave());
+            case SET:
+                // TODO
+                return Optional.of(GroupCommand.set(new JID[0], new JID[0], subject));
+            case GET:
+            case RESULT:
+            default:
+                // TODO
+                return Optional.empty();
         }
-
-        // TODO
-        return new GroupCommand(gid, new JID[0], new JID[0]);
     }
 }

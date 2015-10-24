@@ -20,32 +20,35 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.SortedSet;
-import java.util.TreeSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.model.Chat.GID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.system.Database;
 
 /**
  * The global list of all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class ChatList extends Observable implements Observer {
+public final class ChatList extends Observable implements Observer, Iterable<Chat> {
     private static final Logger LOGGER = Logger.getLogger(ChatList.class.getName());
 
     private static final ChatList INSTANCE = new ChatList();
 
-    private final HashMap<Integer, Chat> mMap = new HashMap<>();
+    private final Map<Integer, Chat> mMap =
+            Collections.synchronizedMap(new HashMap<Integer, Chat>());
 
     private boolean mUnread = false;
 
-    private ChatList() {
-    }
+    private ChatList() {}
 
     public void load() {
         assert mMap.isEmpty();
@@ -53,7 +56,9 @@ public final class ChatList extends Observable implements Observer {
         Database db = Database.getInstance();
         try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
             while (chatRS.next()) {
-                Chat chat = Chat.load(chatRS);
+                Chat chat = Chat.loadOrNull(chatRS);
+                if (chat == null)
+                    continue;
                 this.putSilent(chat);
 
                 mUnread |= !chat.isRead();
@@ -64,21 +69,37 @@ public final class ChatList extends Observable implements Observer {
         this.changed(null);
     }
 
-    public synchronized SortedSet<Chat> getAll() {
-        return new TreeSet<>(mMap.values());
+    public Set<Chat> getAll() {
+        return new HashSet<>(mMap.values());
     }
 
-    /**
-     * Get chat with contact and XMPPID.
-     */
-    public synchronized Optional<Chat> get(Contact contact, String xmmpThreadID) {
+    /** Get single chat with contact and XMPPID. */
+    public Optional<SingleChat> get(Contact contact, String xmmpThreadID) {
         for (Chat chat : mMap.values()) {
-            if (chat.getXMPPID().equals(xmmpThreadID)
-                    // TODO
-                    //&& !chat.isGroupChat()
-                    && chat.getAllContacts().contains(contact))
-                return Optional.of(chat);
+            if (!(chat instanceof SingleChat))
+                continue;
+            SingleChat singleChat = (SingleChat) chat;
+
+            if (singleChat.getXMPPID().equals(xmmpThreadID)
+                    && singleChat.getContact().equals(contact))
+                return Optional.of(singleChat);
         }
+        return Optional.empty();
+    }
+
+    /** Get group chat with group ID and containing contact. */
+    public Optional<GroupChat> get(GID gid, Contact contact) {
+        for (Chat chat : mMap.values()) {
+            if (!(chat instanceof GroupChat))
+                continue;
+
+            GroupChat groupChat = (GroupChat) chat;
+            if (groupChat.getGID().equals(gid) &&
+                    groupChat.getAllContacts().contains(contact)) {
+                return Optional.of(groupChat);
+            }
+        }
+
         return Optional.empty();
     }
 
@@ -86,31 +107,34 @@ public final class ChatList extends Observable implements Observer {
         return this.getOrCreate(contact, "");
     }
 
-    /**
-     * Find chat for contact and XMPP ID or creates a new chat.
-     */
-    public Chat getOrCreate(Contact contact, String xmppThreadID) {
-        Optional<Chat> optChat = this.get(contact, xmppThreadID);
+    /** Find group chat by GID or create a new chat. */
+    public GroupChat getOrCreate(GID gid, Contact contact) {
+        Optional<GroupChat> optChat = this.get(gid, contact);
+        if (optChat.isPresent())
+            return optChat.get();
+
+        return this.createNew(new Contact[]{contact}, gid, "");
+    }
+
+    /** Find single chat for contact and XMPP ID or creates a new chat. */
+    public SingleChat getOrCreate(Contact contact, String xmppThreadID) {
+        Optional<SingleChat> optChat = this.get(contact, xmppThreadID);
         if (optChat.isPresent())
             return optChat.get();
 
         return this.createNew(contact, xmppThreadID);
     }
 
-    public Chat createNew(Contact contact) {
-        return this.createNew(contact, "");
-    }
-
-    private Chat createNew(Contact contact, String xmppThreadID) {
-        Chat newChat = new Chat(contact, xmppThreadID);
+    private SingleChat createNew(Contact contact, String xmppThreadID) {
+        SingleChat newChat = new SingleChat(contact, xmppThreadID);
         LOGGER.config("created new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
         return newChat;
     }
 
-    public Chat createNew(Contact[] contacts, GID gid, String subject) {
-        Chat newChat = new Chat(contacts, gid, subject);
+    public GroupChat createNew(Contact[] contacts, GID gid, String subject) {
+        GroupChat newChat = new GroupChat(contacts, gid, subject);
         LOGGER.config("created new group chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
@@ -118,19 +142,13 @@ public final class ChatList extends Observable implements Observer {
     }
 
     private void putSilent(Chat chat) {
-        synchronized (this) {
-            // TODO check if we already have a chat equal to this
-            mMap.put(chat.getID(), chat);
+        if (mMap.containsValue(chat)) {
+            LOGGER.warning("chat already in chat list");
+            return;
         }
-        chat.addObserver(this);
-    }
 
-    // TODO unused
-    private synchronized Optional<Chat> get(int id) {
-        Chat chat = mMap.get(id);
-        if (chat == null)
-            LOGGER.warning("can't find chat with id: "+id);
-        return Optional.ofNullable(chat);
+        mMap.put(chat.getID(), chat);
+        chat.addObserver(this);
     }
 
     public boolean contains(int id) {
@@ -141,7 +159,11 @@ public final class ChatList extends Observable implements Observer {
         return this.get(contact, "").isPresent();
     }
 
-    public synchronized void delete(int id) {
+    public boolean isEmpty() {
+        return mMap.isEmpty();
+    }
+
+    public void delete(int id) {
         Chat chat = mMap.remove(id);
         if (chat == null) {
             LOGGER.warning("can't delete chat, not found. id: "+id);
@@ -152,20 +174,14 @@ public final class ChatList extends Observable implements Observer {
         this.changed(chat);
     }
 
-    /**
-     * Return if any chat is unread.
-     */
+    /** Return if any chat is unread. */
     public boolean isUnread() {
         return mUnread;
     }
 
-    private synchronized void changed(Object arg) {
+    private void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
-    }
-
-    public static ChatList getInstance() {
-        return INSTANCE;
     }
 
     @Override
@@ -184,14 +200,22 @@ public final class ChatList extends Observable implements Observer {
             return;
         }
 
-        synchronized (this) {
-            for (Chat chat : mMap.values()) {
-                if (!chat.isRead()) {
-                    return;
-                }
+        for (Chat chat : mMap.values()) {
+            if (!chat.isRead()) {
+                return;
             }
         }
+
         mUnread = false;
         this.changed(mUnread);
+    }
+
+    @Override
+    public Iterator<Chat> iterator() {
+        return mMap.values().iterator();
+    }
+
+    public static ChatList getInstance() {
+        return INSTANCE;
     }
 }

@@ -45,7 +45,6 @@ import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -191,19 +190,23 @@ final class Utils {
                 hashOrJID(contact, maxLength);
     }
 
+    static String nameOrJID(Set<Contact> contacts) {
+        return nameOrJID(contacts, Integer.MAX_VALUE);
+    }
+
+    static String nameOrJID(Set<Contact> contacts, int maxLength) {
+        List<String> nameList = new ArrayList<>(contacts.size());
+        for (Contact contact : contacts) {
+            nameList.add(nameOrJID(contact, maxLength));
+        }
+        return StringUtils.join(nameList, ", ");
+    }
+
     private static String hashOrJID(Contact contact, int maxLength) {
         JID jid = contact.getJID();
         return jid.isHash() && jid.string().length() >= 10 ?
                 "[" + jid.string().substring(0, 10) + "]" :
                 jid(contact, maxLength, true);
-    }
-
-    static String contactNameList(Set<Contact> contacts) {
-        List<String> nameList = new ArrayList<>(contacts.size());
-        for (Contact contact : contacts) {
-            nameList.add(nameOrJID(contact, 18));
-        }
-        return StringUtils.join(nameList, ", ");
     }
 
     static String jid(Contact contact, int maxLength, boolean brackets) {
@@ -227,9 +230,7 @@ final class Utils {
             String subj = chat.getSubject();
             return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
         } else {
-            Optional<Contact> optContact = chat.getSingleContact();
-            return optContact.isPresent() ? Utils.nameOrJID(optContact.get()) :
-                    "--no title--";
+            return Utils.nameOrJID(chat.getAllContacts());
         }
     }
 

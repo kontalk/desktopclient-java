@@ -38,6 +38,7 @@ import org.jivesoftware.smackx.delay.packet.DelayInformation;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.misc.JID;
+import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
@@ -53,8 +54,6 @@ import org.kontalk.util.EncodingUtils;
  */
 final public class KonMessageListener implements StanzaListener {
     private static final Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
-
-    // plain text body added by Android client
 
     private final Client mClient;
     private final Control mControl;
@@ -162,8 +161,11 @@ final public class KonMessageListener implements StanzaListener {
 
         // make sure not to save a message without content
         if (content.isEmpty()) {
-            if (chatState == null)
+            if (chatState == null) {
                 LOGGER.warning("can't find any content in message");
+            } else if (chatState == ChatState.active) {
+                LOGGER.info("only active chat state");
+            }
             return;
         }
 
@@ -229,15 +231,22 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         // group command
-        GroupCommand groupCommand = null;
-        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE);
+        Optional<GID> optGID = Optional.empty();
+        Optional<GroupCommand> optCom = Optional.empty();
+        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME,
+                GroupExtension.NAMESPACE);
         if (groupExt instanceof GroupExtension) {
             GroupExtension group = (GroupExtension) groupExt;
-            groupCommand = ClientUtils.groupExtensionToGroupCommand(
-                    JID.bare(group.getOwner()), group.getID(),
-                    group.getCommand(), group.getMember());
+            optGID = Optional.of(new GID(JID.bare(group.getOwner()), group.getID()));
+            optCom = ClientUtils.groupExtensionToGroupCommand(
+                    group.getCommand(), group.getMember(), group.getSubject());
         }
 
-        return new MessageContent(plainText, encrypted, attachment, preview, groupCommand);
+        return new MessageContent(plainText,
+                encrypted,
+                attachment,
+                preview,
+                optGID.orElse(null),
+                optCom.orElse(null));
     }
 }

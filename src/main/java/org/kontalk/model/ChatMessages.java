@@ -41,10 +41,12 @@ public final class ChatMessages {
     private final NavigableSet<KonMessage> mSet =
         Collections.synchronizedNavigableSet(new TreeSet<KonMessage>());
 
-    private boolean mLoaded = false;
+    private boolean mLoaded;
 
-    public ChatMessages(Chat chat) {
+    ChatMessages(Chat chat, boolean newChat) {
         mChat = chat;
+        // don't load from db if chat is just created
+        mLoaded = newChat;
     }
 
     private void ensureLoaded() {
@@ -61,7 +63,11 @@ public final class ChatMessages {
         try (ResultSet messageRS = db.execSelectWhereInsecure(KonMessage.TABLE,
                 KonMessage.COL_CHAT_ID + " == " + mChat.getID())) {
             while (messageRS.next()) {
-                this.addSilent(KonMessage.load(messageRS, mChat));
+                KonMessage message = KonMessage.load(messageRS, mChat);
+                if (message.getTransmissions().length == 0)
+                    // ignore broken message
+                    continue;
+                this.addSilent(message);
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load messages from db", ex);
@@ -78,7 +84,6 @@ public final class ChatMessages {
     }
 
     private boolean addSilent(KonMessage message) {
-        // see KonMessage.equals()
         if (mSet.contains(message)) {
             LOGGER.warning("message already in chat: " + message);
             return false;
@@ -93,9 +98,7 @@ public final class ChatMessages {
         return mSet;
     }
 
-    /**
-     * Get all outgoing messages with status "PENDING" for this chat.
-     */
+    /** Get all outgoing messages with status "PENDING" for this chat. */
     public SortedSet<OutMessage> getPending() {
         this.ensureLoaded();
 
@@ -111,9 +114,7 @@ public final class ChatMessages {
         return s;
     }
 
-    /**
-     * Get the newest (ie last received) outgoing message.
-     */
+    /** Get the newest (ie last received) outgoing message. */
     public Optional<OutMessage> getLast(String xmppID) {
         this.ensureLoaded();
 
@@ -130,5 +131,28 @@ public final class ChatMessages {
         }
 
         return Optional.of(message);
+    }
+
+    /** Get the last created message. */
+    public Optional<KonMessage> getLast() {
+        this.ensureLoaded();
+        return mSet.isEmpty() ?
+                Optional.<KonMessage>empty() :
+                Optional.of(mSet.last());
+    }
+
+    public boolean contains(KonMessage message) {
+        this.ensureLoaded();
+        return mSet.contains(message);
+    }
+
+    public int size() {
+        this.ensureLoaded();
+        return mSet.size();
+    }
+
+    public boolean isEmpty() {
+        this.ensureLoaded();
+        return mSet.isEmpty();
     }
 }

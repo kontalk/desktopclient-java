@@ -15,7 +15,6 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package org.kontalk.view;
 
 import com.alee.extended.colorchooser.GradientData;
@@ -28,7 +27,6 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.radiobutton.WebRadioButton;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.slider.WebSlider;
-import com.alee.laf.text.WebTextField;
 import com.alee.utils.swing.UnselectableButtonGroup;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -41,18 +39,21 @@ import java.util.Optional;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.kontalk.model.Chat;
+import org.kontalk.model.GroupChat;
 import org.kontalk.util.Tr;
 
 /**
  * Show and edit thread/chat settings.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatDetails extends WebPanel {
 
     private static final Color DEFAULT_BG = Color.WHITE;
 
+    private final View mView;
     private final Chat mChat;
-    private final WebTextField mSubjectField;
+    private final ComponentUtils.EditableTextField mSubjectField;
     private final WebRadioButton mColorOpt;
     private final WebButton mColor;
     private final WebRadioButton mImgOpt;
@@ -60,34 +61,30 @@ final class ChatDetails extends WebPanel {
     // TODO group chat
     //WebCheckBoxList mParticipantsList;
 
-    ChatDetails(final ComponentUtils.ModalPopup popup, Chat chat) {
+    ChatDetails(View view, final ComponentUtils.ModalPopup popup, Chat chat) {
+        mView = view;
         mChat = chat;
 
         GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
         groupPanel.setMargin(View.MARGIN_BIG);
 
-        groupPanel.add(new WebLabel(Tr.tr("Edit Chat")).setBoldFont());
+        groupPanel.add(new WebLabel(mChat.isGroupChat()
+                ? Tr.tr("Edit Group Chat")
+                : Tr.tr("Edit Chat")).setBoldFont());
         groupPanel.add(new WebSeparator(true, true));
 
         // editable fields
+        mSubjectField = new ComponentUtils.EditableTextField(mChat.getSubject(),
+                View.MAX_SUBJ_LENGTH, mChat.isAdministratable(), 16, this);
         if (chat.isGroupChat()) {
-            groupPanel.add(new WebLabel(Tr.tr("Subject:")));
-            mSubjectField = new WebTextField(22);
-            mSubjectField.setDocument(new ComponentUtils.TextLimitDocument(View.MAX_SUBJ_LENGTH));
-            String subj = mChat.getSubject();
-            mSubjectField.setText(subj);
-            mSubjectField.setInputPrompt(subj);
-            mSubjectField.setHideInputPromptOnFocus(false);
-            groupPanel.add(mSubjectField);
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    new WebLabel(Tr.tr("Subject:")), mSubjectField));
             groupPanel.add(new WebSeparator(true, true));
-        } else {
-            mSubjectField = null;
         }
-
         final WebSlider colorSlider = new WebSlider(WebSlider.HORIZONTAL);
 
         groupPanel.add(new WebLabel(Tr.tr("Custom Background")));
-        mColorOpt = new WebRadioButton(Tr.tr("Color:")+" ");
+        mColorOpt = new WebRadioButton(Tr.tr("Color:") + " ");
         Optional<Color> optBGColor = mChat.getViewSettings().getBGColor();
         mColorOpt.setSelected(optBGColor.isPresent());
         mColorOpt.addItemListener(new ItemListener() {
@@ -123,7 +120,7 @@ final class ChatDetails extends WebPanel {
         });
         groupPanel.add(colorSlider);
 
-        mImgOpt = new WebRadioButton(Tr.tr("Image:")+" ");
+        mImgOpt = new WebRadioButton(Tr.tr("Image:") + " ");
         String imgPath = mChat.getViewSettings().getImagePath();
         mImgOpt.setSelected(!imgPath.isEmpty());
         mImgOpt.addItemListener(new ItemListener() {
@@ -166,7 +163,6 @@ final class ChatDetails extends WebPanel {
 //
 //        groupPanel.add(new WebScrollPane(mParticipantsList));
 //        groupPanel.add(new WebSeparator(true, true));
-
         this.add(groupPanel, BorderLayout.CENTER);
 
         saveButton.addActionListener(new ActionListener() {
@@ -193,10 +189,11 @@ final class ChatDetails extends WebPanel {
     }
 
     private void save() {
-        if (mSubjectField != null) {
-            String subj = mSubjectField.getText();
-            if (subj.length() > 0 && !mSubjectField.getText().equals(mChat.getSubject()))
-                mChat.setSubject(mSubjectField.getText());
+        String subj = mSubjectField.getText();
+        if (subj.length() > 0
+                && !mSubjectField.getText().equals(mChat.getSubject())
+                && mChat instanceof GroupChat) {
+            mView.getControl().setChatSubject((GroupChat) mChat, mSubjectField.getText());
         }
 //        List<?> participants = mParticipantsList.getCheckedValues();
 //        Set<Contact> chatContact = new HashSet<>();
@@ -206,15 +203,16 @@ final class ChatDetails extends WebPanel {
 //        mChat.setContact(chatContact);
 
         Chat.ViewSettings newSettings;
-        if (mColorOpt.isSelected())
+        if (mColorOpt.isSelected()) {
             newSettings = new Chat.ViewSettings(mColor.getBottomBgColor());
-        else if (mImgOpt.isSelected() && !mImgChooser.getSelectedFiles().isEmpty())
+        } else if (mImgOpt.isSelected() && !mImgChooser.getSelectedFiles().isEmpty()) {
             newSettings = new Chat.ViewSettings(mImgChooser.getSelectedFiles().get(0).getAbsolutePath());
-        else
+        } else {
             newSettings = new Chat.ViewSettings();
+        }
 
         if (!newSettings.equals(mChat.getViewSettings())) {
-             mChat.setViewSettings(newSettings);
+            mChat.setViewSettings(newSettings);
         }
     }
 }

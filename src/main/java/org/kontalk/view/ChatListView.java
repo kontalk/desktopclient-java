@@ -30,7 +30,6 @@ import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
-import java.util.SortedSet;
 import java.util.Timer;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
@@ -41,6 +40,7 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.Chat.KonChatState;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatListView.ChatItem;
 
@@ -81,9 +81,12 @@ final class ChatListView extends Table<ChatItem, Chat> {
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
+
                 Optional<Chat> optChat = ChatListView.this.getSelectedValue();
-                if (!optChat.isPresent())
+                if (!optChat.isPresent()) {
+                    // note: this happens also on righ-click for some reason
                     return;
+                }
 
                 // if event is caused by filtering, dont do anything
                 if (lastChat == optChat.get())
@@ -144,8 +147,10 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
     private void deleteSelectedChat() {
         ChatItem t = this.getSelectedItem();
-        if (t.mValue.getMessages().getAll().size() != 0) {
+        if (!t.mValue.getMessages().isEmpty()) {
             String text = Tr.tr("Permanently delete all messages in this chat?");
+            if (t.mValue.isGroupChat())
+                text += "\n\n"+Tr.tr("You will automatically leave this group.");
             if (!Utils.confirmDeletion(this, text))
                 return;
         }
@@ -168,8 +173,8 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
             mTitleLabel = new WebLabel();
             mTitleLabel.setFontSize(14);
-            if (chat.isGroupChat())
-                mTitleLabel.setForeground(View.DARK_GREEN);
+            if (mValue.isGroupChat())
+                    mTitleLabel.setForeground(View.DARK_GREEN);
             this.add(mTitleLabel, BorderLayout.NORTH);
 
             mStatusLabel = new WebLabel();
@@ -212,13 +217,13 @@ final class ChatListView extends Table<ChatItem, Chat> {
         }
 
         private void updateView(Object arg) {
-            if (arg == null || arg instanceof Contact || arg instanceof String) {
+            if (arg == null || arg instanceof Contact ||
+                    arg instanceof String || arg instanceof GroupCommand) {
                 mTitleLabel.setText(Utils.chatTitle(mValue));
             }
 
             if (arg == null || arg instanceof KonMessage) {
                 this.updateBG();
-
                 mStatusLabel.setText(lastActivity(mValue, true));
                 ChatListView.this.updateSorting();
             } else if (arg instanceof Boolean) {
@@ -259,7 +264,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
             if (optChat.isPresent() && optChat.get() == mValue)
                 return true;
 
-            for (Contact contact: mValue.getContacts()) {
+            for (Contact contact: mValue.getAllContacts()) {
                 if (contact.getName().toLowerCase().contains(search) ||
                         contact.getJID().string().toLowerCase().contains(search))
                     return true;
@@ -269,20 +274,20 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
         @Override
         public int compareTo(TableItem o) {
-            SortedSet<KonMessage> messages = this.mValue.getMessages().getAll();
-            SortedSet<KonMessage> oMessages = o.mValue.getMessages().getAll();
-            if (!messages.isEmpty() && !oMessages.isEmpty())
-                return -messages.last().getDate().compareTo(oMessages.last().getDate());
+            Optional<KonMessage> m = this.mValue.getMessages().getLast();
+            Optional<KonMessage> oM = o.mValue.getMessages().getLast();
+            if (m.isPresent() && oM.isPresent())
+                return -m.get().getDate().compareTo(oM.get().getDate());
 
             return -Integer.compare(this.mValue.getID(), o.mValue.getID());
         }
     }
 
     private static String lastActivity(Chat chat, boolean pretty) {
-        SortedSet<KonMessage> messageSet = chat.getMessages().getAll();
-        String lastActivity = messageSet.isEmpty() ? Tr.tr("no messages yet") :
-                pretty ? Utils.PRETTY_TIME.format(messageSet.last().getDate()) :
-                Utils.MID_DATE_FORMAT.format(messageSet.last().getDate());
-        return  lastActivity;
+        Optional<KonMessage> optM = chat.getMessages().getLast();
+        String lastActivity = !optM.isPresent() ? Tr.tr("no messages yet") :
+                pretty ? Utils.PRETTY_TIME.format(optM.get().getDate()) :
+                Utils.MID_DATE_FORMAT.format(optM.get().getDate());
+        return lastActivity;
     }
 }

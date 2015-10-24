@@ -211,11 +211,8 @@ final class MainFrame extends WebFrame {
         mAddGroupButton = new ComponentUtils.ToggleButton(
                 // TODO different button
                 Utils.getIcon("ic_ui_add.png"),
-                Tr.tr("Create a new group chat")+" "+
-                        Tr.tr("(coming soon)"),
+                Tr.tr("Create a new group chat"),
                 new ComponentUtils.AddGroupChatPanel(mView, this));
-        // TODO
-        mAddGroupButton.setEnabled(false);
         WebPanel chatPanel = new GroupPanel(GroupingType.fillFirst, false,
                 chatPane, mAddGroupButton);
         chatPanel.setPaintSides(false, false, false, false);
