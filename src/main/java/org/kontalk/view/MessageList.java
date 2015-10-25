@@ -231,7 +231,6 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             super(message);
 
             this.setOpaque(false);
-            this.setMargin(2);
             //this.setBorder(new EmptyBorder(10, 10, 10, 10));
         }
 
@@ -249,7 +248,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 mPanel.setBackground(View.LIGHT_BLUE);
 
             // from label
-            if (mValue.isInMessage()) {
+            if (mValue.isInMessage() && mValue.getChat().isGroupChat()) {
                 mFromLabel = new WebLabel();
                 mFromLabel.setFontSize(12);
                 mFromLabel.setForeground(Color.BLUE);
