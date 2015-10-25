@@ -257,7 +257,7 @@ public final class Client implements StanzaListener, Runnable {
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
 
         if (encrypted) {
-            Optional<byte[]> encryptedData = content.isComplex() ?
+            Optional<byte[]> encryptedData = content.isComplex() || chat.isGroupChat() ?
                         Coder.encryptStanza(message,
                                 rawMessage(content, chat, true).toXML().toString()) :
                         Coder.encryptMessage(message);
