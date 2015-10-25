@@ -35,12 +35,15 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.util.List;
 import java.util.Optional;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.kontalk.model.Chat;
+import org.kontalk.model.Contact;
 import org.kontalk.model.GroupChat;
 import org.kontalk.util.Tr;
+import org.kontalk.view.ComponentUtils.ParticipantsList;
 
 /**
  * Show and edit thread/chat settings.
@@ -58,7 +61,6 @@ final class ChatDetails extends WebPanel {
     private final WebButton mColor;
     private final WebRadioButton mImgOpt;
     private final WebFileChooserField mImgChooser;
-    // TODO group chat
     //WebCheckBoxList mParticipantsList;
 
     ChatDetails(View view, final ComponentUtils.ModalPopup popup, Chat chat) {
@@ -79,6 +81,14 @@ final class ChatDetails extends WebPanel {
         if (chat.isGroupChat()) {
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
                     new WebLabel(Tr.tr("Subject:")), mSubjectField));
+
+            groupPanel.add(new WebLabel(Tr.tr("Participants:")));
+            ParticipantsList mParticipantsList = new ParticipantsList(false);
+            List<Contact> chatContacts = Utils.contactList(mChat);
+            mParticipantsList.setContacts(chatContacts);
+            mParticipantsList.setVisibleRowCount(Math.min(chatContacts.size(), 5));
+            groupPanel.add(new ScrollPane(mParticipantsList, false).setPreferredWidth(160));
+
             groupPanel.add(new WebSeparator(true, true));
         }
         final WebSlider colorSlider = new WebSlider(WebSlider.HORIZONTAL);
@@ -138,44 +148,12 @@ final class ChatDetails extends WebPanel {
         UnselectableButtonGroup.group(mColorOpt, mImgOpt);
         groupPanel.add(new WebSeparator());
 
-//        groupPanel.add(new WebLabel(Tr.tr("Participants:")));
-//        mParticipantsList = new WebCheckBoxList();
-//        mParticipantsList.setVisibleRowCount(10);
-//        for (Contact oneContact : ContactList.getInstance().getAll()) {
-//            boolean selected = mChat.getContact().contains(oneContact);
-//            mParticipantsList.getCheckBoxListModel().addCheckBoxElement(
-//                    new ContactElement(oneContact),
-//                    selected);
-//        }
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
-//        mParticipantsList.getModel().addListDataListener(new ListDataListener() {
-//            @Override
-//            public void intervalAdded(ListDataEvent e) {
-//            }
-//            @Override
-//            public void intervalRemoved(ListDataEvent e) {
-//            }
-//            @Override
-//            public void contentsChanged(ListDataEvent e) {
-//                saveButton.setEnabled(!mParticipantsList.getCheckedValues().isEmpty());
-//            }
-//        });
-//
-//        groupPanel.add(new WebScrollPane(mParticipantsList));
-//        groupPanel.add(new WebSeparator(true, true));
         this.add(groupPanel, BorderLayout.CENTER);
 
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-//                if (mParticipantsList.getCheckedValues().size() > 1) {
-//                        String infoText = Tr.t/r("More than one receiver not supported (yet).");
-//                        WebOptionPane.showMessageDialog(ChatListView.this,
-//                                infoText,
-//                                Tr.t/r("Sorry"),
-//                                WebOptionPane.INFORMATION_MESSAGE);
-//                    return;
-//                }
                 ChatDetails.this.save();
 
                 popup.close();

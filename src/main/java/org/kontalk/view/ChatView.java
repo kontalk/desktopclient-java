@@ -56,11 +56,11 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 import java.io.File;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.Set;
 import javax.swing.Box;
 import javax.swing.JFileChooser;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
@@ -411,9 +411,9 @@ final class ChatView extends WebPanel implements Observer {
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
-        Set<Contact> contacts = chat.getAllContacts();
+        List<Contact> contacts = Utils.contactList(chat);
         mSubTitleLabel.setText(contacts.isEmpty() ? Tr.tr("<Empty>") :
-                chat.isGroupChat() ? Utils.nameOrJID(chat.getAllContacts(), 18) :
+                chat.isGroupChat() ? Utils.displayNames(contacts, 18) :
                 Utils.mainStatus(contacts.iterator().next(), true));
 
         // text area

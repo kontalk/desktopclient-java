@@ -118,9 +118,8 @@ final class Notifier {
         panel.add(new WebLabel(Tr.tr("Contact error")).setBoldFont());
         panel.add(new WebSeparator(true, true));
 
-        panel.add(new WebLabel(Tr.tr("Contact:")));
-        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
-        panel.add(new WebLabel(contactText));
+        panel.add(new WebLabel(Tr.tr("Contact:")).setBoldFont());
+        panel.add(new WebLabel(contactText(contact)));
 
         panel.add(new WebLabel(Tr.tr("Error:")).setBoldFont());
         String errorText = Tr.tr(error.toString());
@@ -146,9 +145,8 @@ final class Notifier {
         panel.add(new WebLabel(Tr.tr("Received new key for contact")).setBoldFont());
         panel.add(new WebSeparator(true, true));
 
-        panel.add(new WebLabel(Tr.tr("Contact:")));
-        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
-        panel.add(new WebLabel(contactText).setBoldFont());
+        panel.add(new WebLabel(Tr.tr("Contact:")).setBoldFont());
+        panel.add(new WebLabel(contactText(contact)));
 
         panel.add(new WebLabel(Tr.tr("Key fingerprint:")));
         WebTextArea fpArea = Utils.createFingerprintArea();
@@ -191,8 +189,7 @@ final class Notifier {
         panel.add(new WebLabel(Tr.tr("Contact was deleted on server")).setBoldFont());
         panel.add(new WebSeparator(true, true));
 
-        String contactText = Utils.name(contact) + " " + Utils.jid(contact, 30, true);
-        panel.add(new WebLabel(contactText).setBoldFont());
+        panel.add(new WebLabel(contactText(contact)).setBoldFont());
 
         String expl = Tr.tr("Remove this contact from your contact list?") + "\n" +
                 View.REMOVE_CONTACT_NOTE;
@@ -276,5 +273,9 @@ final class Notifier {
 
         dialog.setVisible(true);
         NotificationManager.showNotification(dialog, popup);
+    }
+
+    static String contactText(Contact contact){
+        return Utils.name(contact, 20) + " < " + Utils.jid(contact.getJID(), 30)+" >";
     }
 }

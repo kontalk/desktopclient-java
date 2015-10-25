@@ -44,8 +44,8 @@ import java.nio.file.Path;
 import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
@@ -172,57 +172,52 @@ final class Utils {
 
     /* strings */
 
-    static String name(Contact contact) {
-        return contact.isDeleted() ? Tr.tr("<deleted>") :
-                !contact.getName().isEmpty() ? contact.getName() :
-                Tr.tr("<unknown>");
+    static String name(Contact contact, int maxLength) {
+        String name = name_(contact, maxLength);
+        return !name.isEmpty() ? name :
+                "<"+Tr.tr("Unknown")+">";
     }
 
-    static String nameOrJID(Contact contact) {
-        return nameOrJID(contact, Integer.MAX_VALUE);
+    static String displayName(Contact contact) {
+        return displayName(contact, Integer.MAX_VALUE);
     }
 
-    static String nameOrJID(Contact contact, int maxLength) {
-        return contact.isDeleted() ?
-                Tr.tr("<deleted>") :
-                !contact.getName().isEmpty() ?
-                StringUtils.abbreviate(contact.getName(), maxLength) :
-                hashOrJID(contact, maxLength);
+    private static String displayName(Contact contact, int maxLength) {
+        return displayName(contact, contact.getJID(), maxLength);
     }
 
-    static String nameOrJID(Set<Contact> contacts) {
-        return nameOrJID(contacts, Integer.MAX_VALUE);
+    static String displayName(Contact contact, JID jid, int maxLength) {
+        String name = name_(contact, maxLength);
+        return !name.isEmpty() ? name : jid(jid, maxLength);
     }
 
-    static String nameOrJID(Set<Contact> contacts, int maxLength) {
+    private static String displayNames(List<Contact> contacts) {
+        return displayNames(contacts, Integer.MAX_VALUE);
+    }
+
+    static String displayNames(List<Contact> contacts, int maxLength) {
         List<String> nameList = new ArrayList<>(contacts.size());
         for (Contact contact : contacts) {
-            nameList.add(nameOrJID(contact, maxLength));
+            nameList.add(displayName(contact, maxLength));
         }
         return StringUtils.join(nameList, ", ");
     }
 
-    private static String hashOrJID(Contact contact, int maxLength) {
-        JID jid = contact.getJID();
-        return jid.isHash() && jid.string().length() >= 10 ?
-                "[" + jid.string().substring(0, 10) + "]" :
-                jid(contact, maxLength, true);
+    private static String name_(Contact contact, int maxLength) {
+        return contact.isDeleted() ? "("+Tr.tr("Deleted")+")" :
+                contact.isMe() ? Tr.tr("You") :
+                StringUtils.abbreviate(contact.getName(), maxLength);
     }
 
-    static String jid(Contact contact, int maxLength, boolean brackets) {
-        JID jid = contact.getJID();
-        if (brackets)
-            maxLength -= 2;
-        String s = jid.string();
-        if (s.length() > maxLength) {
-            String local = StringUtils.abbreviate(jid.local(), (int) (maxLength * 0.4));
-            String domain = StringUtils.abbreviate(jid.domain(), (int) (maxLength * 0.6));
-            // not precise, adding a character here
-            s = XmppStringUtils.completeJidFrom(local, domain);
-        }
-        if (brackets)
-            s = "<" + s + ">";
-        return s;
+    static String jid(JID jid, int maxLength) {
+        String local = jid.local(), domain = jid.domain();
+        if (jid.isHash())
+            local = "[" + jid.local().substring(0, Math.min(jid.local().length(), 6)) + "]";
+
+        local = StringUtils.abbreviate(local, (int) ((maxLength-1) * 0.4));
+        domain = StringUtils.abbreviate(domain, (int) ((maxLength-1) * 0.6));
+
+        return XmppStringUtils.completeJidFrom(local, domain);
     }
 
     static String chatTitle(Chat chat) {
@@ -230,7 +225,7 @@ final class Utils {
             String subj = chat.getSubject();
             return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
         } else {
-            return Utils.nameOrJID(chat.getAllContacts());
+            return Utils.displayNames(new ArrayList<>(chat.getAllContacts()));
         }
     }
 
@@ -358,7 +353,23 @@ final class Utils {
         return selectedOption == WebOptionPane.OK_OPTION;
     }
 
+    static List<Contact> contactList(Chat chat) {
+        List<Contact> contacts = new ArrayList<>(chat.getAllContacts());
+        contacts.sort(new Comparator<Contact>() {
+            @Override
+            public int compare(Contact c1, Contact c2) {
+                return Utils.compareContacts(c1, c2);
+            }
+        });
+        return contacts;
+    }
+
     static int compareContacts(Contact c1, Contact c2) {
-        return c1.getName().compareToIgnoreCase(c2.getName());
+        if (c1.isMe()) return +1;
+        if (c2.isMe()) return -1;
+
+        String s1 = StringUtils.defaultIfEmpty(c1.getName(), c1.getJID().string());
+        String s2 = StringUtils.defaultIfEmpty(c2.getName(), c2.getJID().string());
+        return s1.compareToIgnoreCase(s2);
     }
 }

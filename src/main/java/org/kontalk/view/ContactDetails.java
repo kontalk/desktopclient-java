@@ -101,7 +101,7 @@ final class ContactDetails extends WebPanel implements Observer {
                 new ComponentUtils.EditableTextField(View.MAX_JID_LENGTH, 20, this) {
             @Override
             protected String labelText() {
-                return Utils.jid(mContact, 28, false);
+                return Utils.jid(mContact.getJID(), 28);
             }
             @Override
             protected String editText() {

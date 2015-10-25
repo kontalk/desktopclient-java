@@ -66,6 +66,7 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
@@ -376,7 +377,7 @@ final class ComponentUtils {
 
         private final View mView;
         private final WebTextField mSubjectField;
-        private final ContactSelectionList mList;
+        private final ParticipantsList mList;
 
         private final WebButton mCreateButton;
 
@@ -403,15 +404,15 @@ final class ComponentUtils {
 
             groupPanel.add(new WebLabel(Tr.tr("Select participants:")+" "));
 
-            mList = new ContactSelectionList();
-            mList.setVisibleRowCount(10);
+            mList = new ParticipantsList();
+            mList.setVisibleRowCount(6);
             mList.addListSelectionListener(new ListSelectionListener() {
                 @Override
                 public void valueChanged(ListSelectionEvent e) {
                     AddGroupChatPanel.this.checkSaveButton();
                 }
             });
-            groupPanel.add(new ScrollPane(mList).setPreferredWidth(200));
+            groupPanel.add(new ScrollPane(mList).setPreferredWidth(160));
 
             this.add(groupPanel, BorderLayout.CENTER);
 
@@ -432,7 +433,7 @@ final class ComponentUtils {
 
         private void checkSaveButton() {
             mCreateButton.setEnabled(!mSubjectField.getText().isEmpty() &&
-                    mList.getSelectedContacts().size() > 1);
+                    !mList.getSelectedContacts().isEmpty());
         }
 
         private void createGroup() {
@@ -444,42 +445,10 @@ final class ComponentUtils {
 
         @Override
         void onShow() {
-            mList.reload();
-        }
-    }
-
-    // Note: https://github.com/mgarin/weblaf/issues/153
-    static class ContactSelectionList extends WebList {
-
-        private final DefaultListModel<Contact> mModel;
-
-        @SuppressWarnings("unchecked")
-        ContactSelectionList() {
-            mModel = new DefaultListModel<>();
-            this.setModel(mModel);
-
-            this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-            this.setSelectionModel(new DefaultListSelectionModel() {
-                @Override
-                public void setSelectionInterval(int index0, int index1) {
-                    if(super.isSelectedIndex(index0)) {
-                        super.removeSelectionInterval(index0, index1);
-                    } else {
-                        super.addSelectionInterval(index0, index1);
-                    }
-                }
-            });
-
-            this.setCellRenderer(new CellRenderer());
-        }
-
-        void reload() {
-            mModel.clear();
-
             Set<Contact> allContacts = ContactList.getInstance().getAll();
             List<Contact> contacts = new LinkedList<>();
             for (Contact c : allContacts) {
-                if (c.isKontalkUser())
+                if (c.isKontalkUser() && !c.isMe())
                     contacts.add(c);
             }
 
@@ -490,8 +459,47 @@ final class ComponentUtils {
                 }
             });
 
+            mList.setContacts(contacts);
+        }
+    }
+
+    // Note: https://github.com/mgarin/weblaf/issues/153
+    static class ParticipantsList extends WebList {
+
+        private final DefaultListModel<Contact> mModel;
+
+        public ParticipantsList() {
+            this(true);
+        }
+
+        @SuppressWarnings("unchecked")
+        ParticipantsList(boolean selectable) {
+            mModel = new DefaultListModel<>();
+            this.setModel(mModel);
+            this.setFixedCellHeight(25);
+
+            this.setEnabled(selectable);
+            if (selectable) {
+                this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                this.setSelectionModel(new DefaultListSelectionModel() {
+                    @Override
+                    public void setSelectionInterval(int index0, int index1) {
+                        if(super.isSelectedIndex(index0)) {
+                            super.removeSelectionInterval(index0, index1);
+                        } else {
+                            super.addSelectionInterval(index0, index1);
+                        }
+                    }
+                });
+            }
+
+            this.setCellRenderer(new CellRenderer());
+        }
+
+        void setContacts(List<Contact> contacts) {
+            mModel.clear();
+
             for (Contact contact : contacts)
-                if (!contact.isMe())
                     mModel.addElement(contact);
         }
 
@@ -507,7 +515,10 @@ final class ComponentUtils {
                     int index,
                     boolean isSelected,
                     boolean cellHasFocus) {
-                this.setText(Utils.nameOrJID(contact, 40));
+                this.setText(" " + Utils.displayName(contact));
+
+                this.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0,Color.LIGHT_GRAY));
+
                 return this;
             }
         }

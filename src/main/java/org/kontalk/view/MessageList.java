@@ -671,15 +671,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
     }
 
     private static String getFromString(InMessage message) {
-        String from;
-        if (!message.getContact().getName().isEmpty()) {
-            from = message.getContact().getName();
-        } else {
-            from = message.getJID().local();
-            if (from.length() > 40)
-                from = from.substring(0, 8) + "...";
-        }
-        return from;
+        return Utils.displayName(message.getContact(), message.getJID(), 40);
     }
 
     private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();
