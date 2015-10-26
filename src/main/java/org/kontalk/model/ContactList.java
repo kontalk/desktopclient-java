@@ -172,8 +172,7 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         return true;
     }
 
-    // TODO test without synchronized
-    private synchronized void changed(Object arg) {
+    private void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
     }

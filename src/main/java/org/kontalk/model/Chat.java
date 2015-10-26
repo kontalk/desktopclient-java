@@ -270,8 +270,7 @@ public abstract class Chat extends Observable implements Observer {
         }
     }
 
-    // TODO try without synchronization
-    protected synchronized void changed(Object arg) {
+    protected void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
     }
