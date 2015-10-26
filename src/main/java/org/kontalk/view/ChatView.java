@@ -133,7 +133,7 @@ final class ChatView extends WebPanel implements Observer {
         titlePanel.add(editButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
-        mScrollPane = new ScrollPane(this)
+        mScrollPane = new ComponentUtils.ScrollPane(this)
                 .setShadeWidth(0);
         mScrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             @Override
@@ -242,7 +242,7 @@ final class ChatView extends WebPanel implements Observer {
         textBarPanel.setPaintBottom(false);
         bottomPanel.add(textBarPanel, BorderLayout.NORTH);
 
-        bottomPanel.add(new ScrollPane(mSendTextArea)
+        bottomPanel.add(new ComponentUtils.ScrollPane(mSendTextArea)
                 .setShadeWidth(0)
                 .setRound(0),
                 BorderLayout.CENTER);

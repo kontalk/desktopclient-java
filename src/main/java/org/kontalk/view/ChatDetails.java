@@ -87,7 +87,7 @@ final class ChatDetails extends WebPanel {
             List<Contact> chatContacts = Utils.contactList(mChat);
             mParticipantsList.setContacts(chatContacts);
             mParticipantsList.setVisibleRowCount(Math.min(chatContacts.size(), 5));
-            groupPanel.add(new ScrollPane(mParticipantsList, false).setPreferredWidth(160));
+            groupPanel.add(new ComponentUtils.ScrollPane(mParticipantsList, false).setPreferredWidth(160));
 
             groupPanel.add(new WebSeparator(true, true));
         }

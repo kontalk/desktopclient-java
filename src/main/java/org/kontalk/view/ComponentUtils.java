@@ -75,6 +75,7 @@ import javax.swing.JList;
 import javax.swing.JRootPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -99,6 +100,24 @@ import org.kontalk.util.XMPPUtils;
 final class ComponentUtils {
 
     private ComponentUtils() {}
+
+    static class ScrollPane extends WebScrollPane {
+
+        ScrollPane(Component component) {
+            this(component, true);
+        }
+
+        ScrollPane(Component component, boolean border) {
+            super(component);
+
+            if (!border)
+                this.setBorder(BorderFactory.createMatteBorder(1, 1, 0, 1, Color.LIGHT_GRAY));
+
+            this.setHorizontalScrollBarPolicy(
+                    ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+            this.getVerticalScrollBar().setUnitIncrement(25);
+        }
+    }
 
     static class StatusDialog extends WebDialog {
 

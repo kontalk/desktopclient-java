@@ -320,7 +320,7 @@ final class MainFrame extends WebFrame {
     private static WebScrollPane createTablePane(final Table<?, ?> table,
             String overlayText) {
 
-        WebScrollPane scrollPane = new ScrollPane(table);
+        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(table);
         scrollPane.setDrawBorder(false);
         // overlay for empty list
         WebOverlay listOverlayPanel = new WebOverlay(scrollPane);
