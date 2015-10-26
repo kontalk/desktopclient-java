@@ -175,7 +175,7 @@ final class Utils {
     static String name(Contact contact, int maxLength) {
         String name = name_(contact, maxLength);
         return !name.isEmpty() ? name :
-                "<"+Tr.tr("Unknown")+">";
+                "("+Tr.tr("Unknown")+")";
     }
 
     static String displayName(Contact contact) {

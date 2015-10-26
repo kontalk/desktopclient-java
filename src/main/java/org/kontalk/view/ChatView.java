@@ -412,7 +412,7 @@ final class ChatView extends WebPanel implements Observer {
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
         List<Contact> contacts = Utils.contactList(chat);
-        mSubTitleLabel.setText(contacts.isEmpty() ? Tr.tr("<Empty>") :
+        mSubTitleLabel.setText(contacts.isEmpty() ? "("+Tr.tr("Empty")+")" :
                 chat.isGroupChat() ? Utils.displayNames(contacts, 18) :
                 Utils.mainStatus(contacts.iterator().next(), true));
 
