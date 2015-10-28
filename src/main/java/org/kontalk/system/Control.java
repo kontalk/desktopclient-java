@@ -654,7 +654,7 @@ public final class Control {
             for (Contact c: contacts)
                 jids.add(c.getJID());
             this.createAndSendMessage(chat,
-                    new MessageContent(
+                    MessageContent.groupCommand(
                             GroupCommand.create(jids.toArray(new JID[0]),subject)
                     )
             );
@@ -664,7 +664,7 @@ public final class Control {
             if (chat.isGroupChat() && chat.isValid()) {
                 // note: group chats are not 'deleted', were just leaving them
                 boolean sent = this.createAndSendMessage(chat,
-                        new MessageContent(GroupCommand.leave()));
+                        MessageContent.groupCommand(GroupCommand.leave()));
 
                 if (!sent)
                     // TODO tell view (and/or delete chat when message was sent)
@@ -679,7 +679,7 @@ public final class Control {
                 LOGGER.warning("not admin");
                 return;
             }
-            this.createAndSendMessage(chat, new MessageContent(
+            this.createAndSendMessage(chat, MessageContent.groupCommand(
                     GroupCommand.set(new JID[0], new JID[0], subject)));
 
             chat.setSubject(subject);
@@ -717,8 +717,9 @@ public final class Control {
                     return;
             }
             MessageContent content =
-                    attachment == null ? new MessageContent(text) :
-                    new MessageContent(text, attachment);
+                    attachment == null ?
+                    MessageContent.plainText(text) :
+                    MessageContent.outgoing(text, attachment);
 
             this.createAndSendMessage(chat, content);
         }

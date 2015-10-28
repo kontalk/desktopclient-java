@@ -408,7 +408,7 @@ final class Decryptor {
             decryptedContent = KonMessageListener.parseMessageContent(m);
         } else {
             // text/plain MIME type for simple text messages
-            decryptedContent = new MessageContent(content);
+            decryptedContent = MessageContent.plainText(content);
         }
 
         message.setSecurityErrors(errors);

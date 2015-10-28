@@ -231,22 +231,21 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         // group command
-        Optional<GID> optGID = Optional.empty();
-        Optional<GroupCommand> optCom = Optional.empty();
+        GID gid = null;
+        GroupCommand groupCommand = null;
         ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME,
                 GroupExtension.NAMESPACE);
         if (groupExt instanceof GroupExtension) {
             GroupExtension group = (GroupExtension) groupExt;
-            optGID = Optional.of(new GID(JID.bare(group.getOwner()), group.getID()));
-            optCom = ClientUtils.groupExtensionToGroupCommand(
-                    group.getCommand(), group.getMember(), group.getSubject());
+            gid = new GID(JID.bare(group.getOwner()), group.getID());
+            groupCommand = ClientUtils.groupExtensionToGroupCommand(
+                    group.getCommand(), group.getMember(), group.getSubject()).orElse(null);
         }
 
-        return new MessageContent(plainText,
-                encrypted,
-                attachment,
-                preview,
-                optGID.orElse(null),
-                optCom.orElse(null));
+        return new MessageContent.Builder(plainText, encrypted)
+                .attachment(attachment)
+                .preview(preview)
+                .gid(gid)
+                .groupCommand(groupCommand).build();
     }
 }

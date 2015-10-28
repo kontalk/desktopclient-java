@@ -39,8 +39,6 @@ import org.kontalk.util.EncodingUtils;
  * All possible content a message can contain.
  * Recursive: A message can contain a decrypted message.
  *
- * TODO needs builder class
- *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public class MessageContent {
@@ -70,37 +68,29 @@ public class MessageContent {
 
     // used for decrypted content of incoming messages, outgoing messages
     // and as fallback
-    public MessageContent(String plainText) {
-        this(plainText, "", null, null, null, null);
+    public static MessageContent plainText(String plainText) {
+        return new Builder(plainText, "").build();
     }
 
     // used for outgoing messages
-    public MessageContent(String plainText, Attachment attachment) {
-        this(plainText, "", attachment, null, null, null);
+    public static MessageContent outgoing(String plainText, Attachment attachment) {
+        return new Builder(plainText, "").attachment(attachment).build();
     }
 
     // used for outgoing group commands
-    public MessageContent(GroupCommand group) {
-        this("", "", null, null, null, group);
-    }
-
-    // used for incoming messages
-    public MessageContent(String plainText, String encrypted,
-            Attachment attachment, Preview preview, GID gid, GroupCommand group) {
-        this(plainText, encrypted, attachment, preview, gid, group, null);
+    public static MessageContent groupCommand(GroupCommand group) {
+        return new Builder("", "").groupCommand(group).build();
     }
 
     // used when loading from db
-    private MessageContent(String plainText, String encrypted,
-            Attachment attachment, Preview preview, GID gid, GroupCommand group,
-            MessageContent decryptedContent) {
-        mPlainText = plainText;
-        mEncryptedContent = encrypted;
-        mOptAttachment = Optional.ofNullable(attachment);
-        mOptPreview = Optional.ofNullable(preview);
-        mOptGroupCommand = Optional.ofNullable(group);
-        mOptDecryptedContent = Optional.ofNullable(decryptedContent);
-        mOptGID = Optional.ofNullable(gid);
+    private MessageContent(Builder builder) {
+        mPlainText = builder.mPlainText;
+        mEncryptedContent = builder.mEncrypted;
+        mOptAttachment = Optional.ofNullable(builder.mAttachment);
+        mOptPreview = Optional.ofNullable(builder.mPreview);
+        mOptGID = Optional.ofNullable(builder.mGID);
+        mOptGroupCommand = Optional.ofNullable(builder.mGroup);
+        mOptDecryptedContent = Optional.ofNullable(builder.mDecrypted);
     }
 
     /**
@@ -190,7 +180,7 @@ public class MessageContent {
     @Override
     public String toString() {
         return "CONT:plain="+mPlainText+",encr="+mEncryptedContent
-                +",att="+mOptAttachment+",gc="+mOptGroupCommand
+                +",att="+mOptAttachment+",gid="+mOptGID+",gc="+mOptGroupCommand
                 +",decr="+mOptDecryptedContent;
     }
 
@@ -241,16 +231,14 @@ public class MessageContent {
                     null :
                     fromJSONString(jsonDecryptedContent);
 
-            return new MessageContent(plainText,
-                    encrypted,
-                    attachment,
-                    preview,
-                    null,
-                    groupCommand,
-                    decryptedContent);
+            return new Builder(plainText, encrypted)
+                    .attachment(attachment)
+                    .preview(preview)
+                    .groupCommand(groupCommand)
+                    .decryptedContent(decryptedContent).build();
         } catch(ClassCastException ex) {
             LOGGER.log(Level.WARNING, "can't parse JSON message content", ex);
-            return new MessageContent("");
+            return plainText("");
         }
     }
 
@@ -598,6 +586,37 @@ public class MessageContent {
         @Override
         public String toString() {
             return "{GC:op="+mOP+",subj="+mSubject+"}";
+        }
+    }
+
+    public static class Builder {
+        final String mPlainText;
+        final String mEncrypted;
+
+        private Attachment mAttachment = null;
+        private Preview mPreview = null;
+        private GID mGID = null;
+        private GroupCommand mGroup = null;
+        private MessageContent mDecrypted = null;
+
+        public Builder(String plainText, String encrypted) {
+            this.mPlainText = plainText;
+            this.mEncrypted = encrypted;
+        }
+
+        public Builder attachment(Attachment attachment) {
+            mAttachment = attachment; return this; };
+        public Builder preview(Preview preview) {
+            mPreview = preview; return this; };
+        public Builder gid(GID gid) {
+            mGID = gid; return this; };
+        public Builder groupCommand(GroupCommand group) {
+            mGroup = group; return this; };
+        private Builder decryptedContent(MessageContent decrypted) {
+            mDecrypted = decrypted; return this; };
+
+        public MessageContent build() {
+            return new MessageContent(this);
         }
     }
 }
