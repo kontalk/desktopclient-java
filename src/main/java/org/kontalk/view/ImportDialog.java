@@ -212,7 +212,7 @@ final class ImportDialog extends WebDialog {
             // text field for passphrase
             groupPanel.add(new WebLabel(Tr.tr("Decryption password for key:")));
             mPassField = new WebPasswordField(42);
-            mPassField.setInputPrompt(Tr.tr("Enter password..."));
+            mPassField.setInputPrompt(Tr.tr("Enter password…"));
             mPassField.setHideInputPromptOnFocus(false);
             mPassField.getDocument().addDocumentListener(new DocumentChangeListener() {
                 @Override

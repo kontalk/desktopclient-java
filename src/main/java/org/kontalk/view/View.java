@@ -222,7 +222,7 @@ public final class View implements Observer {
         Control.Status status = mControl.getCurrentStatus();
         switch (status) {
             case CONNECTING:
-                mStatusBarLabel.setText(Tr.tr("Connecting..."));
+                mStatusBarLabel.setText(Tr.tr("Connecting…"));
                 break;
             case CONNECTED:
                 mChatView.setColor(Color.WHITE);
@@ -230,7 +230,7 @@ public final class View implements Observer {
                 NotificationManager.hideAllNotifications();
                 break;
             case DISCONNECTING:
-                mStatusBarLabel.setText(Tr.tr("Disconnecting..."));
+                mStatusBarLabel.setText(Tr.tr("Disconnecting…"));
                 break;
             case DISCONNECTED:
                 mChatView.setColor(Color.LIGHT_GRAY);
@@ -280,7 +280,7 @@ public final class View implements Observer {
             }
         });
         // blocking
-        LOGGER.info("asking for password...");
+        LOGGER.info("asking for password…");
         dialog.setVisible(true);
 
         Object value = passPane.getValue();

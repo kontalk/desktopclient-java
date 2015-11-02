@@ -264,7 +264,7 @@ final class Utils {
                 errorText = Tr.tr("Can't open key archive.");
                 break;
             case IMPORT_READ_FILE:
-                errorText = Tr.tr("Can't load keyfile(s) from archive.");
+                errorText = Tr.tr("Can't load all keyfiles from archive.");
                 break;
             case IMPORT_KEY:
                 errorText = Tr.tr("Can't create personal key from key files.") + " ";

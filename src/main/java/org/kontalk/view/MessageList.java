@@ -567,11 +567,11 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                         linkPath);
             } else {
                 // status text
-                String statusText = Tr.tr("loading...");
+                String statusText = Tr.tr("loading…");
                 switch (att.getDownloadProgress()) {
                     case -1: statusText = Tr.tr("stalled"); break;
                     case 0:
-                    case -2: statusText = Tr.tr("downloading..."); break;
+                    case -2: statusText = Tr.tr("downloading…"); break;
                     case -3: statusText = Tr.tr("download failed"); break;
                 }
                 mAttPanel.setStatus(statusText);

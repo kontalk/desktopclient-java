@@ -236,7 +236,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 KonChatState state = (KonChatState) arg;
                 String stateText = null;
                 switch(state.getState()) {
-                    case composing: stateText = Tr.tr("is writing..."); break;
+                    case composing: stateText = Tr.tr("is writing…"); break;
                     //case paused: activity = T/r.tr("stopped typing"); break;
                     //case inactive: stateText = T/r.tr("is inactive"); break;
                 }

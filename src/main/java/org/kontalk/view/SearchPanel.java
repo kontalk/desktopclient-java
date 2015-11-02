@@ -38,7 +38,7 @@ final class SearchPanel extends WebPanel {
 
     SearchPanel(final Table[] tables, final ChatView chatView) {
         mSearchField = new WebTextField();
-        mSearchField.setInputPrompt(Tr.tr("Search..."));
+        mSearchField.setInputPrompt(Tr.tr("Search…"));
         mSearchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {

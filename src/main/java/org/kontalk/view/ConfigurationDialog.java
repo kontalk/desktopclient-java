@@ -306,7 +306,7 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             mChatStateBox = createCheckBox(Tr.tr("Send chatstate notification"),
-                    Tr.tr("Send chat activity (typing,...) to other user"),
+                    Tr.tr("Send chat activity (typing,…) to other user"),
                     mConf.getBoolean(Config.NET_SEND_CHAT_STATE));
             groupPanel.add(new GroupPanel(mChatStateBox, new WebSeparator()));
 
