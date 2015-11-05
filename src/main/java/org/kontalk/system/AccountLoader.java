@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.NoSuchProviderException;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -38,6 +39,7 @@ import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.crypto.X509Bridge;
 
 public final class AccountLoader {
     private static final Logger LOGGER = Logger.getLogger(AccountLoader.class.getName());
@@ -80,12 +82,10 @@ public final class AccountLoader {
 
     public void importAccount(String zipFilePath, char[] password) throws KonException {
         byte[] privateKeyData;
-        byte[] bridgeCertData;
 
         // read key files
         try (ZipFile zipFile = new ZipFile(zipFilePath)) {
             privateKeyData = AccountLoader.readBytesFromZip(zipFile, PRIVATE_KEY_FILENAME);
-            bridgeCertData = AccountLoader.readBytesFromZip(zipFile, BRIDGE_CERT_FILENAME);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't open zip archive: ", ex);
             throw new KonException(KonException.Error.IMPORT_ARCHIVE, ex);
@@ -97,20 +97,31 @@ public final class AccountLoader {
         try {
             encodedPrivateKey = PGPUtils.disarm(privateKeyData);
             key = PersonalKey.load(encodedPrivateKey,
-                    password,
-                    bridgeCertData);
+                    password);
         } catch (PGPException | IOException | CertificateException |
                 NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't import personal key", ex);
             throw new KonException(KonException.Error.IMPORT_KEY, ex);
         }
 
-        // key seems valid. Copy to config dir
+        // key seems valid. Save to config dir
+        byte[] bridgeCertData;
+        try {
+            bridgeCertData = X509Bridge.encode(key.getBridgeCertificate());
+        } catch (CertificateEncodingException | IOException ex) {
+            LOGGER.log(Level.WARNING, "can't encode bridge certificaate");
+            throw new KonException(KonException.Error.IMPORT_KEY, ex);
+        }
         this.writeBytesToFile(bridgeCertData, BRIDGE_CERT_FILENAME, false);
         this.writePrivateKey(encodedPrivateKey, password, new char[0]);
 
         // success! use the new key
         mKey = key;
+
+        // parse JID from user ID in key, could be wrong, e.g. an email address
+        // overwritten when connecting to server
+        String address = PGPUtils.parseUID(key.getUserId())[2];
+        Config.getInstance().setProperty(Config.ACC_JID, address);
     }
 
     public void setPassword(char[] oldPassword, char[] newPassword) throws KonException {
@@ -152,7 +163,7 @@ public final class AccountLoader {
     }
 
     public boolean isPasswordProtected() {
-        // use configuration option to determine this
+        // using configuration option to determine this
         return mConf.getString(Config.ACC_PASS).isEmpty();
     }
 

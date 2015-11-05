@@ -517,6 +517,7 @@ public final class Control {
 
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
             if (!AccountLoader.getInstance().accountIsPresent()) {
+                LOGGER.info("no account found, asking for import...");
                 this.changed(new ViewEvent.MissingAccount(connect));
                 return;
             }
