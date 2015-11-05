@@ -18,12 +18,17 @@
 
 package org.kontalk.crypto;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
+import java.security.SignatureException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Iterator;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyPair;
@@ -34,6 +39,7 @@ import org.bouncycastle.openpgp.PGPSecretKeyRing;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
 import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
+import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.util.encoders.Hex;
 import org.kontalk.misc.KonException;
 
@@ -98,6 +104,15 @@ public final class PersonalKey {
         return Hex.toHexString(mAuthKey.getPublicKey().getFingerprint()).toUpperCase();
     }
 
+    /** Creates a {@link PersonalKey} from private keyring data.
+     * X.509 bridge certificate is created from key data.
+     */
+    public static PersonalKey load(byte[] privateKeyData,
+            char[] passphrase)
+        throws KonException, IOException, PGPException, CertificateException, NoSuchProviderException {
+        return load(privateKeyData, passphrase, null);
+    }
+
     /** Creates a {@link PersonalKey} from private keyring data. */
     @SuppressWarnings("unchecked")
     public static PersonalKey load(byte[] privateKeyData,
@@ -146,8 +161,31 @@ public final class PersonalKey {
         PGPKeyPair encryptKeyPair = PGPUtils.decrypt(encrKey, decryptor);
 
         // X.509 bridge certificate
-        X509Certificate bridgeCert = PGPUtils.loadX509Cert(bridgeCertData);
+        X509Certificate bridgeCert = bridgeCertData == null ?
+                createX509Certificate(authKeyPair, signKeyPair, encryptKeyPair) :
+                PGPUtils.loadX509Cert(bridgeCertData);
 
         return new PersonalKey(authKeyPair, signKeyPair, encryptKeyPair, bridgeCert);
+    }
+
+    private static X509Certificate createX509Certificate(
+            PGPKeyPair authKP,
+            PGPKeyPair signKP,
+            PGPKeyPair encryptKP) throws IOException, KonException {
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        authKP.getPublicKey().encode(out);
+        signKP.getPublicKey().encode(out);
+        encryptKP.getPublicKey().encode(out);
+        byte[] publicKeyRingData = out.toByteArray();
+
+        try {
+            return X509Bridge.createCertificate(authKP, publicKeyRingData);
+        } catch (InvalidKeyException | IllegalStateException | NoSuchAlgorithmException |
+                SignatureException | CertificateException | NoSuchProviderException |
+                PGPException | IOException | OperatorCreationException ex) {
+            LOGGER.log(Level.WARNING, "can't create X.509 certificate");
+            throw new KonException(KonException.Error.LOAD_KEY, ex);
+        }
     }
 }

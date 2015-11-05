@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.Security;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -173,16 +174,26 @@ public final class PGPUtils {
 
     public static X509Certificate loadX509Cert(byte[] certData)
             throws CertificateException, NoSuchProviderException {
+
         CertificateFactory certFactory = CertificateFactory.getInstance("X.509", PROVIDER);
         InputStream in = new ByteArrayInputStream(certData);
+
         return (X509Certificate) certFactory.generateCertificate(in);
     }
 
-    /** Convert a PGP to a JCA key. */
+    private static void ensureKeyConverter() {
+        if (sKeyConverter == null)
+            sKeyConverter = new JcaPGPKeyConverter().setProvider(PGPUtils.PROVIDER);
+    }
+
     static PrivateKey convertPrivateKey(PGPPrivateKey key) throws PGPException {
-    	if (sKeyConverter == null)
-    		sKeyConverter = new JcaPGPKeyConverter().setProvider(PGPUtils.PROVIDER);
+        ensureKeyConverter();
     	return sKeyConverter.getPrivateKey(key);
+    }
+
+    static PublicKey convertPublicKey(PGPPublicKey key) throws PGPException {
+        ensureKeyConverter();
+        return sKeyConverter.getPublicKey(key);
     }
 
     private static int getKeyFlags(PGPPublicKey key) {
