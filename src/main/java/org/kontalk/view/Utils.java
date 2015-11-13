@@ -292,7 +292,7 @@ final class Utils {
                         errorText = Tr.tr("Can't load key files from configuration directory.");
                         break;
                 }
-                errorText += " " + Tr.tr("Please reimport your key.");
+                errorText += eol + Tr.tr("Please reimport your key.");
                 break;
             case LOAD_KEY_DECRYPT:
                 errorText = Tr.tr("Can't decrypt key. Is the passphrase correct?");
@@ -338,7 +338,6 @@ final class Utils {
             default:
                 errorText = Tr.tr("Unusual error:")+" "+ex.getError();
         }
-        errorText.chars();
         return errorText;
     }
 

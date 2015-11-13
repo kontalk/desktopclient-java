@@ -75,9 +75,8 @@ final class Notifier {
             mView.showPasswordDialog(true);
             return;
         }
-        String errorText = Utils.getErrorText(ex);
         Icon icon = NotificationIcon.error.getIcon();
-        NotificationManager.showNotification(errorText, icon);
+        NotificationManager.showNotification(textArea(Utils.getErrorText(ex)), icon);
     }
 
     // TODO more information for message exs
@@ -129,11 +128,7 @@ final class Notifier {
                 break;
         }
 
-        WebTextArea explArea = new WebTextArea(errorText, 3, 30);
-        explArea.setEditable(false);
-        explArea.setLineWrap(true);
-        explArea.setWrapStyleWord(true);
-        panel.add(explArea);
+        panel.add(textArea(errorText));
 
         NotificationManager.showNotification(panel, NotificationOption.cancel);
     }
@@ -154,11 +149,7 @@ final class Notifier {
         panel.add(fpArea);
 
         String expl = Tr.tr("When declining the key further communication to and from this contact will be blocked.");
-        WebTextArea explArea = new WebTextArea(expl, 3, 30);
-        explArea.setEditable(false);
-        explArea.setLineWrap(true);
-        explArea.setWrapStyleWord(true);
-        panel.add(explArea);
+        panel.add(textArea(expl));
 
         WebNotificationPopup popup = NotificationManager.showNotification(panel,
                 NotificationOption.accept, NotificationOption.decline,
@@ -193,11 +184,7 @@ final class Notifier {
 
         String expl = Tr.tr("Remove this contact from your contact list?") + "\n" +
                 View.REMOVE_CONTACT_NOTE;
-        WebTextArea explArea = new WebTextArea(expl, 3, 30);
-        explArea.setEditable(false);
-        explArea.setLineWrap(true);
-        explArea.setWrapStyleWord(true);
-        panel.add(explArea);
+        panel.add(textArea(expl));
 
         WebNotificationPopup popup = NotificationManager.showNotification(panel,
                 NotificationOption.yes, NotificationOption.no,
@@ -275,7 +262,16 @@ final class Notifier {
         NotificationManager.showNotification(dialog, popup);
     }
 
-    static String contactText(Contact contact){
+    private static String contactText(Contact contact){
         return Utils.name(contact, 20) + " < " + Utils.jid(contact.getJID(), 30)+" >";
+    }
+
+    private static WebTextArea textArea(String text) {
+        WebTextArea textArea = new WebTextArea(0, 30);
+        textArea.setEditable(false);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setText(text);
+        return textArea;
     }
 }
