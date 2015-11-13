@@ -297,9 +297,6 @@ final class Utils {
             case LOAD_KEY_DECRYPT:
                 errorText = Tr.tr("Can't decrypt key. Is the passphrase correct?");
                 break;
-            case CLIENT_CONNECTION:
-                errorText = Tr.tr("Can't create connection");
-                break;
             case CLIENT_CONNECT:
                 errorText = Tr.tr("Can't connect to server.");
                 if (ex.getExceptionClass().equals(SmackException.ConnectionException.class)) {

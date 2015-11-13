@@ -35,7 +35,6 @@ public final class KonException extends Exception {
         READ_FILE,
         LOAD_KEY,
         LOAD_KEY_DECRYPT,
-        CLIENT_CONNECTION,
         CLIENT_CONNECT,
         CLIENT_LOGIN,
         CLIENT_ERROR,
