@@ -52,6 +52,12 @@ public final class KonConnection extends XMPPTCPConnection {
 
     private static final String RESSOURCE = "Kontalk_Desktop";
 
+    private final boolean mHasLoginCredentials;
+
+    public KonConnection(EndpointServer server, boolean validateCertificate) {
+        this(server, null, null, validateCertificate);
+    }
+
     public KonConnection(EndpointServer server,
             PrivateKey privateKey,
             X509Certificate bridgeCert,
@@ -62,6 +68,8 @@ public final class KonConnection extends XMPPTCPConnection {
                 bridgeCert,
                 validateCertificate)
         );
+
+        mHasLoginCredentials = privateKey != null && bridgeCert != null;
 
         // blacklist PLAIN mechanism
         SASLAuthentication.blacklistSASLMechanism("PLAIN");
@@ -100,13 +108,16 @@ public final class KonConnection extends XMPPTCPConnection {
             .setSecurityMode(SecurityMode.required);
 
         // setup SSL
-        if (!validateCertificate)
+        SSLContext sslContext = null;
+        if (!validateCertificate) {
             LOGGER.warning("disabling SSL certificate validation");
+        }
         try {
-            SSLContext sslContext = TrustUtils.getCustomSSLContext(privateKey,
+            sslContext = privateKey == null || bridgeCert == null ?
+                    TrustUtils.getCustomSSLContext(validateCertificate) :
+                    TrustUtils.getCustomSSLContext(privateKey,
                     bridgeCert,
                     validateCertificate);
-            builder.setCustomSSLContext(sslContext);
             // Note: SASL EXTERNAL is already enabled in Smack
         } catch (NoSuchAlgorithmException |
                 KeyStoreException |
@@ -117,6 +128,9 @@ public final class KonConnection extends XMPPTCPConnection {
                 NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't setup SSL connection", ex);
         }
+
+        if (sslContext != null)
+            builder.setCustomSSLContext(sslContext);
 
         return builder.build();
     }
@@ -129,5 +143,9 @@ public final class KonConnection extends XMPPTCPConnection {
 
     String getServer() {
         return this.getConfiguration().getServiceName();
+    }
+
+    boolean hasLoginCredentials() {
+        return mHasLoginCredentials;
     }
 }

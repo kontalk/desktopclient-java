@@ -26,7 +26,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterListener;
@@ -91,8 +90,15 @@ public final class Client implements StanzaListener, Runnable {
         //SmackConfiguration.DEBUG = true;
     }
 
+    /** Connect to server without logging in. */
+    public void connect() {
+        this.connect(null);
+    }
+
     public void connect(PersonalKey key) {
         this.disconnect();
+
+        LOGGER.config("connecting...");
         mControl.setStatus(Control.Status.CONNECTING);
 
         Config config = Config.getInstance();
@@ -105,17 +111,12 @@ public final class Client implements StanzaListener, Runnable {
         boolean validateCertificate = config.getBoolean(Config.SERV_CERT_VALIDATION);
 
         // create connection
-        try {
-            mConn = new KonConnection(server,
-                    key.getBridgePrivateKey(),
-                    key.getBridgeCertificate(),
-                    validateCertificate);
-        } catch (PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't create connection", ex);
-            mControl.setStatus(Control.Status.FAILED);
-            mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECTION, ex));
-            return;
-        }
+        mConn = key == null ?
+                new KonConnection(server, validateCertificate) :
+                new KonConnection(server,
+                        key.getServerLoginKey(),
+                        key.getBridgeCertificate(),
+                        validateCertificate);
 
         // connection listener
         mConn.addConnectionListener(new KonConnectionListener(mControl));
@@ -174,23 +175,26 @@ public final class Client implements StanzaListener, Runnable {
                 return;
             }
 
-            // login
-            try {
-                mConn.login();
-            } catch (XMPPException | SmackException | IOException ex) {
-                LOGGER.log(Level.WARNING, "can't login on "+mConn.getServer(), ex);
-                mConn.disconnect();
-                mControl.setStatus(Control.Status.FAILED);
-                mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
-                return;
+            if  (mConn.hasLoginCredentials()) {
+                // login
+                try {
+                    mConn.login();
+                } catch (XMPPException | SmackException | IOException ex) {
+                    LOGGER.log(Level.WARNING, "can't login on "+mConn.getServer(), ex);
+                    mConn.disconnect();
+                    mControl.setStatus(Control.Status.FAILED);
+                    mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
+                    return;
+                }
             }
         }
 
         mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
 
-        this.sendInitialPresence();
-
-        this.sendBlocklistRequest();
+        if (mConn.isAuthenticated()) {
+            this.sendInitialPresence();
+            this.sendBlocklistRequest();
+        }
 
         mControl.setStatus(Control.Status.CONNECTED);
     }

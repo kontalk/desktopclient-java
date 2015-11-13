@@ -27,8 +27,6 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -36,7 +34,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
-import org.bouncycastle.openpgp.PGPException;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
@@ -216,7 +213,7 @@ public class AttachmentManager implements Runnable {
             mControl.handleException(ex);
             return;
         }
-        
+
         if (path.toString().isEmpty()) {
             LOGGER.warning("file path is empty");
             return;
@@ -385,18 +382,9 @@ public class AttachmentManager implements Runnable {
             return null;
         }
         PersonalKey key = optKey.get();
-        PrivateKey privateKey;
-        try {
-            privateKey = key.getBridgePrivateKey();
-        } catch (PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't get private bridge key", ex);
-            return null;
-        }
-        X509Certificate bridgeCert = key.getBridgeCertificate();
-        boolean validateCertificate = Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION);
 
-        return new HTTPFileClient(privateKey,
-                bridgeCert,
-                validateCertificate);
+        return new HTTPFileClient(key.getServerLoginKey(),
+                key.getBridgeCertificate(),
+                Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
     }
 }

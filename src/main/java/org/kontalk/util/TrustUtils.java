@@ -55,6 +55,11 @@ public class TrustUtils {
     private static TrustManager BLIND_TM = null;
     private static KeyStore MERGED_TS = null;
 
+    public static SSLContext getCustomSSLContext(boolean validateCertificate)
+            throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
+        return getCustomSSLContext(null, validateCertificate);
+    }
+
     /**
      * Get a custom SSL context for secure server connections. The key store of
      * the context contains the private key and bridge certificate. The trust
@@ -85,7 +90,11 @@ public class TrustUtils {
         kmFactory.init(keystore, new char[0]);
 
         KeyManager[] km = kmFactory.getKeyManagers();
+        return getCustomSSLContext(km, validateCertificate);
+    }
 
+    private static SSLContext getCustomSSLContext(KeyManager[] km, boolean validateCertificate)
+            throws NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
         // trust managers
         TrustManager[] tm;
         if (validateCertificate) {

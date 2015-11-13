@@ -50,7 +50,9 @@ public final class PersonalKey {
     private static final Logger LOGGER = Logger.getLogger(PersonalKey.class.getName());
 
     /** (Server) Authentication key. */
-    private final PGPKeyPair mAuthKey;
+    private final PGPPublicKey mAuthKey;
+    /** (Server) Login key. */
+    private final PrivateKey mLoginKey;
     /** Signing key. */
     private final PGPKeyPair mSignKey;
     /** En-/decryption key. */
@@ -61,8 +63,9 @@ public final class PersonalKey {
     private PersonalKey(PGPKeyPair authKP,
             PGPKeyPair signKP,
             PGPKeyPair encryptKP,
-            X509Certificate bridgeCert) {
-        mAuthKey = authKP;
+            X509Certificate bridgeCert) throws PGPException {
+        mAuthKey = authKP.getPublicKey();
+        mLoginKey = PGPUtils.convertPrivateKey(authKP.getPrivateKey());
         mSignKey = signKP;
         mEncryptKey = encryptKP;
         mBridgeCert = bridgeCert;
@@ -88,20 +91,20 @@ public final class PersonalKey {
         return mBridgeCert;
     }
 
-    public PrivateKey getBridgePrivateKey() throws PGPException {
-    	return PGPUtils.convertPrivateKey(mAuthKey.getPrivateKey());
+    public PrivateKey getServerLoginKey() {
+        return mLoginKey;
     }
 
     /** Returns the first user ID in the key. */
     public String getUserId() {
-        Iterator<?> uidIt = mAuthKey.getPublicKey().getUserIDs();
+        Iterator<?> uidIt = mAuthKey.getUserIDs();
         if (!uidIt.hasNext())
             throw new IllegalStateException("no UID in personal key");
         return (String) uidIt.next();
     }
 
     public String getFingerprint() {
-        return Hex.toHexString(mAuthKey.getPublicKey().getFingerprint()).toUpperCase();
+        return Hex.toHexString(mAuthKey.getFingerprint()).toUpperCase();
     }
 
     /** Creates a {@link PersonalKey} from private keyring data.
