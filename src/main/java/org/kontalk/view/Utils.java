@@ -268,10 +268,10 @@ final class Utils {
                 break;
             case IMPORT_KEY:
                 errorText = Tr.tr("Can't create personal key from key files.") + " ";
-                if (ex.getExceptionClass().equals(IOException.class)) {
+                if (ex.getCauseClass().equals(IOException.class)) {
                     errorText += eol + Tr.tr("Is the public key file valid?");
                 }
-                if (ex.getExceptionClass().equals(CertificateException.class)) {
+                if (ex.getCauseClass().equals(CertificateException.class)) {
                     errorText += eol + Tr.tr("Are all key files valid?");
                 }
                 break;
@@ -299,19 +299,27 @@ final class Utils {
                 break;
             case CLIENT_CONNECT:
                 errorText = Tr.tr("Can't connect to server.");
-                if (ex.getExceptionClass().equals(SmackException.ConnectionException.class)) {
+
+                if (ex.getCauseClass().equals(SmackException.ConnectionException.class)) {
                     errorText += eol + Tr.tr("Is the server address correct?");
-                }
-                if (ex.getExceptionClass().equals(SSLHandshakeException.class)) {
+                } else if (ex.getCauseClass().equals(SSLHandshakeException.class)) {
                     errorText += eol + Tr.tr("The server rejects the key.");
-                }
-                if (ex.getExceptionClass().equals(SmackException.NoResponseException.class)) {
+                } else if (ex.getCauseClass().equals(SmackException.NoResponseException.class)) {
                     errorText += eol + Tr.tr("The server does not respond.");
+                } else {
+                    Throwable cause = ex.getCause();
+                    if (cause != null) {
+                        Throwable causeCause = cause.getCause();
+                        if (causeCause != null &&
+                                causeCause.getClass().equals(SSLHandshakeException.class)) {
+                            errorText += eol + Tr.tr("The server certificate could not be validated.");
+                        }
+                    }
                 }
                 break;
             case CLIENT_LOGIN:
                 errorText = Tr.tr("Can't login to server.");
-                if (ex.getExceptionClass().equals(SASLErrorException.class)) {
+                if (ex.getCauseClass().equals(SASLErrorException.class)) {
                     errorText += eol + Tr.tr("The server rejects the account. Is the specified server correct and the account valid?");
                 }
                 break;

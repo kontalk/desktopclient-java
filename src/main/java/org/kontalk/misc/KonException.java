@@ -48,22 +48,20 @@ public final class KonException extends Exception {
     }
 
     private final Error mError;
-    private final Class<?> mExceptionClass;
 
     public KonException(Error error, Exception ex) {
-        super();
+        super(ex);
         mError = error;
-        mExceptionClass = ex.getClass();
     }
 
     public KonException(Error error) {
         super();
         mError = error;
-        mExceptionClass = this.getClass();
     }
 
-    public Class<?> getExceptionClass() {
-        return mExceptionClass;
+    public Class<?> getCauseClass() {
+        Throwable cause = this.getCause();
+        return cause == null ? this.getClass() : cause.getClass();
     }
 
     public Error getError() {
