@@ -50,7 +50,8 @@ import org.kontalk.crypto.PGPUtils;
 public class TrustUtils {
     private static final Logger LOGGER = Logger.getLogger(TrustUtils.class.getName());
 
-    private static final String TRUSSTORE_FILE = "truststore.bks";
+    private static final String TRUSTSTORE_FILE = "truststore.bks";
+    private static final String TRUSTSTORE_PASSWD = "123456";
 
     private static TrustManager BLIND_TM = null;
     private static KeyStore MERGED_TS = null;
@@ -135,7 +136,7 @@ public class TrustUtils {
     /**
      * Load own trust store from file and system.
      * Return certificate store containing merged content from own keystore file
-     * (containing certificate for CAcert.org) with system certificates (if any).
+     * (containing certificates for StartCom) with system certificates (if any).
      */
     private static KeyStore getTrustStore() throws KeyStoreException {
         if (MERGED_TS == null) {
@@ -158,8 +159,8 @@ public class TrustUtils {
             // add own certs
             try {
                 KeyStore myTS = KeyStore.getInstance("BKS", PGPUtils.PROVIDER);
-                InputStream in = ClassLoader.getSystemResourceAsStream(TRUSSTORE_FILE);
-                myTS.load(in, "changeit".toCharArray());
+                InputStream in = ClassLoader.getSystemResourceAsStream(TRUSTSTORE_FILE);
+                myTS.load(in, TRUSTSTORE_PASSWD.toCharArray());
                 Enumeration<String> aliases = myTS.aliases();
                 while (aliases.hasMoreElements()) {
                     String alias = aliases.nextElement();
@@ -178,6 +179,10 @@ public class TrustUtils {
                 LOGGER.log(Level.WARNING, "can't add certificates from own truststore", ex);
             }
         }
+
+        //for (String alias : Collections.list(MERGED_TS.aliases()))
+        //    LOGGER.config("ts-alias: "+alias);
+
         return MERGED_TS;
     }
 }
