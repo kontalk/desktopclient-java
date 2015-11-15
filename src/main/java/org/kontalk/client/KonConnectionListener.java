@@ -35,6 +35,7 @@ final class KonConnectionListener implements ConnectionListener {
     private static final Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());
 
     private final Control mControl;
+    private boolean mConnected = false;
 
     KonConnectionListener(Control control) {
         mControl = control;
@@ -43,6 +44,7 @@ final class KonConnectionListener implements ConnectionListener {
     @Override
     public void connected(XMPPConnection connection) {
         LOGGER.info("to "+connection.getHost());
+        mConnected = true;
     }
 
     @Override
@@ -54,11 +56,19 @@ final class KonConnectionListener implements ConnectionListener {
 
     @Override
     public void connectionClosed() {
+        mConnected = false;
         LOGGER.info("connection closed");
     }
 
     @Override
     public void connectionClosedOnError(Exception ex) {
+        // ignore if error occurs on connection attempt (handled by client)
+        boolean connected = mConnected;
+        mConnected = false;
+
+        if (!connected)
+            return;
+
         LOGGER.log(Level.WARNING, "connection closed on error", ex);
         mControl.setStatus(Control.Status.ERROR);
         mControl.handleException(new KonException(KonException.Error.CLIENT_ERROR, ex));
@@ -71,11 +81,13 @@ final class KonConnectionListener implements ConnectionListener {
 
     @Override
     public void reconnectionSuccessful() {
+        mConnected = true;
         LOGGER.info("reconnected");
     }
 
     @Override
     public void reconnectionFailed(Exception e) {
+        mConnected = false;
         LOGGER.info("reconnection failed");
     }
 }
