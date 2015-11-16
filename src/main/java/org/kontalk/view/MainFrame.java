@@ -214,7 +214,8 @@ final class MainFrame extends WebFrame {
                 Tr.tr("Create a new group chat"),
                 new ComponentUtils.AddGroupChatPanel(mView, this));
         WebPanel chatPanel = new GroupPanel(GroupingType.fillFirst, false,
-                chatPane, mAddGroupButton);
+                // temporarily disabling group creation
+                chatPane/*, mAddGroupButton*/);
         chatPanel.setPaintSides(false, false, false, false);
         mTabbedPane.addTab("", chatPanel);
         mTabbedPane.setTabComponentAt(Tab.CHATS.ordinal(),
