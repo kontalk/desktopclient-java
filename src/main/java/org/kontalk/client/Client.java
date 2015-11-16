@@ -44,25 +44,13 @@ import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
-import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
-import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
-import org.kontalk.model.Chat;
 import org.kontalk.misc.JID;
-import org.kontalk.model.GroupChat;
-import org.kontalk.model.GroupChat.GID;
-import org.kontalk.model.KonMessage.Status;
 import org.kontalk.model.OutMessage;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.model.MessageContent.Preview;
-import org.kontalk.model.Transmission;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
-import org.kontalk.util.ClientUtils;
-import org.kontalk.util.EncodingUtils;
 
 /**
  * Network client for an XMPP Kontalk Server.
@@ -80,11 +68,16 @@ public final class Client implements StanzaListener, Runnable {
     private static enum Command {CONNECT, DISCONNECT};
 
     private final Control mControl;
+
+    private final KonMessageSender mMessageSender;
+
     private KonConnection mConn = null;
 
     public Client(Control control) {
         mControl = control;
         //mLimited = limited;
+
+        mMessageSender = new KonMessageSender(this, mControl);
 
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
@@ -208,6 +201,10 @@ public final class Client implements StanzaListener, Runnable {
         mControl.setStatus(Control.Status.DISCONNECTED);
     }
 
+    public boolean isConnected() {
+        return mConn != null && mConn.isAuthenticated();
+    }
+
     /**
      * The full JID of the user currently logged in.
      */
@@ -219,117 +216,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public boolean sendMessage(OutMessage message, boolean sendChatState) {
-        // check for correct receipt status and reset it
-        Status status = message.getStatus();
-        assert status == Status.PENDING || status == Status.ERROR;
-        message.setStatus(Status.PENDING);
-
-        if (!this.isConnected()) {
-            LOGGER.info("not sending message(s), not connected");
-            return false;
-        }
-
-        MessageContent content = message.getContent();
-        Optional<Attachment> optAtt = content.getAttachment();
-        if (optAtt.isPresent() && !optAtt.get().hasURL()) {
-            LOGGER.warning("attachment not uploaded");
-            message.setStatus(Status.ERROR);
-            return false;
-        }
-
-        boolean encrypted =
-                message.getCoderStatus().getEncryption() != Coder.Encryption.NOT ||
-                message.getCoderStatus().getSigning() != Coder.Signing.NOT;
-
-        Chat chat = message.getChat();
-
-        Message protoMessage = encrypted ? new Message() : rawMessage(content, chat, false);
-
-        protoMessage.setType(Message.Type.chat);
-        protoMessage.setStanzaId(message.getXMPPID());
-        String threadID = chat.getXMPPID();
-        if (!threadID.isEmpty())
-            protoMessage.setThread(threadID);
-
-        // extensions
-
-        // TODO with group chat? (for muc "NOT RECOMMENDED")
-        if (!chat.isGroupChat())
-            protoMessage.addExtension(new DeliveryReceiptRequest());
-
-        if (sendChatState)
-            protoMessage.addExtension(new ChatStateExtension(ChatState.active));
-
-        if (encrypted) {
-            Optional<byte[]> encryptedData = content.isComplex() || chat.isGroupChat() ?
-                        Coder.encryptStanza(message,
-                                rawMessage(content, chat, true).toXML().toString()) :
-                        Coder.encryptMessage(message);
-            // check also for security errors just to be sure
-            if (!encryptedData.isPresent() ||
-                    !message.getCoderStatus().getErrors().isEmpty()) {
-                LOGGER.warning("encryption failed");
-                message.setStatus(Status.ERROR);
-                mControl.handleSecurityErrors(message);
-                return false;
-            }
-            protoMessage.addExtension(new E2EEncryption(encryptedData.get()));
-        }
-
-        // transmission specific
-        Transmission[] transmissions = message.getTransmissions();
-        ArrayList<Message> sendMessages = new ArrayList<>(transmissions.length);
-        for (Transmission transmission: message.getTransmissions()) {
-            Message sendMessage = protoMessage.clone();
-            JID to = transmission.getJID();
-            if (!to.isValid()) {
-                LOGGER.warning("invalid JID: "+to);
-                return false;
-            }
-            sendMessage.setTo(to.string());
-            sendMessages.add(sendMessage);
-        }
-
-        return this.sendPackets(sendMessages.toArray(new Message[0]));
-    }
-
-    private static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
-        Message smackMessage = new Message();
-
-        // text
-        String text = content.getPlainText();
-        if (!text.isEmpty())
-            smackMessage.setBody(content.getPlainText());
-
-        // attachment
-        Optional<Attachment> optAtt = content.getAttachment();
-        if (optAtt.isPresent()) {
-            Attachment att = optAtt.get();
-
-            OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
-                    att.getMimeType(), att.getLength(), encrypted);
-            smackMessage.addExtension(oobData);
-
-            Optional<Preview> optPreview = content.getPreview();
-            if (optPreview.isPresent()) {
-                Preview preview = optPreview.get();
-                String data = EncodingUtils.bytesToBase64(preview.getData());
-                BitsOfBinary bob = new BitsOfBinary(preview.getMimeType(), data);
-                smackMessage.addExtension(bob);
-            }
-        }
-
-        // group command
-        if (chat instanceof GroupChat) {
-            GroupChat groupChat = (GroupChat) chat;
-            GID gid = groupChat.getGID();
-            Optional<MessageContent.GroupCommand> optGroupCommand = content.getGroupCommand();
-            smackMessage.addExtension(optGroupCommand.isPresent() ?
-                    ClientUtils.groupCommandToGroupExtension(groupChat, optGroupCommand.get()) :
-                    new GroupExtension(gid.id, gid.ownerJID.string()));
-        }
-
-        return smackMessage;
+        return mMessageSender.sendMessage(message, sendChatState);
     }
 
     // TODO unused
@@ -396,7 +283,7 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(message);
     }
 
-    private synchronized boolean sendPackets(Stanza[] stanzas) {
+    synchronized boolean sendPackets(Stanza[] stanzas) {
         boolean sent = true;
         for (Stanza s: stanzas)
             sent &= this.sendPacket(s);
@@ -504,10 +391,6 @@ public final class Client implements StanzaListener, Runnable {
                     break;
             }
         }
-    }
-
-    public boolean isConnected() {
-        return mConn != null && mConn.isAuthenticated();
     }
 
     private static class Task {
