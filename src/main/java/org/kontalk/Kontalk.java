@@ -50,7 +50,7 @@ import org.kontalk.view.View;
 public final class Kontalk {
     private static final Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
-    public static final String VERSION = "3.0.3";
+    public static final String VERSION = "3.0.4";
     private final Path mAppDir;
 
     private static ServerSocket RUN_LOCK = null;
