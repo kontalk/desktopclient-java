@@ -148,9 +148,12 @@ public final class PersonalKey {
             signKey = authKey;
         }
 
-        if (authKey == null || signKey == null || encrKey == null)
+        if (authKey == null || signKey == null || encrKey == null) {
+            LOGGER.warning("something could not be found, "
+                    +"sign="+signKey+ ", auth="+authKey+", encr="+encrKey);
             throw new KonException(KonException.Error.LOAD_KEY,
                     new PGPException("could not find all keys in key data"));
+        }
 
         // decrypt private keys
         PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(

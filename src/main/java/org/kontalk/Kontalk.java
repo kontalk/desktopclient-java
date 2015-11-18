@@ -36,7 +36,7 @@ import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.ContactList;
-import org.kontalk.system.AccountLoader;
+import org.kontalk.system.Account;
 import org.kontalk.system.Config;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
@@ -50,7 +50,7 @@ import org.kontalk.view.View;
 public final class Kontalk {
     private static final Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
-    public static final String VERSION = "3.0.3";
+    public static final String VERSION = "3.0.4";
     private final Path mAppDir;
 
     private static ServerSocket RUN_LOCK = null;
@@ -123,7 +123,7 @@ public final class Kontalk {
 
 
         Config.initialize(mAppDir.resolve(Config.FILENAME));
-        AccountLoader.initialize(mAppDir);
+        Account.initialize(mAppDir);
 
         ViewControl control = Control.create(mAppDir);
 

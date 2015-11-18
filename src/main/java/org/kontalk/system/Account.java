@@ -19,10 +19,11 @@
 package org.kontalk.system;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateEncodingException;
@@ -30,8 +31,6 @@ import java.security.cert.CertificateException;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
@@ -41,20 +40,24 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.crypto.X509Bridge;
 
-public final class AccountLoader {
-    private static final Logger LOGGER = Logger.getLogger(AccountLoader.class.getName());
+/**
+ * The user account. There can only be one.
+ * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
+ */
+public final class Account {
+    private static final Logger LOGGER = Logger.getLogger(Account.class.getName());
 
     private static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
     private static final String BRIDGE_CERT_FILENAME = "kontalk-login.crt";
 
-    private static AccountLoader INSTANCE = null;
+    private static Account INSTANCE = null;
 
     private final Path mKeyDir;
     private final Config mConf;
 
     private PersonalKey mKey = null;
 
-    private AccountLoader(Path keyDir, Config config) {
+    private Account(Path keyDir, Config config) {
         mKeyDir = keyDir;
         mConf = config;
     }
@@ -65,8 +68,8 @@ public final class AccountLoader {
 
     PersonalKey load(char[] password) throws KonException {
         // read key files
-        byte[] privateKeyData = this.readArmoredFile(PRIVATE_KEY_FILENAME);
-        byte[] bridgeCertData = this.readFile(BRIDGE_CERT_FILENAME);
+        byte[] privateKeyData = this.readFile(PRIVATE_KEY_FILENAME, true);
+        byte[] bridgeCertData = this.readFile(BRIDGE_CERT_FILENAME, false);
 
         // load key
         try {
@@ -80,24 +83,13 @@ public final class AccountLoader {
         return mKey;
     }
 
-    public void importAccount(String zipFilePath, char[] password) throws KonException {
-        byte[] privateKeyData;
-
-        // read key files
-        try (ZipFile zipFile = new ZipFile(zipFilePath)) {
-            privateKeyData = AccountLoader.readBytesFromZip(zipFile, PRIVATE_KEY_FILENAME);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't open zip archive: ", ex);
-            throw new KonException(KonException.Error.IMPORT_ARCHIVE, ex);
-        }
-
+    void setAccount(byte[] privateKeyData, char[] password) throws KonException {
         // try to load key
         PersonalKey key;
         byte[] encodedPrivateKey;
         try {
-            encodedPrivateKey = PGPUtils.disarm(privateKeyData);
-            key = PersonalKey.load(encodedPrivateKey,
-                    password);
+            encodedPrivateKey = privateKeyData;
+            key = PersonalKey.load(encodedPrivateKey, password);
         } catch (PGPException | IOException | CertificateException |
                 NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't import personal key", ex);
@@ -122,10 +114,12 @@ public final class AccountLoader {
         // overwritten when connecting to server
         String address = PGPUtils.parseUID(key.getUserId())[2];
         Config.getInstance().setProperty(Config.ACC_JID, address);
+
+        LOGGER.info("new account, temporary JID: "+address);
     }
 
     public void setPassword(char[] oldPassword, char[] newPassword) throws KonException {
-        byte[] privateKeyData = this.readArmoredFile(PRIVATE_KEY_FILENAME);
+        byte[] privateKeyData = this.readFile(PRIVATE_KEY_FILENAME, true);
         this.writePrivateKey(privateKeyData, oldPassword, newPassword);
     }
 
@@ -167,21 +161,12 @@ public final class AccountLoader {
         return mConf.getString(Config.ACC_PASS).isEmpty();
     }
 
-    private byte[] readArmoredFile(String filename) throws KonException {
-        try {
-            return PGPUtils.disarm(this.readFile(filename));
-        } catch (IOException ex) {
-             LOGGER.warning("can't read armored key file: "+ex.getLocalizedMessage());
-            throw new KonException(KonException.Error.READ_FILE, ex);
-        }
-    }
-
-    private byte[] readFile(String filename) throws KonException {
+    private byte[] readFile(String filename, boolean disarm) throws KonException {
         byte[] bytes = null;
-        try {
-            bytes = Files.readAllBytes(new File(mKeyDir.toString(), filename).toPath());
+        try (InputStream input = new FileInputStream(new File(mKeyDir.toString(), filename))) {
+            bytes = disarm ? PGPUtils.mayDisarm(input) : IOUtils.toByteArray(input);
         } catch (IOException ex) {
-            LOGGER.warning("can't read key file: "+ex.getLocalizedMessage());
+            LOGGER.log(Level.WARNING, "can't read key file", ex);
             throw new KonException(KonException.Error.READ_FILE, ex);
         }
         return bytes;
@@ -204,27 +189,15 @@ public final class AccountLoader {
         return new File(mKeyDir.toString(), filename).isFile();
     }
 
-    private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
-        ZipEntry zipEntry = zipFile.getEntry(filename);
-        byte[] bytes = null;
-        try {
-            bytes = IOUtils.toByteArray(zipFile.getInputStream(zipEntry));
-        } catch (IOException ex) {
-            LOGGER.warning("can't read key file from archive: "+ex.getLocalizedMessage());
-            throw new KonException(KonException.Error.IMPORT_READ_FILE, ex);
-        }
-        return bytes;
-    }
-
     public synchronized static void initialize(Path keyDir)  {
         if (INSTANCE != null) {
             LOGGER.warning("account loader already initialized");
             return;
         }
-        INSTANCE = new AccountLoader(keyDir, Config.getInstance());
+        INSTANCE = new Account(keyDir, Config.getInstance());
     }
 
-    public synchronized static AccountLoader getInstance() {
+    public synchronized static Account getInstance() {
         if (INSTANCE == null)
             throw new IllegalStateException("account loader not initialized");
         return INSTANCE;

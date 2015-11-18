@@ -516,7 +516,7 @@ public final class Control {
             new Thread(mClient).start();
 
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-            if (!AccountLoader.getInstance().accountIsPresent()) {
+            if (!Account.getInstance().accountIsPresent()) {
                 LOGGER.info("no account found, asking for import...");
                 this.changed(new ViewEvent.MissingAccount(connect));
                 return;
@@ -726,7 +726,7 @@ public final class Control {
         }
 
         private PersonalKey keyOrNull(char[] password) {
-            AccountLoader account = AccountLoader.getInstance();
+            Account account = Account.getInstance();
             Optional<PersonalKey> optKey = account.getPersonalKey();
             if (optKey.isPresent())
                 return optKey.get();

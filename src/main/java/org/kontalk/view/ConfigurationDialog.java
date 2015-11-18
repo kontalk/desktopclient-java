@@ -51,7 +51,7 @@ import javax.swing.text.NumberFormatter;
 import org.kontalk.system.Config;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
-import org.kontalk.system.AccountLoader;
+import org.kontalk.system.Account;
 import org.kontalk.util.Tr;
 
 /**
@@ -279,7 +279,7 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void updateFingerprint() {
-            Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
+            Optional<PersonalKey> optKey = Account.getInstance().getPersonalKey();
             mFingerprintArea.setText(optKey.isPresent() ?
                     Utils.fingerprint(optKey.get().getFingerprint()) :
                     "- " + Tr.tr("no key loaded") + " -");
@@ -335,7 +335,7 @@ final class ConfigurationDialog extends WebDialog {
     }
 
     private static String getPassTitle() {
-        return AccountLoader.getInstance().isPasswordProtected() ?
+        return Account.getInstance().isPasswordProtected() ?
                 Tr.tr("Change key password") :
                 Tr.tr("Set key password");
     }
@@ -347,7 +347,7 @@ final class ConfigurationDialog extends WebDialog {
 
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
 
-        boolean passSet = AccountLoader.getInstance().isPasswordProtected();
+        boolean passSet = Account.getInstance().isPasswordProtected();
         final ComponentUtils.PassPanel passPanel = new ComponentUtils.PassPanel(passSet) {
            @Override
            void onValidInput() {
@@ -371,7 +371,7 @@ final class ConfigurationDialog extends WebDialog {
                 }
                 char[] newPassword = optNewPass.get();
                 try {
-                    AccountLoader.getInstance().setPassword(oldPassword, newPassword);
+                    Account.getInstance().setPassword(oldPassword, newPassword);
                 } catch(KonException ex) {
                     LOGGER.log(Level.WARNING, "can't set new password", ex);
                     if (ex.getError() == KonException.Error.CHANGE_PASS_COPY)
