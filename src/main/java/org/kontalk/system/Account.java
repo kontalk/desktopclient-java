@@ -19,10 +19,11 @@
 package org.kontalk.system;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.NoSuchProviderException;
 import java.security.cert.CertificateEncodingException;
@@ -30,6 +31,7 @@ import java.security.cert.CertificateException;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.io.IOUtils;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.util.StringUtils;
@@ -66,8 +68,8 @@ public final class Account {
 
     PersonalKey load(char[] password) throws KonException {
         // read key files
-        byte[] privateKeyData = this.readArmoredFile(PRIVATE_KEY_FILENAME);
-        byte[] bridgeCertData = this.readFile(BRIDGE_CERT_FILENAME);
+        byte[] privateKeyData = this.readFile(PRIVATE_KEY_FILENAME, true);
+        byte[] bridgeCertData = this.readFile(BRIDGE_CERT_FILENAME, false);
 
         // load key
         try {
@@ -117,7 +119,7 @@ public final class Account {
     }
 
     public void setPassword(char[] oldPassword, char[] newPassword) throws KonException {
-        byte[] privateKeyData = this.readArmoredFile(PRIVATE_KEY_FILENAME);
+        byte[] privateKeyData = this.readFile(PRIVATE_KEY_FILENAME, true);
         this.writePrivateKey(privateKeyData, oldPassword, newPassword);
     }
 
@@ -159,21 +161,12 @@ public final class Account {
         return mConf.getString(Config.ACC_PASS).isEmpty();
     }
 
-    private byte[] readArmoredFile(String filename) throws KonException {
-        try {
-            return PGPUtils.disarm(this.readFile(filename));
-        } catch (IOException ex) {
-             LOGGER.warning("can't read armored key file: "+ex.getLocalizedMessage());
-            throw new KonException(KonException.Error.READ_FILE, ex);
-        }
-    }
-
-    private byte[] readFile(String filename) throws KonException {
+    private byte[] readFile(String filename, boolean disarm) throws KonException {
         byte[] bytes = null;
-        try {
-            bytes = Files.readAllBytes(new File(mKeyDir.toString(), filename).toPath());
+        try (InputStream input = new FileInputStream(new File(mKeyDir.toString(), filename))) {
+            bytes = disarm ? PGPUtils.mayDisarm(input) : IOUtils.toByteArray(input);
         } catch (IOException ex) {
-            LOGGER.warning("can't read key file: "+ex.getLocalizedMessage());
+            LOGGER.log(Level.WARNING, "can't read key file", ex);
             throw new KonException(KonException.Error.READ_FILE, ex);
         }
         return bytes;

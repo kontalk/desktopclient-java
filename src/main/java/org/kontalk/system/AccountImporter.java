@@ -25,7 +25,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
-import org.apache.commons.io.IOUtils;
 import org.kontalk.client.EndpointServer;
 import org.kontalk.client.PrivateKeyReceiver;
 import org.kontalk.crypto.PGPUtils;
@@ -66,12 +65,12 @@ public final class AccountImporter extends Observable implements Callback.Handle
         this.set(privateKeyData, password);
     }
 
-    // note: with disarming
+    // note: with disarming if needed
     private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
         ZipEntry zipEntry = zipFile.getEntry(filename);
         byte[] bytes = null;
         try {
-            bytes = PGPUtils.disarm(IOUtils.toByteArray(zipFile.getInputStream(zipEntry)));
+            bytes = PGPUtils.mayDisarm(zipFile.getInputStream(zipEntry));
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't read key file from archive: ", ex);
             throw new KonException(KonException.Error.IMPORT_READ_FILE, ex);

@@ -36,7 +36,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPCompressedData;
@@ -110,8 +109,8 @@ public final class PGPUtils {
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
     }
 
-    public static byte[] disarm(byte[] key) throws IOException {
-        return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
+    public static byte[] mayDisarm(InputStream input) throws IOException {
+        return IOUtils.toByteArray(PGPUtil.getDecoderStream(input));
     }
 
     /**
