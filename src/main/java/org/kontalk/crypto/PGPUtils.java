@@ -218,6 +218,7 @@ public final class PGPUtils {
         try {
             return new PGPKeyPair(secretKey.getPublicKey(), secretKey.extractPrivateKey(dec));
         } catch (PGPException ex) {
+            LOGGER.log(Level.WARNING, "failed", ex);
             throw new KonException(KonException.Error.LOAD_KEY_DECRYPT, ex);
         }
     }
