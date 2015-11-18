@@ -376,7 +376,7 @@ public class AttachmentManager implements Runnable {
     }
 
     private static HTTPFileClient createClientOrNull(){
-        Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
+        Optional<PersonalKey> optKey = Account.getInstance().getPersonalKey();
         if (!optKey.isPresent()) {
             LOGGER.log(Level.WARNING, "personal key not loaded");
             return null;

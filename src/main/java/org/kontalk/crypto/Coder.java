@@ -29,7 +29,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.DecryptMessage;
 import org.kontalk.model.InMessage;
-import org.kontalk.system.AccountLoader;
+import org.kontalk.system.Account;
 
 /**
  * Static methods for decryption and encryption of a message.
@@ -89,7 +89,7 @@ public final class Coder {
     private static final HashMap<Contact, PGPCoderKey> KEY_MAP = new HashMap<>();
 
     static PersonalKey myKeyOrNull() {
-        Optional<PersonalKey> optMyKey = AccountLoader.getInstance().getPersonalKey();
+        Optional<PersonalKey> optMyKey = Account.getInstance().getPersonalKey();
         if (!optMyKey.isPresent()) {
             LOGGER.log(Level.WARNING, "can't get personal key");
             return null;
