@@ -29,6 +29,13 @@ public final class EndpointServer {
     private final int mPort;
     private final String mNetwork;
 
+    public EndpointServer(String host, int port) {
+        // tigase: use hostname as network
+        mNetwork = host;
+        mHost = host;
+        mPort = port;
+    }
+
     public EndpointServer(String network, String host, int port) {
         mNetwork = network;
         mHost = host;
