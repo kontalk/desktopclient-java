@@ -357,6 +357,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
     private class TableRenderer extends WebTableCellRenderer {
         // return for each item (value) in the list/table the component to
         // render - which is the item itself here
+        // NOTE: table and value can be NULL
         @Override
         @SuppressWarnings("unchecked")
         public Component getTableCellRendererComponent(JTable table,
@@ -366,6 +367,9 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
                 int row,
                 int column) {
             TableItem item = (TableItem) value;
+            // hopefully return value is not used
+            if (table == null || item == null)
+                return item;
 
             item.render(table.getWidth(), isSelected);
 
@@ -373,7 +377,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
             // view item needs a little more then it preferres
             height += 1;
             if (height != table.getRowHeight(row))
-                // note: this calls resizeAndRepaint()
+                // NOTE: this calls resizeAndRepaint()
                 table.setRowHeight(row, height);
             return item;
         }
