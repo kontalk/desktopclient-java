@@ -230,6 +230,7 @@ final class Utils {
     }
 
     static String fingerprint(String fp) {
+        fp = fp.toUpperCase();
         int m = fp.length() / 2;
         return group(fp.substring(0, m)) + "\n" + group(fp.substring(m));
     }

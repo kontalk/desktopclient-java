@@ -93,7 +93,7 @@ public class PresenceListener implements StanzaListener {
                 PublicKeyPresence.NAMESPACE);
         if (publicKeyExt instanceof PublicKeyPresence) {
             PublicKeyPresence pubKey = (PublicKeyPresence) publicKeyExt;
-            String fingerprint = StringUtils.defaultString(pubKey.getFingerprint());
+            String fingerprint = StringUtils.defaultString(pubKey.getFingerprint()).toLowerCase();
             if (!fingerprint.isEmpty()) {
                 mHandler.onFingerprintPresence(jid, fingerprint);
             } else {
