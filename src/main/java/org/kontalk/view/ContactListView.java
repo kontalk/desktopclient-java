@@ -265,6 +265,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
                     if (!Utils.confirmDeletion(ContactListView.this, text))
                         return;
                     mView.getControl().deleteContact(mItem.mValue);
+                    mView.showNothing();
                 }
             });
             this.add(mDeleteMenuItem);
