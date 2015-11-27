@@ -80,6 +80,8 @@ public final class ContactList extends Observable implements Iterable<Contact> {
      * Create and add a new contact.
      */
     public Optional<Contact> create(JID jid, String name) {
+        jid = jid.toBare();
+
         if (!this.isValid(jid))
             return Optional.empty();
 
