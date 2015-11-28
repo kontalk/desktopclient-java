@@ -68,15 +68,34 @@ public class PresenceListener implements StanzaListener {
 
         JID jid = JID.bare(presence.getFrom());
 
-        if (presence.getType() == Presence.Type.error) {
-            XMPPError error = presence.getError();
-            if (error == null) {
-                LOGGER.warning("error presence does not contain error");
+        ExtensionElement publicKeyExt = presence.getExtension(
+                PublicKeyPresence.ELEMENT_NAME,
+                PublicKeyPresence.NAMESPACE);
+        PublicKeyPresence pubKey = publicKeyExt instanceof PublicKeyPresence ?
+                (PublicKeyPresence) publicKeyExt :
+                null;
+
+        switch(presence.getType()) {
+            case error:
+                XMPPError error = presence.getError();
+                if (error == null) {
+                    LOGGER.warning("error presence does not contain error");
+                    return;
+                }
+                mHandler.onPresenceError(jid, error.getType(),
+                        error.getCondition());
                 return;
-            }
-            mHandler.onPresenceError(jid, error.getType(),
-                    error.getCondition());
-            return;
+            // NOTE: only handled here if Roster.SubscriptionMode is set to 'manual'
+            case subscribe:
+                byte[] key = pubKey != null ? pubKey.getKey() : null;
+                if (key == null)
+                    key = new byte[0];
+                mHandler.onSubscriptionRequest(jid, key);
+                return;
+            case unsubscribe:
+                // TODO
+                LOGGER.info(("ignoring unsubscribe request, JID: "+jid));
+                return;
         }
 
         Presence bestPresence = mRoster.getPresence(jid.string());
@@ -88,16 +107,12 @@ public class PresenceListener implements StanzaListener {
                 bestPresence.getType(),
                 bestPresence.getStatus());
 
-        ExtensionElement publicKeyExt = presence.getExtension(
-                PublicKeyPresence.ELEMENT_NAME,
-                PublicKeyPresence.NAMESPACE);
-        if (publicKeyExt instanceof PublicKeyPresence) {
-            PublicKeyPresence pubKey = (PublicKeyPresence) publicKeyExt;
-            String fingerprint = StringUtils.defaultString(pubKey.getFingerprint()).toLowerCase();
-            if (!fingerprint.isEmpty()) {
-                mHandler.onFingerprintPresence(jid, fingerprint);
-            } else {
+        if (pubKey != null) {
+            String fp = StringUtils.defaultString(pubKey.getFingerprint()).toLowerCase();
+            if (fp.isEmpty()) {
                 LOGGER.warning("no fingerprint in public key presence extension");
+            } else {
+                mHandler.onFingerprintPresence(jid, fp);
             }
         }
 

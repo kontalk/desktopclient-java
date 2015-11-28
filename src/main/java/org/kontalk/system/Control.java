@@ -155,10 +155,7 @@ public final class Control {
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
 
-        ContactList contactList = ContactList.getInstance();
-        Optional<Contact> optContact = contactList.contains(ids.jid) ?
-                contactList.get(ids.jid) :
-                this.createContact(ids.jid, "");
+        Optional<Contact> optContact = this.getOrCreate(ids.jid, "");
         if (!optContact.isPresent()) {
             LOGGER.warning("can't get contact for message");
             return false;
@@ -267,8 +264,11 @@ public final class Control {
             LOGGER.warning("can't find contact with jid: "+jid);
             return;
         }
-        Contact contact = optContact.get();
 
+        this.handlePGPKey(optContact.get(), rawKey);
+    }
+
+    void handlePGPKey(Contact contact, byte[] rawKey) {
         Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
         if (!optKey.isPresent()) {
             LOGGER.warning("invalid public PGP key, contact: "+contact);
@@ -285,11 +285,12 @@ public final class Control {
             // same key
             return;
 
-        if (contact.hasKey())
+        if (contact.hasKey()) {
             // ask before overwriting
             mViewControl.changed(new ViewEvent.NewKey(contact, key));
-        else
+        } else {
             this.setKey(contact, key);
+        }
     }
 
     public void setKey(Contact contact, PGPCoderKey key) {
@@ -357,11 +358,21 @@ public final class Control {
         mClient.sendPublicKeyRequest(contact.getJID());
     }
 
+    Optional<Contact> getOrCreate(JID jid, String name) {
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (optContact.isPresent())
+            return optContact;
+
+        return this.createContact(jid, "");
+    }
+
     Optional<Contact> createContact(JID jid, String name) {
         return this.createContact(jid, name, XMPPUtils.isKontalkJID(jid));
     }
 
-    Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
+    /* private */
+
+    private Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
         if (!mClient.isConnected()) {
             // workaround: create only if contact can be added to roster
             return Optional.empty();
@@ -387,8 +398,6 @@ public final class Control {
 
         return Optional.of(newContact);
     }
-
-    /* private */
 
     private void decryptAndProcess(InMessage message) {
         if (!message.isEncrypted()) {
@@ -463,13 +472,10 @@ public final class Control {
             // add contacts if necessary
             // TODO design problem here: we need at least the public keys, but user
             // might dont wanna have group members in contact list
-            ContactList contactList = ContactList.getInstance();
             for (JID jid : command.getAdded()) {
-                if (!contactList.contains(jid)) {
-                    boolean succ = this.createContact(jid, "").isPresent();
-                    if (!succ)
-                        LOGGER.warning("can't create contact, JID: "+jid);
-                }
+                boolean succ = this.getOrCreate(jid, "").isPresent();
+                if (!succ)
+                    LOGGER.warning("can't create contact, JID: "+jid);
             }
         }
 

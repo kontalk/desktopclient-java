@@ -55,15 +55,14 @@ import org.kontalk.system.RosterHandler;
 /**
  * Network client for an XMPP Kontalk Server.
  *
- * Note: By default incoming presence subscription requests are automatically
- * granted by Smack (but Kontalk uses a custom subscription request!?)
- *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Client implements StanzaListener, Runnable {
     private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
+
+    public enum PresenceCommand {SUBSCRIBE, GRANT};
 
     private static enum Command {CONNECT, DISCONNECT};
 
@@ -106,10 +105,14 @@ public final class Client implements StanzaListener, Runnable {
         // connection listener
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
+        Roster roster = Roster.getInstanceFor(mConn);
+        // subscriptions handled by roster handler
+        roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
+
         // packet listeners
         RosterHandler rosterSyncer = mControl.getRosterHandler();
-        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), rosterSyncer);
-        Roster.getInstanceFor(mConn).addRosterListener(rl);
+        RosterListener rl = new KonRosterListener(roster, rosterSyncer);
+        roster.addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
         mConn.addAsyncStanzaListener(new KonMessageListener(this, mControl), messageFilter);
@@ -124,7 +127,7 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-        mConn.addAsyncStanzaListener(new PresenceListener(Roster.getInstanceFor(mConn), rosterSyncer), presenceFilter);
+        mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterSyncer), presenceFilter);
 
          // fallback listener
         mConn.addAsyncStanzaListener(this,
@@ -260,11 +263,16 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(presence);
     }
 
-    public void sendPresenceSubscriptionRequest(JID jid) {
-        LOGGER.info("to "+jid);
-        Presence subscribeRequest = new Presence(Presence.Type.subscribe);
-        subscribeRequest.setTo(jid.string());
-        this.sendPacket(subscribeRequest);
+    public void sendPresenceSubscription(JID jid, PresenceCommand command) {
+        LOGGER.info("to "+jid+ " command: "+command);
+        Presence.Type type = null;
+        switch(command) {
+            case GRANT: type = Presence.Type.subscribed; break;
+            case SUBSCRIBE: type = Presence.Type.subscribe; break;
+        }
+        Presence presence = new Presence(type);
+        presence.setTo(jid.string());
+        this.sendPacket(presence);
     }
 
     public void sendChatState(JID jid, String threadID, ChatState state) {

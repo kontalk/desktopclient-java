@@ -60,8 +60,6 @@ public final class RosterHandler {
         mClient = client;
     }
 
-    /* from client */
-
     public void onEntryAdded(JID jid,
             String name,
             RosterPacket.ItemType type,
@@ -86,7 +84,7 @@ public final class RosterHandler {
         optNewContact.get().setSubScriptionStatus(status);
 
         if (status == Contact.Subscription.UNSUBSCRIBED)
-            mClient.sendPresenceSubscriptionRequest(jid);
+            mClient.sendPresenceSubscription(jid, Client.PresenceCommand.SUBSCRIBE);
     }
 
     public void onEntryDeleted(JID jid) {
@@ -116,6 +114,18 @@ public final class RosterHandler {
         // name may have changed
         if (contact.getName().isEmpty() && !name.equals(jid.local()))
             contact.setName(name);
+    }
+
+    public void onSubscriptionRequest(JID jid, byte[] key) {
+        Optional<Contact> optContact = mControl.getOrCreate(jid, "");
+        if (!optContact.isPresent())
+            return;
+
+        // TODO ask user before
+        mClient.sendPresenceSubscription(jid, Client.PresenceCommand.GRANT);
+
+        if (key.length > 0)
+            mControl.handlePGPKey(optContact.get(), key);
     }
 
     public void onPresenceUpdate(JID jid, Presence.Type type, String status) {
