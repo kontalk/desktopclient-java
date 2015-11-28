@@ -34,7 +34,6 @@ import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.NotFilter;
 import org.jivesoftware.smack.filter.OrFilter;
 import org.jivesoftware.smack.filter.StanzaFilter;
-import org.jivesoftware.smack.filter.StanzaIdFilter;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
@@ -230,21 +229,12 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendBlockingCommand(JID jid, boolean blocking) {
-        LOGGER.info("jid: "+jid+" blocking="+blocking);
-
         if (mConn == null || !this.isConnected()) {
             LOGGER.warning("not connected");
             return;
         }
 
-        String command = blocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
-        BlockingCommand blockingCommand = new BlockingCommand(command, jid.string());
-
-        // add response listener
-        StanzaListener blockResponseListener = new BlockResponseListener(mControl, mConn, blocking, jid);
-        mConn.addAsyncStanzaListener(blockResponseListener, new StanzaIdFilter(blockingCommand));
-
-        this.sendPacket(blockingCommand);
+        new BlockSendReceiver(mControl, mConn, blocking, jid).sendAndListen();
     }
 
     public void sendInitialPresence() {
