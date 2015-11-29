@@ -31,8 +31,7 @@ import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.NotFilter;
-import org.jivesoftware.smack.filter.OrFilter;
+import org.jivesoftware.smack.filter.IQTypeFilter;
 import org.jivesoftware.smack.filter.StanzaFilter;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
@@ -40,7 +39,6 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.roster.RosterEntry;
-import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.kontalk.system.Config;
@@ -128,21 +126,8 @@ public final class Client implements StanzaListener, Runnable {
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
         mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterSyncer), presenceFilter);
 
-         // fallback listener
-        mConn.addAsyncStanzaListener(this,
-                new NotFilter(
-                        new OrFilter(
-                                messageFilter,
-                                vCardFilter,
-                                blockingCommandFilter,
-                                publicKeyFilter,
-                                vCardFilter,
-                                presenceFilter,
-                                // handled by roster listener
-                                new StanzaTypeFilter(RosterPacket.class)
-                        )
-                )
-        );
+        // listen to all IQ errors
+        mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
 
         // continue async
         List<?> args = new ArrayList<>(0);
@@ -294,7 +279,7 @@ public final class Client implements StanzaListener, Runnable {
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.config("unhandled: "+packet);
+        LOGGER.warning("IQ error: "+packet);
     }
 
     public boolean addToRoster(JID jid, String name) {
