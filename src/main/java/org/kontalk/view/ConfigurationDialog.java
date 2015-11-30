@@ -297,6 +297,7 @@ final class ConfigurationDialog extends WebDialog {
 
         private final WebCheckBox mChatStateBox;
         private final WebCheckBox mRosterNameBox;
+        private final WebCheckBox mSubscriptionBox;
 
         PrivacyPanel() {
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
@@ -305,8 +306,13 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebLabel(Tr.tr("Privacy Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
+            mSubscriptionBox = createCheckBox(Tr.tr("Automatically grant authorization"),
+                     Tr.tr("Automatically grant online status authorization requests from other users"),
+                    mConf.getBoolean(Config.NET_AUTO_SUBSCRIPTION));
+            groupPanel.add(new GroupPanel(mSubscriptionBox, new WebSeparator()));
+
             mChatStateBox = createCheckBox(Tr.tr("Send chatstate notification"),
-                    Tr.tr("Send chat activity (typing,…) to other user"),
+                    Tr.tr("Send chat activity (typing,…) to other users"),
                     mConf.getBoolean(Config.NET_SEND_CHAT_STATE));
             groupPanel.add(new GroupPanel(mChatStateBox, new WebSeparator()));
 
@@ -321,6 +327,7 @@ final class ConfigurationDialog extends WebDialog {
         private void saveConfiguration() {
             mConf.setProperty(Config.NET_SEND_CHAT_STATE, mChatStateBox.isSelected());
             mConf.setProperty(Config.NET_SEND_ROSTER_NAME, mRosterNameBox.isSelected());
+            mConf.setProperty(Config.NET_AUTO_SUBSCRIPTION, mSubscriptionBox.isSelected());
         }
     }
 
