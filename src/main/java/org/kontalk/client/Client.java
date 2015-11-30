@@ -59,7 +59,7 @@ public final class Client implements StanzaListener, Runnable {
 
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
-    public enum PresenceCommand {SUBSCRIBE, GRANT};
+    public enum PresenceCommand {REQUEST, GRANT, DENY};
 
     private static enum Command {CONNECT, DISCONNECT};
 
@@ -239,11 +239,12 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendPresenceSubscription(JID jid, PresenceCommand command) {
-        LOGGER.info("to "+jid+ " command: "+command);
+        LOGGER.info("to: "+jid+ ", command: "+command);
         Presence.Type type = null;
         switch(command) {
+            case REQUEST: type = Presence.Type.subscribe; break;
             case GRANT: type = Presence.Type.subscribed; break;
-            case SUBSCRIBE: type = Presence.Type.subscribe; break;
+            case DENY: type = Presence.Type.unsubscribed; break;
         }
         Presence presence = new Presence(type);
         presence.setTo(jid.string());

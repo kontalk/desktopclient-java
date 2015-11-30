@@ -370,6 +370,10 @@ public final class Control {
         return this.createContact(jid, name, XMPPUtils.isKontalkJID(jid));
     }
 
+    void sendPresenceSubscription(JID jid, Client.PresenceCommand command) {
+        mClient.sendPresenceSubscription(jid, command);
+    }
+
     /* private */
 
     private Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
@@ -631,6 +635,13 @@ public final class Control {
 
         public void declineKey(Contact contact) {
             this.sendContactBlocking(contact, true);
+        }
+
+        public void sendSubscriptionResponse(Contact contact, boolean accept) {
+            Control.this.sendPresenceSubscription(contact.getJID(),
+                    accept ?
+                            Client.PresenceCommand.GRANT :
+                            Client.PresenceCommand.DENY);
         }
 
         /* chats */

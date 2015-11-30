@@ -93,8 +93,8 @@ public class PresenceListener implements StanzaListener {
                 mHandler.onSubscriptionRequest(jid, key);
                 return;
             case unsubscribe:
-                // TODO
-                LOGGER.info(("ignoring unsubscribe request, JID: "+jid));
+                // nothing to do(?)
+                LOGGER.info(("ignoring unsubscribe, JID: "+jid));
                 return;
         }
 
