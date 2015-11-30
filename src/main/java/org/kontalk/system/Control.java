@@ -644,6 +644,11 @@ public final class Control {
                             Client.PresenceCommand.DENY);
         }
 
+        public void sendSubscriptionRequest(Contact contact) {
+            Control.this.sendPresenceSubscription(contact.getJID(),
+                    Client.PresenceCommand.REQUEST);
+        }
+
         /* chats */
 
         public Chat getOrCreateSingleChat(Contact contact) {

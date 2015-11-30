@@ -59,7 +59,8 @@ final class ContactDetails extends WebPanel implements Observer {
     private final View mView;
     private final Contact mContact;
     private final WebTextField mNameField;
-    private final WebLabel mAuthorization;
+    private final WebLabel mSubscrStatus;
+    private final WebButton mSubscrButton;
     private final WebLabel mKeyStatus;
     private final WebLabel mFPLabel;
     private final WebTextArea mFPArea;
@@ -117,10 +118,21 @@ final class ContactDetails extends WebPanel implements Observer {
         mainPanel.add(jidField);
 
         mainPanel.add(new WebLabel(Tr.tr("Authorization:")));
-        mAuthorization = new WebLabel();
-        String authText = Tr.tr("Permission to view presence status and public key");
-        TooltipManager.addTooltip(mAuthorization, authText);
-        mainPanel.add(mAuthorization);
+        mSubscrStatus = new WebLabel();
+        String subscrText = Tr.tr("Permission to view presence status and public key");
+        TooltipManager.addTooltip(mSubscrStatus, subscrText);
+
+        mSubscrButton = new WebButton(Tr.tr("Request"));
+        String reqText = Tr.tr("Request status authorization from contact");
+        TooltipManager.addTooltip(mSubscrButton, reqText);
+        mSubscrButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mView.getControl().sendSubscriptionRequest(mContact);
+            }
+        });
+        mainPanel.add(new GroupPanel(GroupingType.fillFirst,
+                View.GAP_DEFAULT, mSubscrStatus, mSubscrButton));
 
         groupPanel.add(mainPanel);
 
@@ -214,7 +226,9 @@ final class ContactDetails extends WebPanel implements Observer {
             case SUBSCRIBED: auth = Tr.tr("Authorized"); break;
             case UNSUBSCRIBED: auth = Tr.tr("Not authorized"); break;
         }
-        mAuthorization.setText(auth);
+        mSubscrButton.setVisible(subscription != Contact.Subscription.SUBSCRIBED);
+        mSubscrButton.setEnabled(subscription == Contact.Subscription.UNSUBSCRIBED);
+        mSubscrStatus.setText(auth);
         String hasKey = "<html>";
         if (mContact.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";
