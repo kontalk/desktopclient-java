@@ -140,7 +140,8 @@ public final class RosterHandler {
         }
 
         Contact contact = optContact.get();
-        if (!contact.getFingerprint().equals(fingerprint)) {
+        if (!fingerprint.isEmpty() &&
+                !fingerprint.equalsIgnoreCase(contact.getFingerprint())) {
             LOGGER.info("detected public key change, requesting new key...");
             mControl.maySendKeyRequest(contact);
         }

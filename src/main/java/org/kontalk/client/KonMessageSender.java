@@ -124,8 +124,7 @@ final class KonMessageSender {
             sendMessages.add(sendMessage);
         }
 
-        //return mClient.sendPackets(sendMessages.toArray(new Message[0]));
-        return true;
+        return mClient.sendPackets(sendMessages.toArray(new Message[0]));
     }
 
     private static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {

@@ -71,6 +71,10 @@ public final class JID {
                 this.equals(JID.me());
     }
 
+    public JID toBare() {
+        return new JID(mLocal, mDomain, "");
+    }
+
     /**
      * Comparing only bare JIDs.
      * Case-insensitive (local and domain part, resource is case-sensitive).

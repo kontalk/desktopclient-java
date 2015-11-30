@@ -123,7 +123,7 @@ public final class Contact extends Observable {
         mLastSeen = lastSeen;
         mEncrypted = encrypted;
         mKey = publicKey;
-        mFingerprint = fingerprint;
+        mFingerprint = fingerprint.toLowerCase();
     }
 
     public JID getJID() {
@@ -230,7 +230,7 @@ public final class Contact extends Observable {
             LOGGER.info("overwriting public key of contact: "+this);
 
         mKey = EncodingUtils.bytesToBase64(rawKey);
-        mFingerprint = fingerprint;
+        mFingerprint = fingerprint.toLowerCase();
         this.save();
         this.changed(new byte[0]);
     }
