@@ -39,6 +39,8 @@ import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import javax.swing.Box;
@@ -56,6 +58,8 @@ import org.kontalk.util.Tr;
  */
 final class ContactDetails extends WebPanel implements Observer {
 
+    private static final Map<Contact, ContactDetails> CACHE = new HashMap<>();
+
     private final View mView;
     private final Contact mContact;
     private final WebTextField mNameField;
@@ -66,7 +70,7 @@ final class ContactDetails extends WebPanel implements Observer {
     private final WebTextArea mFPArea;
     private final WebCheckBox mEncryptionBox;
 
-    ContactDetails(View view, Contact contact) {
+    private ContactDetails(View view, Contact contact) {
         mView = view;
         mContact = contact;
 
@@ -216,7 +220,7 @@ final class ContactDetails extends WebPanel implements Observer {
     }
 
     private void updateOnEDT() {
-        // may have changed: contact name and/or key
+        // may have changed: contact name, subscription and/or key
         mNameField.setText(mContact.getName());
         mNameField.setInputPrompt(mContact.getName());
         Contact.Subscription subscription = mContact.getSubScription();
@@ -269,7 +273,13 @@ final class ContactDetails extends WebPanel implements Observer {
             mView.getControl().changeJID(mContact, jid);
     }
 
-    void onClose() {
-        this.mContact.deleteObserver(this);
+    static ContactDetails instance(View view, Contact contact) {
+        if (!CACHE.containsKey(contact)) {
+            ContactDetails newContactDetails = new ContactDetails(view, contact);
+            contact.addObserver(newContactDetails);
+            CACHE.put(contact, newContactDetails);
+        }
+
+        return CACHE.get(contact);
     }
 }
