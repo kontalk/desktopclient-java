@@ -347,12 +347,13 @@ public final class Control {
     }
 
     void maySendKeyRequest(Contact contact) {
-        if (!contact.isKontalkUser())
+        if (!contact.isKontalkUser()) {
+            LOGGER.config("not sending, not a kontalk user, contact: "+contact);
             return;
+        }
 
-        if (contact.getSubScription() == Contact.Subscription.UNSUBSCRIBED ||
-                contact.getSubScription() == Contact.Subscription.PENDING) {
-            LOGGER.info("no presence subscription, not sending key request, contact: "+contact);
+        if (contact.getSubScription() != Contact.Subscription.SUBSCRIBED) {
+            LOGGER.config("not sending, no subscription, contact: "+contact);
             return;
         }
         mClient.sendPublicKeyRequest(contact.getJID());

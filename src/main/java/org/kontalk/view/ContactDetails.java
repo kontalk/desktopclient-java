@@ -67,6 +67,7 @@ final class ContactDetails extends WebPanel implements Observer {
     private final WebButton mSubscrButton;
     private final WebLabel mKeyStatus;
     private final WebLabel mFPLabel;
+    private final WebButton mUpdateButton;
     private final WebTextArea mFPArea;
     private final WebCheckBox mEncryptionBox;
 
@@ -146,17 +147,17 @@ final class ContactDetails extends WebPanel implements Observer {
 
         keyPanel.add(new WebLabel(Tr.tr("Public Key")+":"));
         mKeyStatus = new WebLabel();
-        WebButton updButton = new WebButton(Tr.tr("Update"));
+        mUpdateButton = new WebButton(Tr.tr("Update"));
         String updText = Tr.tr("Update key");
-        TooltipManager.addTooltip(updButton, updText);
-        updButton.addActionListener(new ActionListener() {
+        TooltipManager.addTooltip(mUpdateButton, updText);
+        mUpdateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 mView.getControl().requestKey(ContactDetails.this.mContact);
             }
         });
         keyPanel.add(new GroupPanel(GroupingType.fillFirst,
-                View.GAP_DEFAULT, mKeyStatus, updButton));
+                View.GAP_DEFAULT, mKeyStatus, mUpdateButton));
 
         mFPLabel = new WebLabel(Tr.tr("Fingerprint:"));
         keyPanel.add(mFPLabel);
@@ -248,6 +249,8 @@ final class ContactDetails extends WebPanel implements Observer {
             mFPArea.setVisible(false);
         }
         mKeyStatus.setText(hasKey);
+        mUpdateButton.setEnabled(mContact.isKontalkUser() &&
+                subscription == Contact.Subscription.SUBSCRIBED);
     }
 
     private void saveName(String name) {
