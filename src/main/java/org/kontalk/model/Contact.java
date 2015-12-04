@@ -144,7 +144,7 @@ public final class Contact extends Observable {
         this.changed(mJID);
     }
 
-    int getID() {
+    public int getID() {
         return mID;
     }
 
