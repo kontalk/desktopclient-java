@@ -18,7 +18,11 @@
 
 package org.kontalk.system;
 
+import org.kontalk.model.UserAvatar;
 import org.kontalk.model.Account;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -30,6 +34,7 @@ import java.util.Observable;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.Kontalk;
@@ -86,6 +91,7 @@ public final class Control {
     private final RosterHandler mRosterHandler;
     private final AvatarHandler mAvatarHandler;
     private final GroupControl mGroupControl;
+    private final UserAvatar mAvatar;
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
@@ -98,6 +104,7 @@ public final class Control {
         mRosterHandler = new RosterHandler(this, mClient);
         mAvatarHandler = new AvatarHandler(mClient);
         mGroupControl = new GroupControl(this);
+        mAvatar = new UserAvatar(appDir);
     }
 
     public RosterHandler getRosterHandler() {
@@ -748,6 +755,23 @@ public final class Control {
 
         public void sendAttachment(Chat chat, Path file){
             this.sendTextMessage(chat, "", file);
+        }
+
+        public BufferedImage getUserAvatar() {
+            return mAvatar.get();
+        }
+
+        public void setUserAvatar(BufferedImage avatar) {
+            mAvatar.set(avatar);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            try {
+                ImageIO.write(avatar, UserAvatar.EXT, out);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't convert avatar", ex);
+                return;
+            }
+            byte[] avatarData = out.toByteArray();
+            mClient.publishAvatar(DigestUtils.sha1Hex(avatarData), avatarData);
         }
 
         /* private */
