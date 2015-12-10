@@ -180,6 +180,64 @@ public final class Client implements StanzaListener, Runnable {
 
         mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
 
+        // (server) service discovery, XEP-0030
+        // NOTE: smack automatically creates instances of SDM and CapsM and connects them
+        //ServiceDiscoveryManager discoManager = ServiceDiscoveryManager.getInstanceFor(mConn);
+//        try {
+//            // blocking
+//            // NOTE: null parameter does not work
+//            DiscoverInfo i = discoManager.discoverInfo(mConn.getServiceName());
+//            for (DiscoverInfo.Feature f: i.getFeatures()) {
+//                System.out.println("server feature: "+f.getVar());
+//            }
+//        } catch (SmackException.NoResponseException |
+//                XMPPException.XMPPErrorException |
+//                SmackException.NotConnectedException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+
+        // Caps, XEP-0115
+        // NOTE: caps manager is automatically used by Smack
+        //EntityCapsManager capsManager = EntityCapsManager.getInstanceFor(mConn);
+
+        // PEP, XEP-0163
+        // NOTE: Smack's implementation is not usable, use PubSub instead
+//        PEPManager m = new PEPManager(mConn);
+//        m.addPEPListener(new PEPListener() {
+//            @Override
+//            public void eventReceived(String from, PEPEvent event) {
+//                LOGGER.info("from: "+from+" event: "+event);
+//            }
+//        });
+
+        // PubSub, XEP-0060
+        // NOTE: pubsub is currently unsupported by beta.kontalk.net
+//        PubSubManager pubSubManager = new PubSubManager(mConn, mConn.getServiceName());
+//        try {
+//            DiscoverInfo i = pubSubManager.getSupportedFeatures();
+//            // same as server service discovery features!?
+//            for (DiscoverInfo.Feature f: i.getFeatures()) {
+//                System.out.println("feature: "+f.getVar());
+//            }
+//        } catch (SmackException.NoResponseException |
+//                XMPPException.XMPPErrorException |
+//                SmackException.NotConnectedException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+        // here be exceptions
+//        try {
+//            for (Affiliation a: pubSubManager.getAffiliations()) {
+//                System.out.println("aff: "+a.toXML());
+//            }
+//            for (Subscription s: pubSubManager.getSubscriptions()) {
+//                System.out.println("subs: "+s.toXML());
+//            }
+//        } catch (SmackException.NoResponseException |
+//                XMPPException.XMPPErrorException |
+//                SmackException.NotConnectedException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+
         this.sendInitialPresence();
         this.sendBlocklistRequest();
 
