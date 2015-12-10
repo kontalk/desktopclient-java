@@ -491,6 +491,7 @@ public final class Control {
     /* static */
 
     public static ViewControl create(Path appDir) {
+        Client.setCapsCache(appDir);
         return new Control(appDir).mViewControl;
     }
 

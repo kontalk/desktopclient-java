@@ -18,7 +18,9 @@
 
 package org.kontalk.client;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +41,8 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.roster.RosterEntry;
+import org.jivesoftware.smackx.caps.EntityCapsManager;
+import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.kontalk.system.Config;
@@ -57,6 +61,7 @@ import org.kontalk.system.RosterHandler;
 public final class Client implements StanzaListener, Runnable {
     private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
+    private static final String CAPS_CACHE_DIR = "caps_cache";
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
     public enum PresenceCommand {REQUEST, GRANT, DENY};
@@ -77,6 +82,20 @@ public final class Client implements StanzaListener, Runnable {
 
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
+    }
+
+    public static void setCapsCache(Path appDir) {
+        File cacheDir = appDir.resolve(CAPS_CACHE_DIR).toFile();
+        if (cacheDir.mkdir())
+            LOGGER.info("created caps cache directory");
+
+        if (!cacheDir.isDirectory()) {
+            LOGGER.warning("invalid cache directory: "+cacheDir);
+            return;
+        }
+
+        EntityCapsManager.setPersistentCache(
+                new SimpleDirectoryPersistentCache(cacheDir));
     }
 
     public void connect(PersonalKey key) {
