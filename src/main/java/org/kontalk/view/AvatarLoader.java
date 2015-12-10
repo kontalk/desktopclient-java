@@ -58,18 +58,22 @@ final class AvatarLoader {
     private static ImageIcon load(Item item) {
         if (!CACHE.containsKey(item)) {
             // TODO
-            CACHE.put(item, fallback(item));
+            CACHE.put(item, new ImageIcon(fallback(item.label, item.colorCode, IMG_SIZE)));
         }
         return CACHE.get(item);
     }
 
-    private static ImageIcon fallback(Item item) {
-        BufferedImage img = new BufferedImage(IMG_SIZE, IMG_SIZE, BufferedImage.TYPE_INT_RGB);
+    static BufferedImage createFallback(int size) {
+        return fallback("", 0, size);
+    }
+
+    private static BufferedImage fallback(String text, int colorCode, int size) {
+        BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
 
         // color
         Color color;
-        if (!item.label.isEmpty()) {
-            int hue = Math.abs(item.colorCode) % 360;
+        if (!text.isEmpty()) {
+            int hue = Math.abs(colorCode) % 360;
             color = Color.getHSBColor(hue / 360.0f, 1, 1);
         } else {
             color = FALLBACK_COLOR;
@@ -77,15 +81,14 @@ final class AvatarLoader {
 
         Graphics2D graphics = img.createGraphics();
         graphics.setColor(color);
-        graphics.fillRect(0, 0, IMG_SIZE, IMG_SIZE);
+        graphics.fillRect(0, 0, size, size);
 
         // letter
-        String name = item.label;
-        String letter = name.length() > 1 ?
-                name.substring(0, 1).toUpperCase() :
+        String letter = text.length() > 1 ?
+                text.substring(0, 1).toUpperCase() :
                 FALLBACK_LETTER;
 
-        graphics.setFont(new Font(Font.MONOSPACED, Font.BOLD, IMG_SIZE));
+        graphics.setFont(new Font(Font.MONOSPACED, Font.BOLD, size));
         graphics.setColor(LETTER_COLOR);
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
@@ -94,11 +97,11 @@ final class AvatarLoader {
         int h = fm.getHeight();
         int d = fm.getDescent();
         graphics.drawString(letter,
-                 (IMG_SIZE / 2.0f) - (w / 2.0f),
+                 (size / 2.0f) - (w / 2.0f),
                  // adjust to font baseline
-                 (IMG_SIZE / 2.0f) + (h / 2.0f) - d);
+                 (size / 2.0f) + (h / 2.0f) - d);
 
-        return new ImageIcon(img);
+        return img;
     }
 
     private static class Item {
