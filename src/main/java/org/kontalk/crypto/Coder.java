@@ -29,7 +29,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.DecryptMessage;
 import org.kontalk.model.InMessage;
-import org.kontalk.system.Account;
+import org.kontalk.model.Account;
 
 /**
  * Static methods for decryption and encryption of a message.

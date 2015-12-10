@@ -49,7 +49,7 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.kontalk.misc.KonException;
 import org.kontalk.system.AccountImporter;
-import org.kontalk.system.Account;
+import org.kontalk.model.Account;
 import org.kontalk.util.Tr;
 
 /**

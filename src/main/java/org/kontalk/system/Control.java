@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import org.kontalk.model.Account;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -527,7 +528,7 @@ public final class Control {
             new Thread(mClient).start();
 
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-            if (!Account.getInstance().accountIsPresent()) {
+            if (!Account.getInstance().isPresent()) {
                 LOGGER.info("no account found, asking for import...");
                 this.changed(new ViewEvent.MissingAccount(connect));
                 return;
