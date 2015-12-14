@@ -185,37 +185,39 @@ public final class View implements Observer {
     }
 
     private void updateOnEDT(Object arg) {
-       if (arg instanceof ViewEvent.StatusChanged) {
-           this.statusChanged();
-       } else if (arg instanceof ViewEvent.PasswordSet) {
-           this.showPasswordDialog(false);
-       } else if (arg instanceof ViewEvent.MissingAccount) {
-           ViewEvent.MissingAccount missAccount = (ViewEvent.MissingAccount) arg;
-           this.showImportWizard(missAccount.connect);
-       } else if (arg instanceof ViewEvent.Exception) {
-           ViewEvent.Exception exception = (ViewEvent.Exception) arg;
-           mNotifier.showException(exception.exception);
-       } else if (arg instanceof ViewEvent.SecurityError) {
-           ViewEvent.SecurityError error = (ViewEvent.SecurityError) arg;
-           mNotifier.showSecurityErrors(error.message);
-       } else if (arg instanceof ViewEvent.NewMessage) {
-           ViewEvent.NewMessage newMessage = (ViewEvent.NewMessage) arg;
-           mNotifier.onNewMessage(newMessage.message);
-       } else if (arg instanceof ViewEvent.NewKey) {
-           ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
-           if (!newKey.contact.hasKey())
-               // TODO webkey, disabling for now
-               return;
-           mNotifier.confirmNewKey(newKey.contact, newKey.key);
-       } else if (arg instanceof ViewEvent.ContactDeleted) {
-           ViewEvent.ContactDeleted contactDeleted = (ViewEvent.ContactDeleted) arg;
-           mNotifier.confirmContactDeletion(contactDeleted.contact);
-       } else if (arg instanceof ViewEvent.PresenceError) {
-           ViewEvent.PresenceError presenceError = (ViewEvent.PresenceError) arg;
-           mNotifier.showPresenceError(presenceError.contact, presenceError.error);
-       } else {
-           LOGGER.warning("unexpected argument");
-       }
+        if (arg instanceof ViewEvent.StatusChanged) {
+            this.statusChanged();
+        } else if (arg instanceof ViewEvent.PasswordSet) {
+            this.showPasswordDialog(false);
+        } else if (arg instanceof ViewEvent.MissingAccount) {
+            ViewEvent.MissingAccount missAccount = (ViewEvent.MissingAccount) arg;
+            this.showImportWizard(missAccount.connect);
+        } else if (arg instanceof ViewEvent.Exception) {
+            ViewEvent.Exception exception = (ViewEvent.Exception) arg;
+            mNotifier.showException(exception.exception);
+        } else if (arg instanceof ViewEvent.SecurityError) {
+            ViewEvent.SecurityError error = (ViewEvent.SecurityError) arg;
+            mNotifier.showSecurityErrors(error.message);
+        } else if (arg instanceof ViewEvent.NewMessage) {
+            ViewEvent.NewMessage newMessage = (ViewEvent.NewMessage) arg;
+            mNotifier.onNewMessage(newMessage.message);
+        } else if (arg instanceof ViewEvent.NewKey) {
+            ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
+            if (!newKey.contact.hasKey())
+                // TODO webkey, disabling for now
+                return;
+            mNotifier.confirmNewKey(newKey.contact, newKey.key);
+        } else if (arg instanceof ViewEvent.ContactDeleted) {
+            ViewEvent.ContactDeleted contactDeleted = (ViewEvent.ContactDeleted) arg;
+            mNotifier.confirmContactDeletion(contactDeleted.contact);
+        } else if (arg instanceof ViewEvent.PresenceError) {
+            ViewEvent.PresenceError presenceError = (ViewEvent.PresenceError) arg;
+            mNotifier.showPresenceError(presenceError.contact, presenceError.error);
+        } else if (arg instanceof ViewEvent.SubscriptionRequest) {
+            mNotifier.confirmSubscription((ViewEvent.SubscriptionRequest) arg);
+        } else {
+            LOGGER.warning("unexpected argument: "+arg);
+        }
     }
 
     private void statusChanged() {

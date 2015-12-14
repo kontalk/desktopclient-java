@@ -18,29 +18,30 @@
 
 package org.kontalk.client;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.jivesoftware.smack.ExceptionCallback;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Stanza;
 import org.kontalk.misc.JID;
 import org.kontalk.system.Control;
 
 /**
- *
+ * Send blocking command and listen to response.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class BlockResponseListener implements StanzaListener {
-    private static final Logger LOGGER = Logger.getLogger(BlockResponseListener.class.getName());
+final class BlockSendReceiver implements StanzaListener {
+    private static final Logger LOGGER = Logger.getLogger(BlockSendReceiver.class.getName());
 
     private final Control mControl;
-    private final XMPPConnection mConn;
+    private final KonConnection mConn;
     private final boolean mBlocking;
     private final JID mJID;
 
-    BlockResponseListener(Control control,
-            XMPPConnection conn,
+    BlockSendReceiver(Control control,
+            KonConnection conn,
             boolean blocking,
             JID jid){
         mControl = control;
@@ -49,21 +50,37 @@ final class BlockResponseListener implements StanzaListener {
         mJID = jid;
     }
 
+    public void sendAndListen() {
+        LOGGER.info("jid: "+mJID+" blocking="+mBlocking);
+
+        String command = mBlocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
+        BlockingCommand blockingCommand = new BlockingCommand(command, mJID.string());
+
+        try {
+            mConn.sendIqWithResponseCallback(blockingCommand, this, new ExceptionCallback() {
+                @Override
+                public void processException(Exception exception) {
+                    LOGGER.log(Level.WARNING, "exception response", exception);
+                }
+            });
+        } catch (SmackException.NotConnectedException ex) {
+            LOGGER.log(Level.WARNING, "not connected", ex);
+        }
+    }
+
     @Override
     public void processPacket(Stanza packet)
             throws SmackException.NotConnectedException {
-        LOGGER.info("block response: "+packet);
-
-        mConn.removeSyncStanzaListener(this);
+        LOGGER.info("response: "+packet);
 
         if (!(packet instanceof IQ)) {
-            LOGGER.warning("block response not an IQ packet");
+            LOGGER.warning("response not an IQ packet");
             return;
         }
         IQ p = (IQ) packet;
 
         if (p.getType() != IQ.Type.result) {
-            LOGGER.warning("ignoring block response with IQ type: "+p.getType());
+            LOGGER.warning("ignoring response with IQ type: "+p.getType());
             return;
         }
 

@@ -56,7 +56,7 @@ public class Content extends WebPanel {
     }
 
     void showContact(Contact contact) {
-        this.show(new ContactDetails(mView, contact));
+        this.show(ContactDetails.instance(mView, contact));
     }
 
     void showNothing() {
@@ -69,9 +69,6 @@ public class Content extends WebPanel {
     }
 
     private void show(Component comp) {
-        if (mCurrent instanceof ContactDetails) {
-            ((ContactDetails) mCurrent).onClose();
-        }
         // Swing...
         this.removeAll();
         this.add(comp, BorderLayout.CENTER);

@@ -36,7 +36,7 @@ import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.ContactList;
-import org.kontalk.system.Account;
+import org.kontalk.model.Account;
 import org.kontalk.system.Config;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;

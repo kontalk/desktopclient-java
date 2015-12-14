@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.system;
+package org.kontalk.model;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,6 +39,7 @@ import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.crypto.X509Bridge;
+import org.kontalk.system.Config;
 
 /**
  * The user account. There can only be one.
@@ -66,7 +67,7 @@ public final class Account {
         return Optional.ofNullable(mKey);
     }
 
-    PersonalKey load(char[] password) throws KonException {
+    public PersonalKey load(char[] password) throws KonException {
         // read key files
         byte[] privateKeyData = this.readFile(PRIVATE_KEY_FILENAME, true);
         byte[] bridgeCertData = this.readFile(BRIDGE_CERT_FILENAME, false);
@@ -83,7 +84,7 @@ public final class Account {
         return mKey;
     }
 
-    void setAccount(byte[] privateKeyData, char[] password) throws KonException {
+    public void setAccount(byte[] privateKeyData, char[] password) throws KonException {
         // try to load key
         PersonalKey key;
         byte[] encodedPrivateKey;
@@ -151,7 +152,7 @@ public final class Account {
         mConf.setProperty(Config.ACC_PASS, savedPass);
     }
 
-    boolean accountIsPresent() {
+    public boolean isPresent() {
         return this.fileExists(PRIVATE_KEY_FILENAME) &&
                 this.fileExists(BRIDGE_CERT_FILENAME);
     }

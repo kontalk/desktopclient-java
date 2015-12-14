@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import org.kontalk.model.Account;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -155,10 +156,7 @@ public final class Control {
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
 
-        ContactList contactList = ContactList.getInstance();
-        Optional<Contact> optContact = contactList.contains(ids.jid) ?
-                contactList.get(ids.jid) :
-                this.createContact(ids.jid, "");
+        Optional<Contact> optContact = this.getOrCreate(ids.jid, "");
         if (!optContact.isPresent()) {
             LOGGER.warning("can't get contact for message");
             return false;
@@ -267,8 +265,11 @@ public final class Control {
             LOGGER.warning("can't find contact with jid: "+jid);
             return;
         }
-        Contact contact = optContact.get();
 
+        this.handlePGPKey(optContact.get(), rawKey);
+    }
+
+    void handlePGPKey(Contact contact, byte[] rawKey) {
         Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
         if (!optKey.isPresent()) {
             LOGGER.warning("invalid public PGP key, contact: "+contact);
@@ -285,11 +286,12 @@ public final class Control {
             // same key
             return;
 
-        if (contact.hasKey())
+        if (contact.hasKey()) {
             // ask before overwriting
             mViewControl.changed(new ViewEvent.NewKey(contact, key));
-        else
+        } else {
             this.setKey(contact, key);
+        }
     }
 
     public void setKey(Contact contact, PGPCoderKey key) {
@@ -346,22 +348,37 @@ public final class Control {
     }
 
     void maySendKeyRequest(Contact contact) {
-        if (!contact.isKontalkUser())
+        if (!contact.isKontalkUser()) {
+            LOGGER.config("not sending, not a kontalk user, contact: "+contact);
             return;
+        }
 
-        if (contact.getSubScription() == Contact.Subscription.UNSUBSCRIBED ||
-                contact.getSubScription() == Contact.Subscription.PENDING) {
-            LOGGER.info("no presence subscription, not sending key request, contact: "+contact);
+        if (contact.getSubScription() != Contact.Subscription.SUBSCRIBED) {
+            LOGGER.config("not sending, no subscription, contact: "+contact);
             return;
         }
         mClient.sendPublicKeyRequest(contact.getJID());
+    }
+
+    Optional<Contact> getOrCreate(JID jid, String name) {
+        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        if (optContact.isPresent())
+            return optContact;
+
+        return this.createContact(jid, "");
     }
 
     Optional<Contact> createContact(JID jid, String name) {
         return this.createContact(jid, name, XMPPUtils.isKontalkJID(jid));
     }
 
-    Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
+    void sendPresenceSubscription(JID jid, Client.PresenceCommand command) {
+        mClient.sendPresenceSubscription(jid, command);
+    }
+
+    /* private */
+
+    private Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
         if (!mClient.isConnected()) {
             // workaround: create only if contact can be added to roster
             return Optional.empty();
@@ -387,8 +404,6 @@ public final class Control {
 
         return Optional.of(newContact);
     }
-
-    /* private */
 
     private void decryptAndProcess(InMessage message) {
         if (!message.isEncrypted()) {
@@ -463,13 +478,10 @@ public final class Control {
             // add contacts if necessary
             // TODO design problem here: we need at least the public keys, but user
             // might dont wanna have group members in contact list
-            ContactList contactList = ContactList.getInstance();
             for (JID jid : command.getAdded()) {
-                if (!contactList.contains(jid)) {
-                    boolean succ = this.createContact(jid, "").isPresent();
-                    if (!succ)
-                        LOGGER.warning("can't create contact, JID: "+jid);
-                }
+                boolean succ = this.getOrCreate(jid, "").isPresent();
+                if (!succ)
+                    LOGGER.warning("can't create contact, JID: "+jid);
             }
         }
 
@@ -479,6 +491,7 @@ public final class Control {
     /* static */
 
     public static ViewControl create(Path appDir) {
+        Client.setCapsCache(appDir);
         return new Control(appDir).mViewControl;
     }
 
@@ -516,7 +529,7 @@ public final class Control {
             new Thread(mClient).start();
 
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-            if (!Account.getInstance().accountIsPresent()) {
+            if (!Account.getInstance().isPresent()) {
                 LOGGER.info("no account found, asking for import...");
                 this.changed(new ViewEvent.MissingAccount(connect));
                 return;
@@ -625,6 +638,18 @@ public final class Control {
 
         public void declineKey(Contact contact) {
             this.sendContactBlocking(contact, true);
+        }
+
+        public void sendSubscriptionResponse(Contact contact, boolean accept) {
+            Control.this.sendPresenceSubscription(contact.getJID(),
+                    accept ?
+                            Client.PresenceCommand.GRANT :
+                            Client.PresenceCommand.DENY);
+        }
+
+        public void sendSubscriptionRequest(Contact contact) {
+            Control.this.sendPresenceSubscription(contact.getJID(),
+                    Client.PresenceCommand.REQUEST);
         }
 
         /* chats */

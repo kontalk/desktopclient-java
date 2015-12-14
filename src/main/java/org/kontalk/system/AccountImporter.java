@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import org.kontalk.model.Account;
 import java.io.IOException;
 import java.util.Observable;
 import java.util.Observer;

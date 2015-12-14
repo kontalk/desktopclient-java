@@ -18,7 +18,9 @@
 
 package org.kontalk.client;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -31,17 +33,16 @@ import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.NotFilter;
-import org.jivesoftware.smack.filter.OrFilter;
+import org.jivesoftware.smack.filter.IQTypeFilter;
 import org.jivesoftware.smack.filter.StanzaFilter;
-import org.jivesoftware.smack.filter.StanzaIdFilter;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.roster.RosterEntry;
-import org.jivesoftware.smack.roster.packet.RosterPacket;
+import org.jivesoftware.smackx.caps.EntityCapsManager;
+import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.kontalk.system.Config;
@@ -55,15 +56,15 @@ import org.kontalk.system.RosterHandler;
 /**
  * Network client for an XMPP Kontalk Server.
  *
- * Note: By default incoming presence subscription requests are automatically
- * granted by Smack (but Kontalk uses a custom subscription request!?)
- *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Client implements StanzaListener, Runnable {
     private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
+    private static final String CAPS_CACHE_DIR = "caps_cache";
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
+
+    public enum PresenceCommand {REQUEST, GRANT, DENY};
 
     private static enum Command {CONNECT, DISCONNECT};
 
@@ -81,6 +82,20 @@ public final class Client implements StanzaListener, Runnable {
 
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
+    }
+
+    public static void setCapsCache(Path appDir) {
+        File cacheDir = appDir.resolve(CAPS_CACHE_DIR).toFile();
+        if (cacheDir.mkdir())
+            LOGGER.info("created caps cache directory");
+
+        if (!cacheDir.isDirectory()) {
+            LOGGER.warning("invalid cache directory: "+cacheDir);
+            return;
+        }
+
+        EntityCapsManager.setPersistentCache(
+                new SimpleDirectoryPersistentCache(cacheDir));
     }
 
     public void connect(PersonalKey key) {
@@ -106,10 +121,14 @@ public final class Client implements StanzaListener, Runnable {
         // connection listener
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
+        Roster roster = Roster.getInstanceFor(mConn);
+        // subscriptions handled by roster handler
+        roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
+
         // packet listeners
         RosterHandler rosterSyncer = mControl.getRosterHandler();
-        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), rosterSyncer);
-        Roster.getInstanceFor(mConn).addRosterListener(rl);
+        RosterListener rl = new KonRosterListener(roster, rosterSyncer);
+        roster.addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
         mConn.addAsyncStanzaListener(new KonMessageListener(this, mControl), messageFilter);
@@ -124,23 +143,10 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-        mConn.addAsyncStanzaListener(new PresenceListener(Roster.getInstanceFor(mConn), rosterSyncer), presenceFilter);
+        mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterSyncer), presenceFilter);
 
-         // fallback listener
-        mConn.addAsyncStanzaListener(this,
-                new NotFilter(
-                        new OrFilter(
-                                messageFilter,
-                                vCardFilter,
-                                blockingCommandFilter,
-                                publicKeyFilter,
-                                vCardFilter,
-                                presenceFilter,
-                                // handled by roster listener
-                                new StanzaTypeFilter(RosterPacket.class)
-                        )
-                )
-        );
+        // listen to all IQ errors
+        mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
 
         // continue async
         List<?> args = new ArrayList<>(0);
@@ -173,6 +179,64 @@ public final class Client implements StanzaListener, Runnable {
         }
 
         mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
+
+        // (server) service discovery, XEP-0030
+        // NOTE: smack automatically creates instances of SDM and CapsM and connects them
+        //ServiceDiscoveryManager discoManager = ServiceDiscoveryManager.getInstanceFor(mConn);
+//        try {
+//            // blocking
+//            // NOTE: null parameter does not work
+//            DiscoverInfo i = discoManager.discoverInfo(mConn.getServiceName());
+//            for (DiscoverInfo.Feature f: i.getFeatures()) {
+//                System.out.println("server feature: "+f.getVar());
+//            }
+//        } catch (SmackException.NoResponseException |
+//                XMPPException.XMPPErrorException |
+//                SmackException.NotConnectedException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+
+        // Caps, XEP-0115
+        // NOTE: caps manager is automatically used by Smack
+        //EntityCapsManager capsManager = EntityCapsManager.getInstanceFor(mConn);
+
+        // PEP, XEP-0163
+        // NOTE: Smack's implementation is not usable, use PubSub instead
+//        PEPManager m = new PEPManager(mConn);
+//        m.addPEPListener(new PEPListener() {
+//            @Override
+//            public void eventReceived(String from, PEPEvent event) {
+//                LOGGER.info("from: "+from+" event: "+event);
+//            }
+//        });
+
+        // PubSub, XEP-0060
+        // NOTE: pubsub is currently unsupported by beta.kontalk.net
+//        PubSubManager pubSubManager = new PubSubManager(mConn, mConn.getServiceName());
+//        try {
+//            DiscoverInfo i = pubSubManager.getSupportedFeatures();
+//            // same as server service discovery features!?
+//            for (DiscoverInfo.Feature f: i.getFeatures()) {
+//                System.out.println("feature: "+f.getVar());
+//            }
+//        } catch (SmackException.NoResponseException |
+//                XMPPException.XMPPErrorException |
+//                SmackException.NotConnectedException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+        // here be exceptions
+//        try {
+//            for (Affiliation a: pubSubManager.getAffiliations()) {
+//                System.out.println("aff: "+a.toXML());
+//            }
+//            for (Subscription s: pubSubManager.getSubscriptions()) {
+//                System.out.println("subs: "+s.toXML());
+//            }
+//        } catch (SmackException.NoResponseException |
+//                XMPPException.XMPPErrorException |
+//                SmackException.NotConnectedException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
 
         this.sendInitialPresence();
         this.sendBlocklistRequest();
@@ -227,21 +291,12 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendBlockingCommand(JID jid, boolean blocking) {
-        LOGGER.info("jid: "+jid+" blocking="+blocking);
-
         if (mConn == null || !this.isConnected()) {
             LOGGER.warning("not connected");
             return;
         }
 
-        String command = blocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
-        BlockingCommand blockingCommand = new BlockingCommand(command, jid.string());
-
-        // add response listener
-        StanzaListener blockResponseListener = new BlockResponseListener(mControl, mConn, blocking, jid);
-        mConn.addAsyncStanzaListener(blockResponseListener, new StanzaIdFilter(blockingCommand));
-
-        this.sendPacket(blockingCommand);
+        new BlockSendReceiver(mControl, mConn, blocking, jid).sendAndListen();
     }
 
     public void sendInitialPresence() {
@@ -260,11 +315,17 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(presence);
     }
 
-    public void sendPresenceSubscriptionRequest(JID jid) {
-        LOGGER.info("to "+jid);
-        Presence subscribeRequest = new Presence(Presence.Type.subscribe);
-        subscribeRequest.setTo(jid.string());
-        this.sendPacket(subscribeRequest);
+    public void sendPresenceSubscription(JID jid, PresenceCommand command) {
+        LOGGER.info("to: "+jid+ ", command: "+command);
+        Presence.Type type = null;
+        switch(command) {
+            case REQUEST: type = Presence.Type.subscribe; break;
+            case GRANT: type = Presence.Type.subscribed; break;
+            case DENY: type = Presence.Type.unsubscribed; break;
+        }
+        Presence presence = new Presence(type);
+        presence.setTo(jid.string());
+        this.sendPacket(presence);
     }
 
     public void sendChatState(JID jid, String threadID, ChatState state) {
@@ -296,7 +357,7 @@ public final class Client implements StanzaListener, Runnable {
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.config("unhandled: "+packet);
+        LOGGER.warning("IQ error: "+packet);
     }
 
     public boolean addToRoster(JID jid, String name) {

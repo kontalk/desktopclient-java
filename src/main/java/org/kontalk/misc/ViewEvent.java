@@ -106,4 +106,13 @@ public class ViewEvent {
             this.error = error;
         }
     }
+
+    /** A contact wants presence subscription (ask whattodo). */
+    public static class SubscriptionRequest extends ViewEvent {
+        public final Contact contact;
+
+        public SubscriptionRequest(Contact contact) {
+            this.contact = contact;
+        }
+    }
 }

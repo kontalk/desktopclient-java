@@ -39,6 +39,8 @@ import java.awt.Graphics2D;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import javax.swing.Box;
@@ -56,16 +58,20 @@ import org.kontalk.util.Tr;
  */
 final class ContactDetails extends WebPanel implements Observer {
 
+    private static final Map<Contact, ContactDetails> CACHE = new HashMap<>();
+
     private final View mView;
     private final Contact mContact;
     private final WebTextField mNameField;
-    private final WebLabel mAuthorization;
+    private final WebLabel mSubscrStatus;
+    private final WebButton mSubscrButton;
     private final WebLabel mKeyStatus;
     private final WebLabel mFPLabel;
+    private final WebButton mUpdateButton;
     private final WebTextArea mFPArea;
     private final WebCheckBox mEncryptionBox;
 
-    ContactDetails(View view, Contact contact) {
+    private ContactDetails(View view, Contact contact) {
         mView = view;
         mContact = contact;
 
@@ -117,10 +123,21 @@ final class ContactDetails extends WebPanel implements Observer {
         mainPanel.add(jidField);
 
         mainPanel.add(new WebLabel(Tr.tr("Authorization:")));
-        mAuthorization = new WebLabel();
-        String authText = Tr.tr("Permission to view presence status and public key");
-        TooltipManager.addTooltip(mAuthorization, authText);
-        mainPanel.add(mAuthorization);
+        mSubscrStatus = new WebLabel();
+        String subscrText = Tr.tr("Permission to view presence status and public key");
+        TooltipManager.addTooltip(mSubscrStatus, subscrText);
+
+        mSubscrButton = new WebButton(Tr.tr("Request"));
+        String reqText = Tr.tr("Request status authorization from contact");
+        TooltipManager.addTooltip(mSubscrButton, reqText);
+        mSubscrButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                mView.getControl().sendSubscriptionRequest(mContact);
+            }
+        });
+        mainPanel.add(new GroupPanel(GroupingType.fillFirst,
+                View.GAP_DEFAULT, mSubscrStatus, mSubscrButton));
 
         groupPanel.add(mainPanel);
 
@@ -130,17 +147,17 @@ final class ContactDetails extends WebPanel implements Observer {
 
         keyPanel.add(new WebLabel(Tr.tr("Public Key")+":"));
         mKeyStatus = new WebLabel();
-        WebButton updButton = new WebButton(Tr.tr("Update"));
+        mUpdateButton = new WebButton(Tr.tr("Update"));
         String updText = Tr.tr("Update key");
-        TooltipManager.addTooltip(updButton, updText);
-        updButton.addActionListener(new ActionListener() {
+        TooltipManager.addTooltip(mUpdateButton, updText);
+        mUpdateButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 mView.getControl().requestKey(ContactDetails.this.mContact);
             }
         });
         keyPanel.add(new GroupPanel(GroupingType.fillFirst,
-                View.GAP_DEFAULT, mKeyStatus, updButton));
+                View.GAP_DEFAULT, mKeyStatus, mUpdateButton));
 
         mFPLabel = new WebLabel(Tr.tr("Fingerprint:"));
         keyPanel.add(mFPLabel);
@@ -204,7 +221,7 @@ final class ContactDetails extends WebPanel implements Observer {
     }
 
     private void updateOnEDT() {
-        // may have changed: contact name and/or key
+        // may have changed: contact name, subscription and/or key
         mNameField.setText(mContact.getName());
         mNameField.setInputPrompt(mContact.getName());
         Contact.Subscription subscription = mContact.getSubScription();
@@ -214,7 +231,9 @@ final class ContactDetails extends WebPanel implements Observer {
             case SUBSCRIBED: auth = Tr.tr("Authorized"); break;
             case UNSUBSCRIBED: auth = Tr.tr("Not authorized"); break;
         }
-        mAuthorization.setText(auth);
+        mSubscrButton.setVisible(subscription != Contact.Subscription.SUBSCRIBED);
+        mSubscrButton.setEnabled(subscription == Contact.Subscription.UNSUBSCRIBED);
+        mSubscrStatus.setText(auth);
         String hasKey = "<html>";
         if (mContact.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";
@@ -230,6 +249,8 @@ final class ContactDetails extends WebPanel implements Observer {
             mFPArea.setVisible(false);
         }
         mKeyStatus.setText(hasKey);
+        mUpdateButton.setEnabled(mContact.isKontalkUser() &&
+                subscription == Contact.Subscription.SUBSCRIBED);
     }
 
     private void saveName(String name) {
@@ -255,7 +276,13 @@ final class ContactDetails extends WebPanel implements Observer {
             mView.getControl().changeJID(mContact, jid);
     }
 
-    void onClose() {
-        this.mContact.deleteObserver(this);
+    static ContactDetails instance(View view, Contact contact) {
+        if (!CACHE.containsKey(contact)) {
+            ContactDetails newContactDetails = new ContactDetails(view, contact);
+            contact.addObserver(newContactDetails);
+            CACHE.put(contact, newContactDetails);
+        }
+
+        return CACHE.get(contact);
     }
 }
