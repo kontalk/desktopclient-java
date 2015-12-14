@@ -21,9 +21,12 @@ package org.kontalk.util;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
+import java.awt.image.ImageObserver;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -31,6 +34,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
+import org.kontalk.misc.Callback;
 
 /**
  *
@@ -89,8 +93,16 @@ public class MediaUtils {
         return new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
     }
 
-    public static byte[] imageToByteArray(Image image, String format) {
+    public static Optional<BufferedImage> readImage(byte[] imgData) {
+        try {
+            return Optional.ofNullable(ImageIO.read(new ByteArrayInputStream(imgData)));
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't read image data", ex);
+        }
+        return Optional.empty();
+    }
 
+    public static byte[] imageToByteArray(Image image, String format) {
         BufferedImage bufImage = new BufferedImage(
                 image.getWidth(null), image.getHeight(null),
                 BufferedImage.TYPE_INT_RGB);
@@ -118,7 +130,30 @@ public class MediaUtils {
      * @param max specifies if image is scaled to maximum or minimum of width/height
      * @return the scaled image, loaded async
      */
-    public static Image scale(Image image, int width, int height, boolean max) {
+    public static void scale(Image image, int width, int height, boolean max,
+            final Callback.Handler<Image> handler) {
+        Image img = scaleAsync(image, width, height, max);
+
+        ImageObserver observer = new ImageObserver() {
+            @Override
+            public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
+                // ignore if image is not completely loaded
+                if ((infoflags & ImageObserver.ALLBITS) == 0) {
+                    return true;
+                }
+
+                handler.handle(new Callback<>(img));
+                return false;
+            }
+        };
+
+        if (img.getWidth(observer) == -1)
+            return;
+
+        handler.handle(new Callback<>(img));
+    }
+
+    public static Image scaleAsync(Image image, int width, int height, boolean max) {
         int iw = image.getWidth(null);
         int ih = image.getHeight(null);
         if (iw == -1) {

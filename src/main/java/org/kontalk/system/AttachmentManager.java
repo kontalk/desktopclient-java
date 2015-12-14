@@ -266,7 +266,7 @@ public class AttachmentManager implements Runnable {
                 && image.getHeight() <= THUMBNAIL_DIM.height)
             return false;
 
-        Image thumb = MediaUtils.scale(image,
+        Image thumb = MediaUtils.scaleAsync(image,
                 THUMBNAIL_DIM.width ,
                 THUMBNAIL_DIM.height,
                 false);

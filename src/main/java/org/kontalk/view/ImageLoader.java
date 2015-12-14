@@ -56,7 +56,7 @@ class ImageLoader {
         @Override
         public void run() {
             BufferedImage image = MediaUtils.readImage(path);
-            Image scaledImage = MediaUtils.scale(image,
+            Image scaledImage = MediaUtils.scaleAsync(image,
                     AttachmentManager.THUMBNAIL_DIM.width,
                     AttachmentManager.THUMBNAIL_DIM.height,
                     false);
