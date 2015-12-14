@@ -18,9 +18,7 @@
 
 package org.kontalk.client;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.ExceptionCallback;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.IQ;
@@ -50,22 +48,13 @@ final class BlockSendReceiver implements StanzaListener {
         mJID = jid;
     }
 
-    public void sendAndListen() {
+    void sendAndListen() {
         LOGGER.info("jid: "+mJID+" blocking="+mBlocking);
 
         String command = mBlocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
         BlockingCommand blockingCommand = new BlockingCommand(command, mJID.string());
 
-        try {
-            mConn.sendIqWithResponseCallback(blockingCommand, this, new ExceptionCallback() {
-                @Override
-                public void processException(Exception exception) {
-                    LOGGER.log(Level.WARNING, "exception response", exception);
-                }
-            });
-        } catch (SmackException.NotConnectedException ex) {
-            LOGGER.log(Level.WARNING, "not connected", ex);
-        }
+        mConn.sendWithCallback(blockingCommand, this);
     }
 
     @Override

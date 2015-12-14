@@ -36,12 +36,14 @@ final class BlockListListener implements StanzaListener {
 
     private final Control mControl;
 
-    public BlockListListener(Control control) {
-        mControl = control;
-
+    static {
         ProviderManager.addIQProvider(BlockingCommand.BLOCKLIST,
                 BlockingCommand.NAMESPACE,
                 new BlockingCommand.Provider());
+    }
+
+    BlockListListener(Control control) {
+        mControl = control;
     }
 
     @Override

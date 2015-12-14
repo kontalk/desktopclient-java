@@ -66,7 +66,7 @@ public class PresenceListener implements StanzaListener {
 
         Presence presence = (Presence) packet;
 
-        JID jid = JID.bare(presence.getFrom());
+        JID jid = JID.full(presence.getFrom());
 
         ExtensionElement publicKeyExt = presence.getExtension(
                 PublicKeyPresence.ELEMENT_NAME,
@@ -98,12 +98,14 @@ public class PresenceListener implements StanzaListener {
                 return;
         }
 
-        Presence bestPresence = mRoster.getPresence(jid.string());
-
         // NOTE: a delay extension is sometimes included, don't know why;
         // ignoring mode, always null anyway
 
-        mHandler.onPresenceUpdate(JID.bare(bestPresence.getFrom()),
+        // NOTE: using only the "best" presence to ignore unimportant updates
+        // from multiple clients
+        Presence bestPresence = mRoster.getPresence(jid.string());
+
+        mHandler.onPresenceUpdate(jid,
                 bestPresence.getType(),
                 bestPresence.getStatus());
 
@@ -116,7 +118,7 @@ public class PresenceListener implements StanzaListener {
             }
         }
 
-        ExtensionElement signatureExt = presence.getExtension(
+        ExtensionElement signatureExt = bestPresence.getExtension(
                 PresenceSignature.ELEMENT_NAME,
                 PresenceSignature.NAMESPACE);
         if (signatureExt instanceof PresenceSignature) {
