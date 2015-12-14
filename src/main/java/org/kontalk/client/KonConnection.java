@@ -36,7 +36,12 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.UnsupportedCallbackException;
 
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
+import org.jivesoftware.smack.ExceptionCallback;
 import org.jivesoftware.smack.SASLAuthentication;
+import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.StanzaListener;
+import org.jivesoftware.smack.packet.IQ;
+import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration.Builder;
@@ -147,5 +152,30 @@ public final class KonConnection extends XMPPTCPConnection {
 
     boolean hasLoginCredentials() {
         return mHasLoginCredentials;
+    }
+
+    boolean send(Stanza p) {
+        try {
+            super.sendStanza(p);
+        } catch (SmackException.NotConnectedException ex) {
+            LOGGER.info("can't send packet, not connected.");
+            return false;
+        }
+        LOGGER.config("packet: "+p);
+        return true;
+    }
+
+    void sendWithCallback(IQ packet, StanzaListener callback) {
+        LOGGER.config("packet: "+packet);
+        try {
+            super.sendIqWithResponseCallback(packet, callback, new ExceptionCallback() {
+                @Override
+                public void processException(Exception ex) {
+                    LOGGER.log(Level.WARNING, "exception response", ex);
+                }
+            });
+        } catch (SmackException.NotConnectedException ex) {
+            LOGGER.log(Level.WARNING, "not connected", ex);
+        }
     }
 }

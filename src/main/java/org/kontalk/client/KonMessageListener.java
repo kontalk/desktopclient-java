@@ -35,6 +35,11 @@ import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
+import org.jivesoftware.smackx.pubsub.EventElement;
+import org.jivesoftware.smackx.pubsub.EventElementType;
+import org.jivesoftware.smackx.pubsub.ItemsExtension;
+import org.jivesoftware.smackx.pubsub.NodeExtension;
+import org.jivesoftware.smackx.pubsub.packet.PubSubNamespace;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.misc.JID;
@@ -57,24 +62,28 @@ final public class KonMessageListener implements StanzaListener {
 
     private final Client mClient;
     private final Control mControl;
+    private final AvatarSendReceiver mAvatarHandler;
 
-    KonMessageListener(Client client, Control control) {
-        mClient = client;
-        mControl = control;
-
+    static {
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
         ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
         ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
         ProviderManager.addExtensionProvider(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE, new GroupExtension.Provider());
     }
 
+    KonMessageListener(Client client, Control control, AvatarSendReceiver avatarHandler) {
+        mClient = client;
+        mControl = control;
+        mAvatarHandler = avatarHandler;
+    }
+
     @Override
     public void processPacket(Stanza packet) {
         Message m = (Message) packet;
 
+        Message.Type type = m.getType();
         // check for delivery receipt (XEP-0184)
-        if (m.getType() == Message.Type.normal ||
-                m.getType() == Message.Type.chat) {
+        if (type == Message.Type.normal || type == Message.Type.chat) {
             DeliveryReceipt receipt = DeliveryReceipt.from(m);
             if (receipt != null) {
                 // HOORAY! our message was received
@@ -83,13 +92,13 @@ final public class KonMessageListener implements StanzaListener {
             }
         }
 
-        if (m.getType() == Message.Type.chat) {
+        if (type == Message.Type.chat) {
             // somebody has news for us
             this.processChatMessage(m);
             return;
         }
 
-        if (m.getType() == Message.Type.error) {
+        if (type == Message.Type.error) {
             LOGGER.warning("got error message: "+m);
 
             XMPPError error = m.getError();
@@ -99,6 +108,11 @@ final public class KonMessageListener implements StanzaListener {
             }
             String text = StringUtils.defaultString(error.getDescriptiveText());
             mControl.setMessageError(MessageIDs.from(m), error.getCondition(), text);
+            return;
+        }
+
+        if (type == Message.Type.headline) {
+            this.processHeadlineMessage(m);
             return;
         }
 
@@ -181,6 +195,30 @@ final public class KonMessageListener implements StanzaListener {
             received.addExtension(new DeliveryReceipt(ids.xmppID));
             mClient.sendPacket(received);
         }
+    }
+
+    private void processHeadlineMessage(Message m) {
+        LOGGER.config("message: "+m);
+
+        // this should be a pubsub event
+        PubSubNamespace ns = PubSubNamespace.EVENT;
+        ExtensionElement eventExt = m.getExtension(ns.getFragment(), ns.getXmlns());
+        if (eventExt instanceof EventElement){
+            EventElement event = (EventElement) eventExt;
+
+            if (event.getEventType() == EventElementType.items) {
+                NodeExtension extension = event.getEvent();
+                if (extension instanceof ItemsExtension) {
+                    ItemsExtension items = (ItemsExtension) extension;
+                    if (items.getNode().equals(AvatarSendReceiver.METADATA_NODE)) {
+                        mAvatarHandler.processMetadataEvent(JID.full(m.getFrom()), items);
+                        return;
+                    }
+                }
+            }
+        }
+
+        LOGGER.warning("unhandled");
     }
 
     public static MessageContent parseMessageContent(Message m) {

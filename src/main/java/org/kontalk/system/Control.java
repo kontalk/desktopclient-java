@@ -78,12 +78,13 @@ public final class Control {
         ERROR
     }
 
+    private final ViewControl mViewControl;
+
     private final Client mClient;
     private final ChatStateManager mChatStateManager;
     private final AttachmentManager mAttachmentManager;
     private final RosterHandler mRosterHandler;
-
-    private final ViewControl mViewControl;
+    private final AvatarHandler mAvatarHandler;
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
@@ -94,10 +95,15 @@ public final class Control {
         mChatStateManager = new ChatStateManager(mClient);
         mAttachmentManager = AttachmentManager.create(appDir, this);
         mRosterHandler = new RosterHandler(this, mClient);
+        mAvatarHandler = new AvatarHandler(mClient);
     }
 
     public RosterHandler getRosterHandler() {
         return mRosterHandler;
+    }
+
+    public AvatarHandler getAvatarHandler() {
+        return mAvatarHandler;
     }
 
     ViewControl getViewControl() {

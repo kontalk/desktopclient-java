@@ -71,6 +71,7 @@ public final class Client implements StanzaListener, Runnable {
     private final Control mControl;
 
     private final KonMessageSender mMessageSender;
+    private AvatarSendReceiver mAvatarSendReceiver;
 
     private KonConnection mConn = null;
 
@@ -118,6 +119,8 @@ public final class Client implements StanzaListener, Runnable {
                         key.getBridgeCertificate(),
                         validateCertificate);
 
+        mAvatarSendReceiver = new AvatarSendReceiver(mConn, mControl.getAvatarHandler());
+
         // connection listener
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
@@ -131,7 +134,9 @@ public final class Client implements StanzaListener, Runnable {
         roster.addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
-        mConn.addAsyncStanzaListener(new KonMessageListener(this, mControl), messageFilter);
+        mConn.addAsyncStanzaListener(
+                new KonMessageListener(this, mControl, mAvatarSendReceiver),
+                messageFilter);
 
         StanzaFilter vCardFilter = new StanzaTypeFilter(VCard4.class);
         mConn.addAsyncStanzaListener(new VCardListener(mControl), vCardFilter);
@@ -345,14 +350,12 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     synchronized boolean sendPacket(Stanza p) {
-        try {
-            mConn.sendStanza(p);
-        } catch (SmackException.NotConnectedException ex) {
-            LOGGER.info("can't send packet, not connected.");
+        if (mConn == null) {
+            LOGGER.warning("not connected");
             return false;
         }
-        LOGGER.config("packet: "+p);
-        return true;
+
+        return mConn.send(p);
     }
 
     @Override
@@ -423,6 +426,14 @@ public final class Client implements StanzaListener, Runnable {
             LOGGER.log(Level.WARNING, "can't set name for entry", ex);
         }
         return true;
+    }
+
+    public void requestAvatar(JID jid, String id) {
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
+            return;
+        }
+        mAvatarSendReceiver.requestAndListen(jid, id);
     }
 
     @Override

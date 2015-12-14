@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -88,6 +89,7 @@ public final class Contact extends Observable {
     private boolean mBlocked = false;
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
+    private Avatar mAvatar = null;
 
     // used for creating new contacts (eg from roster)
     Contact(JID jid, String name) {
@@ -256,6 +258,17 @@ public final class Contact extends Observable {
         this.changed(mSubStatus);
     }
 
+    public Optional<Avatar> getAvatar() {
+        return Optional.ofNullable(mAvatar);
+    }
+
+    public void setAvatar(Avatar avatar) {
+        mAvatar = avatar;
+        // TODO
+        //this.save();
+        this.changed(mAvatar);
+    }
+
     public boolean isMe() {
         return mJID.isMe();
     }
@@ -276,6 +289,7 @@ public final class Contact extends Observable {
         mEncrypted = false;
         mKey = "";
         mFingerprint = "";
+        mAvatar = null;
 
         this.save();
         this.changed(null);
@@ -323,5 +337,32 @@ public final class Contact extends Observable {
         String key = Database.getString(rs, Contact.COL_PUB_KEY);
         String fp = Database.getString(rs, Contact.COL_KEY_FP);
         return new Contact(id, jid, name, status, lastSeen, encr, key, fp);
+    }
+
+    public static class Avatar {
+        public final String id;
+        public final byte[] data;
+
+        public Avatar(String id, byte[] data) {
+            this.id = id;
+            this.data = data;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+
+            if (!(o instanceof Avatar)) return false;
+
+            Avatar oAvatar = (Avatar) o;
+            return id.equals(oAvatar.id);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 59 * hash + Objects.hashCode(this.id);
+            return hash;
+        }
     }
 }
