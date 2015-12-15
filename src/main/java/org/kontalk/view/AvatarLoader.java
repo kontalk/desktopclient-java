@@ -18,18 +18,22 @@
 
 package org.kontalk.view;
 
+import com.alee.utils.ImageUtils;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import javax.swing.ImageIcon;
+import org.apache.commons.lang.ObjectUtils;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Contact.Avatar;
 
 /**
  * Static functions for loading avatar pictures.
@@ -57,8 +61,15 @@ final class AvatarLoader {
 
     private static ImageIcon load(Item item) {
         if (!CACHE.containsKey(item)) {
-            // TODO
-            CACHE.put(item, new ImageIcon(fallback(item.label, item.colorCode, IMG_SIZE)));
+            ImageIcon icon = null;
+
+            if (item.avatar != null)
+                icon = ImageUtils.loadImage(new ByteArrayInputStream(item.avatar.data));
+
+            if (icon == null)
+                icon = new ImageIcon(fallback(item.label, item.colorCode, IMG_SIZE));
+
+            CACHE.put(item, icon);
         }
         return CACHE.get(item);
     }
@@ -105,20 +116,32 @@ final class AvatarLoader {
     }
 
     private static class Item {
+        final Avatar avatar;
         final String label;
         final int colorCode;
 
         Item(Contact contact) {
+            avatar = contact.getAvatar().orElse(null);
             label = contact.getName();
             colorCode = hash(contact.getID());
         }
 
         Item(Chat chat) {
             if (chat.isGroupChat()) {
+                // nice to have: group picture
+                avatar = null;
                 label = chat.getSubject();
             } else {
                 Contact[] contacts = chat.getValidContacts();
-                label = contacts.length > 0 ? contacts[0].getName() : "";
+                if (contacts.length == 0) {
+                    avatar = null;
+                    label = "";
+                } else {
+                    Contact c = contacts[0];
+                    avatar = c.getAvatar().orElse(null);
+                    label = c.getName();
+                }
+
             }
             colorCode = hash(chat.getID());
         }
@@ -132,7 +155,8 @@ final class AvatarLoader {
                 return false;
 
             Item oItem = (Item) o;
-            return label.equals(oItem.label) && colorCode == oItem.colorCode;
+            return ObjectUtils.equals(avatar, oItem.avatar) &&
+                    label.equals(oItem.label) && colorCode == oItem.colorCode;
         }
 
         @Override

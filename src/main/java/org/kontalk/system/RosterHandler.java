@@ -117,7 +117,7 @@ public final class RosterHandler {
     }
 
     public void onSubscriptionRequest(JID jid, byte[] rawKey) {
-        Optional<Contact> optContact = mControl.getOrCreate(jid, "");
+        Optional<Contact> optContact = mControl.getOrCreateContact(jid, "");
         if (!optContact.isPresent())
             return;
         Contact contact = optContact.get();

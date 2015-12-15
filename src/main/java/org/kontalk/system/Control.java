@@ -52,7 +52,6 @@ import org.kontalk.misc.JID;
 import org.kontalk.model.GroupChat;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
-import org.kontalk.model.MessageContent.GroupCommand.OP;
 import org.kontalk.model.ProtoMessage;
 import org.kontalk.model.SingleChat;
 import org.kontalk.util.ClientUtils.MessageIDs;
@@ -162,7 +161,7 @@ public final class Control {
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
 
-        Optional<Contact> optContact = this.getOrCreate(ids.jid, "");
+        Optional<Contact> optContact = this.getOrCreateContact(ids.jid, "");
         if (!optContact.isPresent()) {
             LOGGER.warning("can't get contact for message");
             return false;
@@ -178,9 +177,12 @@ public final class Control {
         // note: decryption must be successful to select group chat
         Optional<GID> optGID = protoMessage.getContent().getGID();
 
+        // TODO ignore message if it contains unexpected group commands
+
         Chat chat = optGID.isPresent() ?
                 ChatList.getInstance().getOrCreate(optGID.get(), contact) :
                 ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
+
         InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
                 ids.xmppID, serverDate);
 
@@ -199,12 +201,11 @@ public final class Control {
             return false;
         }
 
-        Optional<GroupCommand> optCom = newMessage.getContent().getGroupCommand();
-        if (optCom.isPresent()) {
-            if (chat instanceof GroupChat)
-                this.processGroupCommand(optCom.get(), (GroupChat) chat, contact);
-            else
-                LOGGER.warning("group command for non-group chat");
+        if (chat instanceof GroupChat) {
+            this.GroupControlForChat((GroupChat) chat)
+                    .onInMessage(newMessage.getContent(), contact);
+        } else if (newMessage.getContent().getGroupCommand().isPresent()) {
+            LOGGER.warning("group command for non-group chat");
         }
 
         this.processContent(newMessage);
@@ -339,6 +340,36 @@ public final class Control {
 
     /* package */
 
+    /**
+      * All-in-one method for a new outgoing message: Create,
+      * save, process and send message.
+      */
+    boolean createAndSendMessage(Chat chat, MessageContent content) {
+        LOGGER.config("chat: "+chat+" content: "+content);
+
+        if (!chat.isValid()) {
+                LOGGER.warning("invalid chat");
+                return false;
+        }
+
+        Contact[] contacts = chat.getValidContacts();
+        if (contacts.length == 0) {
+            LOGGER.warning("can't send message, no (valid) contact(s)");
+            return false;
+        }
+
+        OutMessage newMessage = new OutMessage(chat, contacts, content,
+                chat.isSendEncrypted());
+        if (newMessage.getContent().getAttachment().isPresent())
+            mAttachmentManager.createImagePreview(newMessage);
+        boolean added = chat.addMessage(newMessage);
+        if (!added) {
+            LOGGER.warning("could not add outgoing message to chat");
+        }
+
+        return this.sendMessage(newMessage);
+     }
+
     boolean sendMessage(OutMessage message) {
         if (message.getContent().getAttachment().isPresent() &&
                 !message.getContent().getAttachment().get().hasURL()) {
@@ -366,7 +397,7 @@ public final class Control {
         mClient.sendPublicKeyRequest(contact.getJID());
     }
 
-    Optional<Contact> getOrCreate(JID jid, String name) {
+    Optional<Contact> getOrCreateContact(JID jid, String name) {
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (optContact.isPresent())
             return optContact;
@@ -464,34 +495,9 @@ public final class Control {
         }
     }
 
-    // warning: call this only once for each group command!
-    private void processGroupCommand(GroupCommand command, GroupChat chat, Contact sender) {
-        // note: chat was selected/created by GID so we can be sure message and
-        // chat GIDs match
-        GID gid = chat.getGID();
-        OP op = command.getOperation();
-
-        // validation check
-        if (op != OP.LEAVE) {
-            // sender must be owner
-            if (!gid.ownerJID.equals(sender.getJID())) {
-                LOGGER.warning("sender not owner");
-                return;
-            }
-        }
-
-        if (op == OP.CREATE || op == OP.SET) {
-            // add contacts if necessary
-            // TODO design problem here: we need at least the public keys, but user
-            // might dont wanna have group members in contact list
-            for (JID jid : command.getAdded()) {
-                boolean succ = this.getOrCreate(jid, "").isPresent();
-                if (!succ)
-                    LOGGER.warning("can't create contact, JID: "+jid);
-            }
-        }
-
-        chat.applyGroupCommand(command, sender);
+    private GroupControl GroupControlForChat(GroupChat chat) {
+        // TODO
+        return new GroupControl.KonChatControl(this, chat);
     }
 
     /* static */
@@ -676,30 +682,20 @@ public final class Control {
             List<Contact> withMe = new ArrayList<>(contacts);
             withMe.add(me);
 
-            Chat chat = ChatList.getInstance().createNew(withMe.toArray(new Contact[0]),
-                    new GID(me.getJID(),
-                            org.jivesoftware.smack.util.StringUtils.randomString(8)),
+            // TODO static new
+            GroupChat.GID gid = new GroupChat.GID(me.getJID(), org.jivesoftware.smack.util.StringUtils.randomString(8));
+
+            GroupChat chat = ChatList.getInstance().createNew(withMe.toArray(new Contact[0]),
+                    gid,
                     subject);
 
-            // send create group command
-            List<JID> jids = new ArrayList<>(contacts.size());
-            for (Contact c: contacts)
-                jids.add(c.getJID());
-            this.createAndSendMessage(chat,
-                    MessageContent.groupCommand(
-                            GroupCommand.create(jids.toArray(new JID[0]),subject)
-                    )
-            );
+            Control.this.GroupControlForChat(chat).onCreate(contacts, subject);
         }
 
         public void deleteChat(Chat chat) {
-            if (chat.isGroupChat() && chat.isValid()) {
-                // note: group chats are not 'deleted', were just leaving them
-                boolean sent = this.createAndSendMessage(chat,
-                        MessageContent.groupCommand(GroupCommand.leave()));
-
-                if (!sent)
-                    // TODO tell view (and/or delete chat when message was sent)
+            if (chat instanceof GroupChat) {
+                boolean succ = Control.this.GroupControlForChat((GroupChat) chat).beforeDelete();
+                if (!succ)
                     return;
             }
 
@@ -711,7 +707,7 @@ public final class Control {
                 LOGGER.warning("not admin");
                 return;
             }
-            this.createAndSendMessage(chat, MessageContent.groupCommand(
+            Control.this.createAndSendMessage(chat, MessageContent.groupCommand(
                     GroupCommand.set(new JID[0], new JID[0], subject)));
 
             chat.setSubject(subject);
@@ -753,7 +749,7 @@ public final class Control {
                     MessageContent.plainText(text) :
                     MessageContent.outgoing(text, attachment);
 
-            this.createAndSendMessage(chat, content);
+            Control.this.createAndSendMessage(chat, content);
         }
 
         private PersonalKey keyOrNull(char[] password) {
@@ -778,36 +774,6 @@ public final class Control {
                 Control.this.handleException(ex);
                 return null;
             }
-        }
-
-        /**
-         * All-in-one method for a new outgoing message: Create,
-         * save, process and send message.
-         */
-        private boolean createAndSendMessage(Chat chat, MessageContent content) {
-            LOGGER.config("chat: "+chat+" content: "+content);
-
-            if (!chat.isValid()) {
-                    LOGGER.warning("invalid chat");
-                    return false;
-            }
-
-            Contact[] contacts = chat.getValidContacts();
-            if (contacts.length == 0) {
-                LOGGER.warning("can't send message, no (valid) contact(s)");
-                return false;
-            }
-
-            OutMessage newMessage = new OutMessage(chat, contacts, content,
-                    chat.isSendEncrypted());
-            if (newMessage.getContent().getAttachment().isPresent())
-                mAttachmentManager.createImagePreview(newMessage);
-            boolean added = chat.addMessage(newMessage);
-            if (!added) {
-                LOGGER.warning("could not add outgoing message to chat");
-            }
-
-            return Control.this.sendMessage(newMessage);
         }
 
         void changed(ViewEvent event) {
