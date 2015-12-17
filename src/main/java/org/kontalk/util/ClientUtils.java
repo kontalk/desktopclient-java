@@ -29,10 +29,10 @@ import org.jivesoftware.smack.packet.Message;
 import org.kontalk.client.GroupExtension;
 import org.kontalk.client.GroupExtension.Command;
 import org.kontalk.client.GroupExtension.Member;
-import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
-import org.kontalk.model.GroupChat;
+import org.kontalk.model.GroupChat.KonGroupChat;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.GroupCommand.OP;
 
@@ -77,11 +77,11 @@ public final class ClientUtils {
         }
     }
 
-    public static GroupExtension groupCommandToGroupExtension(GroupChat chat,
+    public static GroupExtension groupCommandToGroupExtension(KonGroupChat chat,
         GroupCommand groupCommand) {
         assert chat.isGroupChat();
 
-        GID gid = chat.getGID();
+        KonGroupData gid = chat.getGroupData();
         OP op = groupCommand.getOperation();
         switch (op) {
             case LEAVE:

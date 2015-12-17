@@ -43,7 +43,7 @@ import org.jivesoftware.smackx.pubsub.packet.PubSubNamespace;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.misc.JID;
-import org.kontalk.model.GroupChat.GID;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
@@ -269,13 +269,13 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         // group command
-        GID gid = null;
+        KonGroupData gid = null;
         GroupCommand groupCommand = null;
         ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME,
                 GroupExtension.NAMESPACE);
         if (groupExt instanceof GroupExtension) {
             GroupExtension group = (GroupExtension) groupExt;
-            gid = new GID(JID.bare(group.getOwner()), group.getID());
+            gid = new KonGroupData(JID.bare(group.getOwner()), group.getID());
             groupCommand = ClientUtils.groupExtensionToGroupCommand(
                     group.getCommand(), group.getMember(), group.getSubject()).orElse(null);
         }
@@ -283,7 +283,7 @@ final public class KonMessageListener implements StanzaListener {
         return new MessageContent.Builder(plainText, encrypted)
                 .attachment(attachment)
                 .preview(preview)
-                .gid(gid)
+                .groupData(gid)
                 .groupCommand(groupCommand).build();
     }
 }

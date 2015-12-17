@@ -42,7 +42,6 @@ import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
-import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
 import org.kontalk.model.ChatList;
@@ -50,6 +49,9 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
 import org.kontalk.model.GroupChat;
+import org.kontalk.model.GroupChat.KonGroupChat;
+import org.kontalk.model.GroupMetaData;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.ProtoMessage;
@@ -175,7 +177,7 @@ public final class Control {
         }
 
         // note: decryption must be successful to select group chat
-        Optional<GID> optGID = protoMessage.getContent().getGID();
+        Optional<KonGroupData> optGID = protoMessage.getContent().getGroupData();
 
         // TODO ignore message if it contains unexpected group commands
 
@@ -496,8 +498,10 @@ public final class Control {
     }
 
     private GroupControl GroupControlForChat(GroupChat chat) {
-        // TODO
-        return new GroupControl.KonChatControl(this, chat);
+        return (chat instanceof KonGroupChat) ?
+                new GroupControl.KonChatControl(this, (KonGroupChat) chat) :
+                // TODO
+                null;
     }
 
     /* static */
@@ -683,7 +687,7 @@ public final class Control {
             withMe.add(me);
 
             // TODO static new
-            GroupChat.GID gid = new GroupChat.GID(me.getJID(), org.jivesoftware.smack.util.StringUtils.randomString(8));
+            GroupMetaData gid = new GroupMetaData.KonGroupData(me.getJID(), org.jivesoftware.smack.util.StringUtils.randomString(8));
 
             GroupChat chat = ChatList.getInstance().createNew(withMe.toArray(new Contact[0]),
                     gid,

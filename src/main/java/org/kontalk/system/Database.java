@@ -173,7 +173,7 @@ public final class Database {
             mConn.createStatement().execute("PRAGMA foreign_keys=ON");
 
             mConn.createStatement().execute("ALTER TABLE "+Chat.TABLE+
-                    " ADD COLUMN "+Chat.COL_GID+" DEFAULT NULL");
+                    " ADD COLUMN "+Chat.COL_GD+" DEFAULT NULL");
         }
 
         // set new version

@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.GroupChat.GID;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -53,7 +53,7 @@ public class MessageContent {
     // small preview file of attachment
     private Optional<Preview> mOptPreview;
     // group id
-    private final Optional<GID> mOptGID;
+    private final Optional<KonGroupData> mOptGroupData;
     // group command
     private final Optional<GroupCommand> mOptGroupCommand;
     // decrypted message content
@@ -88,7 +88,7 @@ public class MessageContent {
         mEncryptedContent = builder.mEncrypted;
         mOptAttachment = Optional.ofNullable(builder.mAttachment);
         mOptPreview = Optional.ofNullable(builder.mPreview);
-        mOptGID = Optional.ofNullable(builder.mGID);
+        mOptGroupData = Optional.ofNullable(builder.mGroupData);
         mOptGroupCommand = Optional.ofNullable(builder.mGroup);
         mOptDecryptedContent = Optional.ofNullable(builder.mDecrypted);
     }
@@ -144,12 +144,12 @@ public class MessageContent {
         mOptPreview = Optional.of(preview);
     }
 
-    public Optional<GID> getGID() {
+    public Optional<KonGroupData> getGroupData() {
         if (mOptDecryptedContent.isPresent() &&
-                mOptDecryptedContent.get().getGID().isPresent()) {
-            return mOptDecryptedContent.get().getGID();
+                mOptDecryptedContent.get().getGroupData().isPresent()) {
+            return mOptDecryptedContent.get().getGroupData();
         }
-        return mOptGID;
+        return mOptGroupData;
     }
 
     public Optional<GroupCommand> getGroupCommand() {
@@ -180,7 +180,7 @@ public class MessageContent {
     @Override
     public String toString() {
         return "CONT:plain="+mPlainText+",encr="+mEncryptedContent
-                +",att="+mOptAttachment+",gid="+mOptGID+",gc="+mOptGroupCommand
+                +",att="+mOptAttachment+",gd="+mOptGroupData+",gc="+mOptGroupCommand
                 +",decr="+mOptDecryptedContent;
     }
 
@@ -595,7 +595,7 @@ public class MessageContent {
 
         private Attachment mAttachment = null;
         private Preview mPreview = null;
-        private GID mGID = null;
+        private KonGroupData mGroupData = null;
         private GroupCommand mGroup = null;
         private MessageContent mDecrypted = null;
 
@@ -608,8 +608,8 @@ public class MessageContent {
             mAttachment = attachment; return this; };
         public Builder preview(Preview preview) {
             mPreview = preview; return this; };
-        public Builder gid(GID gid) {
-            mGID = gid; return this; };
+        public Builder groupData(KonGroupData gData) {
+            mGroupData = gData; return this; };
         public Builder groupCommand(GroupCommand group) {
             mGroup = group; return this; };
         private Builder decryptedContent(MessageContent decrypted) {

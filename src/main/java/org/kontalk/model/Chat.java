@@ -37,7 +37,7 @@ import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.kontalk.model.GroupChat.GID;
+import org.kontalk.model.GroupMetaData;
 import org.kontalk.system.Database;
 
 /**
@@ -52,7 +52,7 @@ public abstract class Chat extends Observable implements Observer {
 
     public static final String TABLE = "threads";
     public static final String COL_XMPPID = "xmpp_id";
-    public static final String COL_GID = "gid";
+    public static final String COL_GD = "gid";
     public static final String COL_SUBJ = "subject";
     public static final String COL_READ = "read";
     public static final String COL_VIEW_SET = "view_settings";
@@ -67,7 +67,7 @@ public abstract class Chat extends Observable implements Observer {
             // view settings in JSON format
             COL_VIEW_SET+" TEXT NOT NULL, " +
             // optional group id in JSON format
-            COL_GID+" TEXT " +
+            COL_GD+" TEXT " +
             ")";
 
     // many to many relationship requires additional table for receiver
@@ -94,7 +94,7 @@ public abstract class Chat extends Observable implements Observer {
         this(new Contact[]{contact}, xmppID, subject, null);
     }
 
-    protected Chat(Contact[] contacts, String xmppID, String subject, GID gid) {
+    protected Chat(Contact[] contacts, String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages(this, true);
         mRead = true;
         mViewSettings = new ViewSettings();
@@ -106,7 +106,7 @@ public abstract class Chat extends Observable implements Observer {
         values.add(Database.setString(subject));
         values.add(mRead);
         values.add(mViewSettings.toJSONString());
-        values.add(Database.setString(gid == null ? "" : gid.toJSON()));
+        values.add(Database.setString(gData == null ? "" : gData.toJSON()));
         mID = db.execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert chat");
@@ -130,6 +130,8 @@ public abstract class Chat extends Observable implements Observer {
     }
 
     public boolean addMessage(KonMessage message) {
+        assert message.getChat() == this;
+
         boolean added = mMessages.add(message);
         if (added) {
             if (message.isInMessage() && mRead) {
@@ -173,7 +175,7 @@ public abstract class Chat extends Observable implements Observer {
     }
 
     public boolean isGroupChat() {
-        return this instanceof GroupChat;
+        return (this instanceof GroupChat);
     }
 
     /** Get all contacts (including deleted, blocked and user contact). */
@@ -283,10 +285,10 @@ public abstract class Chat extends Observable implements Observer {
     static Chat loadOrNull(ResultSet rs) throws SQLException {
         int id = rs.getInt("_id");
 
-        String jsonGID = Database.getString(rs, Chat.COL_GID);
-        Optional<GID> optGID = Optional.ofNullable(jsonGID.isEmpty() ?
+        String jsonGD = Database.getString(rs, Chat.COL_GD);
+        Optional<GroupMetaData> optGD = Optional.ofNullable(jsonGD.isEmpty() ?
                 null :
-                GID.fromJSONOrNull(jsonGID));
+                GroupMetaData.fromJSONOrNull(jsonGD));
 
         String xmppID = Database.getString(rs, Chat.COL_XMPPID);
 
@@ -308,8 +310,8 @@ public abstract class Chat extends Observable implements Observer {
         String jsonViewSettings = Database.getString(rs,
                 Chat.COL_VIEW_SET);
 
-        if (optGID.isPresent()) {
-            return new GroupChat(id, contacts, optGID.get(), subject, read, jsonViewSettings);
+        if (optGD.isPresent()) {
+            return GroupChat.create(id, contacts, optGD.get(), subject, read, jsonViewSettings);
         } else {
             if (contacts.size() != 1) {
                 LOGGER.warning("not one contact for single chat, id="+id);

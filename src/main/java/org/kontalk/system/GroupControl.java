@@ -24,7 +24,8 @@ import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
-import org.kontalk.model.GroupChat;
+import org.kontalk.model.GroupChat.KonGroupChat;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.GroupCommand;
 
@@ -47,9 +48,9 @@ interface GroupControl {
         private static final Logger LOGGER = Logger.getLogger(KonChatControl.class.getName());
 
         private final Control mControl;
-        private final GroupChat mChat;
+        private final KonGroupChat mChat;
 
-        KonChatControl(Control control, GroupChat chat) {
+        KonChatControl(Control control, KonGroupChat chat) {
             mControl = control;
             mChat = chat;
         }
@@ -95,9 +96,9 @@ interface GroupControl {
 
             GroupCommand command = optCom.get();
 
-            // NOTE: chat was selected/created by GID so we can be sure message and
-            // chat GIDs match
-            GroupChat.GID gid = mChat.getGID();
+            // NOTE: chat was selected/created by GID so we can be sure message
+            // and chat GIDs match
+            KonGroupData gid = mChat.getGroupData();
             MessageContent.GroupCommand.OP op = command.getOperation();
 
             // validation check

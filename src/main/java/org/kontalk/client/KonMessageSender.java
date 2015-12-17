@@ -28,7 +28,8 @@ import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Chat;
-import org.kontalk.model.GroupChat;
+import org.kontalk.model.GroupChat.KonGroupChat;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
@@ -154,9 +155,9 @@ final class KonMessageSender {
         }
 
         // group command
-        if (chat instanceof GroupChat) {
-            GroupChat groupChat = (GroupChat) chat;
-            GroupChat.GID gid = groupChat.getGID();
+        if (chat instanceof KonGroupChat) {
+            KonGroupChat groupChat = (KonGroupChat) chat;
+            KonGroupData gid = groupChat.getGroupData();
             Optional<MessageContent.GroupCommand> optGroupCommand = content.getGroupCommand();
             smackMessage.addExtension(optGroupCommand.isPresent() ?
                     ClientUtils.groupCommandToGroupExtension(groupChat, optGroupCommand.get()) :
