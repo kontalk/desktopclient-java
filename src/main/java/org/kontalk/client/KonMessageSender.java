@@ -161,7 +161,7 @@ final class KonMessageSender {
             Optional<MessageContent.GroupCommand> optGroupCommand = content.getGroupCommand();
             smackMessage.addExtension(optGroupCommand.isPresent() ?
                     ClientUtils.groupCommandToGroupExtension(groupChat, optGroupCommand.get()) :
-                    new GroupExtension(gid.id, gid.ownerJID.string()));
+                    new GroupExtension(gid.id, gid.owner.string()));
         }
 
         return smackMessage;

@@ -104,7 +104,7 @@ interface GroupControl {
             // validation check
             if (op != MessageContent.GroupCommand.OP.LEAVE) {
                 // sender must be owner
-                if (!gid.ownerJID.equals(sender.getJID())) {
+                if (!gid.owner.equals(sender.getJID())) {
                     LOGGER.warning("sender not owner");
                     return;
                 }

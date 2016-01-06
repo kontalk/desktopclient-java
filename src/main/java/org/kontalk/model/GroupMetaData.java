@@ -46,17 +46,17 @@ public abstract class GroupMetaData {
         private static final String JSON_OWNER_JID = "jid";
         private static final String JSON_ID = "id";
 
-        public final JID ownerJID;
+        public final JID owner;
         public final String id;
 
         public KonGroupData(JID ownerJID, String id) {
-            this.ownerJID = ownerJID;
+            this.owner = ownerJID;
             this.id = id;
         }
 
         @Override
         boolean isAdministratable() {
-            return ownerJID.isMe();
+            return owner.isMe();
         }
 
         // using legacy lib, raw types extend Object
@@ -64,7 +64,7 @@ public abstract class GroupMetaData {
         @Override
         public String toJSON() {
             JSONObject json = new JSONObject();
-            json.put(JSON_OWNER_JID, ownerJID.string());
+            json.put(JSON_OWNER_JID, owner.string());
             json.put(JSON_ID, id);
             return json.toJSONString();
         }
@@ -84,15 +84,20 @@ public abstract class GroupMetaData {
                 return false;
             }
             KonGroupData oGID = (KonGroupData) o;
-            return ownerJID.equals(oGID.ownerJID) && id.equals(oGID.id);
+            return owner.equals(oGID.owner) && id.equals(oGID.id);
         }
 
         @Override
         public int hashCode() {
             int hash = 7;
-            hash = 37 * hash + Objects.hashCode(this.ownerJID);
+            hash = 37 * hash + Objects.hashCode(this.owner);
             hash = 37 * hash + Objects.hashCode(this.id);
             return hash;
+        }
+
+        @Override
+        public String toString() {
+            return "KGD:{id="+id+",owner="+owner+"}";
         }
     }
 
@@ -103,6 +108,10 @@ public abstract class GroupMetaData {
 
         public final JID room;
         public final String password;
+
+        public MUCData(JID room) {
+            this(room, "");
+        }
 
         public MUCData(JID room, String password) {
             this.room = room;
@@ -131,7 +140,29 @@ public abstract class GroupMetaData {
             return new MUCData(room, pw);
         }
 
-        // TODO equals()
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof MUCData)) {
+                return false;
+            }
+            MUCData oData = (MUCData) o;
+            return room.equals(oData.room);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 79 * hash + Objects.hashCode(this.room);
+            return hash;
+        }
+
+        @Override
+        public String toString() {
+            return "MUCD:{room="+room+"}";
+        }
     }
 
     static GroupMetaData fromJSONOrNull(String json) {

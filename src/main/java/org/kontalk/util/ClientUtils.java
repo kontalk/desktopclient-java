@@ -77,6 +77,7 @@ public final class ClientUtils {
         }
     }
 
+    /* Internal to external */
     public static GroupExtension groupCommandToGroupExtension(KonGroupChat chat,
         GroupCommand groupCommand) {
         assert chat.isGroupChat();
@@ -86,7 +87,7 @@ public final class ClientUtils {
         switch (op) {
             case LEAVE:
                 // weare leaving
-                return new GroupExtension(gid.id, gid.ownerJID.string(), Command.LEAVE);
+                return new GroupExtension(gid.id, gid.owner.string(), Command.LEAVE);
             case CREATE:
             case SET:
                 Command command;
@@ -118,7 +119,7 @@ public final class ClientUtils {
                 }
 
                 return new GroupExtension(gid.id,
-                        gid.ownerJID.string(),
+                        gid.owner.string(),
                         command,
                         member.toArray(new Member[0]),
                         subject);
@@ -128,6 +129,7 @@ public final class ClientUtils {
         }
     }
 
+    /* External to internal */
     public static Optional<GroupCommand> groupExtensionToGroupCommand(
             Command com,
             Member[] members,
