@@ -21,6 +21,7 @@ package org.kontalk.model;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -305,12 +306,29 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     public static final class MUCChat extends GroupChat<GroupMetaData.MUCData> {
+
+        // dynamic nickname to jid mapping
+        private final Map<String, JID> mJIDMap = new HashMap<>();
+
         private MUCChat(Contact[] contacts, GroupMetaData.MUCData gData, String subject) {
             super(contacts, gData, subject);
         }
 
         private MUCChat(int id, Set<Contact> contacts, GroupMetaData.MUCData gData, String subject, boolean read, String jsonViewSettings) {
             super(id, contacts, gData, subject, read, jsonViewSettings);
+        }
+
+        public void addNicknameMapping(String nick, JID jid) {
+            mJIDMap.put(nick, jid);
+        }
+
+        public JID findJID(String nick) {
+            JID jid = mJIDMap.get(nick);
+            if (jid == null) {
+                LOGGER.warning("can't find JID for nickname: "+nick);
+                jid = JID.empty();
+            }
+            return jid;
         }
     }
 
@@ -325,5 +343,4 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 new KonGroupChat(contacts, (KonGroupData) gData, subject) :
                 new MUCChat(contacts, (MUCData) gData, subject);
     }
-
 }

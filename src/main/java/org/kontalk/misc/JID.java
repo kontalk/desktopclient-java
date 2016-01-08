@@ -131,4 +131,7 @@ public final class JID {
         return JID.bare(Config.getInstance().getString(Config.ACC_JID));
     }
 
+    public static JID empty() {
+        return JID.bare("");
+    }
 }
