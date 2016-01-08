@@ -20,6 +20,7 @@ package org.kontalk.model;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -90,9 +91,25 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         return contacts.toArray(new Contact[0]);
     }
 
-    private void addContact(Contact contact) {
+    public void addContact(Contact contact) {
         this.addContactSilent(contact);
         this.save();
+        this.changed(contact);
+    }
+
+    public void addContacts(List<Contact> contacts) {
+        boolean changed = false;
+        for (Contact c: contacts)
+            if (!this.getAllContacts().contains(c)) {
+                this.addContactSilent(c);
+                changed = true;
+            }
+
+        if (changed) {
+            System.out.println("addContacts save");
+            this.save();
+            this.changed(contacts);
+        }
     }
 
     private void addContactSilent(Contact contact) {
@@ -164,7 +181,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                         continue;
                     }
                     meIn |= contact.isMe();
-                    this.addContact(contact);
+                    this.addContactSilent(contact);
                 }
 
                 if (!meIn)
