@@ -111,7 +111,7 @@ final public class Transmission {
 
         int id = db.execInsert(TABLE, values);
         if (id <= 0) {
-            LOGGER.log(Level.WARNING, "db, could not insert");
+            LOGGER.log(Level.WARNING, "could not insert");
             return -2;
         }
         return id;

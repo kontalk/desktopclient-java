@@ -135,8 +135,6 @@ final public class KonMessageListener implements StanzaListener {
         // note: thread and subject are null if message comes from the Kontalk
         // Android client
 
-        String threadID = m.getThread() != null ? m.getThread() : "";
-
         // TODO a message can contain all sorts of extensions, we should loop
         // over all of them
 
@@ -156,6 +154,8 @@ final public class KonMessageListener implements StanzaListener {
                     LOGGER.warning("delay time is in future: "+date);
                 optServerDate = Optional.of(date);
         }
+
+        String threadID = StringUtils.defaultString(m.getThread());
 
         // process possible chat state notification (XEP-0085)
         ExtensionElement csExt = m.getExtension(ChatStateExtension.NAMESPACE);
