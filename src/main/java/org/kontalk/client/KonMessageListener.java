@@ -35,6 +35,7 @@ import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
+import org.jivesoftware.smackx.muc.packet.MUCUser;
 import org.jivesoftware.smackx.pubsub.EventElement;
 import org.jivesoftware.smackx.pubsub.EventElementType;
 import org.jivesoftware.smackx.pubsub.ItemsExtension;
@@ -92,7 +93,7 @@ final public class KonMessageListener implements StanzaListener {
             }
         }
 
-        if (type == Message.Type.chat) {
+        if (type == Message.Type.chat || type == Message.Type.groupchat) {
             // somebody has news for us
             this.processChatMessage(m);
             return;
@@ -115,6 +116,10 @@ final public class KonMessageListener implements StanzaListener {
             this.processHeadlineMessage(m);
             return;
         }
+
+        if (m.hasExtension(MUCUser.ELEMENT, MUCUser.NAMESPACE))
+            // handled by muc manager
+            return;
 
         LOGGER.warning("unhandled message: "+m);
     }
