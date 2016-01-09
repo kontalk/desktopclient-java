@@ -131,7 +131,22 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         }
 
         mContactMap.remove(contact);
+    }
+
+    // TODO needed?
+    private void setContacts(List<Contact> contacts) {
+        for (Contact c: mContactMap.keySet().toArray(new Contact[0])) {
+            if (!contacts.contains(c))
+                this.removeContactSilent(c);
+        }
+
+        for (Contact c : contacts) {
+            if (!mContactMap.containsKey(c))
+                this.addContactSilent(c);
+        }
+
         this.save();
+        this.changed(contacts);
     }
 
     public D getGroupData() {
@@ -185,6 +200,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                     this.addContactSilent(contact);
                 }
 
+                // TODO have to think about this
                 if (!meIn)
                     LOGGER.warning("user JID not included");
 

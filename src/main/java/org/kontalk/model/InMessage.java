@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.MessageContent.Attachment;
+import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.Preview;
 
 /**
@@ -45,6 +46,21 @@ public final class InMessage extends KonMessage implements DecryptMessage {
                 proto.getCoderStatus());
 
         mTransmission = new Transmission(proto.getContact(), from, mID);
+    }
+
+    /**
+     * Changes to group chat. Translated to Message with a GroupCommand for
+     * unified model representation.
+     */
+    public InMessage(GroupChat chat, Contact contact, GroupCommand command) {
+        super(chat,
+                "",
+                MessageContent.groupCommand(command),
+                Optional.<Date>empty(),
+                Status.IN,
+                CoderStatus.createInsecure());
+
+        mTransmission = new Transmission(contact, contact.getJID(), mID);
     }
 
     // used when loading from database

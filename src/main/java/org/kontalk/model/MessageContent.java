@@ -77,7 +77,7 @@ public class MessageContent {
         return new Builder(plainText, "").attachment(attachment).build();
     }
 
-    // used for outgoing group commands
+    // used for incoming and outgoing group commands
     public static MessageContent groupCommand(GroupCommand group) {
         return new Builder("", "").groupCommand(group).build();
     }
@@ -496,6 +496,11 @@ public class MessageContent {
         /** Group creation. */
         public static GroupCommand create(JID[] added, String subject) {
             return new GroupCommand(OP.CREATE, added, new JID[0], subject);
+        }
+
+        /** Group creation. For MUC invitations */
+        public static GroupCommand create() {
+            return new GroupCommand(OP.CREATE, new JID[0], new JID[0], "");
         }
 
         /** Group changed. */
