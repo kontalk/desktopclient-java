@@ -49,6 +49,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
 import org.kontalk.model.GroupChat;
+import org.kontalk.model.GroupChat.MUCChat;
 import org.kontalk.model.GroupMetaData;
 import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent.Attachment;
@@ -170,6 +171,24 @@ public final class Control {
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
 
+        JID jid = ids.jid;
+        if (jid.isEmpty() && !ids.mucJID.isEmpty()) {
+            // find real JID by nickname for MUC chat
+            Optional<GroupChat> optChat =
+                    ChatList.getInstance().get(new GroupMetaData.MUCData(ids.mucJID));
+            if (optChat.isPresent()) {
+                GroupChat chat = optChat.get();
+                if (chat instanceof MUCChat) {
+                    jid = ((MUCChat) chat).findJID(ids.mucJID.resource());
+                }
+            }
+        }
+
+        if (!jid.isValid()) {
+            LOGGER.warning("can't find (valid) sender JID for message");
+            return false;
+        }
+
         Optional<Contact> optContact = this.getOrCreateContact(ids.jid);
         if (!optContact.isPresent()) {
             LOGGER.warning("can't get contact for message");
@@ -186,13 +205,16 @@ public final class Control {
         // NOTE: decryption must be successful to select group chat
         Optional<KonGroupData> optGID = protoMessage.getContent().getGroupData();
 
-        // TODO ignore message if it contains unexpected group commands
+        GroupMetaData gData =
+                optGID.isPresent() ? optGID.get() :
+                ids.mucJID.isValid() ? new GroupMetaData.MUCData(ids.mucJID) :
+                null;
 
-        Chat chat = optGID.isPresent() ?
-                ChatList.getInstance().getOrCreate(optGID.get(), contact) :
+        Chat chat = gData != null ?
+                ChatList.getInstance().getOrCreate(gData, contact) :
                 ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
 
-        InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
+        InMessage newMessage = new InMessage(protoMessage, chat, jid,
                 ids.xmppID, serverDate);
 
         if (newMessage.getID() <= 0)
