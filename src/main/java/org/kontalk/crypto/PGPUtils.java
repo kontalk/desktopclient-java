@@ -80,8 +80,7 @@ public final class PGPUtils {
     /** Singleton for converting a PGP key to a JCA key. */
     private static JcaPGPKeyConverter sKeyConverter;
 
-    private PGPUtils() {
-    }
+    private PGPUtils() {}
 
     /**
      * A contacts public keys for encryption and signing together with UID and

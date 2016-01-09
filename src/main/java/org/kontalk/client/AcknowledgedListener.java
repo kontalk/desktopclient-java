@@ -67,5 +67,4 @@ public final class AcknowledgedListener implements StanzaListener {
 
         mControl.setSent(MessageIDs.from(m));
     }
-
 }

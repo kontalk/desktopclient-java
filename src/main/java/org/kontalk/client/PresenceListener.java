@@ -27,6 +27,7 @@ import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.jivesoftware.smackx.muc.packet.MUCUser;
 import org.kontalk.misc.JID;
 import org.kontalk.system.RosterHandler;
 
@@ -62,6 +63,12 @@ public class PresenceListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza packet) {
+        if (MUCUser.from(packet) != null) {
+            // handled by MUC manager
+            LOGGER.config("ignoring MUC presence, from: "+packet.getFrom());
+            return;
+        }
+
         LOGGER.config("packet: "+packet);
 
         Presence presence = (Presence) packet;

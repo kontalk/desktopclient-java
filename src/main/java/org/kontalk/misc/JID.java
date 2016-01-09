@@ -24,7 +24,7 @@ import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.system.Config;
 
 /**
- * A Jabber ID (the address of an XMPP client or user). Immutable.
+ * A Jabber ID (the address of an XMPP entity). Immutable.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -40,11 +40,11 @@ public final class JID {
         mResource = resource;
     }
 
-    public String local(){
+    public String local() {
         return mLocal;
     }
 
-    public String domain(){
+    public String domain() {
         return mDomain;
     }
 
