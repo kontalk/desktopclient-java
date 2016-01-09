@@ -48,6 +48,10 @@ public final class JID {
         return mDomain;
     }
 
+    public String resource() {
+        return mResource;
+    }
+
     public String string() {
         return XmppStringUtils.completeJidFrom(mLocal, mDomain, mResource);
     }
@@ -56,6 +60,10 @@ public final class JID {
         // TODO stronger check here.
         //org.jxmpp.jid.util.JidUtil.validateBareJid(mBareJID);
         return !mLocal.isEmpty() && !mDomain.isEmpty();
+    }
+
+    public boolean isEmpty() {
+        return string().isEmpty();
     }
 
     public boolean isHash() {

@@ -21,6 +21,7 @@ package org.kontalk.system;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+import org.kontalk.client.MUCManager;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.GroupChat;
@@ -135,6 +136,33 @@ final class GroupControl {
             mChat.applyGroupCommand(command, sender);
         }
     }
+
+    final class MUCControl extends ChatControl<MUCChat> {
+
+        private MUCControl(MUCChat chat) {
+            super(chat);
+        }
+
+        @Override
+        public void onCreate() {
+        }
+
+        @Override
+        public void onSetSubject(String subject) {
+            // TODO
+        }
+
+        @Override
+        public boolean beforeDelete() {
+            // TODO
+            return true;
+        }
+
+        @Override
+        public void onInMessage(GroupCommand command, Contact sender) {
+        }
+    }
+
     ChatControl getInstanceFor(GroupChat chat) {
         // TODO
         return (chat instanceof KonGroupChat) ?
@@ -148,4 +176,10 @@ final class GroupControl {
                 org.jivesoftware.smack.util.StringUtils.randomString(8));
     }
 
+    static MUCData newMUCGroupData() {
+        // TODO
+        return new MUCData(
+                JID.bare("kon_testroom_2", MUCManager.SERVICE),
+                "secretpw");
+    }
 }

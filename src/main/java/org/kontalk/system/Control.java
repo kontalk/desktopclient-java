@@ -84,6 +84,7 @@ public final class Control {
     private final ChatStateManager mChatStateManager;
     private final AttachmentManager mAttachmentManager;
     private final RosterHandler mRosterHandler;
+    private final MUCHandler mMUCHandler;
     private final AvatarHandler mAvatarHandler;
     private final GroupControl mGroupControl;
 
@@ -96,6 +97,7 @@ public final class Control {
         mChatStateManager = new ChatStateManager(mClient);
         mAttachmentManager = AttachmentManager.create(appDir, this);
         mRosterHandler = new RosterHandler(this, mClient);
+        mMUCHandler = new MUCHandler(this, mClient);
         mAvatarHandler = new AvatarHandler(mClient);
         mGroupControl = new GroupControl(this);
     }
@@ -106,6 +108,10 @@ public final class Control {
 
     public AvatarHandler getAvatarHandler() {
         return mAvatarHandler;
+    }
+
+    public MUCHandler getMUCHandler() {
+        return mMUCHandler;
     }
 
     ViewControl getViewControl() {

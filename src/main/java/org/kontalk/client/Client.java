@@ -45,10 +45,14 @@ import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.muc.Affiliate;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.misc.Callback;
 import org.kontalk.misc.JID;
+import org.kontalk.model.GroupChat.MUCChat;
+import org.kontalk.model.GroupMetaData.MUCData;
 import org.kontalk.model.OutMessage;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
@@ -74,6 +78,7 @@ public final class Client implements StanzaListener, Runnable {
     private AvatarSendReceiver mAvatarSendReceiver;
 
     private KonConnection mConn = null;
+    private MUCManager mMUCManager = null;
 
     public Client(Control control) {
         mControl = control;
@@ -127,6 +132,8 @@ public final class Client implements StanzaListener, Runnable {
         Roster roster = Roster.getInstanceFor(mConn);
         // subscriptions handled by roster handler
         roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
+
+        mMUCManager = new MUCManager(mConn, mControl.getMUCHandler());
 
         // packet listeners
         RosterHandler rosterSyncer = mControl.getRosterHandler();
@@ -434,6 +441,28 @@ public final class Client implements StanzaListener, Runnable {
             return;
         }
         mAvatarSendReceiver.requestAndListen(jid, id);
+    }
+
+    public boolean createRoom(MUCChat chat) {
+        if (mMUCManager == null) {
+            LOGGER.warning("no MUC manager");
+            return false;
+        }
+
+        MUCData mucData = chat.getGroupData();
+        return mMUCManager.create(
+                mucData.room,
+                chat.getSubject(),
+                mucData.password);
+    }
+
+    public void join(JID room, String password, Callback.Handler<List<Affiliate>> cbh) {
+        if (mMUCManager == null) {
+            LOGGER.warning("no MUC manager");
+            return;
+        }
+
+        mMUCManager.join(room, password, cbh);
     }
 
     @Override
