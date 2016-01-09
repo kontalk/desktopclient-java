@@ -49,7 +49,6 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
 import org.kontalk.model.GroupChat;
-import org.kontalk.model.GroupChat.KonGroupChat;
 import org.kontalk.model.GroupMetaData;
 import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent.Attachment;
@@ -86,6 +85,7 @@ public final class Control {
     private final AttachmentManager mAttachmentManager;
     private final RosterHandler mRosterHandler;
     private final AvatarHandler mAvatarHandler;
+    private final GroupControl mGroupControl;
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
@@ -97,6 +97,7 @@ public final class Control {
         mAttachmentManager = AttachmentManager.create(appDir, this);
         mRosterHandler = new RosterHandler(this, mClient);
         mAvatarHandler = new AvatarHandler(mClient);
+        mGroupControl = new GroupControl(this);
     }
 
     public RosterHandler getRosterHandler() {
@@ -163,7 +164,7 @@ public final class Control {
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
 
-        Optional<Contact> optContact = this.getOrCreateContact(ids.jid, "");
+        Optional<Contact> optContact = this.getOrCreateContact(ids.jid);
         if (!optContact.isPresent()) {
             LOGGER.warning("can't get contact for message");
             return false;
@@ -176,7 +177,7 @@ public final class Control {
             Coder.decryptMessage(protoMessage);
         }
 
-        // note: decryption must be successful to select group chat
+        // NOTE: decryption must be successful to select group chat
         Optional<KonGroupData> optGID = protoMessage.getContent().getGroupData();
 
         // TODO ignore message if it contains unexpected group commands
@@ -203,11 +204,14 @@ public final class Control {
             return false;
         }
 
-        if (chat instanceof GroupChat) {
-            this.GroupControlForChat((GroupChat) chat)
-                    .onInMessage(newMessage.getContent(), contact);
-        } else if (newMessage.getContent().getGroupCommand().isPresent()) {
-            LOGGER.warning("group command for non-group chat");
+        Optional<GroupCommand> optCom = newMessage.getContent().getGroupCommand();
+        if (optCom.isPresent()) {
+            if (chat instanceof GroupChat) {
+                mGroupControl.getInstanceFor((GroupChat) chat)
+                        .onInMessage(optCom.get(), contact);
+            } else {
+                LOGGER.warning("group command for non-group chat");
+            }
         }
 
         this.processContent(newMessage);
@@ -399,7 +403,7 @@ public final class Control {
         mClient.sendPublicKeyRequest(contact.getJID());
     }
 
-    Optional<Contact> getOrCreateContact(JID jid, String name) {
+    Optional<Contact> getOrCreateContact(JID jid) {
         Optional<Contact> optContact = ContactList.getInstance().get(jid);
         if (optContact.isPresent())
             return optContact;
@@ -495,13 +499,6 @@ public final class Control {
         if (!succ) {
             LOGGER.warning("could not remove contact from roster");
         }
-    }
-
-    private GroupControl GroupControlForChat(GroupChat chat) {
-        return (chat instanceof KonGroupChat) ?
-                new GroupControl.KonChatControl(this, (KonGroupChat) chat) :
-                // TODO
-                null;
     }
 
     /* static */
@@ -686,19 +683,20 @@ public final class Control {
             List<Contact> withMe = new ArrayList<>(contacts);
             withMe.add(me);
 
-            // TODO static new
-            GroupMetaData gid = new GroupMetaData.KonGroupData(me.getJID(), org.jivesoftware.smack.util.StringUtils.randomString(8));
+            // TODO
+            KonGroupData gData = GroupControl.newKonGroupData(me.getJID());
+            //MUCData gData = GroupControl.newMUCGroupData();
 
             GroupChat chat = ChatList.getInstance().createNew(withMe.toArray(new Contact[0]),
-                    gid,
+                    gData,
                     subject);
 
-            Control.this.GroupControlForChat(chat).onCreate(contacts, subject);
+            mGroupControl.getInstanceFor(chat).onCreate();
         }
 
         public void deleteChat(Chat chat) {
             if (chat instanceof GroupChat) {
-                boolean succ = Control.this.GroupControlForChat((GroupChat) chat).beforeDelete();
+                boolean succ = mGroupControl.getInstanceFor((GroupChat) chat).beforeDelete();
                 if (!succ)
                     return;
             }

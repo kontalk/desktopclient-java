@@ -20,12 +20,14 @@ package org.kontalk.system;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
+import org.kontalk.model.GroupChat;
 import org.kontalk.model.GroupChat.KonGroupChat;
+import org.kontalk.model.GroupChat.MUCChat;
 import org.kontalk.model.GroupMetaData.KonGroupData;
+import org.kontalk.model.GroupMetaData.MUCData;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.GroupCommand;
 
@@ -33,38 +35,53 @@ import org.kontalk.model.MessageContent.GroupCommand;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-interface GroupControl {
+final class GroupControl {
+    private static final Logger LOGGER = Logger.getLogger(GroupControl.class.getName());
 
-    void onCreate(List<Contact> contacts, String subject);
+    private final Control mControl;
 
-    void onSetSubject(String subject);
+    GroupControl(Control control) {
+        mControl = control;
+    }
 
-    boolean beforeDelete();
+    abstract class ChatControl<C extends GroupChat> {
 
-    // warning: call this only once for each group command!
-    void onInMessage(MessageContent content, Contact sender);
+        protected final C mChat;
 
-    class KonChatControl implements GroupControl {
-        private static final Logger LOGGER = Logger.getLogger(KonChatControl.class.getName());
-
-        private final Control mControl;
-        private final KonGroupChat mChat;
-
-        KonChatControl(Control control, KonGroupChat chat) {
-            mControl = control;
+        private ChatControl(C chat) {
             mChat = chat;
         }
 
+        abstract void onCreate();
+
+        abstract void onSetSubject(String subject);
+
+        abstract boolean beforeDelete();
+
+        //
+        abstract void onInMessage(GroupCommand command, Contact sender);
+    }
+
+    final class KonChatControl extends ChatControl<KonGroupChat> {
+
+        private KonChatControl(KonGroupChat chat) {
+            super(chat);
+        }
+
         @Override
-        public void onCreate(List<Contact> contacts, String subject) {
+        void onCreate() {
+            Contact[] contacts = mChat.getValidContacts();
+
             // send create group command
-            List<JID> jids = new ArrayList<>(contacts.size());
+            List<JID> jids = new ArrayList<>(contacts.length);
             for (Contact c: contacts)
                 jids.add(c.getJID());
 
             mControl.createAndSendMessage(mChat,
                     MessageContent.groupCommand(
-                            MessageContent.GroupCommand.create(jids.toArray(new JID[0]),subject)
+                            MessageContent.GroupCommand.create(
+                                    jids.toArray(new JID[0]),
+                                    mChat.getSubject())
                     )
             );
         }
@@ -86,15 +103,8 @@ interface GroupControl {
         }
 
         @Override
-        public void onInMessage(MessageContent content, Contact sender) {
-            Optional<GroupCommand> optCom = content.getGroupCommand();
-            if (!optCom.isPresent()) {
-                return;
-            }
-
-            // TODO ignore message if it contains unexpected group command
-
-            GroupCommand command = optCom.get();
+        public void onInMessage(GroupCommand command, Contact sender) {
+            // TODO ignore message if it contains unexpected group command (?)
 
             // NOTE: chat was selected/created by GID so we can be sure message
             // and chat GIDs match
@@ -116,7 +126,7 @@ interface GroupControl {
                 // TODO design problem here: we need at least the public keys, but user
                 // might dont wanna have group members in contact list
                 for (JID jid : command.getAdded()) {
-                    boolean succ = mControl.getOrCreateContact(jid, "").isPresent();
+                    boolean succ = mControl.getOrCreateContact(jid).isPresent();
                     if (!succ)
                         LOGGER.warning("can't create contact, JID: "+jid);
                 }
@@ -125,4 +135,17 @@ interface GroupControl {
             mChat.applyGroupCommand(command, sender);
         }
     }
+    ChatControl getInstanceFor(GroupChat chat) {
+        // TODO
+        return (chat instanceof KonGroupChat) ?
+                new KonChatControl((KonGroupChat) chat) :
+        //        new MUCControl((MUCChat) chat);
+                null;
+    }
+
+    static KonGroupData newKonGroupData(JID myJID) {
+        return new KonGroupData(myJID,
+                org.jivesoftware.smack.util.StringUtils.randomString(8));
+    }
+
 }
