@@ -25,7 +25,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
+import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smackx.address.packet.MultipleAddresses;
+import org.jivesoftware.smackx.address.packet.MultipleAddresses.Address;
 import org.kontalk.client.GroupExtension;
 import org.kontalk.client.GroupExtension.Command;
 import org.kontalk.client.GroupExtension.Member;
@@ -50,12 +53,13 @@ public final class ClientUtils {
         public final JID jid;
         public final String xmppID;
         public final String xmppThreadID;
-        //public final Optional<GroupID> groupID;
+        public final JID mucJID;
 
-        private MessageIDs(JID jid, String xmppID, String threadID) {
+        private MessageIDs(JID jid, String xmppID, String threadID, JID mucJID) {
             this.jid = jid;
             this.xmppID = xmppID;
             this.xmppThreadID = threadID;
+            this.mucJID = mucJID;
         }
 
         public static MessageIDs from(Message m) {
@@ -63,17 +67,45 @@ public final class ClientUtils {
         }
 
         public static MessageIDs from(Message m, String receiptID) {
-            return new MessageIDs(
-                    // TODO
-                    JID.full(StringUtils.defaultString(m.getFrom())),
+            JID from = JID.full(m.getFrom());
+
+            JID origin = JID.empty();
+            JID room;
+            if (m.getType() == Message.Type.groupchat) {
+                // NOTE in theory this could be encrypted;
+                // but if it is, there is no way to figure out who send it and
+                // therefore we cant decrypt the message anyway
+                ExtensionElement addrExt = m.getExtension(
+                        MultipleAddresses.ELEMENT,
+                        MultipleAddresses.NAMESPACE);
+                if (addrExt instanceof MultipleAddresses) {
+                    MultipleAddresses addresses = (MultipleAddresses) addrExt;
+                    List<Address> froms = addresses.getAddressesOfType(MultipleAddresses.Type.ofrom);
+                    if (!froms.isEmpty())
+                        origin = JID.full(froms.get(0).getJid());
+                }
+                room = from;
+            } else {
+                origin = from;
+                room = JID.empty();
+            }
+
+            if (origin.isEmpty() && room.isEmpty())
+                LOGGER.warning("can't find any sender address");
+
+
+            return new MessageIDs(origin,
                     !receiptID.isEmpty() ? receiptID :
                             StringUtils.defaultString(m.getStanzaId()),
-                    StringUtils.defaultString(m.getThread()));
+                    StringUtils.defaultString(m.getThread()),
+                    room
+            );
         }
 
         @Override
         public String toString() {
-            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID;
+            return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID
+                    +",room="+mucJID;
         }
     }
 
