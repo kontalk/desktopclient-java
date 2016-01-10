@@ -258,7 +258,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         db.execUpdate(TABLE, set, mID);
     }
 
-    protected synchronized void changed(Object arg) {
+    protected void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
     }
