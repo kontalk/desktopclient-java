@@ -220,7 +220,7 @@ public final class Control {
         return newMessage.getID() >= -1;
     }
 
-    public void setSent(MessageIDs ids) {
+    public void messageSent(MessageIDs ids) {
         Optional<OutMessage> optMessage = findMessage(ids);
         if (!optMessage.isPresent())
             return;

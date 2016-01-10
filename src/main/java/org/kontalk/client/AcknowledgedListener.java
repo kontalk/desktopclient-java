@@ -43,7 +43,7 @@ public final class AcknowledgedListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza p) {
-        // note: the packet is not the acknowledgement itself but the packet that
+        // NOTE: the packet is not the acknowledgement itself but the packet that
         // is acknowledged
         if (!(p instanceof Message)) {
             // we are only interested in acks for messages
@@ -65,6 +65,6 @@ public final class AcknowledgedListener implements StanzaListener {
             return;
         }
 
-        mControl.setSent(MessageIDs.from(m));
+        mControl.messageSent(MessageIDs.to(m));
     }
 }

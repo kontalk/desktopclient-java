@@ -44,13 +44,13 @@ public final class ClientUtils {
     private static final Logger LOGGER = Logger.getLogger(ClientUtils.class.getName());
 
     /**
-     * Message attributes to identify the chat for a message.
+     * Message attributes for identifying the chat for a message.
+     * KonGroupData is missing here as this could be part of the encrypted content.
      */
     public static class MessageIDs {
         public final JID jid;
         public final String xmppID;
         public final String xmppThreadID;
-        //public final Optional<GroupID> groupID;
 
         private MessageIDs(JID jid, String xmppID, String threadID) {
             this.jid = jid;
@@ -63,9 +63,16 @@ public final class ClientUtils {
         }
 
         public static MessageIDs from(Message m, String receiptID) {
+            return create(m, m.getFrom(), receiptID);
+        }
+
+        public static MessageIDs to(Message m) {
+            return create(m, m.getTo(), "");
+        }
+
+        private static MessageIDs create(Message m, String jid, String receiptID) {
             return new MessageIDs(
-                    // TODO
-                    JID.full(StringUtils.defaultString(m.getFrom())),
+                    JID.full(StringUtils.defaultString(jid)),
                     !receiptID.isEmpty() ? receiptID :
                             StringUtils.defaultString(m.getStanzaId()),
                     StringUtils.defaultString(m.getThread()));
