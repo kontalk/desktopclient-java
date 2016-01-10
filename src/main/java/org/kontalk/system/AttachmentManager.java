@@ -35,6 +35,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
+import org.kontalk.Kontalk;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
@@ -344,12 +345,12 @@ public class AttachmentManager implements Runnable {
         return mimeType.startsWith("image");
     }
 
-    static AttachmentManager create(Path baseDir, Control control) {
-        AttachmentManager downloader = new AttachmentManager(baseDir, control);
+    static AttachmentManager create(Control control) {
+        AttachmentManager manager = new AttachmentManager(Kontalk.appDir(), control);
 
-        new Thread(downloader).start();
+        new Thread(manager).start();
 
-        return downloader;
+        return manager;
     }
 
     /**

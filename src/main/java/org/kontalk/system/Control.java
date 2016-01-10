@@ -88,12 +88,12 @@ public final class Control {
 
     private Status mCurrentStatus = Status.DISCONNECTED;
 
-    private Control(Path appDir) {
+    private Control() {
         mViewControl = new ViewControl();
 
         mClient = new Client(this);
         mChatStateManager = new ChatStateManager(mClient);
-        mAttachmentManager = AttachmentManager.create(appDir, this);
+        mAttachmentManager = AttachmentManager.create(this);
         mRosterHandler = new RosterHandler(this, mClient);
         mAvatarHandler = new AvatarHandler(mClient);
         mGroupControl = new GroupControl(this);
@@ -501,9 +501,8 @@ public final class Control {
 
     /* static */
 
-    public static ViewControl create(Path appDir) {
-        Client.setCapsCache(appDir);
-        return new Control(appDir).mViewControl;
+    public static ViewControl create() {
+        return new Control().mViewControl;
     }
 
     private static Optional<OutMessage> findMessage(MessageIDs ids) {

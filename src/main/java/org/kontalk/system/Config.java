@@ -26,6 +26,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.kontalk.Kontalk;
 import org.kontalk.util.Tr;
 
 /**
@@ -39,7 +40,8 @@ public final class Config extends PropertiesConfiguration {
 
     private static Config INSTANCE = null;
 
-    public static final String FILENAME = "kontalk.properties";
+    private static final String FILENAME = "kontalk.properties";
+
     // all configuration property keys
     // disable network property for now -> same as server host
     //public static final String SERV_NET = "server.network";
@@ -118,17 +120,10 @@ public final class Config extends PropertiesConfiguration {
         }
     }
 
-    public synchronized static void initialize(Path configFile)  {
-        if (INSTANCE != null) {
-            LOGGER.warning("configuration already initialized");
-            return;
-        }
-        INSTANCE = new Config(configFile);
-    }
-
     public synchronized static Config getInstance() {
-        if (INSTANCE == null)
-            throw new IllegalStateException("configuration not initialized");
+        if (INSTANCE == null) {
+            INSTANCE = new Config(Kontalk.appDir().resolve(Config.FILENAME));
+        }
         return INSTANCE;
     }
 }

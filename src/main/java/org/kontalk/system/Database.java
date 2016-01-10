@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
+import org.kontalk.Kontalk;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
@@ -59,9 +60,9 @@ public final class Database {
 
     private static Database INSTANCE = null;
 
-    public static final String FILENAME = "kontalk_db.sqlite";
     public static final String SQL_ID = "_id INTEGER PRIMARY KEY AUTOINCREMENT, ";
 
+    private static final String FILENAME = "kontalk_db.sqlite";
     private static final int DB_VERSION = 3;
     private static final String SQL_CREATE = "CREATE TABLE IF NOT EXISTS ";
     private static final String SV = "schema_version";
@@ -356,8 +357,8 @@ public final class Database {
         return s.isEmpty() ? null : s;
     }
 
-    public static void initialize(Path dbFile) throws KonException {
-        INSTANCE = new Database(dbFile);
+    public static void initialize() throws KonException {
+        INSTANCE = new Database(Kontalk.appDir().resolve(Database.FILENAME));
     }
 
     public static Database getInstance() {
