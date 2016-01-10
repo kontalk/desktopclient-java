@@ -49,7 +49,6 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
 import org.kontalk.model.GroupChat;
-import org.kontalk.model.GroupMetaData;
 import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
@@ -247,8 +246,7 @@ public final class Control {
     /**
      * Inform model (and view) about a received chat state notification.
      */
-    public void processChatState(JID jid,
-            String xmppThreadID,
+    public void processChatState(MessageIDs ids,
             Optional<Date> serverDate,
             ChatState chatState) {
         if (serverDate.isPresent()) {
@@ -258,14 +256,14 @@ public final class Control {
                 return;
             }
         }
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
+        Optional<Contact> optContact = ContactList.getInstance().get(ids.jid);
         if (!optContact.isPresent()) {
-            LOGGER.info("can't find contact with jid: "+jid);
+            LOGGER.info("can't find contact with jid: "+ids.jid);
             return;
         }
         Contact contact = optContact.get();
         // TODO chat states for group chats?
-        Optional<SingleChat> optChat = ChatList.getInstance().get(contact, xmppThreadID);
+        Optional<SingleChat> optChat = ChatList.getInstance().get(contact, ids.xmppThreadID);
         if (!optChat.isPresent())
             return;
 

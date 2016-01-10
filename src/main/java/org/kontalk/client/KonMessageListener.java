@@ -155,15 +155,14 @@ final public class KonMessageListener implements StanzaListener {
                 optServerDate = Optional.of(date);
         }
 
-        String threadID = StringUtils.defaultString(m.getThread());
+        MessageIDs ids = MessageIDs.from(m);
 
         // process possible chat state notification (XEP-0085)
         ExtensionElement csExt = m.getExtension(ChatStateExtension.NAMESPACE);
         ChatState chatState = null;
         if (csExt != null) {
             chatState = ((ChatStateExtension) csExt).getChatState();
-            mControl.processChatState(JID.bare(m.getFrom()),
-                    threadID,
+            mControl.processChatState(ids,
                     optServerDate,
                     chatState);
         }
@@ -182,8 +181,6 @@ final public class KonMessageListener implements StanzaListener {
             }
             return;
         }
-
-        MessageIDs ids = MessageIDs.from(m);
 
         // add message
         boolean success = mControl.newInMessage(ids, optServerDate, content);
