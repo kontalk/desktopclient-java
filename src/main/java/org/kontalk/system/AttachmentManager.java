@@ -262,7 +262,7 @@ public class AttachmentManager implements Runnable {
         if (!isImage(att.getMimeType()))
             return false;
 
-        BufferedImage image = MediaUtils.readImage(path.toString());
+        BufferedImage image = MediaUtils.readImage(path);
         if (image.getWidth() <= THUMBNAIL_DIM.width
                 && image.getHeight() <= THUMBNAIL_DIM.height)
             return false;

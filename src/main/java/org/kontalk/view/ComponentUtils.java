@@ -57,6 +57,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -792,7 +793,7 @@ final class ComponentUtils {
 
         private final WebLabel mStatus;
         private final WebLinkLabel mAttLabel;
-        private String mImagePath = "";
+        private Path mImagePath = Paths.get("");
 
         AttachmentPanel() {
            super(View.GAP_SMALL, false);
@@ -804,7 +805,7 @@ final class ComponentUtils {
            this.add(mAttLabel);
         }
 
-        void setImage(String path) {
+        void setImage(Path path) {
             if (path.equals(mImagePath))
                 return;
 

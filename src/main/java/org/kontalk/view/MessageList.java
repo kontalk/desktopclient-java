@@ -36,6 +36,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
@@ -555,13 +556,13 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
             // image thumbnail preview
             Optional<Path> optImagePath = mView.getControl().getImagePath(mValue);
-            String imagePath = optImagePath.isPresent() ? optImagePath.get().toString() : "";
-            mAttPanel.setImage(imagePath);
+            Path image = optImagePath.isPresent() ? optImagePath.get() : Paths.get("");
+            mAttPanel.setImage(image);
 
             // link to the file
             Path linkPath = mView.getControl().getFilePath(att);
             if (!linkPath.toString().isEmpty()) {
-                mAttPanel.setLink(imagePath.isEmpty() ?
+                mAttPanel.setLink(image.toString().isEmpty() ?
                         linkPath.getFileName().toString() :
                         "",
                         linkPath);

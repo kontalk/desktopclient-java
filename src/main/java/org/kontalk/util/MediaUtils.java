@@ -26,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -81,16 +82,20 @@ public class MediaUtils {
         mAudioClip.play();
     }
 
-    public static BufferedImage readImage(String path) {
+    public static BufferedImage readImage(Path path) {
+        Optional<BufferedImage> optImg = readImage(path.toFile());
+        return optImg.isPresent() ?
+                optImg.get() :
+                new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
+    }
+
+    public static Optional<BufferedImage> readImage(File file) {
         try {
-            BufferedImage image = ImageIO.read(new File(path));
-            if (image != null) {
-                return image;
-            }
+            return Optional.ofNullable(ImageIO.read(file));
         } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't read image, path: "+path, ex);
+            LOGGER.log(Level.WARNING, "can't read image, path: "+file.getPath(), ex);
         }
-        return new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
+        return Optional.empty();
     }
 
     public static Optional<BufferedImage> readImage(byte[] imgData) {
@@ -100,6 +105,16 @@ public class MediaUtils {
             LOGGER.log(Level.WARNING, "can't read image data", ex);
         }
         return Optional.empty();
+    }
+
+    public static boolean writeImage(BufferedImage img, String format, File output) {
+        try {
+            ImageIO.write(img, format, output);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't save avatar", ex);
+            return false;
+        }
+        return true;
     }
 
     public static byte[] imageToByteArray(Image image, String format) {
