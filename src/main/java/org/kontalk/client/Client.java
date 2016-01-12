@@ -44,6 +44,7 @@ import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
 import org.kontalk.Kontalk;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
@@ -71,9 +72,9 @@ public final class Client implements StanzaListener, Runnable {
     private final Control mControl;
 
     private final KonMessageSender mMessageSender;
-    private AvatarSendReceiver mAvatarSendReceiver;
 
     private KonConnection mConn = null;
+    private AvatarSendReceiver mAvatarSendReceiver = null;
 
     public Client(Control control) {
         mControl = control;
@@ -118,8 +119,6 @@ public final class Client implements StanzaListener, Runnable {
                         key.getBridgeCertificate(),
                         validateCertificate);
 
-        mAvatarSendReceiver = new AvatarSendReceiver(mConn, mControl.getAvatarHandler());
-
         // connection listener
         mConn.addConnectionListener(new KonConnectionListener(mControl));
 
@@ -127,9 +126,11 @@ public final class Client implements StanzaListener, Runnable {
         // subscriptions handled by roster handler
         roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
 
+        mAvatarSendReceiver = new AvatarSendReceiver(mConn, mControl.getAvatarHandler());
+
         // packet listeners
-        RosterHandler rosterSyncer = mControl.getRosterHandler();
-        RosterListener rl = new KonRosterListener(roster, rosterSyncer);
+        RosterHandler rosterHandler = mControl.getRosterHandler();
+        RosterListener rl = new KonRosterListener(roster, rosterHandler);
         roster.addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
@@ -147,7 +148,11 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-        mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterSyncer), presenceFilter);
+        mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterHandler), presenceFilter);
+
+        // our service discovery: want avatar from other users
+        ServiceDiscoveryManager.getInstanceFor(mConn).
+                addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
 
         // listen to all IQ errors
         mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
