@@ -18,14 +18,13 @@
 
 package org.kontalk.view;
 
-import com.alee.utils.ImageUtils;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
-import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -34,6 +33,7 @@ import org.apache.commons.lang.ObjectUtils;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Contact.Avatar;
+import org.kontalk.util.MediaUtils;
 
 /**
  * Static functions for loading avatar pictures.
@@ -61,17 +61,81 @@ final class AvatarLoader {
 
     private static ImageIcon load(Item item) {
         if (!CACHE.containsKey(item)) {
-            ImageIcon icon = null;
-
-            if (item.avatar != null)
-                icon = ImageUtils.loadImage(new ByteArrayInputStream(item.avatar.data));
-
-            if (icon == null)
-                icon = new ImageIcon(fallback(item.label, item.colorCode, IMG_SIZE));
-
-            CACHE.put(item, icon);
+            CACHE.put(item, new ImageIcon(item.createImage()));
         }
         return CACHE.get(item);
+    }
+
+    private static class Item {
+        private final Avatar avatar;
+        private final String label;
+        private final int colorCode;
+
+        Item(Contact contact) {
+            avatar = contact.getAvatar().orElse(null);
+            label = contact.getName();
+            colorCode = hash(contact.getID());
+        }
+
+        Item(Chat chat) {
+            if (chat.isGroupChat()) {
+                // nice to have: group picture
+                avatar = null;
+                label = chat.getSubject();
+            } else {
+                Contact[] contacts = chat.getValidContacts();
+                if (contacts.length == 0) {
+                    avatar = null;
+                    label = "";
+                } else {
+                    Contact c = contacts[0];
+                    avatar = c.getAvatar().orElse(null);
+                    label = c.getName();
+                }
+
+            }
+            colorCode = hash(chat.getID());
+        }
+
+        Image createImage() {
+            if (avatar != null) {
+                BufferedImage img = avatar.loadImage().orElse(null);
+                if (img != null)
+                    return MediaUtils.scaleAsync(img, IMG_SIZE, IMG_SIZE, true);
+            }
+
+            return fallback(label, colorCode, IMG_SIZE);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this)
+                return true;
+
+            if (!(o instanceof Item))
+                return false;
+
+            Item oItem = (Item) o;
+            return ObjectUtils.equals(avatar, oItem.avatar) &&
+                    label.equals(oItem.label) && colorCode == oItem.colorCode;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 3;
+            hash = 37 * hash + Objects.hashCode(this.label);
+            hash = 37 * hash + this.colorCode;
+            return hash;
+        }
+    }
+
+    // uniform hash
+    // Source: https://stackoverflow.com/a/12996028
+    private static int hash(int x) {
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = ((x >> 16) ^ x) * 0x45d9f3b;
+        x = ((x >> 16) ^ x);
+        return x;
     }
 
     static BufferedImage createFallback(int size) {
@@ -113,67 +177,5 @@ final class AvatarLoader {
                  (size / 2.0f) + (h / 2.0f) - d);
 
         return img;
-    }
-
-    private static class Item {
-        final Avatar avatar;
-        final String label;
-        final int colorCode;
-
-        Item(Contact contact) {
-            avatar = contact.getAvatar().orElse(null);
-            label = contact.getName();
-            colorCode = hash(contact.getID());
-        }
-
-        Item(Chat chat) {
-            if (chat.isGroupChat()) {
-                // nice to have: group picture
-                avatar = null;
-                label = chat.getSubject();
-            } else {
-                Contact[] contacts = chat.getValidContacts();
-                if (contacts.length == 0) {
-                    avatar = null;
-                    label = "";
-                } else {
-                    Contact c = contacts[0];
-                    avatar = c.getAvatar().orElse(null);
-                    label = c.getName();
-                }
-
-            }
-            colorCode = hash(chat.getID());
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (o == this)
-                return true;
-
-            if (!(o instanceof Item))
-                return false;
-
-            Item oItem = (Item) o;
-            return ObjectUtils.equals(avatar, oItem.avatar) &&
-                    label.equals(oItem.label) && colorCode == oItem.colorCode;
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 3;
-            hash = 37 * hash + Objects.hashCode(this.label);
-            hash = 37 * hash + this.colorCode;
-            return hash;
-        }
-    }
-
-    // uniform hash
-    // Source: https://stackoverflow.com/a/12996028
-    private static int hash(int x) {
-        x = ((x >> 16) ^ x) * 0x45d9f3b;
-        x = ((x >> 16) ^ x) * 0x45d9f3b;
-        x = ((x >> 16) ^ x);
-        return x;
     }
 }

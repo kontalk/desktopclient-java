@@ -90,6 +90,11 @@ public class MediaUtils {
     }
 
     public static Optional<BufferedImage> readImage(File file) {
+        if (!file.exists()) {
+            LOGGER.warning("image file does not exist: "+file);
+            return Optional.empty();
+        }
+
         try {
             return Optional.ofNullable(ImageIO.read(file));
         } catch (IOException ex) {
@@ -109,12 +114,11 @@ public class MediaUtils {
 
     public static boolean writeImage(BufferedImage img, String format, File output) {
         try {
-            ImageIO.write(img, format, output);
+            return ImageIO.write(img, format, output);
         } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't save avatar", ex);
+            LOGGER.log(Level.WARNING, "can't save image", ex);
             return false;
         }
-        return true;
     }
 
     public static byte[] imageToByteArray(Image image, String format) {
