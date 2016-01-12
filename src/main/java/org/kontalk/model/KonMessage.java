@@ -213,12 +213,12 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
     }
 
     protected MessageContent.Attachment getAttachment() {
-        Optional<MessageContent.Attachment> optAttachment = this.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
+        MessageContent.Attachment att = this.getContent().getAttachment().orElse(null);
+        if (att == null) {
             LOGGER.warning("no attachment!?");
             return null;
         }
-        return optAttachment.get();
+        return att;
     }
 
     public CoderStatus getCoderStatus() {

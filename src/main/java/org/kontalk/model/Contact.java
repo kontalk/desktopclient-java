@@ -346,15 +346,13 @@ public final class Contact extends Observable {
         String name = rs.getString(Contact.COL_NAME);
         String status = rs.getString(Contact.COL_STAT);
         long l = rs.getLong(Contact.COL_LAST_SEEN);
-        Optional<Date> lastSeen = l == 0 ?
-                Optional.<Date>empty() :
-                Optional.<Date>of(new Date(l));
+        Date lastSeen = l == 0 ? null : new Date(l);
         boolean encr = rs.getBoolean(Contact.COL_ENCR);
         String key = Database.getString(rs, Contact.COL_PUB_KEY);
         String fp = Database.getString(rs, Contact.COL_KEY_FP);
         String avatarID = Database.getString(rs, Contact.COL_AVATAR_ID);
 
-        return new Contact(id, jid, name, status, lastSeen, encr, key, fp, avatarID);
+        return new Contact(id, jid, name, status, Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
     }
 
     /**

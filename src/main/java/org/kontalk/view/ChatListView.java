@@ -28,7 +28,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.Timer;
 import javax.swing.ListSelectionModel;
@@ -82,19 +81,19 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 if (e.getValueIsAdjusting())
                     return;
 
-                Optional<Chat> optChat = ChatListView.this.getSelectedValue();
-                if (!optChat.isPresent()) {
+                Chat chat = ChatListView.this.getSelectedValue().orElse(null);
+                if (chat == null) {
                     // note: this happens also on righ-click for some reason
                     return;
                 }
 
                 // if event is caused by filtering, dont do anything
-                if (lastChat == optChat.get())
+                if (lastChat == chat)
                     return;
 
                 mView.clearSearch();
-                mView.showChat(optChat.get());
-                lastChat = optChat.get();
+                mView.showChat(chat);
+                lastChat = chat;
             }
         });
 
@@ -260,8 +259,8 @@ final class ChatListView extends Table<ChatItem, Chat> {
         @Override
         protected boolean contains(String search) {
             // always show entry for current chat
-            Optional<Chat> optChat = mView.getCurrentShownChat();
-            if (optChat.isPresent() && optChat.get() == mValue)
+            Chat chat = mView.getCurrentShownChat().orElse(null);
+            if (chat != null && chat == mValue)
                 return true;
 
             for (Contact contact: mValue.getAllContacts()) {
@@ -274,20 +273,20 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
         @Override
         public int compareTo(TableItem o) {
-            Optional<KonMessage> m = this.mValue.getMessages().getLast();
-            Optional<KonMessage> oM = o.mValue.getMessages().getLast();
-            if (m.isPresent() && oM.isPresent())
-                return -m.get().getDate().compareTo(oM.get().getDate());
+            KonMessage m = this.mValue.getMessages().getLast().orElse(null);
+            KonMessage oM = o.mValue.getMessages().getLast().orElse(null);
+            if (m != null && oM != null)
+                return -m.getDate().compareTo(oM.getDate());
 
             return -Integer.compare(this.mValue.getID(), o.mValue.getID());
         }
     }
 
     private static String lastActivity(Chat chat, boolean pretty) {
-        Optional<KonMessage> optM = chat.getMessages().getLast();
-        String lastActivity = !optM.isPresent() ? Tr.tr("no messages yet") :
-                pretty ? Utils.PRETTY_TIME.format(optM.get().getDate()) :
-                Utils.MID_DATE_FORMAT.format(optM.get().getDate());
+        KonMessage m = chat.getMessages().getLast().orElse(null);
+        String lastActivity = m == null ? Tr.tr("no messages yet") :
+                pretty ? Utils.PRETTY_TIME.format(m.getDate()) :
+                Utils.MID_DATE_FORMAT.format(m.getDate());
         return lastActivity;
     }
 }

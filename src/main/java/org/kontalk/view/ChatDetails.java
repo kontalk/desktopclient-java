@@ -36,7 +36,6 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.util.List;
-import java.util.Optional;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.kontalk.model.Chat;
@@ -95,8 +94,8 @@ final class ChatDetails extends WebPanel {
 
         groupPanel.add(new WebLabel(Tr.tr("Custom Background")));
         mColorOpt = new WebRadioButton(Tr.tr("Color:") + " ");
-        Optional<Color> optBGColor = mChat.getViewSettings().getBGColor();
-        mColorOpt.setSelected(optBGColor.isPresent());
+        Color bgColor = mChat.getViewSettings().getBGColor().orElse(null);
+        mColorOpt.setSelected(bgColor != null);
         mColorOpt.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
@@ -105,7 +104,7 @@ final class ChatDetails extends WebPanel {
         });
         mColor = new WebButton();
         mColor.setMinimumHeight(25);
-        Color oldColor = optBGColor.orElse(DEFAULT_BG);
+        Color oldColor = bgColor != null ? bgColor : DEFAULT_BG;
         mColor.setBottomBgColor(oldColor);
         groupPanel.add(new GroupPanel(GroupingType.fillLast,
                 mColorOpt,
@@ -115,7 +114,7 @@ final class ChatDetails extends WebPanel {
         colorSlider.setMaximum(100);
         colorSlider.setPaintTicks(false);
         colorSlider.setPaintLabels(false);
-        colorSlider.setEnabled(optBGColor.isPresent());
+        colorSlider.setEnabled(bgColor != null);
         final GradientData gradientData = GradientData.getDefaultValue();
         // TODO set location for color
         gradientData.getColor(0);

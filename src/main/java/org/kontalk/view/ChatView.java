@@ -157,11 +157,11 @@ final class ChatView extends WebPanel implements Observer {
             @Override
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                Optional<BufferedImage> optBG =
-                        ChatView.this.getCurrentBackground().updateNowOrLater();
+                BufferedImage bg =
+                        ChatView.this.getCurrentBackground().updateNowOrLater().orElse(null);
                 // if there is something to draw, draw it now even if its old
-                if (optBG.isPresent())
-                    g.drawImage(optBG.get(), 0, 0, this.getWidth(), this.getHeight(), null);
+                if (bg != null)
+                    g.drawImage(bg, 0, 0, this.getWidth(), this.getHeight(), null);
             }
         });
 
@@ -283,9 +283,9 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void showChat(Chat chat) {
-        Optional<Chat> optOldChat = this.getCurrentChat();
-        if (optOldChat.isPresent())
-            optOldChat.get().deleteObserver(this);
+        Chat oldChat = this.getCurrentChat().orElse(null);
+        if (oldChat != null)
+            oldChat.deleteObserver(this);
 
         chat.addObserver(this);
 
@@ -317,13 +317,11 @@ final class ChatView extends WebPanel implements Observer {
         MessageList view = this.currentMessageListOrNull();
         if (view == null)
             return mDefaultBG;
-        Optional<Background> optBG = view.getBG();
-        if (!optBG.isPresent())
-            return mDefaultBG;
-        return optBG.get();
+        Background bg = view.getBG().orElse(null);
+        return bg == null ? mDefaultBG : bg;
     }
 
-    Optional<Background> createBG(Chat.ViewSettings s){
+    Optional<Background> createBG(Chat.ViewSettings s) {
         JViewport p = this.mScrollPane.getViewport();
         if (s.getBGColor().isPresent()) {
             Color c = s.getBGColor().get();
@@ -408,12 +406,11 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void onChatChange() {
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
-        Chat chat = optChat.get();
-        // update if chat changes...
 
+        // update if chat changes...
         // avatar
         mAvatarLabel.setIcon(AvatarLoader.load(chat));
 
@@ -448,34 +445,33 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void showPopup(final WebToggleButton invoker) {
-        Optional<Chat> optChat = ChatView.this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = ChatView.this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
         if (mPopup == null)
             mPopup = new ComponentUtils.ModalPopup(invoker);
 
         mPopup.removeAll();
-        mPopup.add(new ChatDetails(mView, mPopup, optChat.get()));
+        mPopup.add(new ChatDetails(mView, mPopup, chat));
         mPopup.showPopup();
     }
 
     private void onKeyTypeEvent(boolean empty) {
         this.updateSendButton();
 
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
 
         // workaround: clearing the text area is not a key event
         if (!empty)
-            mView.getControl().handleOwnChatStateEvent(optChat.get(), ChatState.composing);
+            mView.getControl().handleOwnChatStateEvent(chat, ChatState.composing);
     }
 
     private void updateSendButton() {
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
-        Chat chat = optChat.get();
 
         // enable if chat is valid...
         mSendButton.setEnabled(chat.isValid() &&
@@ -486,8 +482,8 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void sendMsg() {
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             // now current chat
             return;
 
@@ -495,7 +491,7 @@ final class ChatView extends WebPanel implements Observer {
 //       if (!attachments.isEmpty())
 //           mView.getControl().sendAttachment(optChat.get(), attachments.get(0).toPath());
 //       else
-        mView.getControl().sendText(optChat.get(), mSendTextArea.getText());
+        mView.getControl().sendText(chat, mSendTextArea.getText());
 
         mSendTextArea.setText("");
     }
@@ -507,11 +503,11 @@ final class ChatView extends WebPanel implements Observer {
         File file = fileChooser.getSelectedFile();
         fileChooser.setCurrentDirectory(file.toPath().getParent().toString());
 
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
 
-        mView.getControl().sendAttachment(optChat.get(), file.toPath());
+        mView.getControl().sendAttachment(chat, file.toPath());
     }
 
     /** A background image of chat view with efficient async reloading. */

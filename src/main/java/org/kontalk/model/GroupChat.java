@@ -22,7 +22,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
@@ -170,12 +169,12 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
 
                 boolean meIn = false;
                 for (JID jid: command.getAdded()) {
-                    Optional<Contact> optContact = ContactList.getInstance().get(jid);
-                    if (!optContact.isPresent()) {
+                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
+                    if (contact == null) {
                         LOGGER.warning("can't find contact, jid: "+jid);
                         continue;
                     }
-                    Contact contact = optContact.get();
+
                     if (mContactMap.keySet().contains(contact)) {
                         LOGGER.warning("contact already in chat: "+contact);
                         continue;
@@ -198,20 +197,20 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 break;
             case SET:
                 for (JID jid : command.getAdded()) {
-                    Optional<Contact> optC = ContactList.getInstance().get(jid);
-                    if (optC.isPresent()) {
+                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
+                    if (contact == null) {
                         LOGGER.warning("can't get added contact, jid="+jid);
                         continue;
                     }
-                    this.addContactSilent(optC.get());
+                    this.addContactSilent(contact);
                 }
                 for (JID jid : command.getRemoved()) {
-                    Optional<Contact> optC = ContactList.getInstance().get(jid);
-                    if (optC.isPresent()) {
+                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
+                    if (contact == null) {
                         LOGGER.warning("can't get removed contact, jid="+jid);
                         continue;
                     }
-                    this.removeContactSilent(optC.get());
+                    this.removeContactSilent(contact);
                 }
                 mSubject = command.getSubject();
                 this.save();

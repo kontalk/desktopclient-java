@@ -163,12 +163,11 @@ public final class Control {
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
 
-        Optional<Contact> optContact = this.getOrCreateContact(ids.jid);
-        if (!optContact.isPresent()) {
+        Contact contact = this.getOrCreateContact(ids.jid).orElse(null);
+        if (contact == null) {
             LOGGER.warning("can't get contact for message");
             return false;
         }
-        Contact contact = optContact.get();
 
         // decrypt message now to get group id
         ProtoMessage protoMessage = new ProtoMessage(contact, content);
@@ -177,12 +176,12 @@ public final class Control {
         }
 
         // NOTE: decryption must be successful to select group chat
-        Optional<KonGroupData> optGID = protoMessage.getContent().getGroupData();
+        KonGroupData gData = protoMessage.getContent().getGroupData().orElse(null);
 
         // TODO ignore message if it contains unexpected group commands
 
-        Chat chat = optGID.isPresent() ?
-                ChatList.getInstance().getOrCreate(optGID.get(), contact) :
+        Chat chat = gData != null ?
+                ChatList.getInstance().getOrCreate(gData, contact) :
                 ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
 
         InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
@@ -203,11 +202,11 @@ public final class Control {
             return false;
         }
 
-        Optional<GroupCommand> optCom = newMessage.getContent().getGroupCommand();
-        if (optCom.isPresent()) {
+        GroupCommand com = newMessage.getContent().getGroupCommand().orElse(null);
+        if (com != null) {
             if (chat instanceof GroupChat) {
                 mGroupControl.getInstanceFor((GroupChat) chat)
-                        .onInMessage(optCom.get(), contact);
+                        .onInMessage(com, contact);
             } else {
                 LOGGER.warning("group command for non-group chat");
             }
@@ -221,26 +220,26 @@ public final class Control {
     }
 
     public void messageSent(MessageIDs ids) {
-        Optional<OutMessage> optMessage = findMessage(ids);
-        if (!optMessage.isPresent())
+        OutMessage message = findMessage(ids).orElse(null);
+        if (message == null)
             return;
 
-        optMessage.get().setStatus(KonMessage.Status.SENT);
+        message.setStatus(KonMessage.Status.SENT);
     }
 
     public void setReceived(MessageIDs ids) {
-        Optional<OutMessage> optMessage = findMessage(ids);
-        if (!optMessage.isPresent())
+        OutMessage message = findMessage(ids).orElse(null);
+        if (message == null)
             return;
 
-        optMessage.get().setReceived(ids.jid);
+        message.setReceived(ids.jid);
     }
 
     public void setMessageError(MessageIDs ids, Condition condition, String errorText) {
-        Optional<OutMessage> optMessage = findMessage(ids);
-        if (!optMessage.isPresent())
+        OutMessage message = findMessage(ids).orElse(null);
+        if (message == null)
             return ;
-        optMessage.get().setServerError(condition.toString(), errorText);
+        message.setServerError(condition.toString(), errorText);
     }
 
     /**
@@ -256,37 +255,35 @@ public final class Control {
                 return;
             }
         }
-        Optional<Contact> optContact = ContactList.getInstance().get(ids.jid);
-        if (!optContact.isPresent()) {
+        Contact contact = ContactList.getInstance().get(ids.jid).orElse(null);
+        if (contact == null) {
             LOGGER.info("can't find contact with jid: "+ids.jid);
             return;
         }
-        Contact contact = optContact.get();
         // TODO chat states for group chats?
-        Optional<SingleChat> optChat = ChatList.getInstance().get(contact, ids.xmppThreadID);
-        if (!optChat.isPresent())
+        SingleChat chat = ChatList.getInstance().get(contact, ids.xmppThreadID).orElse(null);
+        if (chat == null)
             return;
 
-        optChat.get().setChatState(contact, chatState);
+        chat.setChatState(contact, chatState);
     }
 
     public void handlePGPKey(JID jid, byte[] rawKey) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
             LOGGER.warning("can't find contact with jid: "+jid);
             return;
         }
 
-        this.handlePGPKey(optContact.get(), rawKey);
+        this.handlePGPKey(contact, rawKey);
     }
 
     void handlePGPKey(Contact contact, byte[] rawKey) {
-        Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
-        if (!optKey.isPresent()) {
+        PGPCoderKey key = PGPUtils.readPublicKey(rawKey).orElse(null);
+        if (key == null) {
             LOGGER.warning("invalid public PGP key, contact: "+contact);
             return;
         }
-        PGPCoderKey key = optKey.get();
 
         if (!key.userID.contains("<"+contact.getJID().string()+">")) {
             LOGGER.warning("UID does not contain contact JID");
@@ -331,12 +328,11 @@ public final class Control {
     }
 
     public void setContactBlocking(JID jid, boolean blocking) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
             LOGGER.info("ignoring blocking of JID not in contact list");
             return;
         }
-        Contact contact = optContact.get();
 
         LOGGER.info("set contact blocking: "+contact+" "+blocking);
         contact.setBlocked(blocking);
@@ -402,9 +398,9 @@ public final class Control {
     }
 
     Optional<Contact> getOrCreateContact(JID jid) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (optContact.isPresent())
-            return optContact;
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact != null)
+            return Optional.of(contact);
 
         return this.createContact(jid, "");
     }
@@ -429,13 +425,12 @@ public final class Control {
             name = jid.local();
         }
 
-        Optional<Contact> optNewContact = ContactList.getInstance().create(jid, name);
-        if (!optNewContact.isPresent()) {
+        Contact newContact = ContactList.getInstance().create(jid, name).orElse(null);
+        if (newContact == null) {
             LOGGER.warning("can't create new contact");
             // TODO tell view
             return Optional.empty();
         }
-        Contact newContact = optNewContact.get();
 
         newContact.setEncrypted(encrypted);
 
@@ -509,22 +504,22 @@ public final class Control {
         ChatList cl = ChatList.getInstance();
 
         // get chat by jid -> thread ID -> message id
-        Optional<Contact> optContact = ContactList.getInstance().get(ids.jid);
-        if (optContact.isPresent()) {
-            Optional<? extends Chat> optChat = cl.get(optContact.get(), ids.xmppThreadID);
-            if (optChat.isPresent()) {
-                Optional<OutMessage> optM = optChat.get().getMessages().getLast(ids.xmppID);
-                if (optM.isPresent())
-                    return optM;
+        Contact contact = ContactList.getInstance().get(ids.jid).orElse(null);
+        if (contact != null) {
+            Chat chat = cl.get(contact, ids.xmppThreadID).orElse(null);
+            if (chat != null) {
+                OutMessage m = chat.getMessages().getLast(ids.xmppID).orElse(null);
+                if (m != null)
+                    return Optional.of(m);
             }
         }
 
         // fallback: search everywhere
         LOGGER.info("fallback search, IDs: "+ids);
         for (Chat chat: cl) {
-            Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
-            if (optM.isPresent())
-                return optM;
+            OutMessage m = chat.getMessages().getLast(ids.xmppID).orElse(null);
+            if (m != null)
+                return Optional.of(m);
         }
 
         LOGGER.warning("can't find message by IDs: "+ids);
@@ -669,12 +664,11 @@ public final class Control {
         }
 
         public void createGroupChat(List<Contact> contacts, String subject) {
-            Optional<Contact> optMe = ContactList.getInstance().getMe();
-            if (!optMe.isPresent()) {
+            Contact me = ContactList.getInstance().getMe().orElse(null);
+            if (me == null) {
                 LOGGER.warning("can't find myself");
                 return;
             }
-            Contact me = optMe.get();
 
             // user should be part of the group
             List<Contact> withMe = new ArrayList<>(contacts);
@@ -753,9 +747,9 @@ public final class Control {
 
         private PersonalKey keyOrNull(char[] password) {
             Account account = Account.getInstance();
-            Optional<PersonalKey> optKey = account.getPersonalKey();
-            if (optKey.isPresent())
-                return optKey.get();
+            PersonalKey key = account.getPersonalKey().orElse(null);
+            if (key != null)
+                return key;
 
             if (password.length == 0) {
                 if (account.isPasswordProtected()) {

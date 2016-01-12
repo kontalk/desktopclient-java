@@ -32,7 +32,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Observer;
-import java.util.Optional;
 import java.util.Set;
 import javax.swing.Box;
 import javax.swing.ListSelectionModel;
@@ -70,11 +69,11 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
-                Optional<Contact> optContact = ContactListView.this.getSelectedValue();
-                if (!optContact.isPresent())
+                Contact contact = ContactListView.this.getSelectedValue().orElse(null);
+                if (contact == null)
                     return;
 
-                mView.showContactDetails(optContact.get());
+                mView.showContactDetails(contact);
             }
         });
 
@@ -83,9 +82,9 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    Optional<Contact> optContact = ContactListView.this.getSelectedValue();
-                    if (optContact.isPresent())
-                        mView.showChat(optContact.get());
+                    Contact contact = ContactListView.this.getSelectedValue().orElse(null);
+                    if (contact != null)
+                        mView.showChat(contact);
                 }
             }
             @Override

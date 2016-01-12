@@ -135,23 +135,19 @@ public class AttachmentManager implements Runnable {
     }
 
     private void uploadAsync(OutMessage message) {
-        Optional<Attachment> optAttachment = message.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
+        Attachment attachment = message.getContent().getAttachment().orElse(null);
+        if (attachment == null) {
             LOGGER.warning("no attachment in message to upload");
             return;
         }
-        Attachment attachment = optAttachment.get();
 
         // if text will be encrypted, always encrypt attachment too
         boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
-        File file;
-        if (encrypt){
-            Optional<File> optFile = Coder.encryptAttachment(message);
-            if (!optFile.isPresent())
-                return;
-            file = optFile.get();
-        } else
-            file = attachment.getFile().toFile();
+        File file = encrypt ?
+                Coder.encryptAttachment(message).orElse(null) :
+                attachment.getFile().toFile();
+        if (file == null)
+            return;
 
         HTTPFileClient client = createClientOrNull();
         if (client == null)
@@ -189,12 +185,11 @@ public class AttachmentManager implements Runnable {
     }
 
     private void downloadAsync(final InMessage message) {
-        Optional<Attachment> optAttachment = message.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
+        Attachment attachment = message.getContent().getAttachment().orElse(null);
+        if (attachment == null) {
             LOGGER.warning("no attachment in message to download");
             return;
         }
-        Attachment attachment = optAttachment.get();
 
         HTTPFileClient client = createClientOrNull();
         if (client == null)
@@ -236,12 +231,11 @@ public class AttachmentManager implements Runnable {
     }
 
     public void savePreview(InMessage message) {
-        Optional<Preview> optPreview = message.getContent().getPreview();
-        if (!optPreview.isPresent()) {
+        Preview preview = message.getContent().getPreview().orElse(null);
+        if (preview == null) {
             LOGGER.warning("no preview in message: "+message);
             return;
         }
-        Preview preview = optPreview.get();
         String id = Integer.toString(message.getID());
         String dotExt = MediaUtils.extensionForMIME(preview.getMimeType());
         String filename = id + "_bob" + dotExt;
@@ -251,12 +245,11 @@ public class AttachmentManager implements Runnable {
     }
 
     boolean createImagePreview(KonMessage message) {
-        Optional<Attachment> optAtt = message.getContent().getAttachment();
-        if (!optAtt.isPresent()) {
+        Attachment att = message.getContent().getAttachment().orElse(null);
+        if (att == null) {
             LOGGER.warning("no attachment in message: "+message);
             return false;
         }
-        Attachment att = optAtt.get();
         Path path = filePath(att);
 
         if (!isImage(att.getMimeType()))
@@ -298,11 +291,10 @@ public class AttachmentManager implements Runnable {
     }
 
     Optional<Path> imagePreviewPath(KonMessage message) {
-        Optional<MessageContent.Preview> optPreview = message.getContent().getPreview();
-        if (!optPreview.isPresent())
+        MessageContent.Preview preview = message.getContent().getPreview().orElse(null);
+        if (preview == null)
             return Optional.empty();
 
-        MessageContent.Preview preview = optPreview.get();
         String fn = preview.getFilename();
         if (fn.isEmpty() || !isImage(preview.getMimeType()))
             return Optional.empty();
@@ -378,12 +370,11 @@ public class AttachmentManager implements Runnable {
     }
 
     private static HTTPFileClient createClientOrNull(){
-        Optional<PersonalKey> optKey = Account.getInstance().getPersonalKey();
-        if (!optKey.isPresent()) {
+        PersonalKey key = Account.getInstance().getPersonalKey().orElse(null);
+        if (key == null) {
             LOGGER.log(Level.WARNING, "personal key not loaded");
             return null;
         }
-        PersonalKey key = optKey.get();
 
         return new HTTPFileClient(key.getServerLoginKey(),
                 key.getBridgeCertificate(),

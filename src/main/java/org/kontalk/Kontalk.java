@@ -25,7 +25,6 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -121,12 +120,11 @@ public final class Kontalk {
 
         ViewControl control = Control.create();
 
-        Optional<View> optView = View.create(control);
-        if (!optView.isPresent()) {
+        View view = View.create(control).orElse(null);
+        if (view == null) {
             control.shutDown();
             return; // never reached
         }
-        View view = optView.get();
 
         try {
             // do now to test if successful

@@ -338,15 +338,15 @@ public final class View implements Observer {
 
     void tabPaneChanged(MainFrame.Tab tab) {
         if (tab == MainFrame.Tab.CHATS) {
-            Optional<Chat> optChat = mChatListView.getSelectedValue();
-            if (optChat.isPresent()) {
-                mContent.showChat(optChat.get());
+            Chat chat = mChatListView.getSelectedValue().orElse(null);
+            if (chat != null) {
+                mContent.showChat(chat);
                 return;
             }
         } else {
-            Optional<Contact> optContact = mContactListView.getSelectedValue();
-            if (optContact.isPresent()) {
-                mContent.showContact(optContact.get());
+            Contact contact = mContactListView.getSelectedValue().orElse(null);
+            if (contact != null) {
+                mContent.showContact(contact);
                 return;
             }
         }

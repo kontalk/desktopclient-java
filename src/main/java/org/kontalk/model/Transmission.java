@@ -150,8 +150,8 @@ final public class Transmission {
         int id = resultSet.getInt("_id");
 
         int contactID = resultSet.getInt(COL_CONTACT_ID);
-        Optional<Contact> optContact = ContactList.getInstance().get(contactID);
-        if (!optContact.isPresent()) {
+        Contact contact = ContactList.getInstance().get(contactID).orElse(null);
+        if (contact == null) {
             LOGGER.warning("can't find contact in db, id: "+contactID);
             return null;
         }
@@ -159,6 +159,6 @@ final public class Transmission {
         long rDate = resultSet.getLong(COL_REC_DATE);
         Date receivedDate = rDate == 0 ? null : new Date(rDate);
 
-        return new Transmission(id, optContact.get(), jid, receivedDate);
+        return new Transmission(id, contact, jid, receivedDate);
     }
 }

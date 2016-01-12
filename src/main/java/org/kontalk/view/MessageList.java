@@ -483,9 +483,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             } else { // IN message
                 Date receivedDate = mValue.getDate();
                 String rec = Utils.MID_DATE_FORMAT.format(receivedDate);
-                Optional<Date> sentDate = mValue.getServerDate();
-                if (sentDate.isPresent()) {
-                    String sent = Utils.MID_DATE_FORMAT.format(sentDate.get());
+                Date sentDate = mValue.getServerDate().orElse(null);
+                if (sentDate != null) {
+                    String sent = Utils.MID_DATE_FORMAT.format(sentDate);
                     if (!sent.equals(rec))
                         html += Tr.tr("Sent:")+ " " + sent + "<br>";
                 }
@@ -544,10 +544,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         // attachment / image, note: loading many images is very slow
         private void updateAttachment() {
-            Optional<Attachment> optAttachment = mValue.getContent().getAttachment();
-            if (!optAttachment.isPresent())
+            Attachment att = mValue.getContent().getAttachment().orElse(null);
+            if (att == null)
                 return;
-            Attachment att = optAttachment.get();
 
             if (mAttPanel == null) {
                 mAttPanel = new AttachmentPanel();
@@ -555,8 +554,8 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             }
 
             // image thumbnail preview
-            Optional<Path> optImagePath = mView.getControl().getImagePath(mValue);
-            Path image = optImagePath.isPresent() ? optImagePath.get() : Paths.get("");
+            Path imagePath = mView.getControl().getImagePath(mValue).orElse(null);
+            Path image = imagePath != null ? imagePath : Paths.get("");
             mAttPanel.setImage(image);
 
             // link to the file
@@ -594,9 +593,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                     });
                     popupMenu.add(decryptMenuItem);
                 }
-                Optional<Attachment> optAtt = m.getContent().getAttachment();
-                if (optAtt.isPresent() &&
-                        optAtt.get().getFile().toString().isEmpty()) {
+                Attachment att = m.getContent().getAttachment().orElse(null);
+                if (att != null &&
+                        att.getFile().toString().isEmpty()) {
                     WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
                     attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
                     attMenuItem.addActionListener(new ActionListener() {

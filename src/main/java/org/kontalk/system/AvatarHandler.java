@@ -21,7 +21,6 @@ package org.kontalk.system;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -52,20 +51,19 @@ public final class AvatarHandler {
     }
 
     public void onNotify(JID jid, String id) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
             LOGGER.warning("can't find contact with jid:" + jid);
             return;
         }
-        Contact contact = optContact.get();
 
         if (id.isEmpty()) {
             // contact disabled avatar publishing
             // TODO
         }
 
-        Optional<Avatar> optAvatar = contact.getAvatar();
-        if (optAvatar.isPresent() && optAvatar.get().id.equals(id))
+        Avatar avatar = contact.getAvatar().orElse(null);
+        if (avatar != null && avatar.id.equals(id))
             // avatar is not new
             return;
 
@@ -78,8 +76,8 @@ public final class AvatarHandler {
         if (avatarData.length > MAX_SIZE)
             LOGGER.info("avatar data too long: "+avatarData.length);
 
-        final Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
             LOGGER.warning("can't find contact with jid:" + jid);
             return;
         }
@@ -89,10 +87,10 @@ public final class AvatarHandler {
             return;
         }
 
-        Optional<BufferedImage> optImg = MediaUtils.readImage(avatarData);
-        if (!optImg.isPresent())
+        BufferedImage img = MediaUtils.readImage(avatarData).orElse(null);
+        if (img == null)
             return;
 
-        optContact.get().setAvatar(new Avatar(id, optImg.get()));
+        contact.setAvatar(new Avatar(id, img));
     }
 }

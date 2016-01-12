@@ -286,9 +286,9 @@ public abstract class Chat extends Observable implements Observer {
         int id = rs.getInt("_id");
 
         String jsonGD = Database.getString(rs, Chat.COL_GD);
-        Optional<GroupMetaData> optGD = Optional.ofNullable(jsonGD.isEmpty() ?
+        GroupMetaData gData = jsonGD.isEmpty() ?
                 null :
-                GroupMetaData.fromJSONOrNull(jsonGD));
+                GroupMetaData.fromJSONOrNull(jsonGD);
 
         String xmppID = Database.getString(rs, Chat.COL_XMPPID);
 
@@ -296,9 +296,9 @@ public abstract class Chat extends Observable implements Observer {
         Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
         Set<Contact> contacts = new HashSet<>();
         for (int conID: dbReceiver.keySet()) {
-            Optional<Contact> optCon = ContactList.getInstance().get(conID);
-            if (optCon.isPresent())
-                contacts.add(optCon.get());
+            Contact c = ContactList.getInstance().get(conID).orElse(null);
+            if (c != null)
+                contacts.add(c);
             else
                 LOGGER.warning("can't find contact");
         }
@@ -310,8 +310,8 @@ public abstract class Chat extends Observable implements Observer {
         String jsonViewSettings = Database.getString(rs,
                 Chat.COL_VIEW_SET);
 
-        if (optGD.isPresent()) {
-            return GroupChat.create(id, contacts, optGD.get(), subject, read, jsonViewSettings);
+        if (gData != null) {
+            return GroupChat.create(id, contacts, gData, subject, read, jsonViewSettings);
         } else {
             if (contacts.size() != 1) {
                 LOGGER.warning("not one contact for single chat, id="+id);

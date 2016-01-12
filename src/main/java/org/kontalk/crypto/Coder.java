@@ -89,12 +89,11 @@ public final class Coder {
     private static final HashMap<Contact, PGPCoderKey> KEY_MAP = new HashMap<>();
 
     static PersonalKey myKeyOrNull() {
-        Optional<PersonalKey> optMyKey = Account.getInstance().getPersonalKey();
-        if (!optMyKey.isPresent()) {
+        PersonalKey myKey = Account.getInstance().getPersonalKey().orElse(null);
+        if (myKey == null)
             LOGGER.log(Level.WARNING, "can't get personal key");
-            return null;
-        }
-        return optMyKey.get();
+
+        return myKey;
     }
 
     public static Optional<PGPCoderKey> contactkey(Contact contact) {
@@ -106,10 +105,10 @@ public final class Coder {
 
         byte[] rawKey = contact.getKey();
         if (rawKey.length != 0) {
-            Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
-            if (optKey.isPresent()) {
-                KEY_MAP.put(contact, optKey.get());
-                return optKey;
+            PGPCoderKey key = PGPUtils.readPublicKey(rawKey).orElse(null);
+            if (key != null) {
+                KEY_MAP.put(contact, key);
+                return Optional.of(key);
             }
         }
 

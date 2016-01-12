@@ -332,8 +332,7 @@ public final class Database {
             } else if (value instanceof EnumSet) {
                 stat.setInt(i+1, EncodingUtils.enumSetToInt(((EnumSet) value)));
             } else if (value instanceof Optional) {
-                Optional<?> o = (Optional) value;
-                setValue(stat, i, o.orElse(null));
+                setValue(stat, i, ((Optional<?>) value).orElse(null));
             } else if (value instanceof JID) {
                 stat.setString(i+1, ((JID) value).string());
             } else if (value == null) {

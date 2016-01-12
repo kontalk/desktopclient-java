@@ -119,9 +119,9 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     /** Find group chat by group data or create a new chat. */
     public GroupChat getOrCreate(GroupMetaData gData, Contact contact) {
-        Optional<GroupChat> optChat = this.get(gData, contact);
-        if (optChat.isPresent())
-            return optChat.get();
+        GroupChat chat = this.get(gData, contact).orElse(null);
+        if (chat != null)
+            return chat;
 
         return this.createNew(new Contact[]{contact}, gData, "");
     }
@@ -132,9 +132,9 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     /** Find single chat for contact and XMPP ID or creates a new chat. */
     public SingleChat getOrCreate(Contact contact, String xmppThreadID) {
-        Optional<SingleChat> optChat = this.get(contact, xmppThreadID);
-        if (optChat.isPresent())
-            return optChat.get();
+        SingleChat chat = this.get(contact, xmppThreadID).orElse(null);
+        if (chat != null)
+            return chat;
 
         return this.createNew(contact, xmppThreadID);
     }

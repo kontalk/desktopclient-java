@@ -83,9 +83,9 @@ public class MediaUtils {
     }
 
     public static BufferedImage readImage(Path path) {
-        Optional<BufferedImage> optImg = readImage(path.toFile());
-        return optImg.isPresent() ?
-                optImg.get() :
+        BufferedImage img = readImage(path.toFile()).orElse(null);
+        return img != null ?
+                img :
                 new BufferedImage(20, 20, BufferedImage.TYPE_INT_RGB);
     }
 
