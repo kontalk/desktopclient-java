@@ -37,6 +37,10 @@ import org.kontalk.misc.JID;
 import org.kontalk.system.AvatarHandler;
 
 /**
+ * Manage publishing and requesting user avatars (XEP-0084).
+ *
+ * Metadata notification events are incoming as PubSub messages from message
+ * listener.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -71,7 +75,6 @@ final class AvatarSendReceiver {
 
     // TODO beta.kontalk.net does not support this
     void publish(String id, byte[] data) {
-        // TODO
     }
 
     void processMetadataEvent(JID jid, ItemsExtension itemsExt) {
@@ -113,7 +116,7 @@ final class AvatarSendReceiver {
     }
 
     void requestAndListen(final JID jid, final String id) {
-        // I really dont get how to use this
+        // I dont get how to use this here
         //PubSubManager manager = new PubSubManager(conn);
 
         PubSub request = new PubSub(jid.toBare().string(),

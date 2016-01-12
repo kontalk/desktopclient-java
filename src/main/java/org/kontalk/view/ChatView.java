@@ -89,6 +89,7 @@ final class ChatView extends WebPanel implements Observer {
 
     private final View mView;
 
+    private final WebLabel mAvatarLabel;
     private final WebLabel mTitleLabel;
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
@@ -110,6 +111,10 @@ final class ChatView extends WebPanel implements Observer {
         WebPanel titlePanel = new WebPanel(false,
                 new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
         titlePanel.setMargin(View.MARGIN_DEFAULT);
+
+        mAvatarLabel = new WebLabel();
+        titlePanel.add(mAvatarLabel, BorderLayout.WEST);
+
         mTitleLabel = new WebLabel();
         mTitleLabel.setFontSize(16);
         mTitleLabel.setDrawShade(true);
@@ -408,6 +413,9 @@ final class ChatView extends WebPanel implements Observer {
             return;
         Chat chat = optChat.get();
         // update if chat changes...
+
+        // avatar
+        mAvatarLabel.setIcon(AvatarLoader.load(chat));
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
