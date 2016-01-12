@@ -69,6 +69,7 @@ public final class Contact extends Observable {
     public static final String COL_ENCR = "encrypted";
     public static final String COL_PUB_KEY = "public_key";
     public static final String COL_KEY_FP = "key_fingerprint";
+    public static final String COL_AVATAR_ID = "avatar_id";
     public static final String SCHEMA = "(" +
             Database.SQL_ID +
             COL_JID + " TEXT NOT NULL UNIQUE, " +
@@ -78,7 +79,8 @@ public final class Contact extends Observable {
             // boolean, send messages encrypted?
             COL_ENCR + " INTEGER NOT NULL, " +
             COL_PUB_KEY + " TEXT UNIQUE, " +
-            COL_KEY_FP + " TEXT UNIQUE" +
+            COL_KEY_FP + " TEXT UNIQUE," +
+            COL_AVATAR_ID + " TEXT" +
             ")";
 
     private final int mID;
@@ -108,6 +110,7 @@ public final class Contact extends Observable {
         values.add(mEncrypted);
         values.add(null); // key
         values.add(null); // fingerprint
+        values.add(null); // avatar id
         mID = db.execInsert(TABLE, values);
         if (mID < 1)
             LOGGER.log(Level.WARNING, "could not insert contact");
@@ -121,7 +124,8 @@ public final class Contact extends Observable {
             Optional<Date> lastSeen,
             boolean encrypted,
             String publicKey,
-            String fingerprint) {
+            String fingerprint,
+            String avatarID) {
         mID = id;
         mJID = jid;
         mName = name;
@@ -130,6 +134,7 @@ public final class Contact extends Observable {
         mEncrypted = encrypted;
         mKey = publicKey;
         mFingerprint = fingerprint.toLowerCase();
+        mAvatar = avatarID.isEmpty() ? null : new Avatar(avatarID);
     }
 
     public JID getJID() {
@@ -319,6 +324,7 @@ public final class Contact extends Observable {
         set.put(COL_ENCR, mEncrypted);
         set.put(COL_PUB_KEY, Database.setString(mKey));
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
+        set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.id : ""));
         db.execUpdate(TABLE, set, mID);
     }
 
@@ -346,7 +352,9 @@ public final class Contact extends Observable {
         boolean encr = rs.getBoolean(Contact.COL_ENCR);
         String key = Database.getString(rs, Contact.COL_PUB_KEY);
         String fp = Database.getString(rs, Contact.COL_KEY_FP);
-        return new Contact(id, jid, name, status, lastSeen, encr, key, fp);
+        String avatarID = Database.getString(rs, Contact.COL_AVATAR_ID);
+
+        return new Contact(id, jid, name, status, lastSeen, encr, key, fp, avatarID);
     }
 
     /**
@@ -370,6 +378,11 @@ public final class Contact extends Observable {
             boolean succ = MediaUtils.writeImage(this.image, AVATAR_FORMAT, this.file());
             if (!succ)
                 LOGGER.warning("can't save avatar image: "+this.id);
+        }
+
+        // used when loading from database
+        Avatar(String id) {
+            this.id = id;
         }
 
         public Optional<BufferedImage> loadImage() {

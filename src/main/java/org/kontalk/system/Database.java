@@ -63,7 +63,7 @@ public final class Database {
     public static final String SQL_ID = "_id INTEGER PRIMARY KEY AUTOINCREMENT, ";
 
     private static final String FILENAME = "kontalk_db.sqlite";
-    private static final int DB_VERSION = 3;
+    private static final int DB_VERSION = 4;
     private static final String SQL_CREATE = "CREATE TABLE IF NOT EXISTS ";
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
@@ -176,6 +176,11 @@ public final class Database {
             mConn.createStatement().execute("ALTER TABLE "+Chat.TABLE+
                     " ADD COLUMN "+Chat.COL_GD+" DEFAULT NULL");
         }
+        if (fromVersion < 4) {
+            mConn.createStatement().execute("ALTER TABLE "+Contact.TABLE+
+                    " ADD COLUMN "+Contact.COL_AVATAR_ID+" DEFAULT NULL");
+        }
+
 
         // set new version
         mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
