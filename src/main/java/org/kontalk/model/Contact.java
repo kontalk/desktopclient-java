@@ -87,7 +87,7 @@ public final class Contact extends Observable {
     private JID mJID;
     private String mName;
     private String mStatus = "";
-    private Optional<Date> mLastSeen = Optional.empty();
+    private Date mLastSeen = null;
     private Online mAvailable = Online.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
@@ -130,7 +130,7 @@ public final class Contact extends Observable {
         mJID = jid;
         mName = name;
         mStatus = status;
-        mLastSeen = lastSeen;
+        mLastSeen = lastSeen.orElse(null);
         mEncrypted = encrypted;
         mKey = publicKey;
         mFingerprint = fingerprint.toLowerCase();
@@ -178,7 +178,7 @@ public final class Contact extends Observable {
     }
 
     public Optional<Date> getLastSeen() {
-        return mLastSeen;
+        return Optional.ofNullable(mLastSeen);
     }
 
     public boolean getEncrypted() {
@@ -200,7 +200,7 @@ public final class Contact extends Observable {
     public void setOnline(Presence.Type type, String status) {
         if (type == Presence.Type.available) {
             mAvailable = Online.YES;
-            mLastSeen = Optional.of(new Date());
+            mLastSeen = new Date();
         } else if (type == Presence.Type.unavailable) {
             mAvailable = Online.NO;
         }
@@ -299,7 +299,7 @@ public final class Contact extends Observable {
         mJID = JID.deleted(mID);
         mName = "";
         mStatus = "";
-        mLastSeen = Optional.empty();
+        mLastSeen = null;
         mEncrypted = false;
         mKey = "";
         mFingerprint = "";

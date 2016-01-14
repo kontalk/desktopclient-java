@@ -94,7 +94,7 @@ public final class OutMessage extends KonMessage {
 
         mStatus = status;
         if (status != Status.PENDING)
-            mServerDate = Optional.of(new Date());
+            mServerDate = new Date();
         this.save();
         this.changed(mStatus);
     }

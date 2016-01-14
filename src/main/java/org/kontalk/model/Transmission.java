@@ -62,12 +62,12 @@ final public class Transmission {
 
     private final Contact mContact;
     private final JID mJID;
-    protected Optional<Date> mReceivedDate;
+    private Date mReceivedDate;
 
     Transmission(Contact contact, JID jid, int messageID) {
         mContact = contact;
         mJID = jid;
-        mReceivedDate = Optional.empty();
+        mReceivedDate = null;
 
         mID = this.insert(messageID);
     }
@@ -76,7 +76,7 @@ final public class Transmission {
         mID = id;
         mContact = contact;
         mJID = jid;
-        mReceivedDate = Optional.ofNullable(receivedDate);
+        mReceivedDate = receivedDate;
     }
 
     public Contact getContact() {
@@ -88,15 +88,15 @@ final public class Transmission {
     }
 
     public Optional<Date> getReceivedDate() {
-        return mReceivedDate;
+        return Optional.ofNullable(mReceivedDate);
     }
 
     public boolean isReceived() {
-        return mReceivedDate.isPresent();
+        return mReceivedDate != null;
     }
 
     void setReceived(Date date) {
-        mReceivedDate = Optional.of(date);
+        mReceivedDate = date;
         this.save();
     }
 

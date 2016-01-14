@@ -112,7 +112,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
 
     // last timestamp of server transmission packet
     // incoming: (delayed) sent; outgoing: sent or error
-    protected Optional<Date> mServerDate;
+    protected Date mServerDate;
     protected Status mStatus;
     protected CoderStatus mCoderStatus;
     protected ServerError mServerError;
@@ -128,7 +128,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         mDate = new Date();
         mContent = content;
 
-        mServerDate = serverDate;
+        mServerDate = serverDate.orElse(null);
         mStatus = status;
         mCoderStatus = coderStatus;
         mServerError = new ServerError();
@@ -192,7 +192,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
     }
 
     public Optional<Date> getServerDate() {
-        return mServerDate;
+        return Optional.ofNullable(mServerDate);
     }
 
     public Status getStatus() {
@@ -374,7 +374,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         protected Transmission[] mTransmissions = null;
 
         private String mXMPPID = null;
-        private Optional<Date> mServerDate = null;
+        private Date mServerDate = null;
         private CoderStatus mCoderStatus = null;
         private ServerError mServerError = null;
 
@@ -393,14 +393,11 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         private void transmissions(Transmission[] transmission) { mTransmissions = transmission; }
 
         private void xmppID(String xmppID) { mXMPPID = xmppID; }
-        private void serverDate(Date date) { mServerDate = Optional.of(date); }
+        private void serverDate(Date date) { mServerDate = date; }
         private void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
         private void serverError(ServerError error) { mServerError = error; }
 
         private KonMessage build() {
-            if (mServerDate == null)
-                mServerDate = Optional.empty();
-
             if (mTransmissions == null ||
                     mXMPPID == null ||
                     mCoderStatus == null ||

@@ -351,7 +351,7 @@ public abstract class Chat extends Observable implements Observer {
         // the chat (not necessary according to XEP-0085), this makes the
         // extra date field a bit useless
         // TODO save last active date to DB
-        private Optional<Date> mLastActive = Optional.empty();
+        private Date mLastActive = null;
 
         protected KonChatState(Contact contact) {
             mContact = contact;
@@ -368,7 +368,7 @@ public abstract class Chat extends Observable implements Observer {
         protected void setState(ChatState state) {
             mState = state;
             if (mState == ChatState.active || mState == ChatState.composing)
-                mLastActive = Optional.of(new Date());
+                mLastActive = new Date();
         }
     }
 
@@ -377,48 +377,48 @@ public abstract class Chat extends Observable implements Observer {
         private static final String JSON_IMAGE_PATH = "img";
 
         // background color, if set
-        private final Optional<Color> mOptColor;
+        private final Color mColor;
         // custom image, if set
         private final String mImagePath;
 
         private ViewSettings(Chat t, String json) {
             Object obj = JSONValue.parse(json);
-            Optional<Color> optColor;
+            Color color;
             String imagePath;
             try {
                 Map<?, ?> map = (Map) obj;
-                optColor = map.containsKey(JSON_BG_COLOR) ?
-                    Optional.of(new Color(((Long) map.get(JSON_BG_COLOR)).intValue())) :
-                    Optional.<Color>empty();
+                color = map.containsKey(JSON_BG_COLOR) ?
+                    new Color(((Long) map.get(JSON_BG_COLOR)).intValue()) :
+                    null;
                 imagePath = map.containsKey(JSON_IMAGE_PATH) ?
                     (String) map.get(JSON_IMAGE_PATH) :
                     "";
             } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON view settings", ex);
-                optColor = Optional.empty();
+                color = null;
                 imagePath = "";
             }
-            mOptColor = optColor;
+            mColor = color;
             mImagePath = imagePath;
         }
 
         public ViewSettings() {
-            mOptColor = Optional.empty();
+            mColor = null;
             mImagePath = "";
         }
 
         public ViewSettings(Color color) {
-            mOptColor = Optional.of(color);
+            mColor = null;
             mImagePath = "";
         }
 
         public ViewSettings(String imagePath) {
-            mOptColor = Optional.empty();
+            mColor = null;
             mImagePath = imagePath;
         }
 
         public Optional<Color> getBGColor() {
-            return mOptColor;
+            return Optional.ofNullable(mColor);
         }
 
         public String getImagePath() {
@@ -429,8 +429,8 @@ public abstract class Chat extends Observable implements Observer {
         @SuppressWarnings("unchecked")
         String toJSONString() {
             JSONObject json = new JSONObject();
-            if (mOptColor.isPresent())
-                json.put(JSON_BG_COLOR, mOptColor.get().getRGB());
+            if (mColor != null)
+                json.put(JSON_BG_COLOR, mColor.getRGB());
             if (!mImagePath.isEmpty())
                 json.put(JSON_IMAGE_PATH, mImagePath);
             return json.toJSONString();
@@ -443,14 +443,14 @@ public abstract class Chat extends Observable implements Observer {
             if (!(obj instanceof ViewSettings)) return false;
 
             ViewSettings o = (ViewSettings) obj;
-            return mOptColor.equals(o.mOptColor) &&
+            return mColor.equals(o.mColor) &&
                     mImagePath.equals(o.mImagePath);
         }
 
         @Override
         public int hashCode() {
             int hash = 7;
-            hash = 37 * hash + Objects.hashCode(this.mOptColor);
+            hash = 37 * hash + Objects.hashCode(this.mColor);
             hash = 37 * hash + Objects.hashCode(this.mImagePath);
             return hash;
         }
