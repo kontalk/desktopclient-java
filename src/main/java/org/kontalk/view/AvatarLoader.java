@@ -148,7 +148,7 @@ final class AvatarLoader {
         Color color;
         if (!text.isEmpty()) {
             int hue = Math.abs(colorCode) % 360;
-            color = Color.getHSBColor(hue / 360.0f, 1, 1);
+            color = Color.getHSBColor(hue / 360.0f, 0.8f, 1);
         } else {
             color = FALLBACK_COLOR;
         }
