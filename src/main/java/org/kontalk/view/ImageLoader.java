@@ -21,7 +21,6 @@ package org.kontalk.view;
 import com.alee.extended.label.WebLinkLabel;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
 import java.nio.file.Path;
 import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
@@ -44,7 +43,7 @@ class ImageLoader {
         run.run();
     }
 
-    private static final class AsyncLoader implements Runnable, ImageObserver {
+    private static final class AsyncLoader implements Runnable {
 
         private final WebLinkLabel view;
         private final Path path;
@@ -61,20 +60,11 @@ class ImageLoader {
                     AttachmentManager.THUMBNAIL_DIM.width,
                     AttachmentManager.THUMBNAIL_DIM.height,
                     false);
+
             if (scaledImage.getWidth(view) == -1)
                 return;
+
             this.setOnEDT(scaledImage);
-        }
-
-        @Override
-        public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
-            // ignore if image is not completely loaded
-            if ((infoflags & ImageObserver.ALLBITS) == 0) {
-                return true;
-            }
-
-            this.setOnEDT(img);
-            return false;
         }
 
         private void setOnEDT(final Image image) {
