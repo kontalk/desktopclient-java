@@ -18,6 +18,10 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.DisplayType;
+import com.alee.extended.image.WebImage;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
@@ -30,6 +34,7 @@ import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
+import javax.swing.Box;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -159,6 +164,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
     protected final class ChatItem extends Table<ChatItem, Chat>.TableItem {
 
+        private final WebImage mAvatar;
         private final WebLabel mTitleLabel;
         private final WebLabel mStatusLabel;
         private final WebLabel mChatStateLabel;
@@ -170,11 +176,14 @@ final class ChatListView extends Table<ChatItem, Chat> {
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
             this.setMargin(View.MARGIN_SMALL);
 
+            mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);
+            mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
+            this.add(mAvatar, BorderLayout.WEST);
+
             mTitleLabel = new WebLabel();
             mTitleLabel.setFontSize(14);
             if (mValue.isGroupChat())
                     mTitleLabel.setForeground(View.DARK_GREEN);
-            this.add(mTitleLabel, BorderLayout.NORTH);
 
             mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
@@ -186,7 +195,13 @@ final class ChatListView extends Table<ChatItem, Chat> {
             mChatStateLabel.setFontSize(13);
             mChatStateLabel.setBoldFont();
             //mChatStateLabel.setMargin(0, 5, 0, 5);
-            this.add(mChatStateLabel, BorderLayout.WEST);
+
+            this.add(
+                    new GroupPanel(View.GAP_SMALL, false,
+                            mTitleLabel,
+                            new GroupPanel(GroupingType.fillFirst,
+                                    Box.createGlue(), mStatusLabel, mChatStateLabel)
+                    ), BorderLayout.CENTER);
 
             this.updateView(null);
 
@@ -221,6 +236,11 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 mTitleLabel.setText(Utils.chatTitle(mValue));
             }
 
+            // avatar may change when subject or contact name changes
+            if (arg == null || arg instanceof Contact || arg instanceof String) {
+                mAvatar.setImage(AvatarLoader.load(mValue));
+            }
+
             if (arg == null || arg instanceof KonMessage) {
                 this.updateBG();
                 mStatusLabel.setText(lastActivity(mValue, true));
@@ -231,25 +251,25 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 mStatusLabel.setText(lastActivity(mValue, true));
             }
 
+            String stateText = "";
             if (arg instanceof Chat.KonChatState) {
                 KonChatState state = (KonChatState) arg;
-                String stateText = null;
                 switch(state.getState()) {
                     case composing: stateText = Tr.tr("is writing…"); break;
                     //case paused: activity = T/r.tr("stopped typing"); break;
                     //case inactive: stateText = T/r.tr("is inactive"); break;
                 }
-                if (stateText == null) {
-                    // 'inactive' is default
-                    mChatStateLabel.setText("");
-                    return;
-                }
-
-                if (mValue.isGroupChat())
-                    stateText = state.getContact().getName() + " " + stateText;
-
-                mChatStateLabel.setText(stateText + " ");
+                if (!stateText.isEmpty() && mValue.isGroupChat())
+                    stateText = state.getContact().getName() + ": " + stateText;
             }
+            if (stateText.isEmpty()) {
+                mChatStateLabel.setText("");
+                mStatusLabel.setVisible(true);
+            } else {
+                mChatStateLabel.setText(stateText);
+                mStatusLabel.setVisible(false);
+            }
+
         }
 
         private void updateBG() {

@@ -143,10 +143,10 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
             this.add(mAvatar, BorderLayout.WEST);
 
-            mNameLabel = new WebLabel("foo");
+            mNameLabel = new WebLabel();
             mNameLabel.setFontSize(14);
 
-            mStatusLabel = new WebLabel("foo");
+            mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
             mStatusLabel.setFontSize(11);
             this.add(
