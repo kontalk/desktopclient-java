@@ -20,7 +20,6 @@ package org.kontalk.system;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
@@ -76,12 +75,12 @@ public final class RosterHandler {
             name = "";
         }
 
-        Optional<Contact> optNewContact = mControl.createContact(jid, name);
-        if (!optNewContact.isPresent())
+        Contact newContact = mControl.createContact(jid, name).orElse(null);
+        if (newContact == null)
             return;
 
         Contact.Subscription status = rosterToModelSubscription(itemStatus, type);
-        optNewContact.get().setSubScriptionStatus(status);
+        newContact.setSubScriptionStatus(status);
 
         if (status == Contact.Subscription.UNSUBSCRIBED)
             mControl.sendPresenceSubscription(jid, Client.PresenceCommand.REQUEST);
@@ -89,25 +88,24 @@ public final class RosterHandler {
 
     public void onEntryDeleted(JID jid) {
         // note: also called on rename
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
 
-        mControl.getViewControl().changed(new ViewEvent.ContactDeleted(optContact.get()));
+        mControl.getViewControl().changed(new ViewEvent.ContactDeleted(contact));
     }
 
     public void onEntryUpdate(JID jid,
             String name,
             RosterPacket.ItemType type,
             RosterPacket.ItemStatus itemStatus) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
-            LOGGER.warning("can't find contact with jid: "+jid);
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
+            LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
-        Contact contact = optContact.get();
         // subcription may have changed
         contact.setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
 
@@ -117,10 +115,9 @@ public final class RosterHandler {
     }
 
     public void onSubscriptionRequest(JID jid, byte[] rawKey) {
-        Optional<Contact> optContact = mControl.getOrCreate(jid, "");
-        if (!optContact.isPresent())
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null)
             return;
-        Contact contact = optContact.get();
 
         if (Config.getInstance().getBoolean(Config.NET_AUTO_SUBSCRIPTION)) {
             mControl.sendPresenceSubscription(jid, Client.PresenceCommand.GRANT);
@@ -138,23 +135,21 @@ public final class RosterHandler {
             // don't wanna see myself
             return;
 
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
-            LOGGER.warning("can't find contact with jid: "+jid);
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
+            LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
-        optContact.get().setOnline(type, status);
+        contact.setOnline(type, status);
     }
 
     public void onFingerprintPresence(JID jid, String fingerprint) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
-            if (!this.isMe(jid))
-                LOGGER.warning("can't find contact with jid:" + jid);
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
+            LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
 
-        Contact contact = optContact.get();
         if (!fingerprint.isEmpty() &&
                 !fingerprint.equalsIgnoreCase(contact.getFingerprint())) {
             LOGGER.info("detected public key change, requesting new key...");
@@ -164,21 +159,19 @@ public final class RosterHandler {
 
     // TODO key IDs can be forged, searching by it is defective by design
     public void onSignaturePresence(JID jid, String signature) {
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
-            if (!this.isMe(jid))
-                LOGGER.warning("can't find contact with jid:" + jid);
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
+            LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
-        Contact contact = optContact.get();
 
         long keyID = PGPUtils.parseKeyIDFromSignature(signature);
         if (keyID == 0)
             return;
 
         if (contact.hasKey()) {
-            Optional<PGPUtils.PGPCoderKey> optKey = Coder.contactkey(contact);
-            if (optKey.isPresent() && optKey.get().signKey.getKeyID() == keyID)
+            PGPUtils.PGPCoderKey key = Coder.contactkey(contact).orElse(null);
+            if (key != null && key.signKey.getKeyID() == keyID)
                 // already have this key
                 return;
         }
@@ -194,18 +187,16 @@ public final class RosterHandler {
         if (foundKey.isEmpty())
             return;
 
-        Optional<PGPUtils.PGPCoderKey> optKey = PGPUtils.readPublicKey(foundKey);
-        if (!optKey.isPresent())
+        PGPUtils.PGPCoderKey key = PGPUtils.readPublicKey(foundKey).orElse(null);
+        if (key == null)
             return;
-
-        PGPUtils.PGPCoderKey key = optKey.get();
 
         if (key.signKey.getKeyID() != keyID) {
             LOGGER.warning("key ID is not what we were searching for");
             return;
         }
 
-        mControl.getViewControl().changed(new ViewEvent.NewKey(optContact.get(), key));
+        mControl.getViewControl().changed(new ViewEvent.NewKey(contact, key));
     }
 
     public void onPresenceError(JID jid, XMPPError.Type type, XMPPError.Condition condition) {
@@ -223,13 +214,11 @@ public final class RosterHandler {
             return;
         }
 
-        Optional<Contact> optContact = ContactList.getInstance().get(jid);
-        if (!optContact.isPresent()) {
-            if (!this.isMe(jid))
-                LOGGER.warning("can't find contact with jid:" + jid);
+        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        if (contact == null) {
+            LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
-        Contact contact = optContact.get();
 
         if (contact.getOnline() == Contact.Online.ERROR)
             // we already know this
@@ -243,8 +232,8 @@ public final class RosterHandler {
     /* private */
 
     private boolean isMe(JID jid) {
-        Optional<JID> optMyJID = mClient.getOwnJID();
-        return optMyJID.isPresent() ? optMyJID.get().equals(jid) : false;
+        JID myJID = mClient.getOwnJID().orElse(null);
+        return myJID != null ? myJID.equals(jid) : false;
     }
 
     private static Contact.Subscription rosterToModelSubscription(

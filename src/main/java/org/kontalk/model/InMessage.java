@@ -122,14 +122,14 @@ public final class InMessage extends KonMessage implements DecryptMessage {
     }
 
     public void setPreviewFilename(String filename) {
-        Optional<Preview> optPreview = this.getContent().getPreview();
-        if (!optPreview.isPresent()) {
+        Preview preview = this.getContent().getPreview().orElse(null);
+        if (preview == null) {
             LOGGER.warning("no preview !?");
             return;
         }
-        optPreview.get().setFilename(filename);
+        preview.setFilename(filename);
         this.save();
-        this.changed(optPreview.get());
+        this.changed(preview);
     }
 
     @Override

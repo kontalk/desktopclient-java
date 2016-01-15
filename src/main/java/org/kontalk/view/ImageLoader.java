@@ -21,7 +21,7 @@ package org.kontalk.view;
 import com.alee.extended.label.WebLinkLabel;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
+import java.nio.file.Path;
 import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
 import org.kontalk.system.AttachmentManager;
@@ -36,19 +36,19 @@ class ImageLoader {
     private ImageLoader() {}
 
     // TODO Swing + async == a damn mess
-    static void setImageIconAsync(WebLinkLabel view, String path) {
+    static void setImageIconAsync(WebLinkLabel view, Path path) {
         AsyncLoader run = new AsyncLoader(view, path);
         // TODO all at once? queue not that good either
         //new Chat(run).start();
         run.run();
     }
 
-    private static final class AsyncLoader implements Runnable, ImageObserver {
+    private static final class AsyncLoader implements Runnable {
 
         private final WebLinkLabel view;
-        private final String path;
+        private final Path path;
 
-        AsyncLoader(WebLinkLabel view, String path) {
+        AsyncLoader(WebLinkLabel view, Path path) {
             this.view = view;
             this.path = path;
         }
@@ -56,24 +56,15 @@ class ImageLoader {
         @Override
         public void run() {
             BufferedImage image = MediaUtils.readImage(path);
-            Image scaledImage = MediaUtils.scale(image,
+            Image scaledImage = MediaUtils.scaleAsync(image,
                     AttachmentManager.THUMBNAIL_DIM.width,
                     AttachmentManager.THUMBNAIL_DIM.height,
                     false);
+
             if (scaledImage.getWidth(view) == -1)
                 return;
+
             this.setOnEDT(scaledImage);
-        }
-
-        @Override
-        public boolean imageUpdate(Image img, int infoflags, int x, int y, int width, int height) {
-            // ignore if image is not completely loaded
-            if ((infoflags & ImageObserver.ALLBITS) == 0) {
-                return true;
-            }
-
-            this.setOnEDT(img);
-            return false;
         }
 
         private void setOnEDT(final Image image) {

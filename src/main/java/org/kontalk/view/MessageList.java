@@ -36,6 +36,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
@@ -250,7 +251,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             // from label
             if (mValue.isInMessage() && mValue.getChat().isGroupChat()) {
                 mFromLabel = new WebLabel();
-                mFromLabel.setFontSize(12);
+                mFromLabel.setFontSize(View.FONT_SIZE_SMALL);
                 mFromLabel.setForeground(Color.BLUE);
                 mFromLabel.setItalicFont();
                 mPanel.add(mFromLabel, BorderLayout.NORTH);
@@ -263,7 +264,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             mTextPane = new WebTextPane();
             mTextPane.setEditable(false);
             mTextPane.setOpaque(false);
-            //mTextPane.setFontSize(12);
+            //mTextPane.setFontSize(View.FONT_SIZE_SMALL);
             // sets default font
             mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
             //for detecting clicks
@@ -299,7 +300,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             // date label
             WebLabel dateLabel = new WebLabel(Utils.SHORT_DATE_FORMAT.format(mValue.getDate()));
             dateLabel.setForeground(Color.GRAY);
-            dateLabel.setFontSize(11);
+            dateLabel.setFontSize(View.FONT_SIZE_TINY);
             mStatusPanel.add(dateLabel);
 
             WebPanel southPanel = new WebPanel();
@@ -482,9 +483,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             } else { // IN message
                 Date receivedDate = mValue.getDate();
                 String rec = Utils.MID_DATE_FORMAT.format(receivedDate);
-                Optional<Date> sentDate = mValue.getServerDate();
-                if (sentDate.isPresent()) {
-                    String sent = Utils.MID_DATE_FORMAT.format(sentDate.get());
+                Date sentDate = mValue.getServerDate().orElse(null);
+                if (sentDate != null) {
+                    String sent = Utils.MID_DATE_FORMAT.format(sentDate);
                     if (!sent.equals(rec))
                         html += Tr.tr("Sent:")+ " " + sent + "<br>";
                 }
@@ -513,7 +514,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 String verification = Tr.tr("Unknown");
                 switch (sign) {
                     case NOT: verification = Tr.tr("Not signed"); break;
-                    case SIGNED: verification = Tr.tr("Signed"); break;
+                    case SIGNED: verification = Tr.tr("Not verified"); break;
                     case VERIFIED: verification = Tr.tr("Verified"); break;
                 }
                 sec = encryption + " / " + verification;
@@ -543,10 +544,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
 
         // attachment / image, note: loading many images is very slow
         private void updateAttachment() {
-            Optional<Attachment> optAttachment = mValue.getContent().getAttachment();
-            if (!optAttachment.isPresent())
+            Attachment att = mValue.getContent().getAttachment().orElse(null);
+            if (att == null)
                 return;
-            Attachment att = optAttachment.get();
 
             if (mAttPanel == null) {
                 mAttPanel = new AttachmentPanel();
@@ -554,14 +554,14 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             }
 
             // image thumbnail preview
-            Optional<Path> optImagePath = mView.getControl().getImagePath(mValue);
-            String imagePath = optImagePath.isPresent() ? optImagePath.get().toString() : "";
-            mAttPanel.setImage(imagePath);
+            Path imagePath = mView.getControl().getImagePath(mValue).orElse(null);
+            Path image = imagePath != null ? imagePath : Paths.get("");
+            mAttPanel.setImage(image);
 
             // link to the file
             Path linkPath = mView.getControl().getFilePath(att);
             if (!linkPath.toString().isEmpty()) {
-                mAttPanel.setLink(imagePath.isEmpty() ?
+                mAttPanel.setLink(image.toString().isEmpty() ?
                         linkPath.getFileName().toString() :
                         "",
                         linkPath);
@@ -593,9 +593,9 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                     });
                     popupMenu.add(decryptMenuItem);
                 }
-                Optional<Attachment> optAtt = m.getContent().getAttachment();
-                if (optAtt.isPresent() &&
-                        optAtt.get().getFile().toString().isEmpty()) {
+                Attachment att = m.getContent().getAttachment().orElse(null);
+                if (att != null &&
+                        att.getFile().toString().isEmpty()) {
                     WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
                     attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
                     attMenuItem.addActionListener(new ActionListener() {

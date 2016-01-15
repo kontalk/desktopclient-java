@@ -41,7 +41,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
@@ -377,10 +376,10 @@ final class ImportDialog extends WebDialog {
 
         @Override
         protected void onNext() {
-            Optional<char[]> optNewPass = mPassPanel.getNewPassword();
-            if (optNewPass.isPresent() && optNewPass.get().length > 0) {
+            char[] newPass = mPassPanel.getNewPassword().orElse(null);
+            if (newPass != null && newPass.length > 0) {
                 try {
-                    Account.getInstance().setPassword(new char[0], optNewPass.get());
+                    Account.getInstance().setPassword(new char[0], newPass);
                 } catch (KonException ex) {
                     LOGGER.log(Level.WARNING, "can't set password", ex);
                     return;

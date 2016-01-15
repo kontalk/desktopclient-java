@@ -40,8 +40,8 @@ import org.apache.http.impl.client.HttpClients;
 public final class HKPClient {
     private static final Logger LOGGER = Logger.getLogger(HKPClient.class.getName());
 
-    //private static final short DEFAULT_PORT = 11371;
-    private static final short DEFAULT_SSL_PORT = 443;
+    //private static final int DEFAULT_PORT = 11371;
+    //private static final int DEFAULT_SSL_PORT = 443;
 
     private static final int MAX_CONTENT_LENGTH = 9001;
 

@@ -18,6 +18,10 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.DisplayType;
+import com.alee.extended.image.WebImage;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
@@ -28,9 +32,9 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 import java.util.Timer;
+import javax.swing.Box;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -82,19 +86,19 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 if (e.getValueIsAdjusting())
                     return;
 
-                Optional<Chat> optChat = ChatListView.this.getSelectedValue();
-                if (!optChat.isPresent()) {
+                Chat chat = ChatListView.this.getSelectedValue().orElse(null);
+                if (chat == null) {
                     // note: this happens also on righ-click for some reason
                     return;
                 }
 
                 // if event is caused by filtering, dont do anything
-                if (lastChat == optChat.get())
+                if (lastChat == chat)
                     return;
 
                 mView.clearSearch();
-                mView.showChat(optChat.get());
-                lastChat = optChat.get();
+                mView.showChat(chat);
+                lastChat = chat;
             }
         });
 
@@ -160,6 +164,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
     protected final class ChatItem extends Table<ChatItem, Chat>.TableItem {
 
+        private final WebImage mAvatar;
         private final WebLabel mTitleLabel;
         private final WebLabel mStatusLabel;
         private final WebLabel mChatStateLabel;
@@ -168,26 +173,36 @@ final class ChatListView extends Table<ChatItem, Chat> {
         ChatItem(Chat chat) {
             super(chat);
 
-            this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
-            this.setMargin(View.MARGIN_SMALL);
+            this.setLayout(new BorderLayout(View.GAP_DEFAULT, 0));
+            this.setMargin(View.MARGIN_DEFAULT);
+
+            mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);
+            mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
+            this.add(mAvatar, BorderLayout.WEST);
 
             mTitleLabel = new WebLabel();
-            mTitleLabel.setFontSize(14);
+            mTitleLabel.setFontSize(View.FONT_SIZE_BIG);
+            mTitleLabel.setDrawShade(true);
             if (mValue.isGroupChat())
                     mTitleLabel.setForeground(View.DARK_GREEN);
-            this.add(mTitleLabel, BorderLayout.NORTH);
 
             mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
-            mStatusLabel.setFontSize(11);
+            mStatusLabel.setFontSize(View.FONT_SIZE_TINY);
             this.add(mStatusLabel, BorderLayout.EAST);
 
             mChatStateLabel = new WebLabel();
             mChatStateLabel.setForeground(View.GREEN);
-            mChatStateLabel.setFontSize(13);
+            mChatStateLabel.setFontSize(View.FONT_SIZE_NORMAL);
             mChatStateLabel.setBoldFont();
             //mChatStateLabel.setMargin(0, 5, 0, 5);
-            this.add(mChatStateLabel, BorderLayout.WEST);
+
+            this.add(
+                    new GroupPanel(View.GAP_SMALL, false,
+                            mTitleLabel,
+                            new GroupPanel(GroupingType.fillFirst,
+                                    Box.createGlue(), mStatusLabel, mChatStateLabel)
+                    ), BorderLayout.CENTER);
 
             this.updateView(null);
 
@@ -222,6 +237,11 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 mTitleLabel.setText(Utils.chatTitle(mValue));
             }
 
+            // avatar may change when subject or contact name changes
+            if (arg == null || arg instanceof Contact || arg instanceof String) {
+                mAvatar.setImage(AvatarLoader.load(mValue));
+            }
+
             if (arg == null || arg instanceof KonMessage) {
                 this.updateBG();
                 mStatusLabel.setText(lastActivity(mValue, true));
@@ -232,25 +252,25 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 mStatusLabel.setText(lastActivity(mValue, true));
             }
 
+            String stateText = "";
             if (arg instanceof Chat.KonChatState) {
                 KonChatState state = (KonChatState) arg;
-                String stateText = null;
                 switch(state.getState()) {
                     case composing: stateText = Tr.tr("is writing…"); break;
                     //case paused: activity = T/r.tr("stopped typing"); break;
                     //case inactive: stateText = T/r.tr("is inactive"); break;
                 }
-                if (stateText == null) {
-                    // 'inactive' is default
-                    mChatStateLabel.setText("");
-                    return;
-                }
-
-                if (mValue.isGroupChat())
-                    stateText = state.getContact().getName() + " " + stateText;
-
-                mChatStateLabel.setText(stateText + " ");
+                if (!stateText.isEmpty() && mValue.isGroupChat())
+                    stateText = state.getContact().getName() + ": " + stateText;
             }
+            if (stateText.isEmpty()) {
+                mChatStateLabel.setText("");
+                mStatusLabel.setVisible(true);
+            } else {
+                mChatStateLabel.setText(stateText);
+                mStatusLabel.setVisible(false);
+            }
+
         }
 
         private void updateBG() {
@@ -260,8 +280,8 @@ final class ChatListView extends Table<ChatItem, Chat> {
         @Override
         protected boolean contains(String search) {
             // always show entry for current chat
-            Optional<Chat> optChat = mView.getCurrentShownChat();
-            if (optChat.isPresent() && optChat.get() == mValue)
+            Chat chat = mView.getCurrentShownChat().orElse(null);
+            if (chat != null && chat == mValue)
                 return true;
 
             for (Contact contact: mValue.getAllContacts()) {
@@ -274,20 +294,20 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
         @Override
         public int compareTo(TableItem o) {
-            Optional<KonMessage> m = this.mValue.getMessages().getLast();
-            Optional<KonMessage> oM = o.mValue.getMessages().getLast();
-            if (m.isPresent() && oM.isPresent())
-                return -m.get().getDate().compareTo(oM.get().getDate());
+            KonMessage m = this.mValue.getMessages().getLast().orElse(null);
+            KonMessage oM = o.mValue.getMessages().getLast().orElse(null);
+            if (m != null && oM != null)
+                return -m.getDate().compareTo(oM.getDate());
 
             return -Integer.compare(this.mValue.getID(), o.mValue.getID());
         }
     }
 
     private static String lastActivity(Chat chat, boolean pretty) {
-        Optional<KonMessage> optM = chat.getMessages().getLast();
-        String lastActivity = !optM.isPresent() ? Tr.tr("no messages yet") :
-                pretty ? Utils.PRETTY_TIME.format(optM.get().getDate()) :
-                Utils.MID_DATE_FORMAT.format(optM.get().getDate());
+        KonMessage m = chat.getMessages().getLast().orElse(null);
+        String lastActivity = m == null ? Tr.tr("no messages yet") :
+                pretty ? Utils.PRETTY_TIME.format(m.getDate()) :
+                Utils.MID_DATE_FORMAT.format(m.getDate());
         return lastActivity;
     }
 }

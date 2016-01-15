@@ -18,6 +18,8 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.DisplayType;
+import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
@@ -32,7 +34,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Observer;
-import java.util.Optional;
 import java.util.Set;
 import javax.swing.Box;
 import javax.swing.ListSelectionModel;
@@ -70,11 +71,11 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
-                Optional<Contact> optContact = ContactListView.this.getSelectedValue();
-                if (!optContact.isPresent())
+                Contact contact = ContactListView.this.getSelectedValue().orElse(null);
+                if (contact == null)
                     return;
 
-                mView.showContactDetails(optContact.get());
+                mView.showContactDetails(contact);
             }
         });
 
@@ -83,9 +84,9 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    Optional<Contact> optContact = ContactListView.this.getSelectedValue();
-                    if (optContact.isPresent())
-                        mView.showChat(optContact.get());
+                    Contact contact = ContactListView.this.getSelectedValue().orElse(null);
+                    if (contact != null)
+                        mView.showChat(contact);
                 }
             }
             @Override
@@ -126,6 +127,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
     /** One item in the contact list representing a contact. */
     final class ContactItem extends Table<ContactItem, Contact>.TableItem {
 
+        private final WebImage mAvatar;
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;
         private Color mBackround;
@@ -134,19 +136,25 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             super(contact);
 
             //this.setPaintFocus(true);
-            this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
+            this.setLayout(new BorderLayout(View.GAP_DEFAULT, 0));
             this.setMargin(View.MARGIN_SMALL);
 
-            mNameLabel = new WebLabel("foo");
-            mNameLabel.setFontSize(14);
-            this.add(mNameLabel, BorderLayout.CENTER);
+            mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);
+            mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
+            this.add(mAvatar, BorderLayout.WEST);
 
-            mStatusLabel = new WebLabel("foo");
+            mNameLabel = new WebLabel();
+            mNameLabel.setFontSize(View.FONT_SIZE_BIG);
+
+            mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
-            mStatusLabel.setFontSize(11);
-            this.add(new GroupPanel(GroupingType.fillFirst,
-                    Box.createGlue(), mStatusLabel),
-                    BorderLayout.SOUTH);
+            mStatusLabel.setFontSize(View.FONT_SIZE_TINY);
+            this.add(
+                    new GroupPanel(View.GAP_SMALL, false,
+                            mNameLabel,
+                            new GroupPanel(GroupingType.fillFirst,
+                                    Box.createGlue(), mStatusLabel)
+                    ), BorderLayout.CENTER);
 
             this.updateOnEDT(null);
         }
@@ -188,6 +196,9 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
 
         @Override
         protected void updateOnEDT(Object arg) {
+            // avatar
+            mAvatar.setImage(AvatarLoader.load(mValue));
+
             // name
             String name = Utils.displayName(mValue);
             if (!name.equals(mNameLabel.getText())) {

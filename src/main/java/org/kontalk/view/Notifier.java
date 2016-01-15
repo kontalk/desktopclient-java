@@ -245,7 +245,7 @@ final class Notifier {
         panel.setMargin(View.MARGIN_DEFAULT);
         panel.setOpaque(false);
         WebLabel title = new WebLabel("A new Message!");
-        title.setFontSize(14);
+        title.setFontSize(View.FONT_SIZE_BIG);
         title.setForeground(Color.WHITE);
         panel.add(title, BorderLayout.NORTH);
         String text = "this is some message, and some longer text was added";

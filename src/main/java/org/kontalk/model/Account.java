@@ -35,6 +35,7 @@ import org.apache.commons.io.IOUtils;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.util.StringUtils;
+import org.kontalk.Kontalk;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
@@ -190,17 +191,10 @@ public final class Account {
         return new File(mKeyDir.toString(), filename).isFile();
     }
 
-    public synchronized static void initialize(Path keyDir)  {
-        if (INSTANCE != null) {
-            LOGGER.warning("account loader already initialized");
-            return;
-        }
-        INSTANCE = new Account(keyDir, Config.getInstance());
-    }
-
     public synchronized static Account getInstance() {
-        if (INSTANCE == null)
-            throw new IllegalStateException("account loader not initialized");
+        if (INSTANCE == null) {
+            INSTANCE = new Account(Kontalk.appDir(), Config.getInstance());
+        }
         return INSTANCE;
     }
 }

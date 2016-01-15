@@ -42,7 +42,6 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
-import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Box;
@@ -77,7 +76,7 @@ final class ConfigurationDialog extends WebDialog {
         this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
 
         WebTabbedPane tabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-        tabbedPane.setFontSize(13);
+        tabbedPane.setFontSize(View.FONT_SIZE_NORMAL);
         final MainPanel mainPanel = new MainPanel();
         final AccountPanel accountPanel = new AccountPanel();
         final PrivacyPanel privacyPanel = new PrivacyPanel();
@@ -279,9 +278,9 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void updateFingerprint() {
-            Optional<PersonalKey> optKey = Account.getInstance().getPersonalKey();
-            mFingerprintArea.setText(optKey.isPresent() ?
-                    Utils.fingerprint(optKey.get().getFingerprint()) :
+            PersonalKey key = Account.getInstance().getPersonalKey().orElse(null);
+            mFingerprintArea.setText(key != null ?
+                    Utils.fingerprint(key.getFingerprint()) :
                     "- " + Tr.tr("no key loaded") + " -");
         }
 
@@ -371,12 +370,11 @@ final class ConfigurationDialog extends WebDialog {
             @Override
             public void actionPerformed(ActionEvent e) {
                 char[] oldPassword = passPanel.getOldPassword();
-                Optional<char[]> optNewPass = passPanel.getNewPassword();
-                if (!optNewPass.isPresent()) {
+                char[] newPassword = passPanel.getNewPassword().orElse(null);
+                if (newPassword == null) {
                     LOGGER.warning("can't get new password");
                     return;
                 }
-                char[] newPassword = optNewPass.get();
                 try {
                     Account.getInstance().setPassword(oldPassword, newPassword);
                 } catch(KonException ex) {

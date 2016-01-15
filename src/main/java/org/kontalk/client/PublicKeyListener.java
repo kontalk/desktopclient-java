@@ -36,12 +36,14 @@ public class PublicKeyListener implements StanzaListener {
 
     private final Control mControl;
 
+    static {
+        ProviderManager.addIQProvider(PublicKeyPublish.ELEMENT_NAME,
+            PublicKeyPublish.NAMESPACE,
+            new PublicKeyPublish.Provider());
+    }
+
     public PublicKeyListener(Control control) {
         mControl = control;
-
-        ProviderManager.addIQProvider(PublicKeyPublish.ELEMENT_NAME,
-                PublicKeyPublish.NAMESPACE,
-                new PublicKeyPublish.Provider());
     }
 
     @Override

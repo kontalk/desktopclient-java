@@ -122,12 +122,11 @@ final class Encryptor {
     }
 
     Optional<File> encryptAttachment() {
-        Optional<MessageContent.Attachment> optAttachment = message.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
+        MessageContent.Attachment attachment = message.getContent().getAttachment().orElse(null);
+        if (attachment == null) {
             LOGGER.warning("no attachment in out-message");
             return Optional.empty();
         }
-        MessageContent.Attachment attachment = optAttachment.get();
 
         boolean loaded = this.loadKeys();
         if (!loaded)
@@ -173,10 +172,10 @@ final class Encryptor {
     private static PGPUtils.PGPCoderKey[] receiverKeysOrNull(Contact[] contacts) {
         List<PGPUtils.PGPCoderKey> keys = new ArrayList<>(contacts.length);
         for (Contact c : contacts) {
-            Optional<PGPUtils.PGPCoderKey> optKey = Coder.contactkey(c);
-            if (!optKey.isPresent())
+            PGPUtils.PGPCoderKey key = Coder.contactkey(c).orElse(null);
+            if (key == null)
                 return null;
-            keys.add(optKey.get());
+            keys.add(key);
         }
         return keys.toArray(new PGPUtils.PGPCoderKey[0]);
     }

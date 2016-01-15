@@ -35,6 +35,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
+import org.kontalk.Kontalk;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
@@ -59,10 +60,10 @@ public final class Database {
 
     private static Database INSTANCE = null;
 
-    public static final String FILENAME = "kontalk_db.sqlite";
     public static final String SQL_ID = "_id INTEGER PRIMARY KEY AUTOINCREMENT, ";
 
-    private static final int DB_VERSION = 3;
+    private static final String FILENAME = "kontalk_db.sqlite";
+    private static final int DB_VERSION = 4;
     private static final String SQL_CREATE = "CREATE TABLE IF NOT EXISTS ";
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
@@ -173,8 +174,13 @@ public final class Database {
             mConn.createStatement().execute("PRAGMA foreign_keys=ON");
 
             mConn.createStatement().execute("ALTER TABLE "+Chat.TABLE+
-                    " ADD COLUMN "+Chat.COL_GID+" DEFAULT NULL");
+                    " ADD COLUMN "+Chat.COL_GD+" DEFAULT NULL");
         }
+        if (fromVersion < 4) {
+            mConn.createStatement().execute("ALTER TABLE "+Contact.TABLE+
+                    " ADD COLUMN "+Contact.COL_AVATAR_ID+" DEFAULT NULL");
+        }
+
 
         // set new version
         mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
@@ -326,8 +332,7 @@ public final class Database {
             } else if (value instanceof EnumSet) {
                 stat.setInt(i+1, EncodingUtils.enumSetToInt(((EnumSet) value)));
             } else if (value instanceof Optional) {
-                Optional<?> o = (Optional) value;
-                setValue(stat, i, o.orElse(null));
+                setValue(stat, i, ((Optional<?>) value).orElse(null));
             } else if (value instanceof JID) {
                 stat.setString(i+1, ((JID) value).string());
             } else if (value == null) {
@@ -356,8 +361,8 @@ public final class Database {
         return s.isEmpty() ? null : s;
     }
 
-    public static void initialize(Path dbFile) throws KonException {
-        INSTANCE = new Database(dbFile);
+    public static void initialize() throws KonException {
+        INSTANCE = new Database(Kontalk.appDir().resolve(Database.FILENAME));
     }
 
     public static Database getInstance() {

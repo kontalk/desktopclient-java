@@ -20,7 +20,6 @@ package org.kontalk.client;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -45,6 +44,8 @@ import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
+import org.kontalk.Kontalk;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
@@ -73,6 +74,7 @@ public final class Client implements StanzaListener, Runnable {
     private final KonMessageSender mMessageSender;
 
     private KonConnection mConn = null;
+    private AvatarSendReceiver mAvatarSendReceiver = null;
 
     public Client(Control control) {
         mControl = control;
@@ -82,10 +84,9 @@ public final class Client implements StanzaListener, Runnable {
 
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
-    }
 
-    public static void setCapsCache(Path appDir) {
-        File cacheDir = appDir.resolve(CAPS_CACHE_DIR).toFile();
+        // setting caps cache
+        File cacheDir = Kontalk.appDir().resolve(CAPS_CACHE_DIR).toFile();
         if (cacheDir.mkdir())
             LOGGER.info("created caps cache directory");
 
@@ -125,13 +126,17 @@ public final class Client implements StanzaListener, Runnable {
         // subscriptions handled by roster handler
         roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
 
+        mAvatarSendReceiver = new AvatarSendReceiver(mConn, mControl.getAvatarHandler());
+
         // packet listeners
-        RosterHandler rosterSyncer = mControl.getRosterHandler();
-        RosterListener rl = new KonRosterListener(roster, rosterSyncer);
+        RosterHandler rosterHandler = mControl.getRosterHandler();
+        RosterListener rl = new KonRosterListener(roster, rosterHandler);
         roster.addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
-        mConn.addAsyncStanzaListener(new KonMessageListener(this, mControl), messageFilter);
+        mConn.addAsyncStanzaListener(
+                new KonMessageListener(this, mControl, mAvatarSendReceiver),
+                messageFilter);
 
         StanzaFilter vCardFilter = new StanzaTypeFilter(VCard4.class);
         mConn.addAsyncStanzaListener(new VCardListener(mControl), vCardFilter);
@@ -143,7 +148,11 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-        mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterSyncer), presenceFilter);
+        mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterHandler), presenceFilter);
+
+        // our service discovery: want avatar from other users
+        ServiceDiscoveryManager.getInstanceFor(mConn).
+                addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
 
         // listen to all IQ errors
         mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
@@ -238,7 +247,6 @@ public final class Client implements StanzaListener, Runnable {
 //            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 
-        this.sendInitialPresence();
         this.sendBlocklistRequest();
 
         mControl.setStatus(Control.Status.CONNECTED);
@@ -299,14 +307,11 @@ public final class Client implements StanzaListener, Runnable {
         new BlockSendReceiver(mControl, mConn, blocking, jid).sendAndListen();
     }
 
-    public void sendInitialPresence() {
+    public void sendUserPresence(String statusText) {
         Presence presence = new Presence(Presence.Type.available);
-        List<?> stats = Config.getInstance().getList(Config.NET_STATUS_LIST);
-        if (!stats.isEmpty()) {
-            String stat = (String) stats.get(0);
-            if (!stat.isEmpty())
-                presence.setStatus(stat);
-        }
+        if (!statusText.isEmpty())
+            presence.setStatus(statusText);
+
         // note: not setting priority, according to anti-dicrimination rules;)
 
         // for testing
@@ -345,14 +350,12 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     synchronized boolean sendPacket(Stanza p) {
-        try {
-            mConn.sendStanza(p);
-        } catch (SmackException.NotConnectedException ex) {
-            LOGGER.info("can't send packet, not connected.");
+        if (mConn == null) {
+            LOGGER.warning("not connected");
             return false;
         }
-        LOGGER.config("packet: "+p);
-        return true;
+
+        return mConn.send(p);
     }
 
     @Override
@@ -423,6 +426,14 @@ public final class Client implements StanzaListener, Runnable {
             LOGGER.log(Level.WARNING, "can't set name for entry", ex);
         }
         return true;
+    }
+
+    public void requestAvatar(JID jid, String id) {
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
+            return;
+        }
+        mAvatarSendReceiver.requestAndListen(jid, id);
     }
 
     @Override

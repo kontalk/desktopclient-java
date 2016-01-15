@@ -31,7 +31,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.model.GroupChat.GID;
+import org.kontalk.model.GroupMetaData;
 import org.kontalk.system.Database;
 
 /**
@@ -88,13 +88,13 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     /** Get group chat with group ID and containing contact. */
-    public Optional<GroupChat> get(GID gid, Contact contact) {
+    public Optional<GroupChat> get(GroupMetaData gData, Contact contact) {
         for (Chat chat : mMap.values()) {
             if (!(chat instanceof GroupChat))
                 continue;
 
             GroupChat groupChat = (GroupChat) chat;
-            if (groupChat.getGID().equals(gid) &&
+            if (groupChat.getGroupData().equals(gData) &&
                     groupChat.getAllContacts().contains(contact)) {
                 return Optional.of(groupChat);
             }
@@ -103,39 +103,53 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         return Optional.empty();
     }
 
+    public Optional<GroupChat> get(GroupMetaData gData) {
+        for (Chat chat : mMap.values()) {
+            if (!(chat instanceof GroupChat))
+                continue;
+
+            GroupChat groupChat = (GroupChat) chat;
+            if (groupChat.getGroupData().equals(gData))
+                return Optional.of(groupChat);
+
+        }
+
+        return Optional.empty();
+    }
+
+    /** Find group chat by group data or create a new chat. */
+    public GroupChat getOrCreate(GroupMetaData gData, Contact contact) {
+        GroupChat chat = this.get(gData, contact).orElse(null);
+        if (chat != null)
+            return chat;
+
+        return this.createNew(new Contact[]{contact}, gData, "");
+    }
+
     public Chat getOrCreate(Contact contact) {
         return this.getOrCreate(contact, "");
     }
 
-    /** Find group chat by GID or create a new chat. */
-    public GroupChat getOrCreate(GID gid, Contact contact) {
-        Optional<GroupChat> optChat = this.get(gid, contact);
-        if (optChat.isPresent())
-            return optChat.get();
-
-        return this.createNew(new Contact[]{contact}, gid, "");
-    }
-
     /** Find single chat for contact and XMPP ID or creates a new chat. */
     public SingleChat getOrCreate(Contact contact, String xmppThreadID) {
-        Optional<SingleChat> optChat = this.get(contact, xmppThreadID);
-        if (optChat.isPresent())
-            return optChat.get();
+        SingleChat chat = this.get(contact, xmppThreadID).orElse(null);
+        if (chat != null)
+            return chat;
 
         return this.createNew(contact, xmppThreadID);
     }
 
     private SingleChat createNew(Contact contact, String xmppThreadID) {
         SingleChat newChat = new SingleChat(contact, xmppThreadID);
-        LOGGER.config("created new single chat: "+newChat);
+        LOGGER.config("new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
         return newChat;
     }
 
-    public GroupChat createNew(Contact[] contacts, GID gid, String subject) {
-        GroupChat newChat = new GroupChat(contacts, gid, subject);
-        LOGGER.config("created new group chat: "+newChat);
+    public GroupChat createNew(Contact[] contacts, GroupMetaData gData, String subject) {
+        GroupChat newChat = GroupChat.create(contacts, gData, subject);
+        LOGGER.config("new group chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
         return newChat;

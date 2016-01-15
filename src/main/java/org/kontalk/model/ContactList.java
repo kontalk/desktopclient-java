@@ -97,11 +97,11 @@ public final class ContactList extends Observable implements Iterable<Contact> {
     }
 
     Optional<Contact> get(int id) {
-        Optional<Contact> optContact = Optional.ofNullable(mIDMap.get(id));
-        if (!optContact.isPresent()) {
+        Contact contact = mIDMap.get(id);
+        if (contact == null) {
             LOGGER.warning("can't find contact with ID: " + id);
         }
-        return optContact;
+        return Optional.ofNullable(contact);
     }
 
     /**
@@ -118,9 +118,9 @@ public final class ContactList extends Observable implements Iterable<Contact> {
      */
     public Optional<Contact> getMe() {
         JID myJID = JID.me();
-        Optional<Contact> optContact = this.get(myJID);
-        if (optContact.isPresent())
-            return optContact;
+        Contact contact = this.get(myJID).orElse(null);
+        if (contact == null)
+            return Optional.empty();
 
         return this.create(myJID, "");
     }

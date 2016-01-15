@@ -24,10 +24,15 @@ final class VCardListener implements StanzaListener {
 
     private final Control mControl;
 
+    static {
+        ProviderManager.addIQProvider(
+                VCard4.ELEMENT_NAME,
+                VCard4.NAMESPACE,
+                new VCard4.Provider());
+    }
+
     VCardListener(Control control) {
         mControl = control;
-
-        ProviderManager.addIQProvider(VCard4.ELEMENT_NAME, VCard4.NAMESPACE, new VCard4.Provider());
     }
 
     @Override

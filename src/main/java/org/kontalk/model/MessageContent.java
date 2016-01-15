@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.GroupChat.GID;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -49,15 +49,15 @@ public class MessageContent {
     // encrypted content, empty string if not present
     private String mEncryptedContent;
     // attachment (file url, path and metadata)
-    private final Optional<Attachment> mOptAttachment;
+    private final Attachment mAttachment;
     // small preview file of attachment
-    private Optional<Preview> mOptPreview;
+    private Preview mPreview;
     // group id
-    private final Optional<GID> mOptGID;
+    private final KonGroupData mGroupData;
     // group command
-    private final Optional<GroupCommand> mOptGroupCommand;
+    private final GroupCommand mGroupCommand;
     // decrypted message content
-    private Optional<MessageContent> mOptDecryptedContent;
+    private MessageContent mDecryptedContent;
 
     private static final String JSON_PLAIN_TEXT = "plain_text";
     private static final String JSON_ENC_CONTENT = "encrypted_content";
@@ -86,11 +86,11 @@ public class MessageContent {
     private MessageContent(Builder builder) {
         mPlainText = builder.mPlainText;
         mEncryptedContent = builder.mEncrypted;
-        mOptAttachment = Optional.ofNullable(builder.mAttachment);
-        mOptPreview = Optional.ofNullable(builder.mPreview);
-        mOptGID = Optional.ofNullable(builder.mGID);
-        mOptGroupCommand = Optional.ofNullable(builder.mGroup);
-        mOptDecryptedContent = Optional.ofNullable(builder.mDecrypted);
+        mAttachment = builder.mAttachment;
+        mPreview = builder.mPreview;
+        mGroupData = builder.mGroupData;
+        mGroupCommand = builder.mGroup;
+        mDecryptedContent = builder.mDecrypted;
     }
 
     /**
@@ -99,8 +99,8 @@ public class MessageContent {
      * plain text either return an empty string.
      */
     public String getText() {
-        if (mOptDecryptedContent.isPresent())
-            return mOptDecryptedContent.get().getPlainText();
+        if (mDecryptedContent != null)
+            return mDecryptedContent.getPlainText();
         else
             return mPlainText;
     }
@@ -110,11 +110,11 @@ public class MessageContent {
     }
 
     public Optional<Attachment> getAttachment() {
-        if (mOptDecryptedContent.isPresent() &&
-                mOptDecryptedContent.get().getAttachment().isPresent()) {
-            return mOptDecryptedContent.get().getAttachment();
+        if (mDecryptedContent != null &&
+                mDecryptedContent.getAttachment().isPresent()) {
+            return mDecryptedContent.getAttachment();
         }
-        return mOptAttachment;
+        return Optional.ofNullable(mAttachment);
     }
 
     public String getEncryptedContent() {
@@ -122,42 +122,42 @@ public class MessageContent {
     }
 
     public void setDecryptedContent(MessageContent decryptedContent) {
-        assert !mOptDecryptedContent.isPresent();
-        mOptDecryptedContent = Optional.of(decryptedContent);
+        assert mDecryptedContent == null;
+        mDecryptedContent = decryptedContent;
         // deleting encrypted data!
         mEncryptedContent = "";
     }
 
     public Optional<Preview> getPreview() {
-        if (mOptDecryptedContent.isPresent() &&
-                mOptDecryptedContent.get().getPreview().isPresent()) {
-            return mOptDecryptedContent.get().getPreview();
+        if (mDecryptedContent != null &&
+                mDecryptedContent.getPreview().isPresent()) {
+            return mDecryptedContent.getPreview();
         }
-        return mOptPreview;
+        return Optional.ofNullable(mPreview);
     }
 
     void setPreview(Preview preview) {
-        if (mOptPreview.isPresent()) {
+        if (mPreview != null) {
             LOGGER.warning("preview already present, not overwriting");
             return;
         }
-        mOptPreview = Optional.of(preview);
+        mPreview = preview;
     }
 
-    public Optional<GID> getGID() {
-        if (mOptDecryptedContent.isPresent() &&
-                mOptDecryptedContent.get().getGID().isPresent()) {
-            return mOptDecryptedContent.get().getGID();
+    public Optional<KonGroupData> getGroupData() {
+        if (mDecryptedContent != null &&
+                mDecryptedContent.getGroupData().isPresent()) {
+            return mDecryptedContent.getGroupData();
         }
-        return mOptGID;
+        return Optional.ofNullable(mGroupData);
     }
 
     public Optional<GroupCommand> getGroupCommand() {
-        if (mOptDecryptedContent.isPresent() &&
-                mOptDecryptedContent.get().getGroupCommand().isPresent()) {
-            return mOptDecryptedContent.get().getGroupCommand();
+        if (mDecryptedContent != null &&
+                mDecryptedContent.getGroupCommand().isPresent()) {
+            return mDecryptedContent.getGroupCommand();
         }
-        return mOptGroupCommand;
+        return Optional.ofNullable(mGroupCommand);
     }
 
     /**
@@ -167,21 +167,21 @@ public class MessageContent {
     public boolean isEmpty() {
         return mPlainText.isEmpty() &&
                 mEncryptedContent.isEmpty() &&
-                !mOptAttachment.isPresent() &&
-                !mOptPreview.isPresent() &&
-                !mOptDecryptedContent.isPresent() &&
-                !mOptGroupCommand.isPresent();
+                mAttachment == null &&
+                mPreview == null &&
+                mDecryptedContent == null &&
+                mGroupCommand == null;
     }
 
     public boolean isComplex() {
-        return mOptAttachment.isPresent() || mOptGroupCommand.isPresent();
+        return mAttachment != null || mGroupCommand != null;
     }
 
     @Override
     public String toString() {
         return "CONT:plain="+mPlainText+",encr="+mEncryptedContent
-                +",att="+mOptAttachment+",gid="+mOptGID+",gc="+mOptGroupCommand
-                +",decr="+mOptDecryptedContent;
+                +",att="+mAttachment+",gd="+mGroupData+",gc="+mGroupCommand
+                +",decr="+mDecryptedContent;
     }
 
     // using legacy lib, raw types extend Object
@@ -191,19 +191,19 @@ public class MessageContent {
 
         EncodingUtils.putJSON(json, JSON_PLAIN_TEXT, mPlainText);
 
-        if (mOptAttachment.isPresent())
-            json.put(JSON_ATTACHMENT, mOptAttachment.get().toJSONString());
+        if (mAttachment != null)
+            json.put(JSON_ATTACHMENT, mAttachment.toJSONString());
 
         EncodingUtils.putJSON(json, JSON_ENC_CONTENT, mEncryptedContent);
 
-        if (mOptPreview.isPresent())
-            json.put(JSON_PREVIEW, mOptPreview.get().toJSON());
+        if (mPreview != null)
+            json.put(JSON_PREVIEW, mPreview.toJSON());
 
-        if (mOptGroupCommand.isPresent())
-            json.put(JSON_GROUP_COMMAND, mOptGroupCommand.get().toJSON());
+        if (mGroupCommand != null)
+            json.put(JSON_GROUP_COMMAND, mGroupCommand.toJSON());
 
-        if (mOptDecryptedContent.isPresent())
-            json.put(JSON_DEC_CONTENT, mOptDecryptedContent.get().toJSON());
+        if (mDecryptedContent != null)
+            json.put(JSON_DEC_CONTENT, mDecryptedContent.toJSON());
 
         return json.toJSONString();
     }
@@ -595,7 +595,7 @@ public class MessageContent {
 
         private Attachment mAttachment = null;
         private Preview mPreview = null;
-        private GID mGID = null;
+        private KonGroupData mGroupData = null;
         private GroupCommand mGroup = null;
         private MessageContent mDecrypted = null;
 
@@ -608,8 +608,8 @@ public class MessageContent {
             mAttachment = attachment; return this; };
         public Builder preview(Preview preview) {
             mPreview = preview; return this; };
-        public Builder gid(GID gid) {
-            mGID = gid; return this; };
+        public Builder groupData(KonGroupData gData) {
+            mGroupData = gData; return this; };
         public Builder groupCommand(GroupCommand group) {
             mGroup = group; return this; };
         private Builder decryptedContent(MessageContent decrypted) {

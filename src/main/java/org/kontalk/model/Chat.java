@@ -37,7 +37,7 @@ import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.kontalk.model.GroupChat.GID;
+import org.kontalk.model.GroupMetaData;
 import org.kontalk.system.Database;
 
 /**
@@ -52,7 +52,7 @@ public abstract class Chat extends Observable implements Observer {
 
     public static final String TABLE = "threads";
     public static final String COL_XMPPID = "xmpp_id";
-    public static final String COL_GID = "gid";
+    public static final String COL_GD = "gid";
     public static final String COL_SUBJ = "subject";
     public static final String COL_READ = "read";
     public static final String COL_VIEW_SET = "view_settings";
@@ -67,7 +67,7 @@ public abstract class Chat extends Observable implements Observer {
             // view settings in JSON format
             COL_VIEW_SET+" TEXT NOT NULL, " +
             // optional group id in JSON format
-            COL_GID+" TEXT " +
+            COL_GD+" TEXT " +
             ")";
 
     // many to many relationship requires additional table for receiver
@@ -94,7 +94,7 @@ public abstract class Chat extends Observable implements Observer {
         this(new Contact[]{contact}, xmppID, subject, null);
     }
 
-    protected Chat(Contact[] contacts, String xmppID, String subject, GID gid) {
+    protected Chat(Contact[] contacts, String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages(this, true);
         mRead = true;
         mViewSettings = new ViewSettings();
@@ -106,7 +106,7 @@ public abstract class Chat extends Observable implements Observer {
         values.add(Database.setString(subject));
         values.add(mRead);
         values.add(mViewSettings.toJSONString());
-        values.add(Database.setString(gid == null ? "" : gid.toJSON()));
+        values.add(Database.setString(gData == null ? "" : gData.toJSON()));
         mID = db.execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert chat");
@@ -130,6 +130,8 @@ public abstract class Chat extends Observable implements Observer {
     }
 
     public boolean addMessage(KonMessage message) {
+        assert message.getChat() == this;
+
         boolean added = mMessages.add(message);
         if (added) {
             if (message.isInMessage() && mRead) {
@@ -173,7 +175,7 @@ public abstract class Chat extends Observable implements Observer {
     }
 
     public boolean isGroupChat() {
-        return this instanceof GroupChat;
+        return (this instanceof GroupChat);
     }
 
     /** Get all contacts (including deleted, blocked and user contact). */
@@ -283,10 +285,10 @@ public abstract class Chat extends Observable implements Observer {
     static Chat loadOrNull(ResultSet rs) throws SQLException {
         int id = rs.getInt("_id");
 
-        String jsonGID = Database.getString(rs, Chat.COL_GID);
-        Optional<GID> optGID = Optional.ofNullable(jsonGID.isEmpty() ?
+        String jsonGD = Database.getString(rs, Chat.COL_GD);
+        GroupMetaData gData = jsonGD.isEmpty() ?
                 null :
-                GID.fromJSONOrNull(jsonGID));
+                GroupMetaData.fromJSONOrNull(jsonGD);
 
         String xmppID = Database.getString(rs, Chat.COL_XMPPID);
 
@@ -294,9 +296,9 @@ public abstract class Chat extends Observable implements Observer {
         Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
         Set<Contact> contacts = new HashSet<>();
         for (int conID: dbReceiver.keySet()) {
-            Optional<Contact> optCon = ContactList.getInstance().get(conID);
-            if (optCon.isPresent())
-                contacts.add(optCon.get());
+            Contact c = ContactList.getInstance().get(conID).orElse(null);
+            if (c != null)
+                contacts.add(c);
             else
                 LOGGER.warning("can't find contact");
         }
@@ -308,8 +310,8 @@ public abstract class Chat extends Observable implements Observer {
         String jsonViewSettings = Database.getString(rs,
                 Chat.COL_VIEW_SET);
 
-        if (optGID.isPresent()) {
-            return new GroupChat(id, contacts, optGID.get(), subject, read, jsonViewSettings);
+        if (gData != null) {
+            return GroupChat.create(id, contacts, gData, subject, read, jsonViewSettings);
         } else {
             if (contacts.size() != 1) {
                 LOGGER.warning("not one contact for single chat, id="+id);
@@ -349,7 +351,7 @@ public abstract class Chat extends Observable implements Observer {
         // the chat (not necessary according to XEP-0085), this makes the
         // extra date field a bit useless
         // TODO save last active date to DB
-        private Optional<Date> mLastActive = Optional.empty();
+        private Date mLastActive = null;
 
         protected KonChatState(Contact contact) {
             mContact = contact;
@@ -366,7 +368,7 @@ public abstract class Chat extends Observable implements Observer {
         protected void setState(ChatState state) {
             mState = state;
             if (mState == ChatState.active || mState == ChatState.composing)
-                mLastActive = Optional.of(new Date());
+                mLastActive = new Date();
         }
     }
 
@@ -375,48 +377,48 @@ public abstract class Chat extends Observable implements Observer {
         private static final String JSON_IMAGE_PATH = "img";
 
         // background color, if set
-        private final Optional<Color> mOptColor;
+        private final Color mColor;
         // custom image, if set
         private final String mImagePath;
 
         private ViewSettings(Chat t, String json) {
             Object obj = JSONValue.parse(json);
-            Optional<Color> optColor;
+            Color color;
             String imagePath;
             try {
                 Map<?, ?> map = (Map) obj;
-                optColor = map.containsKey(JSON_BG_COLOR) ?
-                    Optional.of(new Color(((Long) map.get(JSON_BG_COLOR)).intValue())) :
-                    Optional.<Color>empty();
+                color = map.containsKey(JSON_BG_COLOR) ?
+                    new Color(((Long) map.get(JSON_BG_COLOR)).intValue()) :
+                    null;
                 imagePath = map.containsKey(JSON_IMAGE_PATH) ?
                     (String) map.get(JSON_IMAGE_PATH) :
                     "";
             } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON view settings", ex);
-                optColor = Optional.empty();
+                color = null;
                 imagePath = "";
             }
-            mOptColor = optColor;
+            mColor = color;
             mImagePath = imagePath;
         }
 
         public ViewSettings() {
-            mOptColor = Optional.empty();
+            mColor = null;
             mImagePath = "";
         }
 
         public ViewSettings(Color color) {
-            mOptColor = Optional.of(color);
+            mColor = null;
             mImagePath = "";
         }
 
         public ViewSettings(String imagePath) {
-            mOptColor = Optional.empty();
+            mColor = null;
             mImagePath = imagePath;
         }
 
         public Optional<Color> getBGColor() {
-            return mOptColor;
+            return Optional.ofNullable(mColor);
         }
 
         public String getImagePath() {
@@ -427,8 +429,8 @@ public abstract class Chat extends Observable implements Observer {
         @SuppressWarnings("unchecked")
         String toJSONString() {
             JSONObject json = new JSONObject();
-            if (mOptColor.isPresent())
-                json.put(JSON_BG_COLOR, mOptColor.get().getRGB());
+            if (mColor != null)
+                json.put(JSON_BG_COLOR, mColor.getRGB());
             if (!mImagePath.isEmpty())
                 json.put(JSON_IMAGE_PATH, mImagePath);
             return json.toJSONString();
@@ -441,14 +443,14 @@ public abstract class Chat extends Observable implements Observer {
             if (!(obj instanceof ViewSettings)) return false;
 
             ViewSettings o = (ViewSettings) obj;
-            return mOptColor.equals(o.mOptColor) &&
+            return mColor.equals(o.mColor) &&
                     mImagePath.equals(o.mImagePath);
         }
 
         @Override
         public int hashCode() {
             int hash = 7;
-            hash = 37 * hash + Objects.hashCode(this.mOptColor);
+            hash = 37 * hash + Objects.hashCode(this.mColor);
             hash = 37 * hash + Objects.hashCode(this.mImagePath);
             return hash;
         }

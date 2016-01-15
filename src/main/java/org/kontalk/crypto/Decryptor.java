@@ -116,13 +116,13 @@ final class Decryptor {
 
         // parse decrypted CPIM content
         String myUID = myKey.getUserId();
-        Optional<String> senderUID = senderKey.isPresent() ?
-                Optional.of(senderKey.get().userID) :
-                Optional.<String>empty();
+        String senderUID = senderKey.isPresent() ?
+                senderKey.get().userID :
+                null;
         String decrText = EncodingUtils.getString(
                 plainOut.toByteArray(),
                 CPIMMessage.CHARSET);
-        MessageContent content = this.parseCPIMOrNull(decrText, myUID, senderUID);
+        MessageContent content = this.parseCPIMOrNull(decrText, myUID, Optional.ofNullable(senderUID));
 
         // set errors
         message.setSecurityErrors(allErrors);
@@ -145,12 +145,11 @@ final class Decryptor {
         }
         InMessage inMessage = (InMessage) message;
 
-        Optional<MessageContent.Attachment> optAttachment = inMessage.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
+        MessageContent.Attachment attachment = inMessage.getContent().getAttachment().orElse(null);
+        if (attachment == null) {
             LOGGER.warning("no attachment in in-message");
             return;
         }
-        MessageContent.Attachment attachment = optAttachment.get();
 
         boolean loaded = this.loadKeys();
         if (!loaded)

@@ -62,12 +62,12 @@ final public class Transmission {
 
     private final Contact mContact;
     private final JID mJID;
-    protected Optional<Date> mReceivedDate;
+    private Date mReceivedDate;
 
     Transmission(Contact contact, JID jid, int messageID) {
         mContact = contact;
         mJID = jid;
-        mReceivedDate = Optional.empty();
+        mReceivedDate = null;
 
         mID = this.insert(messageID);
     }
@@ -76,7 +76,7 @@ final public class Transmission {
         mID = id;
         mContact = contact;
         mJID = jid;
-        mReceivedDate = Optional.ofNullable(receivedDate);
+        mReceivedDate = receivedDate;
     }
 
     public Contact getContact() {
@@ -88,15 +88,15 @@ final public class Transmission {
     }
 
     public Optional<Date> getReceivedDate() {
-        return mReceivedDate;
+        return Optional.ofNullable(mReceivedDate);
     }
 
     public boolean isReceived() {
-        return mReceivedDate.isPresent();
+        return mReceivedDate != null;
     }
 
     void setReceived(Date date) {
-        mReceivedDate = Optional.of(date);
+        mReceivedDate = date;
         this.save();
     }
 
@@ -111,7 +111,7 @@ final public class Transmission {
 
         int id = db.execInsert(TABLE, values);
         if (id <= 0) {
-            LOGGER.log(Level.WARNING, "db, could not insert");
+            LOGGER.log(Level.WARNING, "could not insert");
             return -2;
         }
         return id;
@@ -150,8 +150,8 @@ final public class Transmission {
         int id = resultSet.getInt("_id");
 
         int contactID = resultSet.getInt(COL_CONTACT_ID);
-        Optional<Contact> optContact = ContactList.getInstance().get(contactID);
-        if (!optContact.isPresent()) {
+        Contact contact = ContactList.getInstance().get(contactID).orElse(null);
+        if (contact == null) {
             LOGGER.warning("can't find contact in db, id: "+contactID);
             return null;
         }
@@ -159,6 +159,6 @@ final public class Transmission {
         long rDate = resultSet.getLong(COL_REC_DATE);
         Date receivedDate = rDate == 0 ? null : new Date(rDate);
 
-        return new Transmission(id, optContact.get(), jid, receivedDate);
+        return new Transmission(id, contact, jid, receivedDate);
     }
 }

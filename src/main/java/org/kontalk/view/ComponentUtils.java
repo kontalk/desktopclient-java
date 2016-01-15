@@ -57,6 +57,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -189,21 +190,7 @@ final class ComponentUtils {
         }
 
         private void saveStatus() {
-            String newStatus = mStatusField.getText();
-
-            Config conf = Config.getInstance();
-            String[] strings = conf.getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.asList(strings));
-
-            stats.remove(newStatus);
-
-            stats.add(0, newStatus);
-
-            if (stats.size() > 20)
-                stats = stats.subList(0, 20);
-
-            conf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
-            mView.getControl().sendStatusText();
+            mView.getControl().setStatusText(mStatusField.getText());
         }
     }
 
@@ -792,7 +779,7 @@ final class ComponentUtils {
 
         private final WebLabel mStatus;
         private final WebLinkLabel mAttLabel;
-        private String mImagePath = "";
+        private Path mImagePath = Paths.get("");
 
         AttachmentPanel() {
            super(View.GAP_SMALL, false);
@@ -804,7 +791,7 @@ final class ComponentUtils {
            this.add(mAttLabel);
         }
 
-        void setImage(String path) {
+        void setImage(Path path) {
             if (path.equals(mImagePath))
                 return;
 

@@ -18,6 +18,8 @@
 
 package org.kontalk.model;
 
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.kontalk.misc.JID;
@@ -26,13 +28,16 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
+import org.kontalk.Kontalk;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
+import org.kontalk.util.MediaUtils;
 import org.kontalk.util.XMPPUtils;
 
 /**
@@ -64,6 +69,7 @@ public final class Contact extends Observable {
     public static final String COL_ENCR = "encrypted";
     public static final String COL_PUB_KEY = "public_key";
     public static final String COL_KEY_FP = "key_fingerprint";
+    public static final String COL_AVATAR_ID = "avatar_id";
     public static final String SCHEMA = "(" +
             Database.SQL_ID +
             COL_JID + " TEXT NOT NULL UNIQUE, " +
@@ -73,14 +79,15 @@ public final class Contact extends Observable {
             // boolean, send messages encrypted?
             COL_ENCR + " INTEGER NOT NULL, " +
             COL_PUB_KEY + " TEXT UNIQUE, " +
-            COL_KEY_FP + " TEXT UNIQUE" +
+            COL_KEY_FP + " TEXT UNIQUE," +
+            COL_AVATAR_ID + " TEXT" +
             ")";
 
     private final int mID;
     private JID mJID;
     private String mName;
     private String mStatus = "";
-    private Optional<Date> mLastSeen = Optional.empty();
+    private Date mLastSeen = null;
     private Online mAvailable = Online.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
@@ -88,6 +95,7 @@ public final class Contact extends Observable {
     private boolean mBlocked = false;
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
+    private Avatar mAvatar = null;
 
     // used for creating new contacts (eg from roster)
     Contact(JID jid, String name) {
@@ -102,6 +110,7 @@ public final class Contact extends Observable {
         values.add(mEncrypted);
         values.add(null); // key
         values.add(null); // fingerprint
+        values.add(null); // avatar id
         mID = db.execInsert(TABLE, values);
         if (mID < 1)
             LOGGER.log(Level.WARNING, "could not insert contact");
@@ -115,15 +124,17 @@ public final class Contact extends Observable {
             Optional<Date> lastSeen,
             boolean encrypted,
             String publicKey,
-            String fingerprint) {
+            String fingerprint,
+            String avatarID) {
         mID = id;
         mJID = jid;
         mName = name;
         mStatus = status;
-        mLastSeen = lastSeen;
+        mLastSeen = lastSeen.orElse(null);
         mEncrypted = encrypted;
         mKey = publicKey;
         mFingerprint = fingerprint.toLowerCase();
+        mAvatar = avatarID.isEmpty() ? null : new Avatar(avatarID);
     }
 
     public JID getJID() {
@@ -167,7 +178,7 @@ public final class Contact extends Observable {
     }
 
     public Optional<Date> getLastSeen() {
-        return mLastSeen;
+        return Optional.ofNullable(mLastSeen);
     }
 
     public boolean getEncrypted() {
@@ -189,7 +200,7 @@ public final class Contact extends Observable {
     public void setOnline(Presence.Type type, String status) {
         if (type == Presence.Type.available) {
             mAvailable = Online.YES;
-            mLastSeen = Optional.of(new Date());
+            mLastSeen = new Date();
         } else if (type == Presence.Type.unavailable) {
             mAvailable = Online.NO;
         }
@@ -256,6 +267,22 @@ public final class Contact extends Observable {
         this.changed(mSubStatus);
     }
 
+    public Optional<Avatar> getAvatar() {
+        return Optional.ofNullable(mAvatar);
+    }
+
+    public void setAvatar(Avatar avatar) {
+        // delete old
+        if (mAvatar != null)
+            mAvatar.delete();
+
+        // set new
+        mAvatar = avatar;
+        this.save();
+
+        this.changed(avatar);
+    }
+
     public boolean isMe() {
         return mJID.isMe();
     }
@@ -272,10 +299,12 @@ public final class Contact extends Observable {
         mJID = JID.deleted(mID);
         mName = "";
         mStatus = "";
-        mLastSeen = Optional.empty();
+        mLastSeen = null;
         mEncrypted = false;
         mKey = "";
         mFingerprint = "";
+        mAvatar.delete();
+        mAvatar = null;
 
         this.save();
         this.changed(null);
@@ -295,6 +324,7 @@ public final class Contact extends Observable {
         set.put(COL_ENCR, mEncrypted);
         set.put(COL_PUB_KEY, Database.setString(mKey));
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
+        set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.id : ""));
         db.execUpdate(TABLE, set, mID);
     }
 
@@ -316,12 +346,82 @@ public final class Contact extends Observable {
         String name = rs.getString(Contact.COL_NAME);
         String status = rs.getString(Contact.COL_STAT);
         long l = rs.getLong(Contact.COL_LAST_SEEN);
-        Optional<Date> lastSeen = l == 0 ?
-                Optional.<Date>empty() :
-                Optional.<Date>of(new Date(l));
+        Date lastSeen = l == 0 ? null : new Date(l);
         boolean encr = rs.getBoolean(Contact.COL_ENCR);
         String key = Database.getString(rs, Contact.COL_PUB_KEY);
         String fp = Database.getString(rs, Contact.COL_KEY_FP);
-        return new Contact(id, jid, name, status, lastSeen, encr, key, fp);
+        String avatarID = Database.getString(rs, Contact.COL_AVATAR_ID);
+
+        return new Contact(id, jid, name, status, Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
+    }
+
+    /**
+     * Contact avatar image. Immutable.
+     */
+    public static class Avatar {
+
+        private static final String AVATAR_FORMAT = "png";
+        private static final String AVATAR_DIR = "avatars";
+
+        /** SHA1 hash of image data. */
+        public final String id;
+
+        private BufferedImage image = null;
+
+        public Avatar(String id, BufferedImage image) {
+            this.id = id;
+            this.image = image;
+
+            // save
+            boolean succ = MediaUtils.writeImage(this.image, AVATAR_FORMAT, this.file());
+            if (!succ)
+                LOGGER.warning("can't save avatar image: "+this.id);
+        }
+
+        // used when loading from database
+        Avatar(String id) {
+            this.id = id;
+        }
+
+        public Optional<BufferedImage> loadImage() {
+            if (image == null)
+                image = MediaUtils.readImage(this.file()).orElse(null);
+
+            return Optional.ofNullable(image);
+        }
+
+        void delete() {
+            boolean succ = this.file().delete();
+            if (succ)
+                LOGGER.warning("could not delete avatar file: "+this.id);
+        }
+
+        private File file() {
+            return Kontalk.appDir().resolve(AVATAR_DIR)
+                    .resolve(this.id + "." + AVATAR_FORMAT).toFile();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+
+            if (!(o instanceof Avatar)) return false;
+
+            Avatar oAvatar = (Avatar) o;
+            return id.equals(oAvatar.id);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 59 * hash + Objects.hashCode(this.id);
+            return hash;
+        }
+
+        public static void createDir() {
+            boolean created = Kontalk.appDir().resolve(AVATAR_DIR).toFile().mkdir();
+            if (created)
+                LOGGER.info("created avatar directory");
+        }
     }
 }

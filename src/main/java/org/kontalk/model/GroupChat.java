@@ -20,37 +20,35 @@ package org.kontalk.model;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 import org.kontalk.misc.JID;
-import org.kontalk.util.EncodingUtils;
+import org.kontalk.model.GroupMetaData.KonGroupData;
+import org.kontalk.model.GroupMetaData.MUCData;
 
 /**
+ * A long-term persistent chat conversation with multiple participants.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class GroupChat extends Chat {
+public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     private static final Logger LOGGER = Logger.getLogger(GroupChat.class.getName());
 
     private final HashMap<Contact, KonChatState> mContactMap = new HashMap<>();
-    private final GID mGID;
+    private final D mGroupData;
 
     private String mSubject;
     // TODO overwrite encryption=OFF field
     private boolean mForceEncryptionOff = false;
 
-    GroupChat(Contact[] contacts, GID gid, String subject) {
-        super(contacts, "", subject, gid);
+    private GroupChat(Contact[] contacts, D gData, String subject) {
+        super(contacts, "", subject, gData);
 
-        mGID = gid;
+        mGroupData = gData;
         mSubject = subject;
 
         for (Contact contact: contacts)
@@ -58,16 +56,16 @@ public final class GroupChat extends Chat {
     }
 
     // used when loading from database
-    GroupChat(int id,
+    private GroupChat(int id,
             Set<Contact> contacts,
-            GID gid,
+            D gData,
             String subject,
             boolean read,
             String jsonViewSettings
             ) {
         super(id, read, jsonViewSettings);
 
-        mGID = gid;
+        mGroupData = gData;
         mSubject = subject;
 
         for (Contact contact: contacts)
@@ -92,9 +90,25 @@ public final class GroupChat extends Chat {
         return contacts.toArray(new Contact[0]);
     }
 
-    private void addContact(Contact contact) {
+    public void addContact(Contact contact) {
         this.addContactSilent(contact);
         this.save();
+        this.changed(contact);
+    }
+
+    public void addContacts(List<Contact> contacts) {
+        boolean changed = false;
+        for (Contact c: contacts)
+            if (!this.getAllContacts().contains(c)) {
+                this.addContactSilent(c);
+                changed = true;
+            }
+
+        if (changed) {
+            System.out.println("addContacts save");
+            this.save();
+            this.changed(contacts);
+        }
     }
 
     private void addContactSilent(Contact contact) {
@@ -118,8 +132,8 @@ public final class GroupChat extends Chat {
         this.save();
     }
 
-    public GID getGID() {
-        return mGID;
+    public D getGroupData() {
+        return mGroupData;
     }
 
     @Override
@@ -155,18 +169,18 @@ public final class GroupChat extends Chat {
 
                 boolean meIn = false;
                 for (JID jid: command.getAdded()) {
-                    Optional<Contact> optContact = ContactList.getInstance().get(jid);
-                    if (!optContact.isPresent()) {
+                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
+                    if (contact == null) {
                         LOGGER.warning("can't find contact, jid: "+jid);
                         continue;
                     }
-                    Contact contact = optContact.get();
+
                     if (mContactMap.keySet().contains(contact)) {
                         LOGGER.warning("contact already in chat: "+contact);
                         continue;
                     }
                     meIn |= contact.isMe();
-                    this.addContact(contact);
+                    this.addContactSilent(contact);
                 }
 
                 if (!meIn)
@@ -183,20 +197,20 @@ public final class GroupChat extends Chat {
                 break;
             case SET:
                 for (JID jid : command.getAdded()) {
-                    Optional<Contact> optC = ContactList.getInstance().get(jid);
-                    if (optC.isPresent()) {
+                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
+                    if (contact == null) {
                         LOGGER.warning("can't get added contact, jid="+jid);
                         continue;
                     }
-                    this.addContactSilent(optC.get());
+                    this.addContactSilent(contact);
                 }
                 for (JID jid : command.getRemoved()) {
-                    Optional<Contact> optC = ContactList.getInstance().get(jid);
-                    if (optC.isPresent()) {
+                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
+                    if (contact == null) {
                         LOGGER.warning("can't get removed contact, jid="+jid);
                         continue;
                     }
-                    this.removeContactSilent(optC.get());
+                    this.removeContactSilent(contact);
                 }
                 mSubject = command.getSubject();
                 this.save();
@@ -238,7 +252,7 @@ public final class GroupChat extends Chat {
 
     @Override
     public boolean isAdministratable() {
-        return mGID.ownerJID.isMe();
+        return mGroupData.isAdministratable();
     }
 
     private boolean containsMe() {
@@ -264,72 +278,51 @@ public final class GroupChat extends Chat {
         if (!(o instanceof GroupChat)) return false;
 
         GroupChat oChat = (GroupChat) o;
-        return mGID.equals(oChat.mGID);
+        return mGroupData.equals(oChat.mGroupData);
     }
 
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 79 * hash + Objects.hashCode(this.mGID);
+        hash = 79 * hash + Objects.hashCode(this.mGroupData);
         return hash;
     }
 
     @Override
     public String toString() {
-        return "GC:id="+mID+",gid="+mGID+",subject="+mSubject;
+        return "GC:id="+mID+",gd="+mGroupData+",subject="+mSubject;
     }
 
-    /** Group ID. */
-    public static class GID {
-        private static final String JSON_OWNER_JID = "jid";
-        private static final String JSON_ID = "id";
-
-        public final JID ownerJID;
-        public final String id;
-
-        public GID(JID ownerJID, String id) {
-            this.ownerJID = ownerJID;
-            this.id = id;
+    public static final class KonGroupChat extends GroupChat<GroupMetaData.KonGroupData> {
+        KonGroupChat(Contact[] contacts, KonGroupData gData, String subject) {
+            super(contacts, gData, subject);
         }
 
-        // using legacy lib, raw types extend Object
-        @SuppressWarnings("unchecked")
-        protected String toJSON() {
-            JSONObject json = new JSONObject();
-            EncodingUtils.putJSON(json, JSON_OWNER_JID, ownerJID.string());
-            EncodingUtils.putJSON(json, JSON_ID, id);
-            return json.toJSONString();
-        }
-
-        static GID fromJSONOrNull(String json) {
-            Object obj = JSONValue.parse(json);
-            try {
-                Map<?, ?> map = (Map) obj;
-                JID jid = JID.bare((String) map.get(JSON_OWNER_JID));
-                String id = (String) map.get(JSON_ID);
-                return new GID(jid, id);
-            }  catch (NullPointerException | ClassCastException ex) {
-                LOGGER.log(Level.WARNING, "can't parse JSON preview", ex);
-                return null;
-            }
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-
-            if (!(o instanceof GID)) return false;
-
-            GID oGID = (GID) o;
-            return ownerJID.equals(oGID.ownerJID) && id.equals(oGID.id);
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 37 * hash + Objects.hashCode(this.ownerJID);
-            hash = 37 * hash + Objects.hashCode(this.id);
-            return hash;
+        KonGroupChat(int id, Set<Contact> contacts, KonGroupData gData, String subject, boolean read, String jsonViewSettings) {
+            super(id, contacts, gData, subject, read, jsonViewSettings);
         }
     }
+
+    public static final class MUCChat extends GroupChat<GroupMetaData.MUCData> {
+        private MUCChat(Contact[] contacts, GroupMetaData.MUCData gData, String subject) {
+            super(contacts, gData, subject);
+        }
+
+        private MUCChat(int id, Set<Contact> contacts, GroupMetaData.MUCData gData, String subject, boolean read, String jsonViewSettings) {
+            super(id, contacts, gData, subject, read, jsonViewSettings);
+        }
+    }
+
+    static GroupChat create(int id, Set<Contact> contacts, GroupMetaData gData, String subject, boolean read, String jsonViewSettings) {
+        return (gData instanceof KonGroupData) ?
+                new KonGroupChat(id, contacts, (KonGroupData) gData, subject, read, jsonViewSettings) :
+                new MUCChat(id, contacts, (MUCData) gData, subject, read, jsonViewSettings);
+    }
+
+    public static GroupChat create(Contact[] contacts, GroupMetaData gData, String subject) {
+        return (gData instanceof KonGroupData) ?
+                new KonGroupChat(contacts, (KonGroupData) gData, subject) :
+                new MUCChat(contacts, (MUCData) gData, subject);
+    }
+
 }

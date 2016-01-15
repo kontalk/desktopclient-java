@@ -19,7 +19,6 @@
 package org.kontalk.client;
 
 import java.util.ArrayList;
-import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -28,7 +27,8 @@ import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Chat;
-import org.kontalk.model.GroupChat;
+import org.kontalk.model.GroupChat.KonGroupChat;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.OutMessage;
@@ -64,8 +64,8 @@ final class KonMessageSender {
         }
 
         MessageContent content = message.getContent();
-        Optional<MessageContent.Attachment> optAtt = content.getAttachment();
-        if (optAtt.isPresent() && !optAtt.get().hasURL()) {
+        MessageContent.Attachment att = content.getAttachment().orElse(null);
+        if (att != null && !att.hasURL()) {
             LOGGER.warning("attachment not uploaded");
             message.setStatus(KonMessage.Status.ERROR);
             return false;
@@ -95,19 +95,19 @@ final class KonMessageSender {
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
 
         if (encrypted) {
-            Optional<byte[]> encryptedData = content.isComplex() || chat.isGroupChat() ?
+            byte[] encryptedData = content.isComplex() || chat.isGroupChat() ?
                         Coder.encryptStanza(message,
-                                rawMessage(content, chat, true).toXML().toString()) :
-                        Coder.encryptMessage(message);
+                                rawMessage(content, chat, true).toXML().toString()).orElse(null) :
+                        Coder.encryptMessage(message).orElse(null);
             // check also for security errors just to be sure
-            if (!encryptedData.isPresent() ||
+            if (encryptedData == null ||
                     !message.getCoderStatus().getErrors().isEmpty()) {
                 LOGGER.warning("encryption failed");
                 message.setStatus(KonMessage.Status.ERROR);
                 mControl.handleSecurityErrors(message);
                 return false;
             }
-            protoMessage.addExtension(new E2EEncryption(encryptedData.get()));
+            protoMessage.addExtension(new E2EEncryption(encryptedData));
         }
 
         // transmission specific
@@ -136,17 +136,14 @@ final class KonMessageSender {
             smackMessage.setBody(content.getPlainText());
 
         // attachment
-        Optional<MessageContent.Attachment> optAtt = content.getAttachment();
-        if (optAtt.isPresent()) {
-            MessageContent.Attachment att = optAtt.get();
-
+        MessageContent.Attachment att = content.getAttachment().orElse(null);
+        if (att != null) {
             OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
                     att.getMimeType(), att.getLength(), encrypted);
             smackMessage.addExtension(oobData);
 
-            Optional<MessageContent.Preview> optPreview = content.getPreview();
-            if (optPreview.isPresent()) {
-                MessageContent.Preview preview = optPreview.get();
+            MessageContent.Preview preview = content.getPreview().orElse(null);
+            if (preview != null) {
                 String data = EncodingUtils.bytesToBase64(preview.getData());
                 BitsOfBinary bob = new BitsOfBinary(preview.getMimeType(), data);
                 smackMessage.addExtension(bob);
@@ -154,13 +151,13 @@ final class KonMessageSender {
         }
 
         // group command
-        if (chat instanceof GroupChat) {
-            GroupChat groupChat = (GroupChat) chat;
-            GroupChat.GID gid = groupChat.getGID();
-            Optional<MessageContent.GroupCommand> optGroupCommand = content.getGroupCommand();
-            smackMessage.addExtension(optGroupCommand.isPresent() ?
-                    ClientUtils.groupCommandToGroupExtension(groupChat, optGroupCommand.get()) :
-                    new GroupExtension(gid.id, gid.ownerJID.string()));
+        if (chat instanceof KonGroupChat) {
+            KonGroupChat groupChat = (KonGroupChat) chat;
+            KonGroupData gid = groupChat.getGroupData();
+            MessageContent.GroupCommand groupCommand = content.getGroupCommand().orElse(null);
+            smackMessage.addExtension(groupCommand != null ?
+                    ClientUtils.groupCommandToGroupExtension(groupChat, groupCommand) :
+                    new GroupExtension(gid.id, gid.owner.string()));
         }
 
         return smackMessage;

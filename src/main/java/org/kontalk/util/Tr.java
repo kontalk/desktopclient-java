@@ -55,7 +55,7 @@ public class Tr {
     /**
      * Translate string used in user interface.
      * Spaces at beginning or end of string not supported!
-     * @param s string thats wants to be translated (in English)
+     * @param s string that wants to be translated (in English)
      * @return translation of input string (depending of platform language)
      */
     public static String tr(String s) {
@@ -67,6 +67,8 @@ public class Tr {
     public static void init() {
         // get language
         String lang = Locale.getDefault().getLanguage();
+        // for testing
+        //String lang = new Locale("zh").getLanguage();
         if (lang.equals(DEFAULT_LANG)) {
             return;
         }

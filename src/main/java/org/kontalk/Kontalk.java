@@ -25,7 +25,6 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -36,8 +35,6 @@ import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.ContactList;
-import org.kontalk.model.Account;
-import org.kontalk.system.Config;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.CryptoUtils;
@@ -51,9 +48,9 @@ public final class Kontalk {
     private static final Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
     public static final String VERSION = "3.0.4";
-    private final Path mAppDir;
 
     private static ServerSocket RUN_LOCK = null;
+    private static Path APP_DIR = null;
 
     Kontalk() {
         // platform dependent configuration directory
@@ -62,7 +59,7 @@ public final class Kontalk {
     }
 
     Kontalk(Path appDir) {
-        mAppDir = appDir;
+        APP_DIR = appDir;
     }
 
     private void start() {
@@ -89,7 +86,7 @@ public final class Kontalk {
         }
 
         // create app directory
-        boolean created = mAppDir.toFile().mkdirs();
+        boolean created = APP_DIR.toFile().mkdirs();
         if (created)
             LOGGER.info("created application directory");
 
@@ -100,7 +97,7 @@ public final class Kontalk {
             if (h instanceof ConsoleHandler)
                 h.setLevel(Level.CONFIG);
         }
-        String logPath = mAppDir.resolve("debug.log").toString();
+        String logPath = APP_DIR.resolve("debug.log").toString();
         Handler fileHandler = null;
         try {
             fileHandler = new FileHandler(logPath, 1024*1000, 1, true);
@@ -121,21 +118,17 @@ public final class Kontalk {
         // register provider
         PGPUtils.registerProvider();
 
+        ViewControl control = Control.create();
 
-        Config.initialize(mAppDir.resolve(Config.FILENAME));
-        Account.initialize(mAppDir);
-
-        ViewControl control = Control.create(mAppDir);
-
-        Optional<View> optView = View.create(control);
-        if (!optView.isPresent()) {
+        View view = View.create(control).orElse(null);
+        if (view == null) {
             control.shutDown();
             return; // never reached
         }
-        View view = optView.get();
 
         try {
-            Database.initialize(mAppDir.resolve(Database.FILENAME));
+            // do now to test if successful
+            Database.initialize();
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
             control.shutDown();
@@ -151,8 +144,11 @@ public final class Kontalk {
         control.launch();
     }
 
-    public Path getAppDir() {
-        return mAppDir;
+    public static Path appDir() {
+        if (APP_DIR == null)
+            throw new IllegalStateException("app dir not initialized");
+
+        return APP_DIR;
     }
 
     public static void exit() {

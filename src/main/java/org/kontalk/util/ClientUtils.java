@@ -29,10 +29,10 @@ import org.jivesoftware.smack.packet.Message;
 import org.kontalk.client.GroupExtension;
 import org.kontalk.client.GroupExtension.Command;
 import org.kontalk.client.GroupExtension.Member;
-import org.kontalk.model.GroupChat.GID;
 import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
-import org.kontalk.model.GroupChat;
+import org.kontalk.model.GroupChat.KonGroupChat;
+import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.MessageContent.GroupCommand.OP;
 
@@ -44,13 +44,13 @@ public final class ClientUtils {
     private static final Logger LOGGER = Logger.getLogger(ClientUtils.class.getName());
 
     /**
-     * Message attributes to identify the chat for a message.
+     * Message attributes for identifying the chat for a message.
+     * KonGroupData is missing here as this could be part of the encrypted content.
      */
     public static class MessageIDs {
         public final JID jid;
         public final String xmppID;
         public final String xmppThreadID;
-        //public final Optional<GroupID> groupID;
 
         private MessageIDs(JID jid, String xmppID, String threadID) {
             this.jid = jid;
@@ -63,9 +63,16 @@ public final class ClientUtils {
         }
 
         public static MessageIDs from(Message m, String receiptID) {
+            return create(m, m.getFrom(), receiptID);
+        }
+
+        public static MessageIDs to(Message m) {
+            return create(m, m.getTo(), "");
+        }
+
+        private static MessageIDs create(Message m, String jid, String receiptID) {
             return new MessageIDs(
-                    // TODO
-                    JID.full(StringUtils.defaultString(m.getFrom())),
+                    JID.full(StringUtils.defaultString(jid)),
                     !receiptID.isEmpty() ? receiptID :
                             StringUtils.defaultString(m.getStanzaId()),
                     StringUtils.defaultString(m.getThread()));
@@ -77,16 +84,17 @@ public final class ClientUtils {
         }
     }
 
-    public static GroupExtension groupCommandToGroupExtension(GroupChat chat,
+    /* Internal to external */
+    public static GroupExtension groupCommandToGroupExtension(KonGroupChat chat,
         GroupCommand groupCommand) {
         assert chat.isGroupChat();
 
-        GID gid = chat.getGID();
+        KonGroupData gid = chat.getGroupData();
         OP op = groupCommand.getOperation();
         switch (op) {
             case LEAVE:
                 // weare leaving
-                return new GroupExtension(gid.id, gid.ownerJID.string(), Command.LEAVE);
+                return new GroupExtension(gid.id, gid.owner.string(), Command.LEAVE);
             case CREATE:
             case SET:
                 Command command;
@@ -118,7 +126,7 @@ public final class ClientUtils {
                 }
 
                 return new GroupExtension(gid.id,
-                        gid.ownerJID.string(),
+                        gid.owner.string(),
                         command,
                         member.toArray(new Member[0]),
                         subject);
@@ -128,6 +136,7 @@ public final class ClientUtils {
         }
     }
 
+    /* External to internal */
     public static Optional<GroupCommand> groupExtensionToGroupCommand(
             Command com,
             Member[] members,

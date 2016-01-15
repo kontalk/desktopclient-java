@@ -41,6 +41,7 @@ import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import org.kontalk.system.Config;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Chat;
@@ -59,12 +60,20 @@ import org.kontalk.util.Tr;
 public final class View implements Observer {
     private static final Logger LOGGER = Logger.getLogger(View.class.getName());
 
+    static final int LISTS_WIDTH = 270;
+
     static final int GAP_DEFAULT = 10;
     static final int GAP_BIG = 15;
     static final int GAP_SMALL = 5;
     static final int MARGIN_DEFAULT = 10;
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
+
+    static final int FONT_SIZE_TINY = 11;
+    static final int FONT_SIZE_SMALL = 12;
+    static final int FONT_SIZE_NORMAL = 13;
+    static final int FONT_SIZE_BIG = 14;
+    static final int FONT_SIZE_HUGE = 16;
 
     static final int MAX_SUBJ_LENGTH = 30;
     static final int MAX_NAME_LENGTH = 60;
@@ -76,6 +85,8 @@ public final class View implements Observer {
     static final Color GREEN = new Color(83, 196, 46);
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
+
+    static final Dimension AVATAR_LIST_DIM = new Dimension(30, 30);
 
     static final String REMOVE_CONTACT_NOTE = Tr.tr("Chats and messages will not be deleted.");
 
@@ -338,15 +349,15 @@ public final class View implements Observer {
 
     void tabPaneChanged(MainFrame.Tab tab) {
         if (tab == MainFrame.Tab.CHATS) {
-            Optional<Chat> optChat = mChatListView.getSelectedValue();
-            if (optChat.isPresent()) {
-                mContent.showChat(optChat.get());
+            Chat chat = mChatListView.getSelectedValue().orElse(null);
+            if (chat != null) {
+                mContent.showChat(chat);
                 return;
             }
         } else {
-            Optional<Contact> optContact = mContactListView.getSelectedValue();
-            if (optContact.isPresent()) {
-                mContent.showContact(optContact.get());
+            Contact contact = mContactListView.getSelectedValue().orElse(null);
+            if (contact != null) {
+                mContent.showContact(contact);
                 return;
             }
         }
