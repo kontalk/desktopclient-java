@@ -41,10 +41,13 @@ import org.kontalk.util.MediaUtils;
 final class AvatarLoader {
 
     private static final int IMG_SIZE = 40;
+
     private static final Color LETTER_COLOR = new Color(255, 255, 255);
+    private static final Color FALLBACK_COLOR = new Color(220, 220, 220);
+    private static final Color GROUP_COLOR = new Color(160, 160, 160);
+
     // TODO i18n?
     private static final String FALLBACK_LETTER = "?";
-    private static final Color FALLBACK_COLOR = new Color(220, 220, 220);
 
     private static final Map<Item, Image> CACHE = new HashMap<>();
 
@@ -69,20 +72,25 @@ final class AvatarLoader {
         private final Avatar avatar;
         private final String label;
         private final int colorCode;
+        private final boolean group;
 
         Item(Contact contact) {
             avatar = contact.getAvatar().orElse(null);
             label = contact.getName();
             colorCode = hash(contact.getID());
+            group = false;
         }
 
         Item(Chat chat) {
             Avatar a = null;
             String l = null;
             Integer cc = null;
+
             if (chat.isGroupChat()) {
-                // nice to have: group picture
+                // or use number of contacts here?
                 l = chat.getSubject();
+                group = true;
+                // nice to have: group picture
             } else {
                 Contact[] contacts = chat.getValidContacts();
                 if (contacts.length > 0) {
@@ -91,6 +99,7 @@ final class AvatarLoader {
                     l = c.getName();
                     cc = hash(c.getID());
                 }
+                group = false;
             }
 
             avatar = a;
@@ -105,7 +114,7 @@ final class AvatarLoader {
                     return MediaUtils.scaleAsync(img, IMG_SIZE, IMG_SIZE, true);
             }
 
-            return fallback(label, colorCode, IMG_SIZE);
+            return fallback(label, colorCode, IMG_SIZE, group);
         }
 
         @Override
@@ -118,7 +127,8 @@ final class AvatarLoader {
 
             Item oItem = (Item) o;
             return ObjectUtils.equals(avatar, oItem.avatar) &&
-                    label.equals(oItem.label) && colorCode == oItem.colorCode;
+                    label.equals(oItem.label) && colorCode == oItem.colorCode &&
+                    group == oItem.group;
         }
 
         @Override
@@ -140,15 +150,17 @@ final class AvatarLoader {
     }
 
     static BufferedImage createFallback(int size) {
-        return fallback("", 0, size);
+        return fallback("", 0, size, false);
     }
 
-    private static BufferedImage fallback(String text, int colorCode, int size) {
+    private static BufferedImage fallback(String text, int colorCode, int size, boolean group) {
         BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
 
         // color
         Color color;
-        if (!text.isEmpty()) {
+        if (group) {
+            color = GROUP_COLOR;
+        } else if (!text.isEmpty()) {
             int hue = Math.abs(colorCode) % 360;
             color = Color.getHSBColor(hue / 360.0f, 0.8f, 1);
         } else {
@@ -160,7 +172,7 @@ final class AvatarLoader {
         graphics.fillRect(0, 0, size, size);
 
         // letter
-        String letter = text.length() > 1 ?
+        String letter = text.length() >= 1 ?
                 text.substring(0, 1).toUpperCase() :
                 FALLBACK_LETTER;
 
