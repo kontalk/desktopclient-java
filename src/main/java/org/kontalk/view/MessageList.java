@@ -514,7 +514,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
                 String verification = Tr.tr("Unknown");
                 switch (sign) {
                     case NOT: verification = Tr.tr("Not signed"); break;
-                    case SIGNED: verification = Tr.tr("Signed"); break;
+                    case SIGNED: verification = Tr.tr("Not verified"); break;
                     case VERIFIED: verification = Tr.tr("Verified"); break;
                 }
                 sec = encryption + " / " + verification;
