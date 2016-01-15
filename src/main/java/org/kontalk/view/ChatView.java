@@ -110,7 +110,7 @@ final class ChatView extends WebPanel implements Observer {
         mView = view;
 
         WebPanel titlePanel = new WebPanel(false,
-                new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
+                new BorderLayout(View.GAP_DEFAULT, 0));
         titlePanel.setMargin(View.MARGIN_DEFAULT);
 
         mAvatar = new WebImage();

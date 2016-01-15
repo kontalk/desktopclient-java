@@ -136,7 +136,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             super(contact);
 
             //this.setPaintFocus(true);
-            this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
+            this.setLayout(new BorderLayout(View.GAP_DEFAULT, 0));
             this.setMargin(View.MARGIN_SMALL);
 
             mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);

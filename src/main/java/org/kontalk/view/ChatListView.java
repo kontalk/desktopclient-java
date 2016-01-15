@@ -173,8 +173,8 @@ final class ChatListView extends Table<ChatItem, Chat> {
         ChatItem(Chat chat) {
             super(chat);
 
-            this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
-            this.setMargin(View.MARGIN_SMALL);
+            this.setLayout(new BorderLayout(View.GAP_DEFAULT, 0));
+            this.setMargin(View.MARGIN_DEFAULT);
 
             mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);
             mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
@@ -182,6 +182,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
 
             mTitleLabel = new WebLabel();
             mTitleLabel.setFontSize(View.FONT_SIZE_BIG);
+            mTitleLabel.setDrawShade(true);
             if (mValue.isGroupChat())
                     mTitleLabel.setForeground(View.DARK_GREEN);
 
