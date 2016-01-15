@@ -77,23 +77,25 @@ final class AvatarLoader {
         }
 
         Item(Chat chat) {
+            Avatar a = null;
+            String l = null;
+            Integer cc = null;
             if (chat.isGroupChat()) {
                 // nice to have: group picture
-                avatar = null;
-                label = chat.getSubject();
+                l = chat.getSubject();
             } else {
                 Contact[] contacts = chat.getValidContacts();
-                if (contacts.length == 0) {
-                    avatar = null;
-                    label = "";
-                } else {
+                if (contacts.length > 0) {
                     Contact c = contacts[0];
-                    avatar = c.getAvatar().orElse(null);
-                    label = c.getName();
+                    a = c.getAvatar().orElse(null);
+                    l = c.getName();
+                    cc = hash(c.getID());
                 }
-
             }
-            colorCode = hash(chat.getID());
+
+            avatar = a;
+            label = l != null ? l : "";
+            colorCode = cc != null ? cc : hash(chat.getID());
         }
 
         Image createImage() {
