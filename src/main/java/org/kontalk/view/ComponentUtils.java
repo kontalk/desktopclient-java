@@ -190,21 +190,7 @@ final class ComponentUtils {
         }
 
         private void saveStatus() {
-            String newStatus = mStatusField.getText();
-
-            Config conf = Config.getInstance();
-            String[] strings = conf.getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.asList(strings));
-
-            stats.remove(newStatus);
-
-            stats.add(0, newStatus);
-
-            if (stats.size() > 20)
-                stats = stats.subList(0, 20);
-
-            conf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
-            mView.getControl().sendStatusText();
+            mView.getControl().setStatusText(mStatusField.getText());
         }
     }
 

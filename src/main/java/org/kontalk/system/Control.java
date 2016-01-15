@@ -22,6 +22,7 @@ import org.kontalk.model.Account;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
@@ -118,6 +119,8 @@ public final class Control {
         mViewControl.changed(new ViewEvent.StatusChanged());
 
         if (status == Status.CONNECTED) {
+            String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
+            mClient.sendUserPresence(strings.length > 0 ? strings[0] : "");
             // send all pending messages
             for (Chat chat: ChatList.getInstance())
                 for (OutMessage m : chat.getMessages().getPending())
@@ -582,8 +585,20 @@ public final class Control {
             return mCurrentStatus;
         }
 
-        public void sendStatusText() {
-            mClient.sendInitialPresence();
+        public void setStatusText(String newStatus) {
+            Config conf = Config.getInstance();
+            String[] strings = conf.getStringArray(Config.NET_STATUS_LIST);
+            List<String> stats = new ArrayList<>(Arrays.asList(strings));
+
+            stats.remove(newStatus);
+
+            stats.add(0, newStatus);
+
+            if (stats.size() > 20)
+                stats = stats.subList(0, 20);
+
+            conf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
+            mClient.sendUserPresence(newStatus);
         }
 
         public Path getFilePath(Attachment attachment) {

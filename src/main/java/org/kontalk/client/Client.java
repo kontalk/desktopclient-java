@@ -247,7 +247,6 @@ public final class Client implements StanzaListener, Runnable {
 //            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 
-        this.sendInitialPresence();
         this.sendBlocklistRequest();
 
         mControl.setStatus(Control.Status.CONNECTED);
@@ -308,14 +307,11 @@ public final class Client implements StanzaListener, Runnable {
         new BlockSendReceiver(mControl, mConn, blocking, jid).sendAndListen();
     }
 
-    public void sendInitialPresence() {
+    public void sendUserPresence(String statusText) {
         Presence presence = new Presence(Presence.Type.available);
-        List<?> stats = Config.getInstance().getList(Config.NET_STATUS_LIST);
-        if (!stats.isEmpty()) {
-            String stat = (String) stats.get(0);
-            if (!stat.isEmpty())
-                presence.setStatus(stat);
-        }
+        if (!statusText.isEmpty())
+            presence.setStatus(statusText);
+
         // note: not setting priority, according to anti-dicrimination rules;)
 
         // for testing
