@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
@@ -89,7 +90,7 @@ final class ChatView extends WebPanel implements Observer {
 
     private final View mView;
 
-    private final WebLabel mAvatarLabel;
+    private final WebImage mAvatar;
     private final WebLabel mTitleLabel;
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
@@ -112,8 +113,8 @@ final class ChatView extends WebPanel implements Observer {
                 new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
         titlePanel.setMargin(View.MARGIN_DEFAULT);
 
-        mAvatarLabel = new WebLabel();
-        titlePanel.add(mAvatarLabel, BorderLayout.WEST);
+        mAvatar = new WebImage();
+        titlePanel.add(mAvatar, BorderLayout.WEST);
 
         mTitleLabel = new WebLabel();
         mTitleLabel.setFontSize(16);
@@ -412,7 +413,7 @@ final class ChatView extends WebPanel implements Observer {
 
         // update if chat changes...
         // avatar
-        mAvatarLabel.setIcon(AvatarLoader.load(chat));
+        mAvatar.setImage(AvatarLoader.load(chat));
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));

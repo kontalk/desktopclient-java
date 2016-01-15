@@ -18,6 +18,8 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.DisplayType;
+import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
@@ -125,6 +127,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
     /** One item in the contact list representing a contact. */
     final class ContactItem extends Table<ContactItem, Contact>.TableItem {
 
+        private final WebImage mAvatar;
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;
         private Color mBackround;
@@ -136,16 +139,22 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_SMALL));
             this.setMargin(View.MARGIN_SMALL);
 
+            mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);
+            mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
+            this.add(mAvatar, BorderLayout.WEST);
+
             mNameLabel = new WebLabel("foo");
             mNameLabel.setFontSize(14);
-            this.add(mNameLabel, BorderLayout.CENTER);
 
             mStatusLabel = new WebLabel("foo");
             mStatusLabel.setForeground(Color.GRAY);
             mStatusLabel.setFontSize(11);
-            this.add(new GroupPanel(GroupingType.fillFirst,
-                    Box.createGlue(), mStatusLabel),
-                    BorderLayout.SOUTH);
+            this.add(
+                    new GroupPanel(View.GAP_SMALL, false,
+                            mNameLabel,
+                            new GroupPanel(GroupingType.fillFirst,
+                                    Box.createGlue(), mStatusLabel)
+                    ), BorderLayout.CENTER);
 
             this.updateOnEDT(null);
         }
@@ -187,6 +196,9 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
 
         @Override
         protected void updateOnEDT(Object arg) {
+            // avatar
+            mAvatar.setImage(AvatarLoader.load(mValue));
+
             // name
             String name = Utils.displayName(mValue);
             if (!name.equals(mNameLabel.getText())) {

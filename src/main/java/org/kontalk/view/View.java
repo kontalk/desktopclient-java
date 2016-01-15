@@ -41,6 +41,7 @@ import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import org.kontalk.system.Config;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Chat;
@@ -76,6 +77,8 @@ public final class View implements Observer {
     static final Color GREEN = new Color(83, 196, 46);
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
+
+    static final Dimension AVATAR_LIST_DIM = new Dimension(30, 30);
 
     static final String REMOVE_CONTACT_NOTE = Tr.tr("Chats and messages will not be deleted.");
 

@@ -28,7 +28,6 @@ import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import javax.swing.ImageIcon;
 import org.apache.commons.lang.ObjectUtils;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
@@ -47,21 +46,21 @@ final class AvatarLoader {
     private static final String FALLBACK_LETTER = "?";
     private static final Color FALLBACK_COLOR = new Color(220, 220, 220);
 
-    private static final Map<Item, ImageIcon> CACHE = new HashMap<>();
+    private static final Map<Item, Image> CACHE = new HashMap<>();
 
     AvatarLoader() {};
 
-    static ImageIcon load(Chat chat) {
+    static Image load(Chat chat) {
         return load(new Item(chat));
     }
 
-    static ImageIcon load(Contact contact) {
+    static Image load(Contact contact) {
         return load(new Item(contact));
     }
 
-    private static ImageIcon load(Item item) {
+    private static Image load(Item item) {
         if (!CACHE.containsKey(item)) {
-            CACHE.put(item, new ImageIcon(item.createImage()));
+            CACHE.put(item, item.createImage());
         }
         return CACHE.get(item);
     }
