@@ -144,11 +144,11 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             this.add(mAvatar, BorderLayout.WEST);
 
             mNameLabel = new WebLabel();
-            mNameLabel.setFontSize(14);
+            mNameLabel.setFontSize(View.FONT_SIZE_BIG);
 
             mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
-            mStatusLabel.setFontSize(11);
+            mStatusLabel.setFontSize(View.FONT_SIZE_TINY);
             this.add(
                     new GroupPanel(View.GAP_SMALL, false,
                             mNameLabel,

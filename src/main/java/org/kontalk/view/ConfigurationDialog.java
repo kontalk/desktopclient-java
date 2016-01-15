@@ -76,7 +76,7 @@ final class ConfigurationDialog extends WebDialog {
         this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
 
         WebTabbedPane tabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-        tabbedPane.setFontSize(13);
+        tabbedPane.setFontSize(View.FONT_SIZE_NORMAL);
         final MainPanel mainPanel = new MainPanel();
         final AccountPanel accountPanel = new AccountPanel();
         final PrivacyPanel privacyPanel = new PrivacyPanel();

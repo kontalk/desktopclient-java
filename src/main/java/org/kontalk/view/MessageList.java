@@ -251,7 +251,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             // from label
             if (mValue.isInMessage() && mValue.getChat().isGroupChat()) {
                 mFromLabel = new WebLabel();
-                mFromLabel.setFontSize(12);
+                mFromLabel.setFontSize(View.FONT_SIZE_SMALL);
                 mFromLabel.setForeground(Color.BLUE);
                 mFromLabel.setItalicFont();
                 mPanel.add(mFromLabel, BorderLayout.NORTH);
@@ -264,7 +264,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             mTextPane = new WebTextPane();
             mTextPane.setEditable(false);
             mTextPane.setOpaque(false);
-            //mTextPane.setFontSize(12);
+            //mTextPane.setFontSize(View.FONT_SIZE_SMALL);
             // sets default font
             mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
             //for detecting clicks
@@ -300,7 +300,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
             // date label
             WebLabel dateLabel = new WebLabel(Utils.SHORT_DATE_FORMAT.format(mValue.getDate()));
             dateLabel.setForeground(Color.GRAY);
-            dateLabel.setFontSize(11);
+            dateLabel.setFontSize(View.FONT_SIZE_TINY);
             mStatusPanel.add(dateLabel);
 
             WebPanel southPanel = new WebPanel();

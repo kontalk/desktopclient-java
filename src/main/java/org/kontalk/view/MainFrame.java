@@ -233,7 +233,7 @@ final class MainFrame extends WebFrame {
         mTabbedPane.setTabComponentAt(Tab.CONTACT.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         // setSize() does not work, whatever
-        mTabbedPane.setPreferredSize(new Dimension(240, -1));
+        mTabbedPane.setPreferredSize(new Dimension(View.LISTS_WIDTH, -1));
         mTabbedPane.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {

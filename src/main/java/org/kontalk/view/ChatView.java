@@ -117,10 +117,10 @@ final class ChatView extends WebPanel implements Observer {
         titlePanel.add(mAvatar, BorderLayout.WEST);
 
         mTitleLabel = new WebLabel();
-        mTitleLabel.setFontSize(16);
+        mTitleLabel.setFontSize(View.FONT_SIZE_HUGE);
         mTitleLabel.setDrawShade(true);
         mSubTitleLabel = new WebLabel();
-        mSubTitleLabel.setFontSize(11);
+        mSubTitleLabel.setFontSize(View.FONT_SIZE_TINY);
         mSubTitleLabel.setForeground(Color.GRAY);
         titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubTitleLabel),
                 BorderLayout.CENTER);
@@ -171,7 +171,7 @@ final class ChatView extends WebPanel implements Observer {
         mSendTextArea.setMargin(View.MARGIN_SMALL);
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
-        mSendTextArea.setFontSize(13);
+        mSendTextArea.setFontSize(View.FONT_SIZE_NORMAL);
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
             public void documentChanged(DocumentEvent e) {

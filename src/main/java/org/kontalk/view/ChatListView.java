@@ -181,18 +181,18 @@ final class ChatListView extends Table<ChatItem, Chat> {
             this.add(mAvatar, BorderLayout.WEST);
 
             mTitleLabel = new WebLabel();
-            mTitleLabel.setFontSize(14);
+            mTitleLabel.setFontSize(View.FONT_SIZE_BIG);
             if (mValue.isGroupChat())
                     mTitleLabel.setForeground(View.DARK_GREEN);
 
             mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
-            mStatusLabel.setFontSize(11);
+            mStatusLabel.setFontSize(View.FONT_SIZE_TINY);
             this.add(mStatusLabel, BorderLayout.EAST);
 
             mChatStateLabel = new WebLabel();
             mChatStateLabel.setForeground(View.GREEN);
-            mChatStateLabel.setFontSize(13);
+            mChatStateLabel.setFontSize(View.FONT_SIZE_NORMAL);
             mChatStateLabel.setBoldFont();
             //mChatStateLabel.setMargin(0, 5, 0, 5);
 

@@ -60,12 +60,20 @@ import org.kontalk.util.Tr;
 public final class View implements Observer {
     private static final Logger LOGGER = Logger.getLogger(View.class.getName());
 
+    static final int LISTS_WIDTH = 270;
+
     static final int GAP_DEFAULT = 10;
     static final int GAP_BIG = 15;
     static final int GAP_SMALL = 5;
     static final int MARGIN_DEFAULT = 10;
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
+
+    static final int FONT_SIZE_TINY = 11;
+    static final int FONT_SIZE_SMALL = 12;
+    static final int FONT_SIZE_NORMAL = 13;
+    static final int FONT_SIZE_BIG = 14;
+    static final int FONT_SIZE_HUGE = 16;
 
     static final int MAX_SUBJ_LENGTH = 30;
     static final int MAX_NAME_LENGTH = 60;
