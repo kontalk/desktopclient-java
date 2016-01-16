@@ -61,8 +61,8 @@ import javax.swing.table.TableRowSorter;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
-    private static final Logger LOGGER = Logger.getLogger(Table.class.getName());
+abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
+    private static final Logger LOGGER = Logger.getLogger(ListView.class.getName());
 
     protected final View mView;
 
@@ -80,7 +80,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    Table(View view, boolean activateTimer) {
+    ListView(View view, boolean activateTimer) {
         mView = view;
 
         // model
@@ -88,7 +88,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
             // row sorter needs this
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                return Table.this.getColumnClass(columnIndex);
+                return ListView.this.getColumnClass(columnIndex);
             }
         };
         this.setModel(mModel);
@@ -128,9 +128,9 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
                 }
                 @Override
                 public void mouseMoved(MouseEvent e) {
-                    int row = Table.this.rowAtPoint(e.getPoint());
+                    int row = ListView.this.rowAtPoint(e.getPoint());
                     if (row >= 0) {
-                        Table.this.editCellAt(row, 0);
+                        ListView.this.editCellAt(row, 0);
                     }
                 }
         });
@@ -150,7 +150,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
             TimerTask statusTask = new TimerTask() {
                         @Override
                         public void run() {
-                            Table.this.timerUpdate();
+                            ListView.this.timerUpdate();
                         }
                     };
             long timerInterval = TimeUnit.SECONDS.toMillis(60);
@@ -297,7 +297,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                Table.this.updateOnEDT(arg);
+                ListView.this.updateOnEDT(arg);
             }
         });
     }
@@ -347,7 +347,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
         // directly to the item, but the behaviour is buggy so we keep this
         @Override
         public String getToolTipText(MouseEvent event) {
-            Table.this.showTooltip(this);
+            ListView.this.showTooltip(this);
             return null;
         }
 

@@ -51,7 +51,7 @@ import org.kontalk.view.ContactListView.ContactItem;
  * Display all contact (aka contacts) in a brief list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ContactListView extends Table<ContactItem, Contact> implements Observer {
+final class ContactListView extends ListView<ContactItem, Contact> implements Observer {
 
     private final ContactList mContactList;
     private final ContactPopupMenu mPopupMenu;
@@ -125,12 +125,12 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
     }
 
     /** One item in the contact list representing a contact. */
-    final class ContactItem extends Table<ContactItem, Contact>.TableItem {
+    final class ContactItem extends ListView<ContactItem, Contact>.TableItem {
 
         private final WebImage mAvatar;
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;
-        private Color mBackround;
+        private Color mBackground;
 
         ContactItem(Contact contact) {
             super(contact);
@@ -185,7 +185,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             if (isSelected)
                 this.setBackground(View.BLUE);
             else
-                this.setBackground(mBackround);
+                this.setBackground(mBackground);
         }
 
         @Override
@@ -211,12 +211,12 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
 
             // online status
             Contact.Subscription subStatus = mValue.getSubScription();
-            mBackround = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
+            mBackground = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
                     subStatus == Contact.Subscription.UNSUBSCRIBED ||
                     subStatus == Contact.Subscription.PENDING ||
                     mValue.isBlocked() ? View.LIGHT_GREY :
                     Color.WHITE;
-            this.setBackground(mBackround);
+            this.setBackground(mBackground);
 
             ContactListView.this.repaint();
         }

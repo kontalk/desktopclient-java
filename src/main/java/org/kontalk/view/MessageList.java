@@ -77,7 +77,7 @@ import org.kontalk.view.ComponentUtils.AttachmentPanel;
  * View all messages of one chat in a left/right MIM style list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
+final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
@@ -98,7 +98,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
         mChat = chat;
 
         // use custom editor (for mouse events)
-        this.setDefaultEditor(Table.TableItem.class, new TableEditor());
+        this.setDefaultEditor(ListView.TableItem.class, new TableEditor());
 
         //this.setEditable(false);
         //this.setAutoscrolls(true);
@@ -216,7 +216,7 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
      * The content is added to a panel inside this panel. For performance
      * reasons the content is created when the item is rendered in the table
      */
-    final class MessageItem extends Table<MessageItem, KonMessage>.TableItem {
+    final class MessageItem extends ListView<MessageItem, KonMessage>.TableItem {
 
         private WebPanel mPanel;
         private WebLabel mFromLabel = null;
@@ -654,14 +654,14 @@ final class MessageList extends Table<MessageList.MessageItem, KonMessage> {
     // needed for correct mouse behaviour for components in items
     // (and breaks selection behaviour somehow)
     private class TableEditor extends AbstractCellEditor implements TableCellEditor {
-        private Table<?, ?>.TableItem mValue;
+        private ListView<?, ?>.TableItem mValue;
         @Override
         public Component getTableCellEditorComponent(JTable table,
                 Object value,
                 boolean isSelected,
                 int row,
                 int column) {
-            mValue = (Table.TableItem) value;
+            mValue = (ListView.TableItem) value;
             return mValue;
         }
         @Override

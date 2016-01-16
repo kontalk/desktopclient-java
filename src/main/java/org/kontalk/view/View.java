@@ -124,7 +124,7 @@ public final class View implements Observer {
 
         // search panel
         mSearchPanel = new SearchPanel(
-                new Table[]{mContactListView, mChatListView},
+                new ListView[]{mContactListView, mChatListView},
                 mChatView);
 
         // status bar

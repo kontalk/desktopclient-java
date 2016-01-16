@@ -52,7 +52,7 @@ import org.kontalk.view.ChatListView.ChatItem;
  * Show a brief list of all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ChatListView extends Table<ChatItem, Chat> {
+final class ChatListView extends ListView<ChatItem, Chat> {
 
     private final ChatList mChatList;
     private final WebPopupMenu mPopupMenu;
@@ -162,7 +162,7 @@ final class ChatListView extends Table<ChatItem, Chat> {
         mView.getControl().deleteChat(chatItem.mValue);
     }
 
-    protected final class ChatItem extends Table<ChatItem, Chat>.TableItem {
+    protected final class ChatItem extends ListView<ChatItem, Chat>.TableItem {
 
         private final WebImage mAvatar;
         private final WebLabel mTitleLabel;
