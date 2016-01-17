@@ -33,8 +33,6 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
@@ -97,6 +95,9 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         mChatView = chatView;
         mChat = chat;
 
+        // disable selection
+        this.setSelectionModel(new UnselectableListModel());
+
         // use custom editor (for mouse events)
         this.setDefaultEditor(ListView.TableItem.class, new TableEditor());
 
@@ -106,26 +107,6 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
 
         // hide grid
         this.setShowGrid(false);
-
-        // disable selection
-        this.setSelectionModel(new UnselectableListModel());
-
-        // actions triggered by mouse events
-        this.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                check(e);
-            }
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                check(e);
-            }
-            private void check(MouseEvent e) {
-                if (e.isPopupTrigger()) {
-                    MessageList.this.showPopupMenu(e);
-                }
-            }
-        });
 
         this.setBackground(mChat.getViewSettings());
 
@@ -196,19 +177,49 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         mChatView.setScrolling();
     }
 
-    private void showPopupMenu(MouseEvent e) {
-        int row = this.rowAtPoint(e.getPoint());
-        if (row < 0)
-            return;
-
-        MessageItem messageView = this.getDisplayedItemAt(row);
-        WebPopupMenu popupMenu = messageView.getPopupMenu();
-        popupMenu.show(this, e.getX(), e.getY());
-    }
-
     private void setBackground(Chat.ViewSettings s) {
         // simply overwrite
         mBackground = mChatView.createBG(s);
+    }
+
+    @Override
+    protected WebPopupMenu rightClickMenu(MessageItem item) {
+        WebPopupMenu menu = new WebPopupMenu();
+
+        final KonMessage m = item.mValue;
+        if (m instanceof InMessage) {
+            if (m.isEncrypted()) {
+                WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
+                decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
+                decryptMenuItem.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent event) {
+                        mView.getControl().decryptAgain((InMessage) m);
+                    }
+                });
+                menu.add(decryptMenuItem);
+            }
+            Attachment att = m.getContent().getAttachment().orElse(null);
+            if (att != null &&
+                    att.getFile().toString().isEmpty()) {
+                WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
+                attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
+                attMenuItem.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent event) {
+                        mView.getControl().downloadAgain((InMessage) m);
+                    }
+                });
+                menu.add(attMenuItem);
+            }
+        }
+
+        WebMenuItem cItem = Utils.createCopyMenuItem(
+                toCopyString(m),
+                Tr.tr("Copy message content"));
+        menu.add(cItem);
+
+        return menu;
     }
 
     /**
@@ -578,51 +589,6 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             }
         }
 
-        private WebPopupMenu getPopupMenu() {
-            WebPopupMenu popupMenu = new WebPopupMenu();
-            final KonMessage m = MessageItem.this.mValue;
-            if (m instanceof InMessage) {
-                if (m.isEncrypted()) {
-                    WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
-                    decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
-                    decryptMenuItem.addActionListener(new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent event) {
-                            mView.getControl().decryptAgain((InMessage) m);
-                        }
-                    });
-                    popupMenu.add(decryptMenuItem);
-                }
-                Attachment att = m.getContent().getAttachment().orElse(null);
-                if (att != null &&
-                        att.getFile().toString().isEmpty()) {
-                    WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
-                    attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
-                    attMenuItem.addActionListener(new ActionListener() {
-                        @Override
-                        public void actionPerformed(ActionEvent event) {
-                            mView.getControl().downloadAgain((InMessage) m);
-                        }
-                    });
-                    popupMenu.add(attMenuItem);
-                }
-            }
-
-            WebMenuItem cItem = Utils.createCopyMenuItem(
-                    this.toCopyString(),
-                    Tr.tr("Copy message content"));
-            popupMenu.add(cItem);
-            return popupMenu;
-        }
-
-        private String toCopyString() {
-            String date = Utils.LONG_DATE_FORMAT.format(mValue.getDate());
-            String from = mValue instanceof InMessage ?
-                    getFromString((InMessage) mValue) :
-                    Tr.tr("me");
-            return date + " - " + from + " : " + mValue.getContent().getText();
-        }
-
         @Override
         protected boolean contains(String search) {
             if (mValue.getContent().getText().toLowerCase().contains(search))
@@ -672,6 +638,14 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
 
     private static String getFromString(InMessage message) {
         return Utils.displayName(message.getContact(), message.getJID(), 40);
+    }
+
+    private static String toCopyString(KonMessage m) {
+        String date = Utils.LONG_DATE_FORMAT.format(m.getDate());
+        String from = m instanceof InMessage ?
+                getFromString((InMessage) m) :
+                Tr.tr("me");
+        return date + " - " + from + " : " + m.getContent().getText();
     }
 
     private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();

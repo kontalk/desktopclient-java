@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.table.WebTable;
 import com.alee.laf.table.renderers.WebTableCellRenderer;
@@ -138,6 +139,21 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
             @Override
+            public void mousePressed(MouseEvent e) {
+                check(e);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                check(e);
+            }
+            private void check(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    int row = ListView.this.rowAtPoint(e.getPoint());
+                    ListView.this.setSelectedItem(row);
+                    ListView.this.showPopupMenu(e, ListView.this.getSelectedItem());
+                }
+            }
+            @Override
             public void mouseExited(MouseEvent e) {
                 if (mTip != null)
                     mTip.closeTooltip();
@@ -159,6 +175,13 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
             mTimer = null;
         }
     }
+
+    private void showPopupMenu(MouseEvent e, I item) {
+        WebPopupMenu menu = this.rightClickMenu(item);
+        menu.show(this, e.getX(), e.getY());
+    }
+
+    protected abstract WebPopupMenu rightClickMenu(I item);
 
     protected boolean containsValue(V value) {
         return mItems.containsKey(value);
