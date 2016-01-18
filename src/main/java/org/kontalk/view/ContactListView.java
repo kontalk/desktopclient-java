@@ -168,6 +168,14 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         return menu;
     }
 
+    @Override
+    protected void onRenameEvent() {
+        Contact contact = this.getSelectedValue().orElse(null);
+        if (contact == null)
+            return;
+
+        mView.requestRenameFocus(contact);
+    }
 
     /** One item in the contact list representing a contact. */
     final class ContactItem extends ListView<ContactItem, Contact>.TableItem {

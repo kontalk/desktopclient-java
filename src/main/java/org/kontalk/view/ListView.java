@@ -29,6 +29,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
@@ -157,6 +159,16 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
             public void mouseExited(MouseEvent e) {
                 if (mTip != null)
                     mTip.closeTooltip();
+            }
+        });
+
+        // actions triggered by key events
+        this.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_F2){
+                    ListView.this.onRenameEvent();
+                }
             }
         });
 
@@ -330,6 +342,8 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
     }
 
     abstract protected void updateOnEDT(Object arg);
+
+    protected void onRenameEvent() {}
 
     abstract class TableItem extends WebPanel implements Observer, Comparable<TableItem> {
 

@@ -42,6 +42,7 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.Chat.KonChatState;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
+import org.kontalk.model.GroupChat;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.SingleChat;
 import org.kontalk.util.Tr;
@@ -152,6 +153,19 @@ final class ChatListView extends ListView<ChatItem, Chat> {
         menu.add(deleteItem);
 
         return menu;
+    }
+
+    @Override
+    protected void onRenameEvent() {
+        Chat chat = this.getSelectedValue().orElse(null);
+        if (chat instanceof SingleChat) {
+            mView.requestRenameFocus(((SingleChat) chat).getContact());
+            return;
+        }
+
+        if (chat instanceof GroupChat) {
+            // TODO
+        }
     }
 
     protected final class ChatItem extends ListView<ChatItem, Chat>.TableItem {

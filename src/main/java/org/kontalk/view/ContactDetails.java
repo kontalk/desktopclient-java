@@ -206,6 +206,10 @@ final class ContactDetails extends WebPanel implements Observer {
         this.add(gradientPanel, BorderLayout.CENTER);
     }
 
+    void setRenameFocus() {
+        mNameField.requestFocusInWindow();
+    }
+
     @Override
     public void update(Observable o, final Object arg) {
         if (SwingUtilities.isEventDispatchThread()) {
