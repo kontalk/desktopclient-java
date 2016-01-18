@@ -330,6 +330,8 @@ public final class View implements Observer {
     }
 
     void showContactDetails(Contact contact) {
+        mMainFrame.selectTab(MainFrame.Tab.CONTACT);
+        mContactListView.setSelectedItem(contact);
         mContent.showContact(contact);
     }
 

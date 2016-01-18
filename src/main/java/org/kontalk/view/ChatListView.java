@@ -43,6 +43,7 @@ import org.kontalk.model.Chat.KonChatState;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.MessageContent.GroupCommand;
+import org.kontalk.model.SingleChat;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatListView.ChatItem;
 
@@ -125,6 +126,20 @@ final class ChatListView extends ListView<ChatItem, Chat> {
     @Override
     protected WebPopupMenu rightClickMenu(ChatItem item) {
         WebPopupMenu menu = new WebPopupMenu();
+
+        Chat chat = item.mValue;
+        if (chat instanceof SingleChat) {
+            final Contact contact = ((SingleChat) chat).getContact();
+            WebMenuItem editItem = new WebMenuItem(Tr.tr("Edit Contact"));
+            editItem.setToolTipText(Tr.tr("Edit contact settings"));
+            editItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    mView.showContactDetails(contact);
+                }
+            });
+            menu.add(editItem);
+        }
 
         WebMenuItem deleteItem = new WebMenuItem(Tr.tr("Delete Chat"));
         deleteItem.setToolTipText(Tr.tr("Delete this chat"));

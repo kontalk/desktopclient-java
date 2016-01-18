@@ -251,6 +251,10 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
     protected void setSelectedItem(int i) {
         if (i >= mModel.getRowCount())
             return;
+
+        if (i == this.getSelectedRow())
+            return;
+
         this.setSelectedRow(i);
     }
 
