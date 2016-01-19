@@ -1,6 +1,8 @@
 kontalk-java-client
 ===================
 
+[![Build Status](https://travis-ci.org/kontalk/desktopclient-java.svg?branch=master)](https://travis-ci.org/kontalk/desktopclient-java)
+
 A platform independent Java client for Kontalk (http://www.kontalk.org). Includes connectivity to the Jabber network!
 
 The desktop client uses your existing Kontalk account from the [Android client](https://github.com/kontalk/androidclient/blob/master/README.md#kontalk-official-android-client). Instructions for exporting the key [here](https://github.com/kontalk/androidclient/wiki/Export-personal-key-to-another-device).
