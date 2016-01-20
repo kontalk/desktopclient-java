@@ -29,8 +29,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Timer;
@@ -44,7 +42,9 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.Chat.KonChatState;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
+import org.kontalk.model.GroupChat;
 import org.kontalk.model.MessageContent.GroupCommand;
+import org.kontalk.model.SingleChat;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatListView.ChatItem;
 
@@ -52,29 +52,15 @@ import org.kontalk.view.ChatListView.ChatItem;
  * Show a brief list of all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ChatListView extends Table<ChatItem, Chat> {
+final class ChatListView extends ListView<ChatItem, Chat> {
 
     private final ChatList mChatList;
-    private final WebPopupMenu mPopupMenu;
 
     ChatListView(final View view, ChatList chatList) {
         super(view, true);
         mChatList = chatList;
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        // right click popup menu
-        mPopupMenu = new WebPopupMenu();
-
-        WebMenuItem deleteMenuItem = new WebMenuItem(Tr.tr("Delete Chat"));
-        deleteMenuItem.setToolTipText(Tr.tr("Delete this chat"));
-        deleteMenuItem.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent event) {
-                ChatListView.this.deleteSelectedChat();
-            }
-        });
-        mPopupMenu.add(deleteMenuItem);
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -102,25 +88,6 @@ final class ChatListView extends Table<ChatItem, Chat> {
             }
         });
 
-        // actions triggered by mouse events
-        this.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                check(e);
-            }
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                check(e);
-            }
-            private void check(MouseEvent e) {
-                if (e.isPopupTrigger()) {
-                    int row = ChatListView.this.rowAtPoint(e.getPoint());
-                    ChatListView.this.setSelectedItem(row);
-                    ChatListView.this.showPopupMenu(e);
-                }
-            }
-        });
-
         this.updateOnEDT(null);
     }
 
@@ -145,15 +112,10 @@ final class ChatListView extends Table<ChatItem, Chat> {
                 this.getSelectedRow());
     }
 
-    private void showPopupMenu(MouseEvent e) {
-           mPopupMenu.show(this, e.getX(), e.getY());
-    }
-
-    private void deleteSelectedChat() {
-        ChatItem t = this.getSelectedItem();
-        if (!t.mValue.getMessages().isEmpty()) {
+    private void deleteChat(ChatItem item) {
+        if (!item.mValue.getMessages().isEmpty()) {
             String text = Tr.tr("Permanently delete all messages in this chat?");
-            if (t.mValue.isGroupChat() && t.mValue.isValid())
+            if (item.mValue.isGroupChat() && item.mValue.isValid())
                 text += "\n\n"+Tr.tr("You will automatically leave this group.");
             if (!Utils.confirmDeletion(this, text))
                 return;
@@ -162,7 +124,51 @@ final class ChatListView extends Table<ChatItem, Chat> {
         mView.getControl().deleteChat(chatItem.mValue);
     }
 
-    protected final class ChatItem extends Table<ChatItem, Chat>.TableItem {
+    @Override
+    protected WebPopupMenu rightClickMenu(ChatItem item) {
+        WebPopupMenu menu = new WebPopupMenu();
+
+        Chat chat = item.mValue;
+        if (chat instanceof SingleChat) {
+            final Contact contact = ((SingleChat) chat).getContact();
+            WebMenuItem editItem = new WebMenuItem(Tr.tr("Edit Contact"));
+            editItem.setToolTipText(Tr.tr("Edit contact settings"));
+            editItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    mView.showContactDetails(contact);
+                }
+            });
+            menu.add(editItem);
+        }
+
+        WebMenuItem deleteItem = new WebMenuItem(Tr.tr("Delete Chat"));
+        deleteItem.setToolTipText(Tr.tr("Delete this chat"));
+        deleteItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                ChatListView.this.deleteChat(ChatListView.this.getSelectedItem());
+            }
+        });
+        menu.add(deleteItem);
+
+        return menu;
+    }
+
+    @Override
+    protected void onRenameEvent() {
+        Chat chat = this.getSelectedValue().orElse(null);
+        if (chat instanceof SingleChat) {
+            mView.requestRenameFocus(((SingleChat) chat).getContact());
+            return;
+        }
+
+        if (chat instanceof GroupChat) {
+            // TODO
+        }
+    }
+
+    protected final class ChatItem extends ListView<ChatItem, Chat>.TableItem {
 
         private final WebImage mAvatar;
         private final WebLabel mTitleLabel;

@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.table.WebTable;
 import com.alee.laf.table.renderers.WebTableCellRenderer;
@@ -28,6 +29,8 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Point;
 import java.awt.Rectangle;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
@@ -61,8 +64,8 @@ import javax.swing.table.TableRowSorter;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
-    private static final Logger LOGGER = Logger.getLogger(Table.class.getName());
+abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
+    private static final Logger LOGGER = Logger.getLogger(ListView.class.getName());
 
     protected final View mView;
 
@@ -80,7 +83,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    Table(View view, boolean activateTimer) {
+    ListView(View view, boolean activateTimer) {
         mView = view;
 
         // model
@@ -88,7 +91,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
             // row sorter needs this
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                return Table.this.getColumnClass(columnIndex);
+                return ListView.this.getColumnClass(columnIndex);
             }
         };
         this.setModel(mModel);
@@ -128,9 +131,9 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
                 }
                 @Override
                 public void mouseMoved(MouseEvent e) {
-                    int row = Table.this.rowAtPoint(e.getPoint());
+                    int row = ListView.this.rowAtPoint(e.getPoint());
                     if (row >= 0) {
-                        Table.this.editCellAt(row, 0);
+                        ListView.this.editCellAt(row, 0);
                     }
                 }
         });
@@ -138,9 +141,34 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
             @Override
+            public void mousePressed(MouseEvent e) {
+                check(e);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                check(e);
+            }
+            private void check(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    int row = ListView.this.rowAtPoint(e.getPoint());
+                    ListView.this.setSelectedItem(row);
+                    ListView.this.showPopupMenu(e, ListView.this.getSelectedItem());
+                }
+            }
+            @Override
             public void mouseExited(MouseEvent e) {
                 if (mTip != null)
                     mTip.closeTooltip();
+            }
+        });
+
+        // actions triggered by key events
+        this.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_F2){
+                    ListView.this.onRenameEvent();
+                }
             }
         });
 
@@ -150,7 +178,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
             TimerTask statusTask = new TimerTask() {
                         @Override
                         public void run() {
-                            Table.this.timerUpdate();
+                            ListView.this.timerUpdate();
                         }
                     };
             long timerInterval = TimeUnit.SECONDS.toMillis(60);
@@ -159,6 +187,13 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
             mTimer = null;
         }
     }
+
+    private void showPopupMenu(MouseEvent e, I item) {
+        WebPopupMenu menu = this.rightClickMenu(item);
+        menu.show(this, e.getX(), e.getY());
+    }
+
+    protected abstract WebPopupMenu rightClickMenu(I item);
 
     protected boolean containsValue(V value) {
         return mItems.containsKey(value);
@@ -228,6 +263,10 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
     protected void setSelectedItem(int i) {
         if (i >= mModel.getRowCount())
             return;
+
+        if (i == this.getSelectedRow())
+            return;
+
         this.setSelectedRow(i);
     }
 
@@ -297,12 +336,14 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                Table.this.updateOnEDT(arg);
+                ListView.this.updateOnEDT(arg);
             }
         });
     }
 
     abstract protected void updateOnEDT(Object arg);
+
+    protected void onRenameEvent() {}
 
     abstract class TableItem extends WebPanel implements Observer, Comparable<TableItem> {
 
@@ -347,7 +388,7 @@ abstract class Table<I extends Table<I, V>.TableItem, V extends Observable> exte
         // directly to the item, but the behaviour is buggy so we keep this
         @Override
         public String getToolTipText(MouseEvent event) {
-            Table.this.showTooltip(this);
+            ListView.this.showTooltip(this);
             return null;
         }
 

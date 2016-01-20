@@ -27,7 +27,6 @@ import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
@@ -36,7 +35,6 @@ import java.util.HashSet;
 import java.util.Observer;
 import java.util.Set;
 import javax.swing.Box;
-import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringEscapeUtils;
@@ -51,21 +49,14 @@ import org.kontalk.view.ContactListView.ContactItem;
  * Display all contact (aka contacts) in a brief list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ContactListView extends Table<ContactItem, Contact> implements Observer {
+final class ContactListView extends ListView<ContactItem, Contact> implements Observer {
 
     private final ContactList mContactList;
-    private final ContactPopupMenu mPopupMenu;
 
     ContactListView(final View view, ContactList contactList) {
         super(view, true);
 
         mContactList = contactList;
-
-        this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        //this.setDragEnabled(true);
-
-        // right click popup menu
-        mPopupMenu = new ContactPopupMenu();
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -89,21 +80,6 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
                         mView.showChat(contact);
                 }
             }
-            @Override
-            public void mousePressed(MouseEvent e) {
-                check(e);
-            }
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                check(e);
-            }
-            private void check(MouseEvent e) {
-                if (e.isPopupTrigger()) {
-                    int row = ContactListView.this.rowAtPoint(e.getPoint());
-                    ContactListView.this.setSelectedItem(row);
-                    ContactListView.this.showPopupMenu(e);
-                }
-            }
         });
 
         this.updateOnEDT(null);
@@ -119,18 +95,95 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         this.sync(contacts, newItems);
     }
 
-    private void showPopupMenu(MouseEvent e) {
-        // note: only work when right click does also selection
-        mPopupMenu.show(this.getSelectedItem(), this, e.getX(), e.getY());
+    @Override
+    protected WebPopupMenu rightClickMenu(ContactItem item) {
+        WebPopupMenu menu = new WebPopupMenu();
+
+        WebMenuItem newItem = new WebMenuItem(Tr.tr("New Chat"));
+        newItem.setToolTipText(Tr.tr("Creates a new chat for this contact"));
+        newItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                mView.getControl().getOrCreateSingleChat(
+                        ContactListView.this.getSelectedItem().mValue);
+            }
+        });
+        menu.add(newItem);
+
+        WebMenuItem blockItem = new WebMenuItem(Tr.tr("Block Contact"));
+        blockItem.setToolTipText(Tr.tr("Block all messages from this contact"));
+        blockItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                mView.getControl().sendContactBlocking(
+                        ContactListView.this.getSelectedItem().mValue, true);
+            }
+        });
+        menu.add(blockItem);
+
+        WebMenuItem unblockItem = new WebMenuItem(Tr.tr("Unblock Contact"));
+        unblockItem.setToolTipText(Tr.tr("Unblock this contact"));
+        unblockItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                mView.getControl().sendContactBlocking(
+                        ContactListView.this.getSelectedItem().mValue, false);
+            }
+        });
+        menu.add(unblockItem);
+
+        WebMenuItem deleteItem = new WebMenuItem(Tr.tr("Delete Contact"));
+        deleteItem.setToolTipText(Tr.tr("Delete this contact"));
+        deleteItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent event) {
+                String text = Tr.tr("Permanently delete this contact?") + "\n" +
+                        View.REMOVE_CONTACT_NOTE;
+                if (!Utils.confirmDeletion(ContactListView.this, text))
+                    return;
+                mView.getControl().deleteContact(
+                        ContactListView.this.getSelectedItem().mValue);
+                mView.showNothing();
+            }
+        });
+        menu.add(deleteItem);
+
+        // dont allow creation of more than one chat for a contact
+        newItem.setVisible(!ChatList.getInstance().contains(item.mValue));
+
+        if (item.mValue.isBlocked()) {
+            blockItem.setVisible(false);
+            unblockItem.setVisible(true);
+        } else {
+            blockItem.setVisible(true);
+            unblockItem.setVisible(false);
+        }
+
+        Control.Status status = mView.getCurrentStatus();
+        boolean connected = status == Control.Status.CONNECTED;
+        blockItem.setEnabled(connected);
+        unblockItem.setEnabled(connected);
+        deleteItem.setEnabled(connected);
+
+        return menu;
+    }
+
+    @Override
+    protected void onRenameEvent() {
+        Contact contact = this.getSelectedValue().orElse(null);
+        if (contact == null)
+            return;
+
+        mView.requestRenameFocus(contact);
     }
 
     /** One item in the contact list representing a contact. */
-    final class ContactItem extends Table<ContactItem, Contact>.TableItem {
+    final class ContactItem extends ListView<ContactItem, Contact>.TableItem {
 
         private final WebImage mAvatar;
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;
-        private Color mBackround;
+        private Color mBackground;
 
         ContactItem(Contact contact) {
             super(contact);
@@ -185,7 +238,7 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
             if (isSelected)
                 this.setBackground(View.BLUE);
             else
-                this.setBackground(mBackround);
+                this.setBackground(mBackground);
         }
 
         @Override
@@ -211,12 +264,12 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
 
             // online status
             Contact.Subscription subStatus = mValue.getSubScription();
-            mBackround = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
+            mBackground = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
                     subStatus == Contact.Subscription.UNSUBSCRIBED ||
                     subStatus == Contact.Subscription.PENDING ||
                     mValue.isBlocked() ? View.LIGHT_GREY :
                     Color.WHITE;
-            this.setBackground(mBackround);
+            this.setBackground(mBackground);
 
             ContactListView.this.repaint();
         }
@@ -224,85 +277,6 @@ final class ContactListView extends Table<ContactItem, Contact> implements Obser
         @Override
         public int compareTo(TableItem o) {
             return Utils.compareContacts(mValue, o.mValue);
-        }
-    }
-
-    private class ContactPopupMenu extends WebPopupMenu {
-
-        ContactItem mItem;
-        WebMenuItem mNewMenuItem;
-        WebMenuItem mBlockMenuItem;
-        WebMenuItem mUnblockMenuItem;
-        WebMenuItem mDeleteMenuItem;
-
-        ContactPopupMenu() {
-            mNewMenuItem = new WebMenuItem(Tr.tr("New Chat"));
-            mNewMenuItem.setToolTipText(Tr.tr("Creates a new chat for this contact"));
-            mNewMenuItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent event) {
-                    mView.getControl().getOrCreateSingleChat(mItem.mValue);
-                }
-            });
-            this.add(mNewMenuItem);
-
-            mBlockMenuItem = new WebMenuItem(Tr.tr("Block Contact"));
-            mBlockMenuItem.setToolTipText(Tr.tr("Block all messages from this contact"));
-            mBlockMenuItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent event) {
-                    mView.getControl().sendContactBlocking(mItem.mValue, true);
-                }
-            });
-            this.add(mBlockMenuItem);
-
-            mUnblockMenuItem = new WebMenuItem(Tr.tr("Unblock Contact"));
-            mUnblockMenuItem.setToolTipText(Tr.tr("Unblock this contact"));
-            mUnblockMenuItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent event) {
-                    mView.getControl().sendContactBlocking(mItem.mValue, false);
-                }
-            });
-            this.add(mUnblockMenuItem);
-
-            mDeleteMenuItem = new WebMenuItem(Tr.tr("Delete Contact"));
-            mDeleteMenuItem.setToolTipText(Tr.tr("Delete this contact"));
-            mDeleteMenuItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent event) {
-                    String text = Tr.tr("Permanently delete this contact?") + "\n" +
-                            View.REMOVE_CONTACT_NOTE;
-                    if (!Utils.confirmDeletion(ContactListView.this, text))
-                        return;
-                    mView.getControl().deleteContact(mItem.mValue);
-                    mView.showNothing();
-                }
-            });
-            this.add(mDeleteMenuItem);
-        }
-
-        void show(ContactItem item, Component invoker, int x, int y) {
-            mItem = item;
-
-            // dont allow creation of more than one chat for a contact
-            mNewMenuItem.setVisible(!ChatList.getInstance().contains(item.mValue));
-
-            if (mItem.mValue.isBlocked()) {
-                mBlockMenuItem.setVisible(false);
-                mUnblockMenuItem.setVisible(true);
-            } else {
-                mBlockMenuItem.setVisible(true);
-                mUnblockMenuItem.setVisible(false);
-            }
-
-            Control.Status status = ContactListView.this.mView.getCurrentStatus();
-            boolean connected = status == Control.Status.CONNECTED;
-            mBlockMenuItem.setEnabled(connected);
-            mUnblockMenuItem.setEnabled(connected);
-            mDeleteMenuItem.setEnabled(connected);
-
-            this.show(invoker, x, y);
         }
     }
 }

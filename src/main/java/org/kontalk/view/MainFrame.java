@@ -75,8 +75,8 @@ final class MainFrame extends WebFrame {
     private final WebToggleButton mAddContactButton;
 
     MainFrame(final View view,
-            Table<?, ?> contactList,
-            Table<?, ?> chatList,
+            ListView<?, ?> contactList,
+            ListView<?, ?> chatList,
             Component content,
             WebPanel searchPanel,
             Component statusBar) {
@@ -317,10 +317,10 @@ final class MainFrame extends WebFrame {
                 icon);
     }
 
-    private static WebScrollPane createTablePane(final Table<?, ?> table,
+    private static WebScrollPane createTablePane(final ListView<?, ?> list,
             String overlayText) {
 
-        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(table);
+        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(list);
         scrollPane.setDrawBorder(false);
         // overlay for empty list
         WebOverlay listOverlayPanel = new WebOverlay(scrollPane);

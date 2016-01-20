@@ -124,7 +124,7 @@ public final class View implements Observer {
 
         // search panel
         mSearchPanel = new SearchPanel(
-                new Table[]{mContactListView, mChatListView},
+                new ListView[]{mContactListView, mChatListView},
                 mChatView);
 
         // status bar
@@ -330,7 +330,20 @@ public final class View implements Observer {
     }
 
     void showContactDetails(Contact contact) {
+        if (contact.isDeleted())
+            return;
+
+        mMainFrame.selectTab(MainFrame.Tab.CONTACT);
+        mContactListView.setSelectedItem(contact);
         mContent.showContact(contact);
+    }
+
+    void requestRenameFocus(Contact contact) {
+        if (contact.isDeleted())
+            return;
+
+        this.showContactDetails(contact);
+        mContent.requestRenameFocus();
     }
 
     void showChat(Chat chat) {

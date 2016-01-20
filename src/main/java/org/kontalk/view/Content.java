@@ -77,4 +77,10 @@ public class Content extends WebPanel {
 
         mCurrent = comp;
     }
+
+    void requestRenameFocus() {
+        if (mCurrent instanceof ContactDetails) {
+            ((ContactDetails) mCurrent).setRenameFocus();
+        }
+    }
 }

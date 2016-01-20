@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.WebImage;
 import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.layout.FormLayout;
 import com.alee.extended.panel.GroupPanel;
@@ -657,6 +658,8 @@ final class ComponentUtils {
                 int columns, final Component focusGainer) {
             super(new ComponentUtils.TextLimitDocument(maxTextLength), text, columns);
 
+            this.setTrailingComponent(new WebImage(Utils.getIcon("ic_ui_edit.png")));
+
             this.setEditable(editable);
             this.setFocusable(editable);
 
@@ -690,11 +693,13 @@ final class ComponentUtils {
             this.setInputPrompt(text);
             this.setText(text);
             this.setDrawBorder(true);
+            this.getTrailingComponent().setVisible(false);
         }
 
         private void switchToLabelMode() {
             this.setText(this.labelText());
             this.setDrawBorder(false);
+            this.getTrailingComponent().setVisible(true);
         }
 
         protected String labelText() {
