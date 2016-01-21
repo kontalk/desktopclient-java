@@ -5,6 +5,8 @@
 /kontalk.db
 /kontalk.properties
 *.pgp
+*.asc
+*.crt
 /win_installer/*.exe
 
 # Gradle
@@ -14,7 +16,7 @@
 /.nb-gradle/
 
 # IntelliJ Idea
-.idea
+.idea/
 *.iml
 
 # Package Files #
