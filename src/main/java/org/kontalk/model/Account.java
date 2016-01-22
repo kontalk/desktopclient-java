@@ -40,10 +40,12 @@ import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.crypto.X509Bridge;
+import org.kontalk.misc.JID;
 import org.kontalk.system.Config;
 
 /**
  * The user account. There can only be one.
+ * 
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Account {
@@ -88,10 +90,8 @@ public final class Account {
     public void setAccount(byte[] privateKeyData, char[] password) throws KonException {
         // try to load key
         PersonalKey key;
-        byte[] encodedPrivateKey;
         try {
-            encodedPrivateKey = privateKeyData;
-            key = PersonalKey.load(encodedPrivateKey, password);
+            key = PersonalKey.load(privateKeyData, password);
         } catch (PGPException | IOException | CertificateException |
                 NoSuchProviderException ex) {
             LOGGER.log(Level.WARNING, "can't import personal key", ex);
@@ -107,7 +107,7 @@ public final class Account {
             throw new KonException(KonException.Error.IMPORT_KEY, ex);
         }
         this.writeBytesToFile(bridgeCertData, BRIDGE_CERT_FILENAME, false);
-        this.writePrivateKey(encodedPrivateKey, password, new char[0]);
+        this.writePrivateKey(privateKeyData, password, new char[0]);
 
         // success! use the new key
         mKey = key;
@@ -120,9 +120,21 @@ public final class Account {
         LOGGER.info("new account, temporary JID: "+address);
     }
 
+    public char[] getPassword() {
+        return Config.getInstance().getString(Config.ACC_PASS).toCharArray();
+    }
+
     public void setPassword(char[] oldPassword, char[] newPassword) throws KonException {
         byte[] privateKeyData = this.readFile(PRIVATE_KEY_FILENAME, true);
         this.writePrivateKey(privateKeyData, oldPassword, newPassword);
+    }
+
+    public void setJID(JID jid) {
+        Config.getInstance().setProperty(Config.ACC_JID, jid.string());
+    }
+
+    public JID getUserJID() {
+        return JID.bare(Config.getInstance().getString(Config.ACC_JID));
     }
 
     private void writePrivateKey(byte[] privateKeyData,

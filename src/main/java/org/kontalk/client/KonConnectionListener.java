@@ -24,7 +24,7 @@ import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.XMPPConnection;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
-import org.kontalk.system.Config;
+import org.kontalk.model.Account;
 import org.kontalk.system.Control;
 
 /**
@@ -51,7 +51,7 @@ final class KonConnectionListener implements ConnectionListener {
     public void authenticated(XMPPConnection connection, boolean resumed) {
         JID jid = JID.bare(connection.getUser());
         LOGGER.info("as "+jid);
-        Config.getInstance().setProperty(Config.ACC_JID, jid.string());
+        Account.getInstance().setJID(jid);
     }
 
     @Override

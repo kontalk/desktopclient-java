@@ -772,7 +772,7 @@ public final class Control {
                     return null;
                 }
 
-                password = Config.getInstance().getString(Config.ACC_PASS).toCharArray();
+                password = account.getPassword();
             }
 
             try {
