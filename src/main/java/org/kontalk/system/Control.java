@@ -547,7 +547,11 @@ public final class Control {
                 this.connect();
         }
 
-        public void shutDown() {
+        public void shutDown(boolean exit) {
+            if (mCurrentStatus == Status.SHUTTING_DOWN)
+                // we were already here
+                return;
+
             this.disconnect();
             LOGGER.info("Shutting down...");
             mCurrentStatus = Status.SHUTTING_DOWN;
@@ -558,8 +562,11 @@ public final class Control {
                 // ignore
             }
             Config.getInstance().saveToFile();
-
-            Kontalk.exit();
+            Kontalk.removeLock();
+            if (exit) {
+                LOGGER.info("exit");
+                System.exit(0);
+            }
         }
 
         public void connect() {

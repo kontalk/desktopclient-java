@@ -316,7 +316,7 @@ public final class View implements Observer {
     void callShutDown() {
         // trigger save if contact details are shown
         mContent.showNothing();
-        mControl.shutDown();
+        mControl.shutDown(true);
     }
 
     /* view internal */
