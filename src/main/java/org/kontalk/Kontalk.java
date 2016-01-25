@@ -23,6 +23,7 @@ import org.kontalk.system.Database;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.ConsoleHandler;
@@ -31,6 +32,13 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.ChatList;
@@ -38,6 +46,7 @@ import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.CryptoUtils;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.kontalk.view.View;
 
@@ -59,7 +68,7 @@ public final class Kontalk {
     }
 
     Kontalk(Path appDir) {
-        APP_DIR = appDir;
+        APP_DIR = appDir.toAbsolutePath();
     }
 
     private void start() {
@@ -88,7 +97,12 @@ public final class Kontalk {
         // create app directory
         boolean created = APP_DIR.toFile().mkdirs();
         if (created)
-            LOGGER.info("created application directory");
+            LOGGER.info("created application directory: "+APP_DIR);
+
+        if (!Files.isWritable(APP_DIR)) {
+            LOGGER.severe("invalid app directory: "+APP_DIR);
+            return;
+        }
 
         // logging
         Logger logger = Logger.getLogger("");
@@ -169,7 +183,45 @@ public final class Kontalk {
     public static void main(String[] args) {
         LOGGER.setLevel(Level.ALL);
 
-        Kontalk app = new Kontalk();
+        // parse args, i18n?
+        Options options = new Options();
+        options.addOption("h", "help", false, "show this help message");
+        options.addOption(Option.builder("d")
+                //.argName("app_dir")
+                .hasArg()
+                .desc("set custom configuration directory")
+                .longOpt("appdir")
+                .build()
+        );
+
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd;
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            showHelp(options);
+            return;
+        }
+        if (cmd.hasOption("h")) {
+            showHelp(options);
+            return;
+        }
+
+        String appDir = cmd.getOptionValue("d", "");
+
+        Kontalk app = appDir.isEmpty() ?
+                new Kontalk() :
+                new Kontalk(Paths.get(appDir));
         app.start();
+    }
+
+    private static void showHelp(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        String eol = EncodingUtils.EOL;
+        formatter.printHelp("java -jar [kontalk_jar]",
+                eol + "Kontalk Java Desktop Client" + eol,
+                options,
+                "",
+                true);
     }
 }
