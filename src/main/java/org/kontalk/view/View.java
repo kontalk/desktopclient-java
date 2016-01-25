@@ -33,15 +33,15 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
 import org.kontalk.system.Config;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Chat;
@@ -397,30 +397,28 @@ public final class View implements Observer {
     /* static */
 
     public static Optional<View> create(final ViewControl control) {
-        Optional<View> optView = invokeAndWait(new Callable<View>() {
-            @Override
-            public View call() throws Exception {
-                return new View(control);
-            }
-        });
-        if(!optView.isPresent()) {
-            LOGGER.log(Level.SEVERE, "can't start view");
-            return optView;
+        View view;
+        try {
+            view = invokeAndWait(new Callable<View>() {
+                @Override
+                public View call() throws Exception {
+                    return new View(control);
+                }
+            });
+        } catch (ExecutionException | InterruptedException ex) {
+            LOGGER.log(Level.WARNING, "can't start view", ex);
+            return Optional.empty();
         }
-        control.addObserver(optView.get());
-        return optView;
+        control.addObserver(view);
+        return Optional.of(view);
     }
 
-    private static <T> Optional<T> invokeAndWait(Callable<T> callable) {
-        try {
-            FutureTask<T> task = new FutureTask<>(callable);
-            SwingUtilities.invokeLater(task);
-            // blocking
-            return Optional.of(task.get());
-        } catch (ExecutionException | InterruptedException ex) {
-            LOGGER.log(Level.WARNING, "can't execute task", ex);
-        }
-        return Optional.empty();
+    private static <T> T invokeAndWait(Callable<T> callable)
+            throws InterruptedException, ExecutionException {
+        FutureTask<T> task = new FutureTask<>(callable);
+        SwingUtilities.invokeLater(task);
+        // blocking
+        return task.get();
     }
 
     public static void showWrongJavaVersionDialog() {
