@@ -50,6 +50,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 
 /**
@@ -427,7 +428,7 @@ public final class View implements Observer {
         if (jVersion.length() >= 3)
             jVersion = jVersion.substring(2, 3);
         String errorText = Tr.tr("The installed Java version is too old")+": " + jVersion;
-        errorText += System.getProperty("line.separator");
+        errorText += EncodingUtils.EOL;
         errorText += Tr.tr("Please install Java 8.");
         WebOptionPane.showMessageDialog(null,
                 errorText,
