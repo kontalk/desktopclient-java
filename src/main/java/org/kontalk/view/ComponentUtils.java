@@ -95,7 +95,6 @@ import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
-import org.kontalk.model.UserAvatar;
 import org.kontalk.system.Config;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
@@ -130,6 +129,8 @@ final class ComponentUtils {
 
     static class StatusDialog extends WebDialog {
 
+        private static final int AVATAR_SIZE = 150;
+
         private final View mView;
         private final WebFileChooser mImgChooser;
         private final WebImage mAvatarImage;
@@ -155,9 +156,9 @@ final class ComponentUtils {
             mImgChooser.setFileFilter(new ImageFilesFilter());
 
             groupPanel.add(new WebLabel(Tr.tr("Your profile picture:")));
-            BufferedImage avatar = mView.getControl().getUserAvatar();
-            if (avatar.getWidth() == 1)
-                    avatar = AvatarLoader.createFallback(UserAvatar.SIZE);
+            BufferedImage avatar = mView.getControl().getUserAvatar().orElse(null);
+            if (avatar == null)
+                    avatar = AvatarLoader.createFallback(AVATAR_SIZE);
             mAvatarImage = new WebImage(avatar);
 
             //mAvatarImage.setDisplayType(DisplayType.fitComponent);
@@ -240,7 +241,7 @@ final class ComponentUtils {
             if (img == null)
                 return;
 
-            mAvatar = ImageUtils.createPreviewImage(img, UserAvatar.SIZE);
+            mAvatar = ImageUtils.createPreviewImage(img, AVATAR_SIZE);
 
             mAvatarImage.setImage(mAvatar);
         }

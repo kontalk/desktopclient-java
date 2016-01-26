@@ -18,8 +18,6 @@
 
 package org.kontalk.model;
 
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.kontalk.misc.JID;
@@ -28,16 +26,13 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
-import org.kontalk.Kontalk;
 import org.kontalk.system.Database;
 import org.kontalk.util.EncodingUtils;
-import org.kontalk.util.MediaUtils;
 import org.kontalk.util.XMPPUtils;
 
 /**
@@ -324,7 +319,7 @@ public final class Contact extends Observable {
         set.put(COL_ENCR, mEncrypted);
         set.put(COL_PUB_KEY, Database.setString(mKey));
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
-        set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.id : ""));
+        set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.getID() : ""));
         db.execUpdate(TABLE, set, mID);
     }
 
@@ -353,75 +348,5 @@ public final class Contact extends Observable {
         String avatarID = Database.getString(rs, Contact.COL_AVATAR_ID);
 
         return new Contact(id, jid, name, status, Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
-    }
-
-    /**
-     * Contact avatar image. Immutable.
-     */
-    public static class Avatar {
-
-        private static final String AVATAR_FORMAT = "png";
-        private static final String AVATAR_DIR = "avatars";
-
-        /** SHA1 hash of image data. */
-        public final String id;
-
-        private BufferedImage image = null;
-
-        public Avatar(String id, BufferedImage image) {
-            this.id = id;
-            this.image = image;
-
-            // save
-            boolean succ = MediaUtils.writeImage(this.image, AVATAR_FORMAT, this.file());
-            if (!succ)
-                LOGGER.warning("can't save avatar image: "+this.id);
-        }
-
-        // used when loading from database
-        Avatar(String id) {
-            this.id = id;
-        }
-
-        public Optional<BufferedImage> loadImage() {
-            if (image == null)
-                image = MediaUtils.readImage(this.file()).orElse(null);
-
-            return Optional.ofNullable(image);
-        }
-
-        void delete() {
-            boolean succ = this.file().delete();
-            if (succ)
-                LOGGER.warning("could not delete avatar file: "+this.id);
-        }
-
-        private File file() {
-            return Kontalk.appDir().resolve(AVATAR_DIR)
-                    .resolve(this.id + "." + AVATAR_FORMAT).toFile();
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-
-            if (!(o instanceof Avatar)) return false;
-
-            Avatar oAvatar = (Avatar) o;
-            return id.equals(oAvatar.id);
-        }
-
-        @Override
-        public int hashCode() {
-            int hash = 7;
-            hash = 59 * hash + Objects.hashCode(this.id);
-            return hash;
-        }
-
-        public static void createDir() {
-            boolean created = Kontalk.appDir().resolve(AVATAR_DIR).toFile().mkdir();
-            if (created)
-                LOGGER.info("created avatar directory");
-        }
     }
 }
