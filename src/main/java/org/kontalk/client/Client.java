@@ -45,7 +45,6 @@ import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
-import org.jivesoftware.smackx.pubsub.PubSubManager;
 import org.kontalk.Kontalk;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
@@ -438,12 +437,11 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void publishAvatar(String id, byte[] data) {
-        if (mConn == null)
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
             return;
-
-        // TODO
-        PubSubManager pubSubManager = new PubSubManager(mConn, mConn.getServiceName());
-        new AvatarSender(pubSubManager).publish(id, data);
+        }
+        mAvatarSendReceiver.publish(id, data);
     }
 
     @Override
