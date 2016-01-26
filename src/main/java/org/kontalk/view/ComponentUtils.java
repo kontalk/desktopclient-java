@@ -25,11 +25,9 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.checkbox.WebCheckBox;
-import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
 import com.alee.laf.panel.WebPanel;
-import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
@@ -38,9 +36,7 @@ import com.alee.laf.text.WebTextField;
 import com.alee.managers.popup.PopupAdapter;
 import com.alee.managers.popup.WebPopup;
 import com.alee.managers.tooltip.TooltipManager;
-import com.alee.utils.ImageUtils;
 import com.alee.utils.SwingUtils;
-import com.alee.utils.filefilter.ImageFilesFilter;
 import com.alee.utils.swing.DocumentChangeListener;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import java.awt.BorderLayout;
@@ -60,11 +56,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
-import java.awt.image.BufferedImage;
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -96,7 +89,6 @@ import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Config;
-import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
 
@@ -124,134 +116,6 @@ final class ComponentUtils {
             this.setHorizontalScrollBarPolicy(
                     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             this.getVerticalScrollBar().setUnitIncrement(25);
-        }
-    }
-
-    static class StatusDialog extends WebDialog {
-
-        private static final int AVATAR_SIZE = 150;
-
-        private final View mView;
-        private final WebFileChooser mImgChooser;
-        private final WebImage mAvatarImage;
-        private final WebTextField mStatusField;
-        private final WebList mStatusList;
-
-        private BufferedImage mAvatar = null;
-
-        StatusDialog(View view) {
-            mView = view;
-
-            this.setTitle(Tr.tr("Status"));
-            this.setResizable(false);
-            this.setModal(true);
-
-            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
-            groupPanel.setMargin(View.MARGIN_BIG);
-
-            groupPanel.add(new WebLabel(Tr.tr("Setup your profile")).setBoldFont());
-            groupPanel.add(new WebSeparator(true, true));
-
-            mImgChooser = new WebFileChooser();
-            mImgChooser.setFileFilter(new ImageFilesFilter());
-
-            groupPanel.add(new WebLabel(Tr.tr("Your profile picture:")));
-            BufferedImage avatar = mView.getControl().getUserAvatar().orElse(null);
-            if (avatar == null)
-                    avatar = AvatarLoader.createFallback(AVATAR_SIZE);
-            mAvatarImage = new WebImage(avatar);
-
-            //mAvatarImage.setDisplayType(DisplayType.fitComponent);
-            //setTransferHandler ( new ImageDragHandler ( image1, i1 ) );
-            mAvatarImage.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    if (!e.isPopupTrigger()) {
-                        StatusDialog.this.chooseAvatar();
-                    }
-                }
-
-            });
-            groupPanel.add(mAvatarImage);
-            groupPanel.add(new WebSeparator(true, true));
-
-            String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
-            String currentStatus = "";
-            if (!stats.isEmpty())
-                currentStatus = stats.remove(0);
-
-            stats.remove("");
-
-            groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
-            mStatusField = new WebTextField(currentStatus, 30);
-            groupPanel.add(mStatusField);
-            groupPanel.add(new WebSeparator(true, true));
-
-            groupPanel.add(new WebLabel(Tr.tr("Previously used:")));
-            mStatusList = new WebList(stats);
-            mStatusList.setMultiplySelectionAllowed(false);
-            mStatusList.addListSelectionListener(new ListSelectionListener() {
-                @Override
-                public void valueChanged(ListSelectionEvent e) {
-                    if (e.getValueIsAdjusting())
-                        return;
-                    mStatusField.setText(mStatusList.getSelectedValue().toString());
-                }
-            });
-            WebScrollPane listScrollPane = new ScrollPane(mStatusList);
-            groupPanel.add(listScrollPane);
-            this.add(groupPanel, BorderLayout.CENTER);
-
-            // buttons
-            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    StatusDialog.this.dispose();
-                }
-            });
-            final WebButton saveButton = new WebButton(Tr.tr("Save"));
-            saveButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    StatusDialog.this.saveStatus();
-                    StatusDialog.this.dispose();
-                }
-            });
-            this.getRootPane().setDefaultButton(saveButton);
-
-            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
-            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
-            this.add(buttonPanel, BorderLayout.SOUTH);
-
-            this.pack();
-        }
-
-        private void chooseAvatar() {
-            int state = mImgChooser.showOpenDialog(this);
-            if (state != WebFileChooser.APPROVE_OPTION)
-                return;
-
-            File imgFile = mImgChooser.getSelectedFile();
-            if (!imgFile.isFile())
-                return;
-
-            BufferedImage img = MediaUtils.readImage(imgFile).orElse(null);
-            if (img == null)
-                return;
-
-            mAvatar = ImageUtils.createPreviewImage(img, AVATAR_SIZE);
-
-            mAvatarImage.setImage(mAvatar);
-        }
-
-        private void saveStatus() {
-            if (mAvatar != null) {
-                mView.getControl().setUserAvatar(mAvatar);
-            }
-
-            mView.getControl().setStatusText(mStatusField.getText());
         }
     }
 
