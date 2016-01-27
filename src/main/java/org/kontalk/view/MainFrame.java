@@ -134,9 +134,9 @@ final class MainFrame extends WebFrame {
         konNetMenu.add(mDisconnectMenuItem);
         konNetMenu.addSeparator();
 
-        WebMenuItem statusMenuItem = new WebMenuItem(Tr.tr("Set status"));
+        WebMenuItem statusMenuItem = new WebMenuItem(Tr.tr("Profile"));
         statusMenuItem.setAccelerator(Hotkey.ALT_S);
-        statusMenuItem.setToolTipText(Tr.tr("Set status text send to other user"));
+        statusMenuItem.setToolTipText(Tr.tr("Set your user profile"));
         statusMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {

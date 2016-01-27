@@ -66,14 +66,14 @@ final class ProfileDialog extends WebDialog {
     ProfileDialog(View view) {
         mView = view;
 
-        this.setTitle(Tr.tr("Status"));
+        this.setTitle(Tr.tr("User Profile"));
         this.setResizable(false);
         this.setModal(true);
 
         GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
         groupPanel.setMargin(View.MARGIN_BIG);
 
-        groupPanel.add(new WebLabel(Tr.tr("Setup your profile")).setBoldFont());
+        groupPanel.add(new WebLabel(Tr.tr("Edit your profile")).setBoldFont());
         groupPanel.add(new WebSeparator(true, true));
 
         mImgChooser = new WebFileChooser();
@@ -109,6 +109,7 @@ final class ProfileDialog extends WebDialog {
 
         groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
         mStatusField = new WebTextField(currentStatus, 30);
+        mStatusField.setToolTipText(Tr.tr("Set status text send to other user"));
         groupPanel.add(mStatusField);
         groupPanel.add(new WebSeparator(true, true));
 
