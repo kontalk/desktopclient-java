@@ -28,6 +28,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -35,7 +37,6 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
-import org.kontalk.misc.Callback;
 
 /**
  *
@@ -145,13 +146,13 @@ public class MediaUtils {
     }
 
     /**
-     * Scale image down to maximum or minimum of width or height, preserving ratio.
-     * @param max specifies if image is scaled to maximum or minimum of width/height
-     * @return the scaled image, loaded async
+     * Scale image down preserving ratio.
+     * Blocking.
      */
-    public static void scale(Image image, int width, int height, boolean max,
-            final Callback.Handler<Image> handler) {
-        Image img = scaleAsync(image, width, height, max);
+    public static BufferedImage scale(Image image, int width, int height, boolean max) {
+        image = scaleAsync(image, width, height, max);
+
+        final CountDownLatch latch = new CountDownLatch(1);
 
         ImageObserver observer = new ImageObserver() {
             @Override
@@ -161,17 +162,53 @@ public class MediaUtils {
                     return true;
                 }
 
-                handler.handle(new Callback<>(img));
+                // scaling done, continue with calling thread
+                latch.countDown();
                 return false;
             }
         };
 
-        if (img.getWidth(observer) == -1)
-            return;
+        if (image.getWidth(observer) == -1) {
+            boolean succ = false;
+            try {
+                succ = latch.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException ex) {
+                LOGGER.log(Level.WARNING, "interrupted", ex);
+            }
+            if (!succ) {
+                LOGGER.warning("await failed");
+            }
+        }
 
-        handler.handle(new Callback<>(img));
+        return toBufferedImage(image);
     }
 
+    // source: https://stackoverflow.com/a/13605411
+    private static BufferedImage toBufferedImage(Image image) {
+        if (image instanceof BufferedImage)
+            return (BufferedImage) image;
+
+        int iw = image.getWidth(null);
+        int ih = image.getHeight(null);
+        if (iw == -1) {
+            LOGGER.warning("image not loaded yet");
+        }
+
+        BufferedImage bimage = new BufferedImage(iw, ih, BufferedImage.TYPE_INT_ARGB);
+
+        Graphics2D bGr = bimage.createGraphics();
+        bGr.drawImage(image, 0, 0, null);
+        bGr.dispose();
+
+        return bimage;
+    }
+
+    /**
+     * Scale image down to maximum or minimum of width or height, preserving ratio.
+     * Async: returned image may not fully loaded.
+     * 
+     * @param max specifies if image is scaled to maximum or minimum of width/height
+     */
     public static Image scaleAsync(Image image, int width, int height, boolean max) {
         int iw = image.getWidth(null);
         int ih = image.getHeight(null);

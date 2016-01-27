@@ -120,6 +120,7 @@ public class Avatar {
 
     public static class UserAvatar extends Avatar {
 
+        private static final int MAX_SIZE = 150;
         private static final String USER_FILENAME = "avatar";
 
         private static UserAvatar USER_AVATAR = null;
@@ -161,9 +162,9 @@ public class Avatar {
             return USER_AVATAR;
         }
 
-        public static UserAvatar setImage(BufferedImage img) {
-            // TODO reduce size ?
-            USER_AVATAR = new UserAvatar(img);
+        public static UserAvatar setImage(BufferedImage image) {
+            image = MediaUtils.scale(image, MAX_SIZE, MAX_SIZE, true);
+            USER_AVATAR = new UserAvatar(image);
             return USER_AVATAR;
         }
     }
@@ -188,6 +189,7 @@ public class Avatar {
             return null;
         }
         return out.toByteArray();
+
     }
 }
 
