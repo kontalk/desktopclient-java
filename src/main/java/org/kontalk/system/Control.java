@@ -132,6 +132,8 @@ public final class Control {
             for (Contact contact : ContactList.getInstance())
                 if (contact.getFingerprint().isEmpty())
                     this.maySendKeyRequest(contact);
+
+            // TODO check current user avatar on server and upload if necessary
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
             for (Contact contact : ContactList.getInstance())
                 contact.setOffline();
@@ -759,7 +761,7 @@ public final class Control {
         public void setUserAvatar(BufferedImage image) {
             Avatar.UserAvatar avatar = Avatar.UserAvatar.setImage(image);
             byte[] avatarData = avatar.imageData().orElse(null);
-            if (avatarData == null)
+            if (avatarData == null || avatar.getID().isEmpty())
                 return;
 
             mClient.publishAvatar(avatar.getID(), avatarData);

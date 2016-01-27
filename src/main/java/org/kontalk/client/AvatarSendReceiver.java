@@ -79,6 +79,11 @@ final class AvatarSendReceiver {
 
     // TODO beta.kontalk.net does not support this, untested
     void publish(String id, byte[] data) {
+        if (!mConn.isAuthenticated()) {
+            LOGGER.info("not logged in");
+            return;
+        }
+
         PubSubManager mPubSubManager = new PubSubManager(mConn, mConn.getServiceName());
         LeafNode node;
         try {
