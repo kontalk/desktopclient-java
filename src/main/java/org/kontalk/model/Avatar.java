@@ -45,49 +45,44 @@ public class Avatar {
 
     /** SHA1 hash of image data. */
     private final String mID;
-    private final File mFile;
+    protected final File mFile;
 
     protected BufferedImage mImage = null;
 
     /** Saved contact avatar. Used when loading from database. */
     Avatar(String id) {
-        mID = id;
-        mFile = Kontalk.appDir().resolve(DIR)
-                .resolve(mID + "." + FORMAT).toFile();
+        this(id, null, null);
     }
 
     /** New contact avatar. */
     public Avatar(String id, BufferedImage image) {
-        this(id);
-        this.mImage = image;
-
-        save(id, image, mFile);
-    }
-
-    private Avatar(File file) {
-        mFile = file;
-        mImage = image(mFile);
-        mID = mImage != null ? id(mImage) : "";
+        this(id, null, image);
     }
 
     private Avatar(String id, File file, BufferedImage image) {
         mID = id;
-        mFile = file;
+        mFile = file != null ?
+                file :
+                Kontalk.appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
         mImage = image;
 
-        save(mID, image, mFile);
+        if (mImage != null) {
+            // save new image
+            boolean succ = MediaUtils.writeImage(image, FORMAT, file);
+            if (!succ)
+                LOGGER.warning("can't save avatar image: "+id);
+        }
+    }
+
+    private Avatar(File file) {
+        mFile = file;
+        mImage = file.isFile() ? image(mFile) : null;
+        mID = mImage != null ? id(mImage) : "";
     }
 
     private static BufferedImage image(File file) {
         return MediaUtils.readImage(file).orElse(null);
     }
-
-    protected static void save(String id, BufferedImage image, File file) {
-        boolean succ = MediaUtils.writeImage(image, FORMAT, file);
-        if (!succ)
-            LOGGER.warning("can't save avatar image: "+id);
-    }
-
 
     public String getID() {
         return mID;
@@ -139,6 +134,13 @@ public class Avatar {
         /** New user Avatar. ID generated from image. */
         UserAvatar(BufferedImage image) {
             super(id(image), userFile(), image);
+        }
+
+        @Override
+        public Optional<BufferedImage> loadImage() {
+            return mFile.isFile() ?
+                    Optional.ofNullable(image(mFile)) :
+                    Optional.<BufferedImage>empty();
         }
 
         public Optional<byte[]> imageData() {
