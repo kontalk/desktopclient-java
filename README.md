@@ -25,7 +25,7 @@ Connect with Kontalk...
 - Use the existing Kontalk account from your phone.
 - Synchronized contact list (=XMPP roster).
 - Add new Kontalk users by phone number.
-- The client automatically requests public keys for save communication.
+- The client automatically requests public keys for safe communication.
 - Your communication with Kontalk users is encrypted by default.
 
 ... and beyond:
@@ -33,15 +33,15 @@ Connect with Kontalk...
 - Add new Jabber contacts by JID.
 - Tested with clients like [Pidgin](https://pidgin.im/) or [Conversations](https://github.com/siacs/Conversations).
 
+**Note: private key and messages are saved unencrypted and can be read by other
+applications on your computer!**
+
 ## Implemented XEP features:
 - XEP-0184: Message receipts
 - XEP-0085: Chat state notifications
 - XEP-0191: User blocking
 - XEP-0066: File transfer over server
 - XEP-0084: Avatar images
-
-**Note: private key and messages are saved unencrypted and can be read by other
-applications on your computer!**
 
 ## Support us
 
