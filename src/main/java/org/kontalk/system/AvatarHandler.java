@@ -26,8 +26,8 @@ import javax.imageio.ImageIO;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.kontalk.client.Client;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Avatar;
 import org.kontalk.model.Contact;
-import org.kontalk.model.Contact.Avatar;
 import org.kontalk.model.ContactList;
 import org.kontalk.util.MediaUtils;
 
@@ -47,7 +47,7 @@ public final class AvatarHandler {
     AvatarHandler(Client client) {
         mClient = client;
 
-        Contact.Avatar.createDir();
+        Avatar.createDir();
     }
 
     public void onNotify(JID jid, String id) {
@@ -63,7 +63,7 @@ public final class AvatarHandler {
         }
 
         Avatar avatar = contact.getAvatar().orElse(null);
-        if (avatar != null && avatar.id.equals(id))
+        if (avatar != null && avatar.getID().equals(id))
             // avatar is not new
             return;
 

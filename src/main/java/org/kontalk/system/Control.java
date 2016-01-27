@@ -19,6 +19,7 @@
 package org.kontalk.system;
 
 import org.kontalk.model.Account;
+import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Avatar;
 import org.kontalk.model.GroupChat;
 import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent.Attachment;
@@ -130,6 +132,8 @@ public final class Control {
             for (Contact contact : ContactList.getInstance())
                 if (contact.getFingerprint().isEmpty())
                     this.maySendKeyRequest(contact);
+
+            // TODO check current user avatar on server and upload if necessary
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
             for (Contact contact : ContactList.getInstance())
                 contact.setOffline();
@@ -748,6 +752,19 @@ public final class Control {
 
         public void sendAttachment(Chat chat, Path file){
             this.sendTextMessage(chat, "", file);
+        }
+
+        public Optional<BufferedImage> getUserAvatar() {
+            return Avatar.UserAvatar.instance().loadImage();
+        }
+
+        public void setUserAvatar(BufferedImage image) {
+            Avatar.UserAvatar avatar = Avatar.UserAvatar.setImage(image);
+            byte[] avatarData = avatar.imageData().orElse(null);
+            if (avatarData == null || avatar.getID().isEmpty())
+                return;
+
+            mClient.publishAvatar(avatar.getID(), avatarData);
         }
 
         /* private */

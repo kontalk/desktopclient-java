@@ -436,6 +436,14 @@ public final class Client implements StanzaListener, Runnable {
         mAvatarSendReceiver.requestAndListen(jid, id);
     }
 
+    public void publishAvatar(String id, byte[] data) {
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
+            return;
+        }
+        mAvatarSendReceiver.publish(id, data);
+    }
+
     @Override
     public void run() {
         while (true) {
