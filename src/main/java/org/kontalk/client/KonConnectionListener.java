@@ -58,6 +58,7 @@ final class KonConnectionListener implements ConnectionListener {
     public void connectionClosed() {
         mConnected = false;
         LOGGER.info("connection closed");
+        mControl.setStatus(Control.Status.DISCONNECTED);
     }
 
     @Override
