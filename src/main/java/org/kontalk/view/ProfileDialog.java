@@ -61,8 +61,6 @@ final class ProfileDialog extends WebDialog {
     private final WebTextField mStatusField;
     private final WebList mStatusList;
 
-    private BufferedImage mAvatar = null;
-
     ProfileDialog(View view) {
         mView = view;
 
@@ -140,7 +138,7 @@ final class ProfileDialog extends WebDialog {
         saveButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                ProfileDialog.this.saveStatus();
+                ProfileDialog.this.save();
                 ProfileDialog.this.dispose();
             }
         });
@@ -166,14 +164,13 @@ final class ProfileDialog extends WebDialog {
         if (img == null)
             return;
 
-        mAvatar = ImageUtils.createPreviewImage(img, AVATAR_SIZE);
-
-        mAvatarImage.setImage(mAvatar);
+        mAvatarImage.setImage(ImageUtils.createPreviewImage(img, AVATAR_SIZE));
     }
 
-    private void saveStatus() {
-        if (mAvatar != null) {
-            mView.getControl().setUserAvatar(mAvatar);
+    private void save() {
+        BufferedImage avatar = mAvatarImage.getImage();
+        if (avatar != null) {
+            mView.getControl().setUserAvatar(avatar);
         }
 
         mView.getControl().setStatusText(mStatusField.getText());
