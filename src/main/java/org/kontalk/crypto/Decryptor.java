@@ -61,6 +61,7 @@ import org.kontalk.util.XMPPUtils;
 import org.xmlpull.v1.XmlPullParserException;
 
 /**
+ * Decrypt message content. Message parameter is internally changed by methods.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -72,27 +73,36 @@ final class Decryptor {
         Coder.Signing signing = Coder.Signing.UNKNOWN;
     }
 
-    private final DecryptMessage message;
-    private PersonalKey myKey = null;
-    private Optional<PGPUtils.PGPCoderKey> senderKey;
+    private final DecryptMessage mMessage;
+    // nullable
+    private final PersonalKey mMyKey;
+    // nullable
+    private final PGPUtils.PGPCoderKey mSenderKey;
 
     Decryptor(DecryptMessage message) {
-        this.message = message;
+        mMessage = message;
+
+        mMyKey = Coder.myKeyOrNull();
+
+        // if sender signing key not found -> decryption possible, signature
+        // verification will not be possible
+        mSenderKey = Coder.contactkey(message.getContact()).orElse(null);
     }
 
     // note: signing requires also encryption
     boolean decryptMessage() {
-        if (!message.isEncrypted()) {
+        if (!mMessage.isEncrypted()) {
             LOGGER.warning("message not encrypted");
             return false;
         }
 
-        boolean loaded = this.loadKeys();
-        if (!loaded)
+        if (mMyKey == null) {
+            mMessage.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
             return false;
+        }
 
         // decrypt
-        String encryptedContent = message.getContent().getEncryptedContent();
+        String encryptedContent = mMessage.getContent().getEncryptedContent();
         if (encryptedContent.isEmpty()) {
             LOGGER.warning("no encrypted data in encrypted message");
         }
@@ -104,20 +114,21 @@ final class Decryptor {
         try {
             decResult = decryptAndVerify(encryptedIn,
                     plainOut,
-                    myKey.getPrivateEncryptionKey(),
-                    senderKey.isPresent() ? Optional.of(senderKey.get().signKey) :
-                    Optional.<PGPPublicKey>empty());
+                    mMyKey.getPrivateEncryptionKey(),
+                    mSenderKey != null ?
+                            Optional.of(mSenderKey.signKey) :
+                            Optional.<PGPPublicKey>empty());
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't decrypt message", ex);
             return false;
         }
         EnumSet<Coder.Error> allErrors = decResult.errors;
-        message.setSigning(decResult.signing);
+        mMessage.setSigning(decResult.signing);
 
         // parse decrypted CPIM content
-        String myUID = myKey.getUserId();
-        String senderUID = senderKey.isPresent() ?
-                senderKey.get().userID :
+        String myUID = mMyKey.getUserId();
+        String senderUID = mSenderKey != null ?
+                mSenderKey.userID :
                 null;
         String decrText = EncodingUtils.getString(
                 plainOut.toByteArray(),
@@ -125,12 +136,12 @@ final class Decryptor {
         MessageContent content = this.parseCPIMOrNull(decrText, myUID, Optional.ofNullable(senderUID));
 
         // set errors
-        message.setSecurityErrors(allErrors);
+        mMessage.setSecurityErrors(allErrors);
 
         if (content != null) {
             // everything went better than expected
             LOGGER.info("message decryption successful");
-            message.setDecryptedContent(content);
+            mMessage.setDecryptedContent(content);
             return true;
         } else {
             LOGGER.warning("message decryption failed");
@@ -139,11 +150,12 @@ final class Decryptor {
     }
 
     void decryptAttachment(Path baseDir) {
-        if (!(message instanceof InMessage)) {
+        // TODO ugly
+        if (!(mMessage instanceof InMessage)) {
             LOGGER.warning("message not incoming message");
             return;
         }
-        InMessage inMessage = (InMessage) message;
+        InMessage inMessage = (InMessage) mMessage;
 
         MessageContent.Attachment attachment = inMessage.getContent().getAttachment().orElse(null);
         if (attachment == null) {
@@ -151,9 +163,10 @@ final class Decryptor {
             return;
         }
 
-        boolean loaded = this.loadKeys();
-        if (!loaded)
+        if (mMyKey == null) {
+            mMessage.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
             return;
+        }
 
         // in file
         File inFile = baseDir.resolve(attachment.getFile()).toFile();
@@ -172,8 +185,8 @@ final class Decryptor {
                 FileOutputStream plainOut = new FileOutputStream(outFile)) {
             decResult = decryptAndVerify(encryptedIn,
                     plainOut,
-                    myKey.getPrivateEncryptionKey(),
-                    senderKey.isPresent() ? Optional.of(senderKey.get().signKey) :
+                    mMyKey.getPrivateEncryptionKey(),
+                    mSenderKey != null ? Optional.of(mSenderKey.signKey) :
                             Optional.<PGPPublicKey>empty());
         } catch (IOException | PGPException ex){
             LOGGER.log(Level.WARNING, "can't decrypt attachment", ex);
@@ -186,22 +199,6 @@ final class Decryptor {
         // set new filename
         inMessage.setDecryptedAttachment(outFile.getName());
         LOGGER.info("attachment decryption successful");
-    }
-
-    private boolean loadKeys() {
-        myKey = Coder.myKeyOrNull();
-        if (myKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
-            return false;
-        }
-        senderKey = Coder.contactkey(message.getContact());
-
-        // sender signing key not found -> continue decryption, siging will not
-        // be possible
-        if (senderKey.isPresent())
-            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
-
-        return true;
     }
 
     /** Decrypt, verify and write input stream data to output stream. */
@@ -361,7 +358,7 @@ final class Decryptor {
             cpimMessage = CPIMMessage.parse(cpim);
         } catch (ParseException ex) {
             LOGGER.log(Level.WARNING, "can't find valid CPIM data", ex);
-            message.setSecurityErrors(EnumSet.of(Coder.Error.INVALID_DATA));
+            mMessage.setSecurityErrors(EnumSet.of(Coder.Error.INVALID_DATA));
             return null;
         }
 
@@ -400,7 +397,7 @@ final class Decryptor {
             } catch (XmlPullParserException | IOException | SmackException ex) {
                 LOGGER.log(Level.WARNING, "can't parse XMPP XML string", ex);
                 errors.add(Coder.Error.INVALID_DATA);
-                message.setSecurityErrors(errors);
+                mMessage.setSecurityErrors(errors);
                 return null;
             }
             LOGGER.config("decrypted XML: "+m.toXML());
@@ -410,7 +407,7 @@ final class Decryptor {
             decryptedContent = MessageContent.plainText(content);
         }
 
-        message.setSecurityErrors(errors);
+        mMessage.setSecurityErrors(errors);
         return decryptedContent;
     }
 }
