@@ -21,9 +21,10 @@ package org.kontalk.model;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +32,6 @@ import java.util.Objects;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -83,6 +83,9 @@ public abstract class Chat extends Observable implements Observer {
             "FOREIGN KEY ("+COL_REC_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
+    /** Long-live authorization model of member in group. 'Affiliation' in MUC */
+    public enum Role {DEFAULT, OWNER, ADMIN};
+
     protected final int mID;
     private final ChatMessages mMessages;
 
@@ -91,10 +94,10 @@ public abstract class Chat extends Observable implements Observer {
     private ViewSettings mViewSettings;
 
     protected Chat(Contact contact, String xmppID, String subject) {
-        this(new Contact[]{contact}, xmppID, subject, null);
+        this(Arrays.asList(new Member(contact)), xmppID, subject, null);
     }
 
-    protected Chat(Contact[] contacts, String xmppID, String subject, GroupMetaData gData) {
+    protected Chat(List<Member> members, String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages(this, true);
         mRead = true;
         mViewSettings = new ViewSettings();
@@ -113,8 +116,8 @@ public abstract class Chat extends Observable implements Observer {
             return;
         }
 
-        for (Contact contact : contacts)
-            this.insertReceiver(contact);
+        for (Member member : members)
+            this.insertMember(member);
     }
 
     // used when loading from database
@@ -179,7 +182,7 @@ public abstract class Chat extends Observable implements Observer {
     }
 
     /** Get all contacts (including deleted, blocked and user contact). */
-    public abstract Set<Contact> getAllContacts();
+    public abstract List<Contact> getAllContacts();
 
     /** Get valid receiver contacts (without deleted and blocked). */
     public abstract Contact[] getValidContacts();
@@ -211,7 +214,7 @@ public abstract class Chat extends Observable implements Observer {
 
     abstract void save();
 
-    protected void save(Contact[] contacts, String subject) {
+    protected void save(List<Member> members, String subject) {
         Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(subject));
@@ -224,11 +227,11 @@ public abstract class Chat extends Observable implements Observer {
         Map<Integer, Integer> dbReceiver = loadReceiver(mID);
 
         // add missing contact
-        for (Contact contact : contacts) {
-            if (!dbReceiver.keySet().contains(contact.getID())) {
-                this.insertReceiver(contact);
+        for (Member member : members) {
+            if (!dbReceiver.keySet().contains(member.contact.getID())) {
+                this.insertMember(member);
             }
-            dbReceiver.remove(contact.getID());
+            dbReceiver.remove(member.contact.getID());
         }
 
         // whats left is too much and can be removed
@@ -261,11 +264,11 @@ public abstract class Chat extends Observable implements Observer {
         db.execDelete(TABLE, mID);
     }
 
-    private void insertReceiver(Contact contact) {
+    private void insertMember(Member member) {
         Database db = Database.getInstance();
         List<Object> recValues = new LinkedList<>();
         recValues.add(mID);
-        recValues.add(contact.getID());
+        recValues.add(member.contact.getID());
         int id = db.execInsert(RECEIVER_TABLE, recValues);
         if (id < 1) {
             LOGGER.warning("could not insert receiver");
@@ -292,15 +295,15 @@ public abstract class Chat extends Observable implements Observer {
 
         String xmppID = Database.getString(rs, Chat.COL_XMPPID);
 
-        // get contacts for chats
+        // get members for chats
         Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
-        Set<Contact> contacts = new HashSet<>();
+        List<Member> members = new ArrayList<>();
         for (int conID: dbReceiver.keySet()) {
             Contact c = ContactList.getInstance().get(conID).orElse(null);
             if (c != null)
-                contacts.add(c);
+                members.add(new Member(c));
             else
-                LOGGER.warning("can't find contact");
+                LOGGER.warning("can't find contact, ID:"+conID);
         }
 
         String subject = Database.getString(rs, Chat.COL_SUBJ);
@@ -311,13 +314,13 @@ public abstract class Chat extends Observable implements Observer {
                 Chat.COL_VIEW_SET);
 
         if (gData != null) {
-            return GroupChat.create(id, contacts, gData, subject, read, jsonViewSettings);
+            return GroupChat.create(id, members, gData, subject, read, jsonViewSettings);
         } else {
-            if (contacts.size() != 1) {
+            if (members.size() != 1) {
                 LOGGER.warning("not one contact for single chat, id="+id);
                 return null;
             }
-            return new SingleChat(id, contacts.iterator().next(), xmppID, read, jsonViewSettings);
+            return new SingleChat(id, members.get(0).contact, xmppID, read, jsonViewSettings);
         }
     }
 
@@ -344,8 +347,10 @@ public abstract class Chat extends Observable implements Observer {
         return dbReceiver;
     }
 
-    public class KonChatState {
-        private final Contact mContact;
+    public static final class Member {
+        public final Contact contact;
+        public final GroupChat.Role role;
+
         private ChatState mState = ChatState.gone;
         // note: the Android client does not set active states when only viewing
         // the chat (not necessary according to XEP-0085), this makes the
@@ -353,12 +358,36 @@ public abstract class Chat extends Observable implements Observer {
         // TODO save last active date to DB
         private Date mLastActive = null;
 
-        protected KonChatState(Contact contact) {
-            mContact = contact;
+        public Member(Contact contact){
+            this(contact, Role.DEFAULT);
         }
 
-        public Contact getContact() {
-            return mContact;
+        public Member(Contact contact, GroupChat.Role role) {
+            this.contact = contact;
+            this.role = role;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (o == this)
+                return true;
+
+            if (!(o instanceof Member))
+                return false;
+
+            return this.contact.equals(o);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 7;
+            hash = 23 * hash + Objects.hashCode(this.contact);
+            return hash;
+        }
+
+        @Override
+        public String toString() {
+            return "Mem:c={"+contact+"}r="+role;
         }
 
         public ChatState getState() {

@@ -39,7 +39,6 @@ import javax.swing.event.ListSelectionListener;
 import org.kontalk.system.Config;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
-import org.kontalk.model.Chat.KonChatState;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.GroupChat;
@@ -259,15 +258,15 @@ final class ChatListView extends ListView<ChatItem, Chat> {
             }
 
             String stateText = "";
-            if (arg instanceof Chat.KonChatState) {
-                KonChatState state = (KonChatState) arg;
-                switch(state.getState()) {
+            if (arg instanceof Chat.Member) {
+                Chat.Member member = (Chat.Member) arg;
+                switch(member.getState()) {
                     case composing: stateText = Tr.tr("is writing…"); break;
                     //case paused: activity = T/r.tr("stopped typing"); break;
                     //case inactive: stateText = T/r.tr("is inactive"); break;
                 }
                 if (!stateText.isEmpty() && mValue.isGroupChat())
-                    stateText = state.getContact().getName() + ": " + stateText;
+                    stateText = member.contact.getName() + ": " + stateText;
             }
             if (stateText.isEmpty()) {
                 mChatStateLabel.setText("");

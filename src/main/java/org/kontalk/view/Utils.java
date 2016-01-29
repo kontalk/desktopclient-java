@@ -226,7 +226,7 @@ final class Utils {
             String subj = chat.getSubject();
             return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
         } else {
-            return Utils.displayNames(new ArrayList<>(chat.getAllContacts()));
+            return Utils.displayNames(chat.getAllContacts());
         }
     }
 

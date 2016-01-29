@@ -18,9 +18,9 @@
 
 package org.kontalk.model;
 
-import java.util.HashSet;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 
@@ -31,19 +31,16 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 public final class SingleChat extends Chat {
     private static final Logger LOGGER = Logger.getLogger(SingleChat.class.getName());
 
-    private final Contact mContact;
+    private final Member mMember;
     private final String mXMPPID;
-    private final KonChatState mChatState;
 
     SingleChat(Contact contact, String xmppID) {
         super(contact, xmppID, "");
 
-        mContact = contact;
+        mMember = new Member(contact);
         contact.addObserver(this);
         // note: Kontalk Android client is ignoring the chat id
         mXMPPID = xmppID;
-
-        mChatState = new KonChatState(contact);
     }
 
     // used when loading from database
@@ -55,31 +52,27 @@ public final class SingleChat extends Chat {
             ) {
         super(id, read, jsonViewSettings);
 
-        mContact = contact;
+        mMember = new Member(contact);
         contact.addObserver(this);
         mXMPPID = xmppID;
-
-        mChatState = new KonChatState(contact);
     }
 
     public Contact getContact() {
-        return mContact;
+        return mMember.contact;
     }
 
     @Override
-    public Set<Contact> getAllContacts() {
-        Set<Contact> contacts = new HashSet<>();
-        contacts.add(mContact);
-
-        return contacts;
+    public List<Contact> getAllContacts() {
+        return Arrays.asList(mMember.contact);
     }
 
     @Override
     public Contact[] getValidContacts() {
-        if (mContact.isDeleted() || mContact.isBlocked() && !mContact.isMe())
+        Contact c = mMember.contact;
+        if (c.isDeleted() || c.isBlocked() && !c.isMe())
             return new Contact[0];
 
-        return new Contact[]{mContact};
+        return new Contact[]{c};
     }
 
     @Override
@@ -94,17 +87,18 @@ public final class SingleChat extends Chat {
 
     @Override
     public boolean isSendEncrypted() {
-        return mContact.getEncrypted();
+        return mMember.contact.getEncrypted();
     }
 
     @Override
     public boolean canSendEncrypted() {
-        return !mContact.isDeleted() && !mContact.isBlocked() && mContact.hasKey();
+        Contact c = mMember.contact;
+        return !c.isDeleted() && !c.isBlocked() && c.hasKey();
     }
 
     @Override
     public boolean isValid() {
-        return !mContact.isDeleted() && !mContact.isBlocked();
+        return !mMember.contact.isDeleted() && !mMember.contact.isBlocked();
     }
 
     @Override
@@ -114,17 +108,17 @@ public final class SingleChat extends Chat {
 
     @Override
     public void setChatState(Contact contact, ChatState chatState) {
-        if (contact != mContact) {
+        if (!contact.equals(mMember.contact)) {
             LOGGER.warning("wrong contact!?");
             return;
         }
-        mChatState.setState(chatState);
-        this.changed(mChatState);
+        mMember.setState(chatState);
+        this.changed(mMember.getState());
     }
 
     @Override
     void save() {
-        super.save(new Contact[]{mContact}, "");
+        super.save(Arrays.asList(mMember), "");
     }
 
     @Override
@@ -134,13 +128,13 @@ public final class SingleChat extends Chat {
         if (!(o instanceof SingleChat)) return false;
 
         SingleChat oChat = (SingleChat) o;
-        return mContact.equals(oChat.mContact) && mXMPPID.equals(oChat.mXMPPID);
+        return mMember.equals(oChat.mMember) && mXMPPID.equals(oChat.mXMPPID);
     }
 
     @Override
     public int hashCode() {
         int hash = 7;
-        hash = 41 * hash + Objects.hashCode(this.mContact);
+        hash = 41 * hash + Objects.hashCode(this.mMember);
         hash = 41 * hash + Objects.hashCode(this.mXMPPID);
         return hash;
     }

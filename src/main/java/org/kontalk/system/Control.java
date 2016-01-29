@@ -704,7 +704,7 @@ public final class Control {
             KonGroupData gData = GroupControl.newKonGroupData(me.getJID());
             //MUCData gData = GroupControl.newMUCGroupData();
 
-            GroupChat chat = ChatList.getInstance().createNew(withMe.toArray(new Contact[0]),
+            GroupChat chat = ChatList.getInstance().createNew(withMe,
                     gData,
                     subject);
 
