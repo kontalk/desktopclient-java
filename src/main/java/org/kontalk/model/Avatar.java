@@ -175,6 +175,10 @@ public class Avatar {
             LOGGER.info("created avatar directory");
     }
 
+    public static Avatar deleted() {
+        return new Avatar("");
+    }
+
     private static String id(BufferedImage image) {
         byte[] imageData = imageData(image);
         return imageData != null ? DigestUtils.sha1Hex(imageData) : "";
