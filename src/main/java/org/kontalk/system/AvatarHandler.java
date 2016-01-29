@@ -51,6 +51,10 @@ public final class AvatarHandler {
     }
 
     public void onNotify(JID jid, String id) {
+        if (Config.getInstance().getBoolean(Config.NET_REQUEST_AVATARS))
+            // disabled by user
+            return;
+
         Contact contact = ContactList.getInstance().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid:" + jid);

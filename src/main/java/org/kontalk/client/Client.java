@@ -161,9 +161,11 @@ public final class Client implements StanzaListener, Runnable {
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
         mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterHandler), presenceFilter);
 
-        // our service discovery: want avatar from other users
-        ServiceDiscoveryManager.getInstanceFor(mConn).
-                addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
+        if (config.getBoolean(Config.NET_REQUEST_AVATARS)) {
+            // our service discovery: want avatar from other users
+            ServiceDiscoveryManager.getInstanceFor(mConn).
+                    addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
+        }
 
         // listen to all IQ errors
         mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);

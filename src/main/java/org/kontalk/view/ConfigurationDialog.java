@@ -116,6 +116,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mTrayBox;
         private final WebCheckBox mCloseTrayBox;
         private final WebCheckBox mEnterSendsBox;
+        private final WebCheckBox mRequestAvatars;
         private final WebCheckBox mBGBox;
         private final WebFileChooserField mBGChooser;
 
@@ -151,6 +152,11 @@ final class ConfigurationDialog extends WebDialog {
                     mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
+            mRequestAvatars = createCheckBox(Tr.tr("Download avatar images"),
+                    Tr.tr("Download contact avatar images"),
+                    mConf.getBoolean(Config.NET_REQUEST_AVATARS));
+            groupPanel.add(new GroupPanel(mRequestAvatars, new WebSeparator()));
+
             String bgPath = mConf.getString(Config.VIEW_CHAT_BG);
             mBGBox = createCheckBox(Tr.tr("Custom background:")+" ",
                     "",
@@ -177,6 +183,7 @@ final class ConfigurationDialog extends WebDialog {
             mView.updateTray();
             mConf.setProperty(Config.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
+            mConf.setProperty(Config.NET_REQUEST_AVATARS, mRequestAvatars.isSelected());
             String bgPath;
             if (mBGBox.isSelected() && !mBGChooser.getSelectedFiles().isEmpty()) {
                 bgPath = mBGChooser.getSelectedFiles().get(0).getAbsolutePath();
