@@ -390,6 +390,10 @@ public final class View implements Observer {
         mChatView.loadDefaultBG();
     }
 
+    void updateContactList() {
+        mContactListView.updateOnEDT(null);
+    }
+
     void updateTray() {
         mTrayManager.setTray();
     }

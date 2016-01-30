@@ -88,7 +88,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     @Override
     protected void updateOnEDT(Object arg) {
         Set<ContactItem> newItems = new HashSet<>();
-        Set<Contact> contacts = mContactList.getAll();
+        Set<Contact> contacts = Utils.allContacts();
         for (Contact contact: contacts)
             if (!this.containsValue(contact))
                 newItems.add(new ContactItem(contact));

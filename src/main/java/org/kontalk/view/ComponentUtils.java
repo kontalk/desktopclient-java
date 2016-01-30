@@ -64,7 +64,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
@@ -87,7 +86,6 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
@@ -376,9 +374,8 @@ final class ComponentUtils {
 
         @Override
         void onShow() {
-            Set<Contact> allContacts = ContactList.getInstance().getAll();
             List<Contact> contacts = new LinkedList<>();
-            for (Contact c : allContacts) {
+            for (Contact c : Utils.allContacts()) {
                 if (c.isKontalkUser() && !c.isMe())
                     contacts.add(c);
             }
@@ -643,7 +640,6 @@ final class ComponentUtils {
         private final WebPanel layerPanel;
 
         ModalPopup(AbstractButton invokerButton) {
-            super();
             mInvoker = invokerButton;
 
             layerPanel = new WebPanel();
@@ -744,7 +740,6 @@ final class ComponentUtils {
         private final int mLimit;
 
         TextLimitDocument(int limit) {
-            super();
             this.mLimit = limit;
         }
 

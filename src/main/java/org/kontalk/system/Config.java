@@ -54,6 +54,7 @@ public final class Config extends PropertiesConfiguration {
     public static final String VIEW_FRAME_HEIGHT = "view.frame.height";
     public static final String VIEW_SELECTED_CHAT = "view.thread";
     public static final String VIEW_CHAT_BG = "view.thread_bg";
+    public static final String VIEW_USER_CONTACT = "view.user_in_contactlist";
     public static final String NET_SEND_CHAT_STATE = "net.chatstate";
     public static final String NET_SEND_ROSTER_NAME = "net.roster_name";
     public static final String NET_STATUS_LIST = "net.status_list";
@@ -97,6 +98,7 @@ public final class Config extends PropertiesConfiguration {
         map.put(VIEW_FRAME_HEIGHT, 650);
         map.put(VIEW_SELECTED_CHAT, -1);
         map.put(VIEW_CHAT_BG, "");
+        map.put(VIEW_USER_CONTACT, false);
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_SEND_ROSTER_NAME, false);
         map.put(NET_STATUS_LIST, new String[]{DEFAULT_XMPP_STATUS});
