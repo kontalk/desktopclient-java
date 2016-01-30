@@ -47,6 +47,7 @@ import java.util.logging.Logger;
 import javax.swing.Box;
 import javax.swing.JFrame;
 import javax.swing.text.NumberFormatter;
+import org.apache.commons.lang.StringUtils;
 import org.kontalk.system.Config;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
@@ -116,6 +117,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mTrayBox;
         private final WebCheckBox mCloseTrayBox;
         private final WebCheckBox mEnterSendsBox;
+        private final WebCheckBox mRequestAvatars;
         private final WebCheckBox mBGBox;
         private final WebFileChooserField mBGChooser;
 
@@ -151,6 +153,11 @@ final class ConfigurationDialog extends WebDialog {
                     mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
+            mRequestAvatars = createCheckBox(Tr.tr("Download avatar images"),
+                    Tr.tr("Download contact avatar images"),
+                    mConf.getBoolean(Config.NET_REQUEST_AVATARS));
+            groupPanel.add(new GroupPanel(mRequestAvatars, new WebSeparator()));
+
             String bgPath = mConf.getString(Config.VIEW_CHAT_BG);
             mBGBox = createCheckBox(Tr.tr("Custom background:")+" ",
                     "",
@@ -177,6 +184,7 @@ final class ConfigurationDialog extends WebDialog {
             mView.updateTray();
             mConf.setProperty(Config.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
+            mConf.setProperty(Config.NET_REQUEST_AVATARS, mRequestAvatars.isSelected());
             String bgPath;
             if (mBGBox.isSelected() && !mBGChooser.getSelectedFiles().isEmpty()) {
                 bgPath = mBGChooser.getSelectedFiles().get(0).getAbsolutePath();
@@ -196,6 +204,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebTextField mServerField;
         private final WebFormattedTextField mPortField;
         private final WebCheckBox mDisableCertBox;
+        private final WebTextArea mUserIDArea;
         private final WebTextArea mFingerprintArea;
 
         AccountPanel() {
@@ -230,11 +239,19 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
             groupPanel.add(new WebSeparator(true, true));
+
+            mUserIDArea = new WebTextArea().setBoldFont();
+            mUserIDArea.setEditable(false);
+            mUserIDArea.setOpaque(false);
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    new WebLabel(Tr.tr("Key user ID:")),
+                    mUserIDArea));
+
             WebLabel fpLabel = new WebLabel(Tr.tr("Key fingerprint:")+" ");
             fpLabel.setAlignmentY(Component.TOP_ALIGNMENT);
             GroupPanel fpLabelPanel = new GroupPanel(false, fpLabel, Box.createGlue());
             mFingerprintArea = Utils.createFingerprintArea();
-            this.updateFingerprint();
+            this.updateKey();
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT, fpLabelPanel, mFingerprintArea));
 
             final WebButton passButton = new WebButton(getPassTitle());
@@ -253,14 +270,13 @@ final class ConfigurationDialog extends WebDialog {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     mView.showImportWizard(false);
-                    AccountPanel.this.updateFingerprint();
+                    AccountPanel.this.updateKey();
                     passButton.setText(getPassTitle());
                 }
             });
             groupPanel.add(importButton);
 
             this.add(groupPanel, BorderLayout.CENTER);
-
 
             WebButton okButton = new WebButton(Tr.tr("Save & Connect"));
             okButton.addActionListener(new ActionListener() {
@@ -277,11 +293,17 @@ final class ConfigurationDialog extends WebDialog {
             this.add(buttonPanel, BorderLayout.SOUTH);
         }
 
-        private void updateFingerprint() {
+        private void updateKey() {
             PersonalKey key = Account.getInstance().getPersonalKey().orElse(null);
+            String uid = key != null ? key.getUserId() : null;
+            mUserIDArea.setText(uid != null ?
+                    StringUtils.abbreviate(uid, 40) :
+                    "- "+Tr.tr("no key loaded")+" -");
+            if (uid != null)
+                TooltipManager.addTooltip(mUserIDArea, uid);
             mFingerprintArea.setText(key != null ?
                     Utils.fingerprint(key.getFingerprint()) :
-                    "- " + Tr.tr("no key loaded") + " -");
+                    "---");
         }
 
         private void saveConfiguration() {

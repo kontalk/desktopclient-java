@@ -21,18 +21,27 @@ The desktop client uses your existing Kontalk account from the [Android client](
 
 ## Key Features
 
-- connecting to Kontalk server with an already existing Kontalk account
-- automatically adding XMPP roster entries from server
-- manually adding arbitrary Kontalk or Jabber user
-- automatically requesting/adding public keys for other Kontalk user
-- sending/receiving (encrypted) text messages from/to Kontalk user
-- sending/receiving (plain) text messages from/to arbitrary Jabber/XMPP user (clients like [Pidgin](https://pidgin.im/) or [Conversations](https://github.com/siacs/Conversations))
-- sending/requesting server receipts according to XMPP extension
-- ability to block all messages for specific user
-- receiving files send from the Android client
+Connect with Kontalk...
+- Use the existing Kontalk account from your phone.
+- Synchronized contact list (=XMPP roster).
+- Add new Kontalk users by phone number.
+- The client automatically requests public keys for safe communication.
+- Your communication with Kontalk users is encrypted by default.
+
+... and beyond:
+- Exchange text messages with any Jabber/XMPP users!
+- Add new Jabber contacts by JID.
+- Tested with clients like [Pidgin](https://pidgin.im/) or [Conversations](https://github.com/siacs/Conversations).
 
 **Note: private key and messages are saved unencrypted and can be read by other
 applications on your computer!**
+
+## Implemented XEP features:
+- XEP-0184: Message receipts
+- XEP-0085: Chat state notifications
+- XEP-0191: User blocking
+- XEP-0066: File transfer over server
+- XEP-0084: Avatar images
 
 ## Support us
 

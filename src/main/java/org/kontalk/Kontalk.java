@@ -23,6 +23,7 @@ import org.kontalk.system.Database;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.ConsoleHandler;
@@ -31,6 +32,13 @@ import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.ChatList;
@@ -38,6 +46,7 @@ import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.CryptoUtils;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.kontalk.view.View;
 
@@ -59,10 +68,10 @@ public final class Kontalk {
     }
 
     Kontalk(Path appDir) {
-        APP_DIR = appDir;
+        APP_DIR = appDir.toAbsolutePath();
     }
 
-    private void start() {
+    void start(boolean ui) {
         // check if already running
         try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
@@ -88,7 +97,12 @@ public final class Kontalk {
         // create app directory
         boolean created = APP_DIR.toFile().mkdirs();
         if (created)
-            LOGGER.info("created application directory");
+            LOGGER.info("created application directory: "+APP_DIR);
+
+        if (!Files.isWritable(APP_DIR)) {
+            LOGGER.severe("invalid app directory: "+APP_DIR);
+            return;
+        }
 
         // logging
         Logger logger = Logger.getLogger("");
@@ -118,20 +132,26 @@ public final class Kontalk {
         // register provider
         PGPUtils.registerProvider();
 
-        ViewControl control = Control.create();
+        final ViewControl control = Control.create();
 
-        View view = View.create(control).orElse(null);
-        if (view == null) {
-            control.shutDown();
-            return; // never reached
-        }
+        // handle shutdown signals
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            @Override
+            public void run() {
+                // NOTE: logging does not work here anymore already
+                control.shutDown(false);
+                System.out.println("shutdown finished");
+            }
+        });
+
+        View view = ui ? View.create(control).orElse(null) : null;
 
         try {
             // do now to test if successful
             Database.initialize();
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
-            control.shutDown();
+            control.shutDown(true);
             return; // never reached
         }
 
@@ -139,7 +159,8 @@ public final class Kontalk {
         ContactList.getInstance().load();
         ChatList.getInstance().load();
 
-        view.init();
+        if (view != null)
+            view.init();
 
         control.launch();
     }
@@ -151,7 +172,7 @@ public final class Kontalk {
         return APP_DIR;
     }
 
-    public static void exit() {
+    public static void removeLock() {
         if (RUN_LOCK != null) {
             try {
                 RUN_LOCK.close();
@@ -159,8 +180,6 @@ public final class Kontalk {
                 LOGGER.log(Level.WARNING, "can't close run socket", ex);
             }
         }
-        LOGGER.info("exit");
-        System.exit(0);
     }
 
     /**
@@ -169,7 +188,46 @@ public final class Kontalk {
     public static void main(String[] args) {
         LOGGER.setLevel(Level.ALL);
 
-        Kontalk app = new Kontalk();
-        app.start();
+        // parse args, i18n?
+        Options options = new Options();
+        options.addOption("h", "help", false, "show this help message");
+        options.addOption(Option.builder("d")
+                .argName("app_dir")
+                .hasArg()
+                .longOpt("app-dir")
+                .desc("set custom configuration directory")
+                .build()
+        );
+        options.addOption("c", "no-gui", false, "run without user interface");
+
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd;
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            showHelp(options);
+            return;
+        }
+        if (cmd.hasOption("h")) {
+            showHelp(options);
+            return;
+        }
+
+        String appDir = cmd.getOptionValue("d", "");
+
+        Kontalk app = appDir.isEmpty() ?
+                new Kontalk() :
+                new Kontalk(Paths.get(appDir));
+        app.start(!cmd.hasOption("c"));
+    }
+
+    private static void showHelp(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        String eol = EncodingUtils.EOL;
+        formatter.printHelp("java -jar [kontalk_jar]",
+                eol + "Kontalk Java Desktop Client" + eol,
+                options,
+                "",
+                true);
     }
 }

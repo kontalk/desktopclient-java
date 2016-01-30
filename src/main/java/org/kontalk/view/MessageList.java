@@ -128,7 +128,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         if (arg instanceof Set ||
                 arg instanceof String ||
                 arg instanceof Boolean ||
-                arg instanceof Chat.KonChatState) {
+                arg instanceof Chat.Member) {
             // contacts, subject, read status or chat state changed, nothing
             // to do here
             return;

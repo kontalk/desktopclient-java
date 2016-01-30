@@ -21,6 +21,8 @@ package org.kontalk.client;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -45,6 +47,8 @@ import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
+import org.jivesoftware.smackx.disco.packet.DiscoverInfo;
+import org.jivesoftware.smackx.pubsub.packet.PubSub;
 import org.kontalk.Kontalk;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
@@ -66,12 +70,15 @@ public final class Client implements StanzaListener, Runnable {
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
     public enum PresenceCommand {REQUEST, GRANT, DENY};
+    public enum ServerFeature {PUBSUB}
 
-    private static enum Command {CONNECT, DISCONNECT};
+    private enum Command {CONNECT, DISCONNECT};
 
     private final Control mControl;
 
     private final KonMessageSender mMessageSender;
+    private final HashMap<String, ServerFeature> mFeatureMap;
+    private final EnumSet<ServerFeature> mFeatures;
 
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
@@ -84,6 +91,10 @@ public final class Client implements StanzaListener, Runnable {
 
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
+
+        mFeatureMap = new HashMap<>();
+        mFeatureMap.put(PubSub.NAMESPACE, ServerFeature.PUBSUB);
+        mFeatures = EnumSet.noneOf(ServerFeature.class);
 
         // setting caps cache
         File cacheDir = Kontalk.appDir().resolve(CAPS_CACHE_DIR).toFile();
@@ -150,9 +161,11 @@ public final class Client implements StanzaListener, Runnable {
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
         mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterHandler), presenceFilter);
 
-        // our service discovery: want avatar from other users
-        ServiceDiscoveryManager.getInstanceFor(mConn).
-                addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
+        if (config.getBoolean(Config.NET_REQUEST_AVATARS)) {
+            // our service discovery: want avatar from other users
+            ServiceDiscoveryManager.getInstanceFor(mConn).
+                    addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
+        }
 
         // listen to all IQ errors
         mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
@@ -191,19 +204,28 @@ public final class Client implements StanzaListener, Runnable {
 
         // (server) service discovery, XEP-0030
         // NOTE: smack automatically creates instances of SDM and CapsM and connects them
-        //ServiceDiscoveryManager discoManager = ServiceDiscoveryManager.getInstanceFor(mConn);
-//        try {
-//            // blocking
-//            // NOTE: null parameter does not work
-//            DiscoverInfo i = discoManager.discoverInfo(mConn.getServiceName());
-//            for (DiscoverInfo.Feature f: i.getFeatures()) {
-//                System.out.println("server feature: "+f.getVar());
-//            }
-//        } catch (SmackException.NoResponseException |
-//                XMPPException.XMPPErrorException |
-//                SmackException.NotConnectedException ex) {
-//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
-//        }
+        ServiceDiscoveryManager discoManager = ServiceDiscoveryManager.getInstanceFor(mConn);
+        DiscoverInfo info = null;
+        try {
+            // blocking
+            // NOTE: null parameter does not work
+             info = discoManager.discoverInfo(mConn.getServiceName());
+        } catch (SmackException.NoResponseException |
+                XMPPException.XMPPErrorException |
+                SmackException.NotConnectedException ex) {
+            LOGGER.log(Level.WARNING, "can't get service discovery info");
+        }
+
+        mFeatures.clear();
+        if (info != null) {
+            for (DiscoverInfo.Feature feature: info.getFeatures()) {
+                String var = feature.getVar();
+                if (mFeatureMap.containsKey(var)) {
+                    mFeatures.add(mFeatureMap.get(feature));
+                }
+            }
+        }
+        LOGGER.info("supported server features: "+mFeatures);
 
         // Caps, XEP-0115
         // NOTE: caps manager is automatically used by Smack
@@ -258,7 +280,6 @@ public final class Client implements StanzaListener, Runnable {
                 mConn.disconnect();
             }
         }
-        mControl.setStatus(Control.Status.DISCONNECTED);
     }
 
     public boolean isConnected() {
@@ -434,6 +455,21 @@ public final class Client implements StanzaListener, Runnable {
             return;
         }
         mAvatarSendReceiver.requestAndListen(jid, id);
+    }
+
+    public void publishAvatar(String id, byte[] data) {
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
+            return;
+        }
+        mAvatarSendReceiver.publish(id, data);
+    }
+
+    public EnumSet<ServerFeature> getServerFeatures() {
+        if (!this.isConnected())
+            mFeatures.clear();
+
+        return mFeatures.clone();
     }
 
     @Override

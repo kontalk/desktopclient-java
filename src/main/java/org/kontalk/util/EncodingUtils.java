@@ -26,6 +26,8 @@ import org.json.simple.JSONObject;
 
 public final class EncodingUtils {
 
+    public static final String EOL = System.getProperty("line.separator");
+
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
 
     private EncodingUtils() { throw new AssertionError(); }

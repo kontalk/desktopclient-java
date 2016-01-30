@@ -58,6 +58,7 @@ public final class Config extends PropertiesConfiguration {
     public static final String NET_SEND_ROSTER_NAME = "net.roster_name";
     public static final String NET_STATUS_LIST = "net.status_list";
     public static final String NET_AUTO_SUBSCRIPTION = "net.auto_subscription";
+    public static final String NET_REQUEST_AVATARS = "net.request_avatars";
     public static final String MAIN_CONNECT_STARTUP = "main.connect_startup";
     public static final String MAIN_TRAY = "main.tray";
     public static final String MAIN_TRAY_CLOSE = "main.tray_close";
@@ -100,6 +101,7 @@ public final class Config extends PropertiesConfiguration {
         map.put(NET_SEND_ROSTER_NAME, false);
         map.put(NET_STATUS_LIST, new String[]{DEFAULT_XMPP_STATUS});
         map.put(NET_AUTO_SUBSCRIPTION, false);
+        map.put(NET_REQUEST_AVATARS, true);
         map.put(MAIN_CONNECT_STARTUP, true);
         map.put(MAIN_TRAY, true);
         map.put(MAIN_TRAY_CLOSE, false);

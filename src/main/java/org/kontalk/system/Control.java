@@ -19,6 +19,7 @@
 package org.kontalk.system;
 
 import org.kontalk.model.Account;
+import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -49,6 +50,7 @@ import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Avatar;
 import org.kontalk.model.GroupChat;
 import org.kontalk.model.GroupMetaData.KonGroupData;
 import org.kontalk.model.MessageContent.Attachment;
@@ -130,6 +132,8 @@ public final class Control {
             for (Contact contact : ContactList.getInstance())
                 if (contact.getFingerprint().isEmpty())
                     this.maySendKeyRequest(contact);
+
+            // TODO check current user avatar on server and upload if necessary
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
             for (Contact contact : ContactList.getInstance())
                 contact.setOffline();
@@ -547,7 +551,11 @@ public final class Control {
                 this.connect();
         }
 
-        public void shutDown() {
+        public void shutDown(boolean exit) {
+            if (mCurrentStatus == Status.SHUTTING_DOWN)
+                // we were already here
+                return;
+
             this.disconnect();
             LOGGER.info("Shutting down...");
             mCurrentStatus = Status.SHUTTING_DOWN;
@@ -558,8 +566,11 @@ public final class Control {
                 // ignore
             }
             Config.getInstance().saveToFile();
-
-            Kontalk.exit();
+            Kontalk.removeLock();
+            if (exit) {
+                LOGGER.info("exit");
+                System.exit(0);
+            }
         }
 
         public void connect() {
@@ -693,7 +704,7 @@ public final class Control {
             KonGroupData gData = GroupControl.newKonGroupData(me.getJID());
             //MUCData gData = GroupControl.newMUCGroupData();
 
-            GroupChat chat = ChatList.getInstance().createNew(withMe.toArray(new Contact[0]),
+            GroupChat chat = ChatList.getInstance().createNew(withMe,
                     gData,
                     subject);
 
@@ -743,6 +754,19 @@ public final class Control {
             this.sendTextMessage(chat, "", file);
         }
 
+        public Optional<BufferedImage> getUserAvatar() {
+            return Avatar.UserAvatar.instance().loadImage();
+        }
+
+        public void setUserAvatar(BufferedImage image) {
+            Avatar.UserAvatar avatar = Avatar.UserAvatar.setImage(image);
+            byte[] avatarData = avatar.imageData().orElse(null);
+            if (avatarData == null || avatar.getID().isEmpty())
+                return;
+
+            mClient.publishAvatar(avatar.getID(), avatarData);
+        }
+
         /* private */
 
         private void sendTextMessage(Chat chat, String text, Path file) {
@@ -772,7 +796,7 @@ public final class Control {
                     return null;
                 }
 
-                password = Config.getInstance().getString(Config.ACC_PASS).toCharArray();
+                password = account.getPassword();
             }
 
             try {

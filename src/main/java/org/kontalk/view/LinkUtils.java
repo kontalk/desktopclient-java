@@ -56,7 +56,7 @@ final class LinkUtils {
     private static final Pattern URL_PATTERN = Pattern.compile(
             "(http[s]?://)?" + // scheme
             "(\\w+(-+\\w+)*\\.)+" + // sub- and host-level(s)
-            "[a-zA]{2,}" + // TLD
+            "[a-z]{2,}(:[0-9]+)?" + // TLD and port
             "(/[^\\s?#/]*)*" + // path
             "(\\?[^\\s?#]*)*" + // query
             "(\\#[^\\s?#]*)*", // fragment

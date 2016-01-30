@@ -28,7 +28,6 @@ import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
 import com.alee.laf.panel.WebPanel;
-import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
@@ -59,7 +58,6 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -118,80 +116,6 @@ final class ComponentUtils {
             this.setHorizontalScrollBarPolicy(
                     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             this.getVerticalScrollBar().setUnitIncrement(25);
-        }
-    }
-
-    static class StatusDialog extends WebDialog {
-
-        private final View mView;
-        private final WebTextField mStatusField;
-        private final WebList mStatusList;
-
-        StatusDialog(View view) {
-            mView = view;
-
-            this.setTitle(Tr.tr("Status"));
-            this.setResizable(false);
-            this.setModal(true);
-
-            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
-            groupPanel.setMargin(View.MARGIN_BIG);
-
-            String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
-            String currentStatus = "";
-            if (!stats.isEmpty())
-                currentStatus = stats.remove(0);
-
-            stats.remove("");
-
-            groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
-            mStatusField = new WebTextField(currentStatus, 30);
-            groupPanel.add(mStatusField);
-            groupPanel.add(new WebSeparator(true, true));
-
-            groupPanel.add(new WebLabel(Tr.tr("Previously used:")));
-            mStatusList = new WebList(stats);
-            mStatusList.setMultiplySelectionAllowed(false);
-            mStatusList.addListSelectionListener(new ListSelectionListener() {
-                @Override
-                public void valueChanged(ListSelectionEvent e) {
-                    if (e.getValueIsAdjusting())
-                        return;
-                    mStatusField.setText(mStatusList.getSelectedValue().toString());
-                }
-            });
-            WebScrollPane listScrollPane = new ScrollPane(mStatusList);
-            groupPanel.add(listScrollPane);
-            this.add(groupPanel, BorderLayout.CENTER);
-
-            // buttons
-            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    StatusDialog.this.dispose();
-                }
-            });
-            final WebButton saveButton = new WebButton(Tr.tr("Save"));
-            saveButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    StatusDialog.this.saveStatus();
-                    StatusDialog.this.dispose();
-                }
-            });
-            this.getRootPane().setDefaultButton(saveButton);
-
-            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
-            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
-            this.add(buttonPanel, BorderLayout.SOUTH);
-
-            this.pack();
-        }
-
-        private void saveStatus() {
-            mView.getControl().setStatusText(mStatusField.getText());
         }
     }
 

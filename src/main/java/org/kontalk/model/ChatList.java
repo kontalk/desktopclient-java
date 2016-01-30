@@ -20,10 +20,12 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
@@ -121,9 +123,9 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     public GroupChat getOrCreate(GroupMetaData gData, Contact contact) {
         GroupChat chat = this.get(gData, contact).orElse(null);
         if (chat != null)
-            return chat;
+            return chat;;
 
-        return this.createNew(new Contact[]{contact}, gData, "");
+        return this.createNew(Arrays.asList(contact), gData, "");
     }
 
     public Chat getOrCreate(Contact contact) {
@@ -147,7 +149,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         return newChat;
     }
 
-    public GroupChat createNew(Contact[] contacts, GroupMetaData gData, String subject) {
+    public GroupChat createNew(List<Contact> contacts, GroupMetaData gData, String subject) {
         GroupChat newChat = GroupChat.create(contacts, gData, subject);
         LOGGER.config("new group chat: "+newChat);
         this.putSilent(newChat);
@@ -157,7 +159,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     private void putSilent(Chat chat) {
         if (mMap.containsValue(chat)) {
-            LOGGER.warning("chat already in chat list");
+            LOGGER.warning("chat already in chat list: "+chat);
             return;
         }
 

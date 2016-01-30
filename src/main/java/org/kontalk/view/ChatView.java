@@ -76,6 +76,7 @@ import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Config;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import static org.kontalk.view.View.MARGIN_SMALL;
@@ -348,7 +349,7 @@ final class ChatView extends WebPanel implements Observer {
                 if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
                         e.getModifiersEx() == KeyEvent.CTRL_DOWN_MASK) {
                     e.consume();
-                    mSendTextArea.append(System.getProperty("line.separator"));
+                    mSendTextArea.append(EncodingUtils.EOL);
                 }
                 if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
                         e.getModifiers() == 0) {

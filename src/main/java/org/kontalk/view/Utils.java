@@ -59,6 +59,7 @@ import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
 
@@ -225,7 +226,7 @@ final class Utils {
             String subj = chat.getSubject();
             return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
         } else {
-            return Utils.displayNames(new ArrayList<>(chat.getAllContacts()));
+            return Utils.displayNames(chat.getAllContacts());
         }
     }
 
@@ -258,7 +259,7 @@ final class Utils {
     }
 
     static String getErrorText(KonException ex) {
-        String eol = " " + System.getProperty("line.separator");
+        String eol = " " + EncodingUtils.EOL;
         String errorText;
         switch (ex.getError()) {
             case IMPORT_ARCHIVE:

@@ -20,17 +20,21 @@ package org.kontalk.client;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
+import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.pubsub.Item;
 import org.jivesoftware.smackx.pubsub.ItemsExtension;
+import org.jivesoftware.smackx.pubsub.LeafNode;
 import org.jivesoftware.smackx.pubsub.PayloadItem;
 import org.jivesoftware.smackx.pubsub.PubSubElementType;
+import org.jivesoftware.smackx.pubsub.PubSubManager;
 import org.jivesoftware.smackx.pubsub.packet.PubSub;
 import org.jivesoftware.smackx.pubsub.packet.PubSubNamespace;
 import org.kontalk.misc.JID;
@@ -73,8 +77,37 @@ final class AvatarSendReceiver {
         mHandler = handler;
     }
 
-    // TODO beta.kontalk.net does not support this
+    // TODO beta.kontalk.net does not support this, untested
     void publish(String id, byte[] data) {
+        if (!mConn.isAuthenticated()) {
+            LOGGER.info("not logged in");
+            return;
+        }
+
+        PubSubManager mPubSubManager = new PubSubManager(mConn, mConn.getServiceName());
+        LeafNode node;
+        try {
+            node = mPubSubManager.createNode(DATA_NODE);
+        } catch (SmackException.NoResponseException |
+                XMPPException.XMPPErrorException |
+                SmackException.NotConnectedException ex) {
+            LOGGER.log(Level.WARNING, "can't create node", ex);
+            return;
+        }
+
+        PayloadItem<AvatarDataExtension> item = new PayloadItem<>(id,
+                new AvatarDataExtension(data));
+        try {
+            // blocking
+            node.send(item);
+        } catch (SmackException.NoResponseException |
+                XMPPException.XMPPErrorException |
+                SmackException.NotConnectedException ex) {
+            LOGGER.log(Level.WARNING, "can't send item", ex);
+            return;
+        }
+
+        // publish meta data...
     }
 
     void processMetadataEvent(JID jid, ItemsExtension itemsExt) {

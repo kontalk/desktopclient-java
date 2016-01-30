@@ -38,11 +38,11 @@ public class CryptoUtils {
      * Ugly hack to get “unlimited strength” for the Java Encryption Extension.
      * Source: https://stackoverflow.com/a/22492582
      */
-    public static void removeCryptographyRestrictions() {
+    public static boolean removeCryptographyRestrictions() {
         try {
             if (Cipher.getMaxAllowedKeyLength("RC5") >= 256) {
                 LOGGER.config("cryptography restrictions removal not needed");
-                return;
+                return true;
             }   } catch (NoSuchAlgorithmException ex) {
             LOGGER.log(Level.WARNING, "can't check for crypto restriction", ex);
         }
@@ -82,6 +82,8 @@ public class CryptoUtils {
                 IllegalArgumentException |
                 IllegalAccessException ex) {
             LOGGER.log(Level.WARNING, "can't remove cryptography restrictions", ex);
+            return false;
         }
+        return true;
     }
 }
