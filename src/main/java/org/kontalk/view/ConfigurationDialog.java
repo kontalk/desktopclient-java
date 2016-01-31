@@ -154,8 +154,8 @@ final class ConfigurationDialog extends WebDialog {
                     mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
-            mRequestAvatars = createCheckBox(Tr.tr("Download avatar images"),
-                    Tr.tr("Download contact avatar images"),
+            mRequestAvatars = createCheckBox(Tr.tr("Download profile pictures"),
+                    Tr.tr("Download contact profile pictures"),
                     mConf.getBoolean(Config.NET_REQUEST_AVATARS));
             groupPanel.add(new GroupPanel(mRequestAvatars, new WebSeparator()));
 
