@@ -162,7 +162,7 @@ public class AttachmentManager implements Runnable {
         } catch (KonException ex) {
             LOGGER.warning("upload failed, attachment: "+attachment);
             message.setStatus(KonMessage.Status.ERROR);
-            mControl.handleException(ex);
+            mControl.onException(ex);
             return;
         }
 
@@ -207,7 +207,7 @@ public class AttachmentManager implements Runnable {
             path = client.download(attachment.getURL(), mAttachmentDir, listener);
         } catch (KonException ex) {
             LOGGER.warning("download failed, URL="+attachment.getURL());
-            mControl.handleException(ex);
+            mControl.onException(ex);
             return;
         }
 

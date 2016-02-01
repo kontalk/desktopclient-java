@@ -34,11 +34,11 @@ import org.kontalk.system.Control;
 final class KonConnectionListener implements ConnectionListener {
     private static final Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());
 
-    private final Control mControl;
+    private final Client mClient;
     private boolean mConnected = false;
 
-    KonConnectionListener(Control control) {
-        mControl = control;
+    KonConnectionListener(Client client) {
+        mClient = client;
     }
 
     @Override
@@ -58,7 +58,7 @@ final class KonConnectionListener implements ConnectionListener {
     public void connectionClosed() {
         mConnected = false;
         LOGGER.info("connection closed");
-        mControl.setStatus(Control.Status.DISCONNECTED);
+        mClient.newStatus(Control.Status.DISCONNECTED);
     }
 
     @Override
@@ -71,8 +71,8 @@ final class KonConnectionListener implements ConnectionListener {
             return;
 
         LOGGER.log(Level.WARNING, "connection closed on error", ex);
-        mControl.setStatus(Control.Status.ERROR);
-        mControl.handleException(new KonException(KonException.Error.CLIENT_ERROR, ex));
+        mClient.newStatus(Control.Status.ERROR);
+        mClient.newException(new KonException(KonException.Error.CLIENT_ERROR, ex));
     }
 
     @Override

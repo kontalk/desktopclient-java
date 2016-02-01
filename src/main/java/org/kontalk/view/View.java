@@ -40,8 +40,10 @@ import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
+import java.util.EnumSet;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
+import org.kontalk.client.Client;
 import org.kontalk.system.Config;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Chat;
@@ -104,6 +106,9 @@ public final class View implements Observer {
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
 
+    private Control.Status mCurrentStatus;
+    private EnumSet<Client.ServerFeature> mServerFeatures;
+
     private View(ViewControl control) {
         mControl = control;
 
@@ -148,7 +153,7 @@ public final class View implements Observer {
         // notifier
         mNotifier = new Notifier(this);
 
-        this.statusChanged();
+        this.statusChanged(Control.Status.DISCONNECTED, EnumSet.noneOf(Client.ServerFeature.class));
     }
 
     void setHotkeys() {
@@ -171,8 +176,12 @@ public final class View implements Observer {
         });
     }
 
-    Control.Status getCurrentStatus() {
-        return mControl.getCurrentStatus();
+    Control.Status currentStatus() {
+        return mCurrentStatus;
+    }
+
+    EnumSet<Client.ServerFeature> serverFeatures() {
+        return mServerFeatures;
     }
 
     void showConfig() {
@@ -197,8 +206,9 @@ public final class View implements Observer {
     }
 
     private void updateOnEDT(Object arg) {
-        if (arg instanceof ViewEvent.StatusChanged) {
-            this.statusChanged();
+        if (arg instanceof ViewEvent.StatusChange) {
+            ViewEvent.StatusChange statChange = (ViewEvent.StatusChange) arg;
+            this.statusChanged(statChange.status, mServerFeatures);
         } else if (arg instanceof ViewEvent.PasswordSet) {
             this.showPasswordDialog(false);
         } else if (arg instanceof ViewEvent.MissingAccount) {
@@ -232,8 +242,9 @@ public final class View implements Observer {
         }
     }
 
-    private void statusChanged() {
-        Control.Status status = mControl.getCurrentStatus();
+    private void statusChanged(Control.Status status, EnumSet<Client.ServerFeature> features) {
+        mCurrentStatus = status;
+        mServerFeatures = features;
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Connecting…"));

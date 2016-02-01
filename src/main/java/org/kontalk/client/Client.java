@@ -114,7 +114,7 @@ public final class Client implements StanzaListener, Runnable {
         this.disconnect();
 
         LOGGER.config("connecting...");
-        mControl.setStatus(Control.Status.CONNECTING);
+        this.newStatus(Control.Status.CONNECTING);
 
         Config config = Config.getInstance();
         //String network = config.getString(KonConf.SERV_NET);
@@ -131,7 +131,7 @@ public final class Client implements StanzaListener, Runnable {
                         validateCertificate);
 
         // connection listener
-        mConn.addConnectionListener(new KonConnectionListener(mControl));
+        mConn.addConnectionListener(new KonConnectionListener(this));
 
         Roster roster = Roster.getInstanceFor(mConn);
         // subscriptions handled by roster handler
@@ -167,6 +167,9 @@ public final class Client implements StanzaListener, Runnable {
                     addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
         }
 
+        // listen to all acks
+        mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
+
         // listen to all IQ errors
         mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
 
@@ -183,8 +186,8 @@ public final class Client implements StanzaListener, Runnable {
                 mConn.connect();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't connect to "+mConn.getServer(), ex);
-                mControl.setStatus(Control.Status.FAILED);
-                mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
+                this.newStatus(Control.Status.FAILED);
+                mControl.onException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
                 return;
             }
 
@@ -194,13 +197,11 @@ public final class Client implements StanzaListener, Runnable {
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't login on "+mConn.getServer(), ex);
                 mConn.disconnect();
-                mControl.setStatus(Control.Status.FAILED);
-                mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
+                this.newStatus(Control.Status.FAILED);
+                mControl.onException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
                 return;
             }
         }
-
-        mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
 
         // (server) service discovery, XEP-0030
         // NOTE: smack automatically creates instances of SDM and CapsM and connects them
@@ -271,12 +272,13 @@ public final class Client implements StanzaListener, Runnable {
 
         this.sendBlocklistRequest();
 
-        mControl.setStatus(Control.Status.CONNECTED);
+        this.newStatus(Control.Status.CONNECTED);
     }
 
     public void disconnect() {
         synchronized (this) {
             if (mConn != null && mConn.isConnected()) {
+                this.newStatus(Control.Status.DISCONNECTING);
                 mConn.disconnect();
             }
         }
@@ -483,12 +485,17 @@ public final class Client implements StanzaListener, Runnable {
         }
     }
 
-    // TODO unused
-    public EnumSet<ServerFeature> getServerFeatures() {
-        if (!this.isConnected())
+    /* package internal*/
+
+    void newStatus(Control.Status status) {
+        if (status != Control.Status.CONNECTED)
             mFeatures.clear();
 
-        return mFeatures.clone();
+        mControl.onStatusChange(status, mFeatures.clone());
+    }
+
+    void newException(KonException konException) {
+        mControl.onException(konException);
     }
 
     @Override

@@ -18,10 +18,13 @@
 
 package org.kontalk.misc;
 
+import java.util.EnumSet;
+import org.kontalk.client.Client;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.InMessage;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Contact;
+import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
 
 /**
@@ -33,7 +36,14 @@ public class ViewEvent {
     private ViewEvent() {}
 
     /** Application status changed. */
-    public static class StatusChanged extends ViewEvent {
+    public static class StatusChange extends ViewEvent {
+        public final Control.Status status;
+        public final EnumSet<Client.ServerFeature> features;
+
+        public StatusChange(Control.Status status, EnumSet<Client.ServerFeature> features) {
+            this.status = status;
+            this.features = features;
+        }
     }
 
     /** Key is password protected (ask for password). */

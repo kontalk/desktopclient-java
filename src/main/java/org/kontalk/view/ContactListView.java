@@ -159,7 +159,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             unblockItem.setVisible(false);
         }
 
-        Control.Status status = mView.getCurrentStatus();
+        Control.Status status = mView.currentStatus();
         boolean connected = status == Control.Status.CONNECTED;
         blockItem.setEnabled(connected);
         unblockItem.setEnabled(connected);

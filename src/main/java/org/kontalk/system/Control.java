@@ -89,7 +89,7 @@ public final class Control {
     private final AvatarHandler mAvatarHandler;
     private final GroupControl mGroupControl;
 
-    private Status mCurrentStatus = Status.DISCONNECTED;
+    private boolean mShuttingDown = false;
 
     private Control() {
         mViewControl = new ViewControl();
@@ -116,9 +116,8 @@ public final class Control {
 
     /* events from network client */
 
-    public void setStatus(Status status) {
-        mCurrentStatus = status;
-        mViewControl.changed(new ViewEvent.StatusChanged());
+    public void onStatusChange(Status status, EnumSet<Client.ServerFeature> features) {
+        mViewControl.changed(new ViewEvent.StatusChange(status, features));
 
         if (status == Status.CONNECTED) {
             String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
@@ -140,7 +139,7 @@ public final class Control {
         }
     }
 
-    public void handleException(KonException ex) {
+    public void onException(KonException ex) {
         mViewControl.changed(new ViewEvent.Exception(ex));
     }
 
@@ -552,14 +551,17 @@ public final class Control {
         }
 
         public void shutDown(boolean exit) {
-            if (mCurrentStatus == Status.SHUTTING_DOWN)
+            if (mShuttingDown)
                 // we were already here
                 return;
 
-            this.disconnect();
+            mShuttingDown = true;
+
             LOGGER.info("Shutting down...");
-            mCurrentStatus = Status.SHUTTING_DOWN;
-            this.changed(new ViewEvent.StatusChanged());
+            this.disconnect();
+
+            this.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
+                    EnumSet.noneOf(Client.ServerFeature.class)));
             try {
                 Database.getInstance().close();
             } catch (RuntimeException ex) {
@@ -587,13 +589,7 @@ public final class Control {
 
         public void disconnect() {
             mChatStateManager.imGone();
-            mCurrentStatus = Status.DISCONNECTING;
-            this.changed(new ViewEvent.StatusChanged());
             mClient.disconnect();
-        }
-
-        public Status getCurrentStatus() {
-            return mCurrentStatus;
         }
 
         public void setStatusText(String newStatus) {
@@ -602,7 +598,6 @@ public final class Control {
             List<String> stats = new ArrayList<>(Arrays.asList(strings));
 
             stats.remove(newStatus);
-
             stats.add(0, newStatus);
 
             if (stats.size() > 20)
@@ -808,7 +803,7 @@ public final class Control {
                 return account.load(password);
             } catch (KonException ex) {
                 // something wrong with the account, tell view
-                Control.this.handleException(ex);
+                Control.this.onException(ex);
                 return null;
             }
         }
