@@ -127,7 +127,7 @@ public final class RosterHandler {
         }
 
         if (rawKey.length > 0)
-            mControl.handlePGPKey(contact, rawKey);
+            mControl.onPGPKey(contact, rawKey);
     }
 
     public void onPresenceUpdate(JID jid, Presence.Type type, String status) {

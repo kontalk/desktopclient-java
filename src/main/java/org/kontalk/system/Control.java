@@ -144,7 +144,7 @@ public final class Control {
     }
 
     // TODO unused
-    public void handleEncryptionErrors(KonMessage message, Contact contact) {
+    public void onEncryptionErrors(KonMessage message, Contact contact) {
         EnumSet<Coder.Error> errors = message.getCoderStatus().getErrors();
         if (errors.contains(Coder.Error.KEY_UNAVAILABLE) ||
                 errors.contains(Coder.Error.INVALID_SIGNATURE) ||
@@ -152,10 +152,10 @@ public final class Control {
             // maybe there is something wrong with the senders key
             this.maySendKeyRequest(contact);
         }
-        this.handleSecurityErrors(message);
+        this.onSecurityErrors(message);
     }
 
-    public void handleSecurityErrors(KonMessage message) {
+    public void onSecurityErrors(KonMessage message) {
         mViewControl.changed(new ViewEvent.SecurityError(message));
     }
 
@@ -164,7 +164,7 @@ public final class Control {
      * receipts): Create, save and process the message.
      * @return true on success or message is a duplicate, false on unexpected failure
      */
-    public boolean newInMessage(MessageIDs ids,
+    public boolean onNewInMessage(MessageIDs ids,
             Optional<Date> serverDate,
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
@@ -225,7 +225,7 @@ public final class Control {
         return newMessage.getID() >= -1;
     }
 
-    public void messageSent(MessageIDs ids) {
+    public void onMessageSent(MessageIDs ids) {
         OutMessage message = findMessage(ids).orElse(null);
         if (message == null)
             return;
@@ -233,7 +233,7 @@ public final class Control {
         message.setStatus(KonMessage.Status.SENT);
     }
 
-    public void setReceived(MessageIDs ids) {
+    public void onMessageReceived(MessageIDs ids) {
         OutMessage message = findMessage(ids).orElse(null);
         if (message == null)
             return;
@@ -241,7 +241,7 @@ public final class Control {
         message.setReceived(ids.jid);
     }
 
-    public void setMessageError(MessageIDs ids, Condition condition, String errorText) {
+    public void onMessageError(MessageIDs ids, Condition condition, String errorText) {
         OutMessage message = findMessage(ids).orElse(null);
         if (message == null)
             return ;
@@ -251,7 +251,7 @@ public final class Control {
     /**
      * Inform model (and view) about a received chat state notification.
      */
-    public void processChatState(MessageIDs ids,
+    public void onChatStateNotification(MessageIDs ids,
             Optional<Date> serverDate,
             ChatState chatState) {
         if (serverDate.isPresent()) {
@@ -274,17 +274,17 @@ public final class Control {
         chat.setChatState(contact, chatState);
     }
 
-    public void handlePGPKey(JID jid, byte[] rawKey) {
+    public void onPGPKey(JID jid, byte[] rawKey) {
         Contact contact = ContactList.getInstance().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid: "+jid);
             return;
         }
 
-        this.handlePGPKey(contact, rawKey);
+        this.onPGPKey(contact, rawKey);
     }
 
-    void handlePGPKey(Contact contact, byte[] rawKey) {
+    void onPGPKey(Contact contact, byte[] rawKey) {
         PGPCoderKey key = PGPUtils.readPublicKey(rawKey).orElse(null);
         if (key == null) {
             LOGGER.warning("invalid public PGP key, contact: "+contact);
@@ -308,32 +308,17 @@ public final class Control {
         }
     }
 
-    public void setKey(Contact contact, PGPCoderKey key) {
-        contact.setKey(key.rawKey, key.fingerprint);
-
-        // enable encryption without asking
-        contact.setEncrypted(true);
-
-        // if not set, use uid in key for contact name
-        if (contact.getName().isEmpty() && key.userID != null) {
-            LOGGER.info("full UID in key: '" + key.userID + "'");
-            String contactName = PGPUtils.parseUID(key.userID)[0];
-            if (!contactName.isEmpty())
-                contact.setName(contactName);
-        }
-    }
-
-    public void setBlockedContacts(JID[] jids) {
+    public void onBlockList(JID[] jids) {
         for (JID jid : jids) {
             if (jid.isFull()) {
                 LOGGER.info("ignoring blocking of JID with resource");
                 return;
             }
-            this.setContactBlocking(jid, true);
+            this.onContactBlocked(jid, true);
         }
     }
 
-    public void setContactBlocking(JID jid, boolean blocking) {
+    public void onContactBlocked(JID jid, boolean blocking) {
         Contact contact = ContactList.getInstance().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("ignoring blocking of JID not in contact list");
@@ -457,12 +442,28 @@ public final class Control {
         this.processContent(message);
     }
 
+
+    private void setKey(Contact contact, PGPCoderKey key) {
+        contact.setKey(key.rawKey, key.fingerprint);
+
+        // enable encryption without asking
+        contact.setEncrypted(true);
+
+        // if not set, use uid in key for contact name
+        if (contact.getName().isEmpty() && key.userID != null) {
+            LOGGER.info("full UID in key: '" + key.userID + "'");
+            String contactName = PGPUtils.parseUID(key.userID)[0];
+            if (!contactName.isEmpty())
+                contact.setName(contactName);
+        }
+    }
+
     /**
      * Download attachment for incoming message if present.
      */
     private void processContent(InMessage message) {
         if (!message.getCoderStatus().getErrors().isEmpty()) {
-            this.handleSecurityErrors(message);
+            this.onSecurityErrors(message);
         }
 
         if (message.getContent().getPreview().isPresent()) {
