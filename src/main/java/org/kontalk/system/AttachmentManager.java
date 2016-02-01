@@ -340,7 +340,9 @@ public class AttachmentManager implements Runnable {
     static AttachmentManager create(Control control) {
         AttachmentManager manager = new AttachmentManager(Kontalk.appDir(), control);
 
-        new Thread(manager).start();
+        Thread thread = new Thread(manager, "Attachment Transfer");
+        thread.setDaemon(true);
+        thread.start();
 
         return manager;
     }

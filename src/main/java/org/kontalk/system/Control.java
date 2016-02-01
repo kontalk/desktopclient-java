@@ -94,7 +94,7 @@ public final class Control {
     private Control() {
         mViewControl = new ViewControl();
 
-        mClient = new Client(this);
+        mClient = Client.create(this);
         mChatStateManager = new ChatStateManager(mClient);
         mAttachmentManager = AttachmentManager.create(this);
         mRosterHandler = new RosterHandler(this, mClient);
@@ -538,8 +538,6 @@ public final class Control {
     public class ViewControl extends Observable {
 
         public void launch() {
-            new Thread(mClient).start();
-
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
             if (!Account.getInstance().isPresent()) {
                 LOGGER.info("no account found, asking for import...");

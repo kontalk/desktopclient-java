@@ -238,7 +238,8 @@ class OggClip {
             // ignore if no mark
         }
 
-        player = new Thread() {
+        player = new Thread("OGG Play") {
+            @Override
             public void run() {
                 try {
                     playStream(Thread.currentThread());
@@ -251,10 +252,9 @@ class OggClip {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-            }
-        ;
+            };
         };
-		player.setDaemon(true);
+        player.setDaemon(true);
         player.start();
     }
 
@@ -270,7 +270,7 @@ class OggClip {
             // ignore if no mark
         }
 
-        player = new Thread() {
+        player = new Thread("OGG Loop") {
             @Override
             public void run() {
                 while (player == Thread.currentThread()) {
@@ -286,10 +286,9 @@ class OggClip {
                     } catch (IOException e) {
                     }
                 }
-            }
-        ;
+            };
         };
-		player.setDaemon(true);
+        player.setDaemon(true);
         player.start();
     }
 

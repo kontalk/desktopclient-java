@@ -61,6 +61,8 @@ public final class Kontalk {
     private static ServerSocket RUN_LOCK = null;
     private static Path APP_DIR = null;
 
+    ViewControl mControl = null;
+
     Kontalk() {
         // platform dependent configuration directory
         this(Paths.get(System.getProperty("user.home"),
@@ -132,26 +134,26 @@ public final class Kontalk {
         // register provider
         PGPUtils.registerProvider();
 
-        final ViewControl control = Control.create();
+        mControl = Control.create();
 
         // handle shutdown signals
-        Runtime.getRuntime().addShutdownHook(new Thread() {
+        Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
             @Override
             public void run() {
                 // NOTE: logging does not work here anymore already
-                control.shutDown(false);
+                mControl.shutDown(false);
                 System.out.println("shutdown finished");
             }
         });
 
-        View view = ui ? View.create(control).orElse(null) : null;
+        View view = ui ? View.create(mControl).orElse(null) : null;
 
         try {
             // do now to test if successful
             Database.initialize();
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
-            control.shutDown(true);
+            mControl.shutDown(true);
             return; // never reached
         }
 
@@ -162,7 +164,31 @@ public final class Kontalk {
         if (view != null)
             view.init();
 
-        control.launch();
+        mControl.launch();
+
+        new Thread("Kontalk Main") {
+            @Override
+            public void run() {
+                try {
+                    // wait until exit call
+                    Object lock = new Object();
+                    synchronized (lock) {
+                        lock.wait();
+                    }
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.WARNING, "interrupted while waiting", ex);
+                }
+            }
+        }.start();
+    }
+
+    void stop() {
+        if (mControl == null) {
+            LOGGER.warning("not started");
+            return;
+        }
+
+        mControl.shutDown(true);
     }
 
     public static Path appDir() {

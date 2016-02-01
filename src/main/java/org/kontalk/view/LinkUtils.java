@@ -118,7 +118,7 @@ final class LinkUtils {
                     WebUtils.browseSiteSafely(fixProto(url));
                 }
             };
-            new Thread(run).start();
+            new Thread(run, "Link Browser").start();
         }
     }
 

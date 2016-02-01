@@ -83,7 +83,7 @@ public final class Client implements StanzaListener, Runnable {
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
 
-    public Client(Control control) {
+    private Client(Control control) {
         mControl = control;
         //mLimited = limited;
 
@@ -108,6 +108,16 @@ public final class Client implements StanzaListener, Runnable {
 
         EntityCapsManager.setPersistentCache(
                 new SimpleDirectoryPersistentCache(cacheDir));
+    }
+
+    public static Client create(Control control) {
+        Client client = new Client(control);
+
+        Thread clientThread = new Thread(client, "Client Connector");
+        clientThread.setDaemon(true);
+        clientThread.start();
+
+        return client;
     }
 
     public void connect(PersonalKey key) {

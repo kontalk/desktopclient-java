@@ -58,12 +58,14 @@ public final class PrivateKeyReceiver implements StanzaListener {
         // create connection
         mConn = new KonConnection(server, validateCertificate);
 
-        new Thread() {
+        Thread thread = new Thread("Private Key Request") {
             @Override
             public void run() {
                 PrivateKeyReceiver.this.sendRequestAsync(registrationToken);
             }
-        }.start();
+        };
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void sendRequestAsync(String registrationToken) {
