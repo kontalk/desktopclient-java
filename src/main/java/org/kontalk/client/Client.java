@@ -462,9 +462,28 @@ public final class Client implements StanzaListener, Runnable {
             LOGGER.warning("no avatar sender");
             return;
         }
-        mAvatarSendReceiver.publish(id, data);
+        if (mFeatures.contains(Client.ServerFeature.PUBSUB)) {
+            mAvatarSendReceiver.publish(id, data);
+        } else {
+            LOGGER.info("not supported by server");
+        }
     }
 
+    public boolean deleteAvatar() {
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
+            return false;
+        }
+
+        if (mFeatures.contains(Client.ServerFeature.PUBSUB)) {
+            return mAvatarSendReceiver.delete();
+        } else {
+            LOGGER.info("not supported by server");
+            return false;
+        }
+    }
+
+    // TODO unused
     public EnumSet<ServerFeature> getServerFeatures() {
         if (!this.isConnected())
             mFeatures.clear();

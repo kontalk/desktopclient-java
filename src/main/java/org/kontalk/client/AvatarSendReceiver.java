@@ -110,6 +110,17 @@ final class AvatarSendReceiver {
         // publish meta data...
     }
 
+    boolean delete() {
+        if (!mConn.isAuthenticated()) {
+            LOGGER.info("not logged in");
+            return false;
+        }
+
+        // TODO
+        LOGGER.warning("not implemented");
+        return false;
+    }
+
     void processMetadataEvent(JID jid, ItemsExtension itemsExt) {
         List<? extends ExtensionElement> items = itemsExt.getItems();
         if (items.isEmpty()) {

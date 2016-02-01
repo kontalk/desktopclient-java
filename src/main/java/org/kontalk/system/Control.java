@@ -754,17 +754,22 @@ public final class Control {
             this.sendTextMessage(chat, "", file);
         }
 
-        public Optional<BufferedImage> getUserAvatar() {
-            return Avatar.UserAvatar.instance().loadImage();
-        }
-
         public void setUserAvatar(BufferedImage image) {
-            Avatar.UserAvatar avatar = Avatar.UserAvatar.setImage(image);
-            byte[] avatarData = avatar.imageData().orElse(null);
-            if (avatarData == null || avatar.getID().isEmpty())
+            Avatar.UserAvatar newAvatar = Avatar.UserAvatar.setImage(image);
+            byte[] avatarData = newAvatar.imageData().orElse(null);
+            if (avatarData == null || newAvatar.getID().isEmpty())
                 return;
 
-            mClient.publishAvatar(avatar.getID(), avatarData);
+            mClient.publishAvatar(newAvatar.getID(), avatarData);
+        }
+
+        public void unsetUserAvatar(){
+            if (Avatar.UserAvatar.instance().getID().isEmpty())
+                return;
+
+            boolean succ = mClient.deleteAvatar();
+            if (succ)
+                Avatar.UserAvatar.deleteImage();
         }
 
         /* private */

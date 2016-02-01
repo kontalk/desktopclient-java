@@ -24,6 +24,8 @@ import com.alee.laf.button.WebButton;
 import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
@@ -43,6 +45,8 @@ import java.util.Arrays;
 import java.util.List;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import org.apache.commons.lang.ObjectUtils;
+import org.kontalk.model.Avatar;
 import org.kontalk.system.Config;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
@@ -58,8 +62,11 @@ final class ProfileDialog extends WebDialog {
     private final View mView;
     private final WebFileChooser mImgChooser;
     private final WebImage mAvatarImage;
+    private final BufferedImage mOldImage;
     private final WebTextField mStatusField;
     private final WebList mStatusList;
+
+    private BufferedImage mNewImage = null;
 
     ProfileDialog(View view) {
         mView = view;
@@ -78,21 +85,33 @@ final class ProfileDialog extends WebDialog {
         mImgChooser.setFileFilter(new ImageFilesFilter());
 
         groupPanel.add(new WebLabel(Tr.tr("Your profile picture:")));
-        BufferedImage avatar = mView.getControl().getUserAvatar().orElse(null);
-        mAvatarImage = new WebImage(avatar != null ?
-                avatar :
-                AvatarLoader.createFallback(AVATAR_SIZE));
+
+        mAvatarImage = new WebImage();
+        mOldImage = mNewImage = Avatar.UserAvatar.instance().loadImage().orElse(null);
+        this.setImage(mOldImage);
 
         //mAvatarImage.setDisplayType(DisplayType.fitComponent);
         //setTransferHandler ( new ImageDragHandler ( image1, i1 ) );
         mAvatarImage.addMouseListener(new MouseAdapter() {
             @Override
+            public void mousePressed(MouseEvent e) {
+                check(e);
+            }
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                check(e);
+            }
+            private void check(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    ProfileDialog.this.showPopupMenu(e);
+                }
+            }
+            @Override
             public void mouseClicked(MouseEvent e) {
-                if (!e.isPopupTrigger()) {
+                if (e.getButton() == MouseEvent.BUTTON1) {
                     ProfileDialog.this.chooseAvatar();
                 }
             }
-
         });
         groupPanel.add(mAvatarImage);
         groupPanel.add(new WebSeparator(true, true));
@@ -151,6 +170,12 @@ final class ProfileDialog extends WebDialog {
         this.pack();
     }
 
+    private void setImage(BufferedImage avatar) {
+        mAvatarImage.setImage(avatar != null ?
+                avatar :
+                AvatarLoader.createFallback(AVATAR_SIZE));
+        }
+
     private void chooseAvatar() {
         int state = mImgChooser.showOpenDialog(this);
         if (state != WebFileChooser.APPROVE_OPTION)
@@ -164,16 +189,33 @@ final class ProfileDialog extends WebDialog {
         if (img == null)
             return;
 
-        mAvatarImage.setImage(ImageUtils.createPreviewImage(img, AVATAR_SIZE));
+        mNewImage = ImageUtils.createPreviewImage(img, AVATAR_SIZE);
+        mAvatarImage.setImage(mNewImage);
     }
 
     private void save() {
-        BufferedImage avatar = mAvatarImage.getImage();
-        if (avatar != null) {
-            mView.getControl().setUserAvatar(avatar);
+        if (!ObjectUtils.equals(mOldImage, mNewImage)) {
+            if (mNewImage != null) {
+                mView.getControl().setUserAvatar(mNewImage);
+            } else {
+                mView.getControl().unsetUserAvatar();
+            }
         }
 
         mView.getControl().setStatusText(mStatusField.getText());
     }
 
+    private void showPopupMenu(MouseEvent e) {
+        WebPopupMenu menu = new WebPopupMenu();
+        WebMenuItem removeItem = new WebMenuItem(Tr.tr("Remove"));
+        removeItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    ProfileDialog.this.setImage(mNewImage = null);
+                }
+            });
+        removeItem.setEnabled(mNewImage != null);
+        menu.add(removeItem);
+        menu.show(mAvatarImage, e.getX(), e.getY());
+    }
 }
