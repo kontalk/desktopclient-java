@@ -30,6 +30,7 @@ import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
+import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.ImageUtils;
 import com.alee.utils.filefilter.ImageFilesFilter;
 import java.awt.BorderLayout;
@@ -46,8 +47,10 @@ import java.util.List;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.ObjectUtils;
+import org.kontalk.client.Client;
 import org.kontalk.model.Avatar;
 import org.kontalk.system.Config;
+import org.kontalk.system.Control;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 
@@ -81,6 +84,7 @@ final class ProfileDialog extends WebDialog {
         groupPanel.add(new WebLabel(Tr.tr("Edit your profile")).setBoldFont());
         groupPanel.add(new WebSeparator(true, true));
 
+        // avatar
         mImgChooser = new WebFileChooser();
         mImgChooser.setFileFilter(new ImageFilesFilter());
 
@@ -92,6 +96,9 @@ final class ProfileDialog extends WebDialog {
 
         //mAvatarImage.setDisplayType(DisplayType.fitComponent);
         //setTransferHandler ( new ImageDragHandler ( image1, i1 ) );
+
+        // permanent, user has to re-open the dialog on change
+        final boolean supported = mView.serverFeatures().contains(Client.ServerFeature.USER_AVATAR);
         mAvatarImage.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -102,27 +109,31 @@ final class ProfileDialog extends WebDialog {
                 check(e);
             }
             private void check(MouseEvent e) {
-                if (e.isPopupTrigger()) {
+                if (supported && e.isPopupTrigger()) {
                     ProfileDialog.this.showPopupMenu(e);
                 }
             }
             @Override
             public void mouseClicked(MouseEvent e) {
-                if (e.getButton() == MouseEvent.BUTTON1) {
+                if (supported && e.getButton() == MouseEvent.BUTTON1) {
                     ProfileDialog.this.chooseAvatar();
                 }
             }
         });
+        mAvatarImage.setEnabled(supported);
+        if (!supported)
+            TooltipManager.addTooltip(mAvatarImage,
+                    mView.currentStatus() != Control.Status.CONNECTED ?
+                            Tr.tr("Not connected") :
+                            Tr.tr("Not supported by server"));
+
         groupPanel.add(mAvatarImage);
         groupPanel.add(new WebSeparator(true, true));
 
+        // status text
         String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
         List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
-        String currentStatus = "";
-        if (!stats.isEmpty())
-            currentStatus = stats.remove(0);
-
-        stats.remove("");
+        String currentStatus = !stats.isEmpty() ? stats.remove(0) : "";
 
         groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
         mStatusField = new WebTextField(currentStatus, 30);

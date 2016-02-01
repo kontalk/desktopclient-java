@@ -70,7 +70,7 @@ public final class Client implements StanzaListener, Runnable {
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
     public enum PresenceCommand {REQUEST, GRANT, DENY};
-    public enum ServerFeature {PUBSUB}
+    public enum ServerFeature {USER_AVATAR}
 
     private enum Command {CONNECT, DISCONNECT};
 
@@ -93,7 +93,7 @@ public final class Client implements StanzaListener, Runnable {
         //SmackConfiguration.DEBUG = true;
 
         mFeatureMap = new HashMap<>();
-        mFeatureMap.put(PubSub.NAMESPACE, ServerFeature.PUBSUB);
+        mFeatureMap.put(PubSub.NAMESPACE, ServerFeature.USER_AVATAR);
         mFeatures = EnumSet.noneOf(ServerFeature.class);
 
         // setting caps cache
@@ -464,10 +464,10 @@ public final class Client implements StanzaListener, Runnable {
             LOGGER.warning("no avatar sender");
             return;
         }
-        if (mFeatures.contains(Client.ServerFeature.PUBSUB)) {
+        if (mFeatures.contains(Client.ServerFeature.USER_AVATAR)) {
             mAvatarSendReceiver.publish(id, data);
         } else {
-            LOGGER.info("not supported by server");
+            LOGGER.warning("not supported by server");
         }
     }
 
@@ -477,10 +477,10 @@ public final class Client implements StanzaListener, Runnable {
             return false;
         }
 
-        if (mFeatures.contains(Client.ServerFeature.PUBSUB)) {
+        if (mFeatures.contains(Client.ServerFeature.USER_AVATAR)) {
             return mAvatarSendReceiver.delete();
         } else {
-            LOGGER.info("not supported by server");
+            LOGGER.warning("not supported by server");
             return false;
         }
     }

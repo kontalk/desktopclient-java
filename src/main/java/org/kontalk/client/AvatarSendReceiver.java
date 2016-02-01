@@ -107,6 +107,8 @@ final class AvatarSendReceiver {
             return;
         }
 
+        // TODO
+        LOGGER.warning("not implemented");
         // publish meta data...
     }
 
