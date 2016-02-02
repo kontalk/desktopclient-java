@@ -42,6 +42,7 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.GroupChat;
+import org.kontalk.model.Member;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.SingleChat;
 import org.kontalk.util.Tr;
@@ -258,15 +259,15 @@ final class ChatListView extends ListView<ChatItem, Chat> {
             }
 
             String stateText = "";
-            if (arg instanceof Chat.Member) {
-                Chat.Member member = (Chat.Member) arg;
+            if (arg instanceof Member) {
+                Member member = (Member) arg;
                 switch(member.getState()) {
                     case composing: stateText = Tr.tr("is writing…"); break;
                     //case paused: activity = T/r.tr("stopped typing"); break;
                     //case inactive: stateText = T/r.tr("is inactive"); break;
                 }
                 if (!stateText.isEmpty() && mValue.isGroupChat())
-                    stateText = member.contact.getName() + ": " + stateText;
+                    stateText = member.getContact().getName() + ": " + stateText;
             }
             if (stateText.isEmpty()) {
                 mChatStateLabel.setText("");

@@ -41,6 +41,7 @@ import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Member;
 import org.kontalk.model.Transmission;
 import org.kontalk.util.EncodingUtils;
 import org.sqlite.SQLiteConfig;
@@ -113,7 +114,7 @@ public final class Database {
                 mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
                 this.createTable(stat, Contact.TABLE, Contact.SCHEMA);
                 this.createTable(stat, Chat.TABLE, Chat.SCHEMA);
-                this.createTable(stat, Chat.RECEIVER_TABLE, Chat.RECEIVER_SCHEMA);
+                this.createTable(stat, Member.TABLE, Member.SCHEMA);
                 this.createTable(stat, KonMessage.TABLE, KonMessage.SCHEMA);
                 this.createTable(stat, Transmission.TABLE, Transmission.SCHEMA);
             } catch (SQLException ex) {
@@ -180,8 +181,8 @@ public final class Database {
                     " ADD COLUMN "+Contact.COL_AVATAR_ID+" DEFAULT NULL");
         }
         if (fromVersion < 5) {
-            mConn.createStatement().execute("ALTER TABLE "+Chat.RECEIVER_TABLE+
-                    " ADD COLUMN "+Chat.COL_REC_ROLE+" DEFAULT 0");
+            mConn.createStatement().execute("ALTER TABLE "+Member.TABLE+
+                    " ADD COLUMN "+Member.COL_ROLE+" DEFAULT 0");
         }
 
         // set new version
