@@ -23,6 +23,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -37,7 +38,6 @@ import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.kontalk.model.GroupMetaData;
 import org.kontalk.system.Database;
 
 /**
@@ -74,16 +74,22 @@ public abstract class Chat extends Observable implements Observer {
     public static final String RECEIVER_TABLE = "receiver";
     public static final String COL_REC_CHAT_ID = "thread_id";
     public static final String COL_REC_CONTACT_ID = "user_id";
+    public static final String COL_REC_ROLE = "role";
     public static final String RECEIVER_SCHEMA = "(" +
             Database.SQL_ID +
             COL_REC_CHAT_ID+" INTEGER NOT NULL, " +
             COL_REC_CONTACT_ID+" INTEGER NOT NULL, " +
+            COL_REC_ROLE+" INTEGER NOT NULL, " +
             "UNIQUE ("+COL_REC_CHAT_ID+", "+COL_REC_CONTACT_ID+"), " +
             "FOREIGN KEY ("+COL_REC_CHAT_ID+") REFERENCES "+TABLE+" (_id), " +
             "FOREIGN KEY ("+COL_REC_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
-    /** Long-live authorization model of member in group. 'Affiliation' in MUC */
+    /**
+     * Long-live authorization model of member in group.
+     * Called 'Affiliation' in MUC
+     * Do not modify, only add! Ordinal used in database
+     */
     public enum Role {DEFAULT, OWNER, ADMIN};
 
     protected final int mID;
@@ -117,7 +123,7 @@ public abstract class Chat extends Observable implements Observer {
         }
 
         for (Member member : members)
-            this.insertMember(member);
+            member.insert(mID);
     }
 
     // used when loading from database
@@ -181,7 +187,11 @@ public abstract class Chat extends Observable implements Observer {
         return (this instanceof GroupChat);
     }
 
-    /** Get all contacts (including deleted, blocked and user contact). */
+    protected abstract List<Member> getAllMembers();
+
+    /** Get all contacts (including deleted, blocked and user contact).
+     * TODO remove me
+     */
     public abstract List<Contact> getAllContacts();
 
     /** Get valid receiver contacts (without deleted and blocked). */
@@ -224,19 +234,19 @@ public abstract class Chat extends Observable implements Observer {
         db.execUpdate(TABLE, set, mID);
 
         // get receiver for this chat
-        Map<Integer, Integer> dbReceiver = loadReceiver(mID);
+        List<Member> oldMembers = this.getAllMembers();
 
-        // add missing contact
-        for (Member member : members) {
-            if (!dbReceiver.keySet().contains(member.contact.getID())) {
-                this.insertMember(member);
+        // save new members
+        for (Member m : members) {
+            if (!oldMembers.contains(m)) {
+                m.insert(mID);
             }
-            dbReceiver.remove(member.contact.getID());
+            oldMembers.remove(m);
         }
 
-        // whats left is too much and can be removed
-        for (int id : dbReceiver.values()) {
-            db.execDelete(RECEIVER_TABLE, id);
+        // whats left is too much and can be deleted
+        for (Member m : oldMembers) {
+            m.delete();
         }
     }
 
@@ -246,33 +256,27 @@ public abstract class Chat extends Observable implements Observer {
         String whereMessages = KonMessage.COL_CHAT_ID + " == " + mID;
 
         // transmissions
-        db.execDeleteWhereInsecure(Transmission.TABLE,
+        boolean succ = db.execDeleteWhereInsecure(Transmission.TABLE,
                 Transmission.COL_MESSAGE_ID + " IN (SELECT _id FROM " +
                         KonMessage.TABLE + " WHERE " + whereMessages + ")");
+        if (!succ)
+            return;
 
         // messages
-        db.execDeleteWhereInsecure(KonMessage.TABLE, whereMessages);
+        succ = db.execDeleteWhereInsecure(KonMessage.TABLE, whereMessages);
+        if (!succ)
+            return;
 
-        // receiver
-        Map<Integer, Integer> dbReceiver = loadReceiver(mID);
-        for (int id : dbReceiver.values()) {
-            boolean deleted = db.execDelete(RECEIVER_TABLE, id);
-            if (!deleted) return;
+        // members
+        boolean allDeleted = true;
+        for (Member member : this.getAllMembers()) {
+            allDeleted &= member.delete();
         }
+        if (!allDeleted)
+            return;
 
         // chat itself
         db.execDelete(TABLE, mID);
-    }
-
-    private void insertMember(Member member) {
-        Database db = Database.getInstance();
-        List<Object> recValues = new LinkedList<>();
-        recValues.add(mID);
-        recValues.add(member.contact.getID());
-        int id = db.execInsert(RECEIVER_TABLE, recValues);
-        if (id < 1) {
-            LOGGER.warning("could not insert receiver");
-        }
     }
 
     protected void changed(Object arg) {
@@ -295,16 +299,8 @@ public abstract class Chat extends Observable implements Observer {
 
         String xmppID = Database.getString(rs, Chat.COL_XMPPID);
 
-        // get members for chats
-        Map<Integer, Integer> dbReceiver = Chat.loadReceiver(id);
-        List<Member> members = new ArrayList<>();
-        for (int conID: dbReceiver.keySet()) {
-            Contact c = ContactList.getInstance().get(conID).orElse(null);
-            if (c != null)
-                members.add(new Member(c));
-            else
-                LOGGER.warning("can't find contact, ID:"+conID);
-        }
+        // get members for chat
+        List<Member> members = Member.load(id);
 
         String subject = Database.getString(rs, Chat.COL_SUBJ);
 
@@ -324,32 +320,11 @@ public abstract class Chat extends Observable implements Observer {
         }
     }
 
-    static Map<Integer, Integer> loadReceiver(int chatID) {
-        Database db = Database.getInstance();
-        String where = COL_REC_CHAT_ID + " == " + chatID;
-        Map<Integer, Integer> dbReceiver = new HashMap<>();
-        ResultSet resultSet;
-        try {
-            resultSet = db.execSelectWhereInsecure(RECEIVER_TABLE, where);
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't get receiver from db", ex);
-            return dbReceiver;
-        }
-        try {
-            while (resultSet.next()) {
-                dbReceiver.put(resultSet.getInt(COL_REC_CONTACT_ID),
-                        resultSet.getInt("_id"));
-            }
-            resultSet.close();
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't get receiver", ex);
-        }
-        return dbReceiver;
-    }
-
     public static final class Member {
         public final Contact contact;
         public final GroupChat.Role role;
+
+        private int id;
 
         private ChatState mState = ChatState.gone;
         // note: the Android client does not set active states when only viewing
@@ -363,6 +338,11 @@ public abstract class Chat extends Observable implements Observer {
         }
 
         public Member(Contact contact, GroupChat.Role role) {
+            this(0, contact, role);
+        }
+
+        private Member(int id, Contact contact, GroupChat.Role role) {
+            this.id = id;
             this.contact = contact;
             this.role = role;
         }
@@ -394,10 +374,73 @@ public abstract class Chat extends Observable implements Observer {
             return mState;
         }
 
+        private boolean insert(int chatID) {
+            if (id > 0) {
+                LOGGER.warning("already in database");
+                return true;
+            }
+
+            List<Object> recValues = new LinkedList<>();
+            recValues.add(chatID);
+            recValues.add(contact.getID());
+            recValues.add(role);
+            id = Database.getInstance().execInsert(RECEIVER_TABLE, recValues);
+            if (id <= 0) {
+                LOGGER.warning("could not insert member");
+                return false;
+            }
+            return true;
+        }
+
+        private void save() {
+            // TODO
+        }
+
+        private boolean delete() {
+            if (id <= 0) {
+                LOGGER.warning("not in database");
+                return true;
+            }
+
+            return Database.getInstance().execDelete(RECEIVER_TABLE, id);
+        }
+
         protected void setState(ChatState state) {
             mState = state;
             if (mState == ChatState.active || mState == ChatState.composing)
                 mLastActive = new Date();
+        }
+
+        static List<Member> load(int chatID) {
+            Database db = Database.getInstance();
+            String where = COL_REC_CHAT_ID + " == " + chatID;
+            ResultSet resultSet;
+            try {
+                resultSet = db.execSelectWhereInsecure(RECEIVER_TABLE, where);
+            } catch (SQLException ex) {
+                LOGGER.log(Level.WARNING, "can't get receiver from db", ex);
+                return Collections.emptyList();
+            }
+            List<Member> members = new ArrayList<>();
+            try {
+                while (resultSet.next()) {
+                    int id = resultSet.getInt("_id");
+                    int contactID = resultSet.getInt(COL_REC_CONTACT_ID);
+                    int r = resultSet.getInt(COL_REC_ROLE);
+                    Role role = Role.values()[r];
+                    Contact c = ContactList.getInstance().get(contactID).orElse(null);
+                    if (c == null) {
+                        LOGGER.warning("can't find contact, ID:"+contactID);
+                        continue;
+                    }
+
+                    members.add(new Member(id, c, role));
+                }
+                resultSet.close();
+            } catch (SQLException ex) {
+                LOGGER.log(Level.WARNING, "can't get members", ex);
+            }
+            return members;
         }
     }
 

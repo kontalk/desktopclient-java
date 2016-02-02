@@ -62,6 +62,11 @@ public final class SingleChat extends Chat {
     }
 
     @Override
+    protected List<Member> getAllMembers() {
+        return Arrays.asList(mMember);
+    }
+
+    @Override
     public List<Contact> getAllContacts() {
         return Arrays.asList(mMember.contact);
     }

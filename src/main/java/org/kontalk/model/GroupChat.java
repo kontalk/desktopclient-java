@@ -73,6 +73,11 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
             this.addMemberSilent(member);
     }
 
+    @Override
+    protected List<Member> getAllMembers() {
+        return new ArrayList<>(mMemberSet);
+    }
+
     /** Get all contacts (including deleted and user contact). */
     @Override
     public List<Contact> getAllContacts() {

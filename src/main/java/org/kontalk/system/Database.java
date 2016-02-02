@@ -63,7 +63,7 @@ public final class Database {
     public static final String SQL_ID = "_id INTEGER PRIMARY KEY AUTOINCREMENT, ";
 
     private static final String FILENAME = "kontalk_db.sqlite";
-    private static final int DB_VERSION = 4;
+    private static final int DB_VERSION = 5;
     private static final String SQL_CREATE = "CREATE TABLE IF NOT EXISTS ";
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
@@ -132,10 +132,12 @@ public final class Database {
             return;
         }
         LOGGER.config("version: "+version);
-        try {
-            this.update(version);
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't update db", ex);
+        if (version < DB_VERSION) {
+            try {
+                this.update(version);
+            } catch (SQLException ex) {
+                LOGGER.log(Level.WARNING, "can't update db", ex);
+            }
         }
     }
 
@@ -144,9 +146,6 @@ public final class Database {
     }
 
     private void update(int fromVersion) throws SQLException {
-        if (fromVersion >= DB_VERSION)
-            return;
-
         if (fromVersion < 1) {
             mConn.createStatement().execute("ALTER TABLE "+Chat.TABLE+
                     " ADD COLUMN "+Chat.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
@@ -180,7 +179,10 @@ public final class Database {
             mConn.createStatement().execute("ALTER TABLE "+Contact.TABLE+
                     " ADD COLUMN "+Contact.COL_AVATAR_ID+" DEFAULT NULL");
         }
-
+        if (fromVersion < 5) {
+            mConn.createStatement().execute("ALTER TABLE "+Chat.RECEIVER_TABLE+
+                    " ADD COLUMN "+Chat.COL_REC_ROLE+" DEFAULT 0");
+        }
 
         // set new version
         mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
