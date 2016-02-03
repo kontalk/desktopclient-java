@@ -145,10 +145,6 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         chat.addObserver(this);
     }
 
-    public boolean contains(int id) {
-        return mMap.containsKey(id);
-    }
-
     public boolean contains(Contact contact) {
         return this.get(contact, "").isPresent();
     }

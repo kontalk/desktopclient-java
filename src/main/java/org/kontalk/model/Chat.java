@@ -71,6 +71,7 @@ public abstract class Chat extends Observable implements Observer {
     private final ChatMessages mMessages;
 
     private boolean mRead;
+    private boolean mDeleted = false;
 
     private ViewSettings mViewSettings;
 
@@ -252,6 +253,11 @@ public abstract class Chat extends Observable implements Observer {
 
         // chat itself
         db.execDelete(TABLE, mID);
+        mDeleted = true;
+    }
+
+    public boolean isDeleted()  {
+        return mDeleted;
     }
 
     protected void changed(Object arg) {
