@@ -53,6 +53,7 @@ import org.kontalk.misc.JID;
 import org.kontalk.model.Avatar;
 import org.kontalk.model.GroupChat;
 import org.kontalk.model.GroupMetaData.KonGroupData;
+import org.kontalk.model.Member;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.ProtoMessage;
@@ -169,14 +170,14 @@ public final class Control {
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
 
-        Contact contact = this.getOrCreateContact(ids.jid).orElse(null);
-        if (contact == null) {
+        Contact sender = this.getOrCreateContact(ids.jid).orElse(null);
+        if (sender == null) {
             LOGGER.warning("can't get contact for message");
             return false;
         }
 
         // decrypt message now to get group id
-        ProtoMessage protoMessage = new ProtoMessage(contact, content);
+        ProtoMessage protoMessage = new ProtoMessage(sender, content);
         if (protoMessage.isEncrypted()) {
             Coder.decryptMessage(protoMessage);
         }
@@ -184,11 +185,11 @@ public final class Control {
         // NOTE: decryption must be successful to select group chat
         KonGroupData gData = protoMessage.getContent().getGroupData().orElse(null);
 
-        // TODO ignore message if it contains unexpected group commands
-
         Chat chat = gData != null ?
-                ChatList.getInstance().getOrCreate(gData, contact) :
-                ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
+                GroupControl.getGroupChat(gData, sender).orElse(null) :
+                ChatList.getInstance().getOrCreate(sender, ids.xmppThreadID);
+        if (chat == null)
+            return true;
 
         InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
                 ids.xmppID, serverDate);
@@ -212,7 +213,7 @@ public final class Control {
         if (com != null) {
             if (chat instanceof GroupChat) {
                 mGroupControl.getInstanceFor((GroupChat) chat)
-                        .onInMessage(com, contact);
+                        .onInMessage(com, sender);
             } else {
                 LOGGER.warning("group command for non-group chat");
             }
@@ -684,21 +685,22 @@ public final class Control {
         }
 
         public void createGroupChat(List<Contact> contacts, String subject) {
+            // user is part of the group
+            List<Member> members = new ArrayList<>(contacts.size()+1);
+            for (Contact c : contacts) {
+                members.add(new Member(c));
+            }
             Contact me = ContactList.getInstance().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
                 return;
             }
+            members.add(new Member(me, Member.Role.OWNER));
 
-            // user should be part of the group
-            List<Contact> withMe = new ArrayList<>(contacts);
-            withMe.add(me);
-
-            // TODO
             KonGroupData gData = GroupControl.newKonGroupData(me.getJID());
             //MUCData gData = GroupControl.newMUCGroupData();
 
-            GroupChat chat = ChatList.getInstance().createNew(withMe,
+            GroupChat chat = ChatList.getInstance().createNew(members,
                     gData,
                     subject);
 

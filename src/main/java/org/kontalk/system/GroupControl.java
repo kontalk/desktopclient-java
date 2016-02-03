@@ -19,15 +19,17 @@
 package org.kontalk.system;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.misc.JID;
+import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.GroupChat;
 import org.kontalk.model.GroupChat.KonGroupChat;
-import org.kontalk.model.GroupChat.MUCChat;
 import org.kontalk.model.GroupMetaData.KonGroupData;
-import org.kontalk.model.GroupMetaData.MUCData;
+import org.kontalk.model.Member;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.GroupCommand;
 
@@ -135,6 +137,7 @@ final class GroupControl {
             mChat.applyGroupCommand(command, sender);
         }
     }
+
     ChatControl getInstanceFor(GroupChat chat) {
         // TODO
         return (chat instanceof KonGroupChat) ?
@@ -148,4 +151,32 @@ final class GroupControl {
                 org.jivesoftware.smack.util.StringUtils.randomString(8));
     }
 
+    static Optional<GroupChat> getGroupChat(KonGroupData gData, Contact sender) {
+        ChatList chatList = ChatList.getInstance();
+
+        // get old...
+        GroupChat chat = chatList.get(gData).orElse(null);
+        if (chat != null) {
+            if (!chat.getAllContacts().contains(sender)) {
+                LOGGER.warning("chat does not include sender: "+chat);
+                // TODO we should ask owner to confirm member list
+                return Optional.empty();
+            }
+            return Optional.of(chat);
+        }
+
+        // ...or create new
+        if (!gData.owner.equals(sender.getJID())) {
+            LOGGER.warning("sender is not owner for new group chat: "+gData);
+            return Optional.empty();
+        }
+
+        // NOTE: the message should include a CREATE or ADD group command
+        // if we are here (but all security checks passed so we continue)
+
+        return Optional.of(
+                chatList.create(
+                        Arrays.asList(new Member(sender, Member.Role.OWNER)),
+                        gData));
+    }
 }
