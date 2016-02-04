@@ -53,7 +53,7 @@ final class VCardListener implements StanzaListener {
                 LOGGER.warning("got vcard without pgp key included");
                 return;
             }
-            mControl.handlePGPKey(JID.bare(p.getFrom()), publicKey);
+            mControl.onPGPKey(JID.bare(p.getFrom()), publicKey);
         }
     }
 }

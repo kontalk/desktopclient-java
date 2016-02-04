@@ -162,7 +162,7 @@ public class AttachmentManager implements Runnable {
         } catch (KonException ex) {
             LOGGER.warning("upload failed, attachment: "+attachment);
             message.setStatus(KonMessage.Status.ERROR);
-            mControl.handleException(ex);
+            mControl.onException(ex);
             return;
         }
 
@@ -207,7 +207,7 @@ public class AttachmentManager implements Runnable {
             path = client.download(attachment.getURL(), mAttachmentDir, listener);
         } catch (KonException ex) {
             LOGGER.warning("download failed, URL="+attachment.getURL());
-            mControl.handleException(ex);
+            mControl.onException(ex);
             return;
         }
 
@@ -340,7 +340,9 @@ public class AttachmentManager implements Runnable {
     static AttachmentManager create(Control control) {
         AttachmentManager manager = new AttachmentManager(Kontalk.appDir(), control);
 
-        new Thread(manager).start();
+        Thread thread = new Thread(manager, "Attachment Transfer");
+        thread.setDaemon(true);
+        thread.start();
 
         return manager;
     }

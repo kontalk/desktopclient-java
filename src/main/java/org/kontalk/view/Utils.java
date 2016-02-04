@@ -46,6 +46,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
@@ -59,6 +60,8 @@ import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
+import org.kontalk.system.Config;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
@@ -357,6 +360,11 @@ final class Utils {
                 WebOptionPane.OK_CANCEL_OPTION,
                 WebOptionPane.WARNING_MESSAGE);
         return selectedOption == WebOptionPane.OK_OPTION;
+    }
+
+    static Set<Contact> allContacts() {
+        boolean showMe = Config.getInstance().getBoolean(Config.VIEW_USER_CONTACT);
+        return ContactList.getInstance().getAll(showMe);
     }
 
     static List<Contact> contactList(Chat chat) {

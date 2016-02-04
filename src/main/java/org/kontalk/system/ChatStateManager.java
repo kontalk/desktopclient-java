@@ -39,7 +39,7 @@ final class ChatStateManager {
 
     private final Client mClient;
     private final Map<Chat, MyChatState> mChatStateCache = new HashMap<>();
-    private final Timer mTimer = new Timer();
+    private final Timer mTimer = new Timer("Chat State Timer", true);
 
     public ChatStateManager(Client client) {
         mClient = client;

@@ -28,8 +28,10 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.kontalk.system.Database;
 
 /**
@@ -118,15 +120,20 @@ public final class ContactList extends Observable implements Iterable<Contact> {
      */
     public Optional<Contact> getMe() {
         JID myJID = Account.getInstance().getUserJID();
-        Contact contact = this.get(myJID).orElse(null);
-        if (contact == null)
-            return Optional.empty();
+        Contact me = this.get(myJID).orElse(null);
+        if (me != null)
+            return Optional.of(me);
 
         return this.create(myJID, "");
     }
 
-    public Set<Contact> getAll() {
-        return new HashSet<>(mJIDMap.values());
+    public Set<Contact> getAll(final boolean withMe) {
+        return new HashSet<>(mJIDMap.values().stream().filter(new Predicate<Contact>(){
+                    @Override
+                    public boolean test(Contact t) {
+                        return withMe || !t.isMe();
+                    }
+        }).collect(Collectors.<Contact>toSet()));
     }
 
     public void delete(Contact contact) {

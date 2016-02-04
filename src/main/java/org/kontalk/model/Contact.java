@@ -278,6 +278,17 @@ public final class Contact extends Observable {
         this.changed(avatar);
     }
 
+    public void deleteAvatar() {
+        // delete old
+        if (mAvatar != null)
+            mAvatar.delete();
+
+        mAvatar = null;
+        this.save();
+
+        this.changed(Avatar.deleted());
+    }
+
     public boolean isMe() {
         return mJID.isMe();
     }

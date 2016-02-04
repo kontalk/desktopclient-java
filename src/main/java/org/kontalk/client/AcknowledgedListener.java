@@ -65,6 +65,6 @@ public final class AcknowledgedListener implements StanzaListener {
             return;
         }
 
-        mControl.messageSent(MessageIDs.to(m));
+        mControl.onMessageSent(MessageIDs.to(m));
     }
 }

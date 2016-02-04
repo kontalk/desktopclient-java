@@ -107,7 +107,7 @@ final public class KonMessageListener implements StanzaListener {
                 return;
             }
             String text = StringUtils.defaultString(error.getDescriptiveText());
-            mControl.setMessageError(MessageIDs.from(m), error.getCondition(), text);
+            mControl.onMessageError(MessageIDs.from(m), error.getCondition(), text);
             return;
         }
 
@@ -125,7 +125,7 @@ final public class KonMessageListener implements StanzaListener {
         if (receiptID == null || receiptID.isEmpty()) {
             LOGGER.warning("message has invalid receipt ID: "+receiptID);
         } else {
-            mControl.setReceived(MessageIDs.from(m, receiptID));
+            mControl.onMessageReceived(MessageIDs.from(m, receiptID));
         }
         // we ignore anything else that might be in this message
     }
@@ -162,7 +162,7 @@ final public class KonMessageListener implements StanzaListener {
         ChatState chatState = null;
         if (csExt != null) {
             chatState = ((ChatStateExtension) csExt).getChatState();
-            mControl.processChatState(ids,
+            mControl.onChatStateNotification(ids,
                     optServerDate,
                     chatState);
         }
@@ -183,7 +183,7 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         // add message
-        boolean success = mControl.newInMessage(ids, optServerDate, content);
+        boolean success = mControl.onNewInMessage(ids, optServerDate, content);
 
         // on success, send a 'received' for a request (XEP-0184)
         DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);

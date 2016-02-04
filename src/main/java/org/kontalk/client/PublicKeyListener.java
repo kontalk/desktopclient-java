@@ -63,7 +63,7 @@ public class PublicKeyListener implements StanzaListener {
                 LOGGER.warning("got public key packet without public key");
                 return;
             }
-            mControl.handlePGPKey(JID.bare(publicKeyPacket.getFrom()), keyData);
+            mControl.onPGPKey(JID.bare(publicKeyPacket.getFrom()), keyData);
         }
     }
 

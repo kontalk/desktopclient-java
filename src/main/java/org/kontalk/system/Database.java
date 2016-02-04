@@ -41,6 +41,7 @@ import org.kontalk.misc.KonException;
 import org.kontalk.model.KonMessage;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Member;
 import org.kontalk.model.Transmission;
 import org.kontalk.util.EncodingUtils;
 import org.sqlite.SQLiteConfig;
@@ -63,7 +64,7 @@ public final class Database {
     public static final String SQL_ID = "_id INTEGER PRIMARY KEY AUTOINCREMENT, ";
 
     private static final String FILENAME = "kontalk_db.sqlite";
-    private static final int DB_VERSION = 4;
+    private static final int DB_VERSION = 5;
     private static final String SQL_CREATE = "CREATE TABLE IF NOT EXISTS ";
     private static final String SV = "schema_version";
     private static final String UV = "user_version";
@@ -113,7 +114,7 @@ public final class Database {
                 mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
                 this.createTable(stat, Contact.TABLE, Contact.SCHEMA);
                 this.createTable(stat, Chat.TABLE, Chat.SCHEMA);
-                this.createTable(stat, Chat.RECEIVER_TABLE, Chat.RECEIVER_SCHEMA);
+                this.createTable(stat, Member.TABLE, Member.SCHEMA);
                 this.createTable(stat, KonMessage.TABLE, KonMessage.SCHEMA);
                 this.createTable(stat, Transmission.TABLE, Transmission.SCHEMA);
             } catch (SQLException ex) {
@@ -132,10 +133,12 @@ public final class Database {
             return;
         }
         LOGGER.config("version: "+version);
-        try {
-            this.update(version);
-        } catch (SQLException ex) {
-            LOGGER.log(Level.WARNING, "can't update db", ex);
+        if (version < DB_VERSION) {
+            try {
+                this.update(version);
+            } catch (SQLException ex) {
+                LOGGER.log(Level.WARNING, "can't update db", ex);
+            }
         }
     }
 
@@ -144,9 +147,6 @@ public final class Database {
     }
 
     private void update(int fromVersion) throws SQLException {
-        if (fromVersion >= DB_VERSION)
-            return;
-
         if (fromVersion < 1) {
             mConn.createStatement().execute("ALTER TABLE "+Chat.TABLE+
                     " ADD COLUMN "+Chat.COL_VIEW_SET+" NOT NULL DEFAULT '{}'");
@@ -180,7 +180,10 @@ public final class Database {
             mConn.createStatement().execute("ALTER TABLE "+Contact.TABLE+
                     " ADD COLUMN "+Contact.COL_AVATAR_ID+" DEFAULT NULL");
         }
-
+        if (fromVersion < 5) {
+            mConn.createStatement().execute("ALTER TABLE "+Member.TABLE+
+                    " ADD COLUMN "+Member.COL_ROLE+" DEFAULT 0");
+        }
 
         // set new version
         mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);

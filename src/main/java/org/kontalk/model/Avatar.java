@@ -167,12 +167,21 @@ public class Avatar {
             USER_AVATAR = new UserAvatar(image);
             return USER_AVATAR;
         }
+
+        public static void deleteImage() {
+            USER_AVATAR.delete();
+            USER_AVATAR = new UserAvatar();
+        }
     }
 
     public static void createDir() {
         boolean created = Kontalk.appDir().resolve(DIR).toFile().mkdir();
         if (created)
             LOGGER.info("created avatar directory");
+    }
+
+    public static Avatar deleted() {
+        return new Avatar("");
     }
 
     private static String id(BufferedImage image) {

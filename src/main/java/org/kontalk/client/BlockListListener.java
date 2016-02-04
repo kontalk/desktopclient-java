@@ -56,7 +56,7 @@ final class BlockListListener implements StanzaListener {
             List<JID> jids = new ArrayList<>(items.size());
             for (String s : items)
                 jids.add(JID.full(s));
-            mControl.setBlockedContacts(jids.toArray(new JID[0]));
+            mControl.onBlockList(jids.toArray(new JID[0]));
         }
     }
 }

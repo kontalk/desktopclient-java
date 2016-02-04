@@ -63,7 +63,7 @@ public final class AvatarHandler {
 
         if (id.isEmpty()) {
             // contact disabled avatar publishing
-            // TODO
+            contact.deleteAvatar();
         }
 
         Avatar avatar = contact.getAvatar().orElse(null);

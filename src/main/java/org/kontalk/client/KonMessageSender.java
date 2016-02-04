@@ -104,7 +104,7 @@ final class KonMessageSender {
                     !message.getCoderStatus().getErrors().isEmpty()) {
                 LOGGER.warning("encryption failed");
                 message.setStatus(KonMessage.Status.ERROR);
-                mControl.handleSecurityErrors(message);
+                mControl.onSecurityErrors(message);
                 return false;
             }
             protoMessage.addExtension(new E2EEncryption(encryptedData));

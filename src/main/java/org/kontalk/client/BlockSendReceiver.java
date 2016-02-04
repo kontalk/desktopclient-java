@@ -73,6 +73,6 @@ final class BlockSendReceiver implements StanzaListener {
             return;
         }
 
-        mControl.setContactBlocking(mJID, mBlocking);
+        mControl.onContactBlocked(mJID, mBlocking);
     }
 };

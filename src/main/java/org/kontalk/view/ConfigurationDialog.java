@@ -118,6 +118,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mCloseTrayBox;
         private final WebCheckBox mEnterSendsBox;
         private final WebCheckBox mRequestAvatars;
+        private final WebCheckBox mUserContact;
         private final WebCheckBox mBGBox;
         private final WebFileChooserField mBGChooser;
 
@@ -153,10 +154,15 @@ final class ConfigurationDialog extends WebDialog {
                     mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
-            mRequestAvatars = createCheckBox(Tr.tr("Download avatar images"),
-                    Tr.tr("Download contact avatar images"),
+            mRequestAvatars = createCheckBox(Tr.tr("Download profile pictures"),
+                    Tr.tr("Download contact profile pictures"),
                     mConf.getBoolean(Config.NET_REQUEST_AVATARS));
             groupPanel.add(new GroupPanel(mRequestAvatars, new WebSeparator()));
+
+            mUserContact = createCheckBox(Tr.tr("Show yourself in contacts"),
+                    Tr.tr("Show yourself in the contact list"),
+                    mConf.getBoolean(Config.VIEW_USER_CONTACT));
+            groupPanel.add(new GroupPanel(mUserContact, new WebSeparator()));
 
             String bgPath = mConf.getString(Config.VIEW_CHAT_BG);
             mBGBox = createCheckBox(Tr.tr("Custom background:")+" ",
@@ -185,6 +191,8 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(Config.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
             mConf.setProperty(Config.NET_REQUEST_AVATARS, mRequestAvatars.isSelected());
+            mConf.setProperty(Config.VIEW_USER_CONTACT, mUserContact.isSelected());
+            mView.updateContactList();
             String bgPath;
             if (mBGBox.isSelected() && !mBGChooser.getSelectedFiles().isEmpty()) {
                 bgPath = mBGChooser.getSelectedFiles().get(0).getAbsolutePath();

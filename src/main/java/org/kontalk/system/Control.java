@@ -89,12 +89,12 @@ public final class Control {
     private final AvatarHandler mAvatarHandler;
     private final GroupControl mGroupControl;
 
-    private Status mCurrentStatus = Status.DISCONNECTED;
+    private boolean mShuttingDown = false;
 
     private Control() {
         mViewControl = new ViewControl();
 
-        mClient = new Client(this);
+        mClient = Client.create(this);
         mChatStateManager = new ChatStateManager(mClient);
         mAttachmentManager = AttachmentManager.create(this);
         mRosterHandler = new RosterHandler(this, mClient);
@@ -116,9 +116,8 @@ public final class Control {
 
     /* events from network client */
 
-    public void setStatus(Status status) {
-        mCurrentStatus = status;
-        mViewControl.changed(new ViewEvent.StatusChanged());
+    public void onStatusChange(Status status, EnumSet<Client.ServerFeature> features) {
+        mViewControl.changed(new ViewEvent.StatusChange(status, features));
 
         if (status == Status.CONNECTED) {
             String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
@@ -140,12 +139,12 @@ public final class Control {
         }
     }
 
-    public void handleException(KonException ex) {
+    public void onException(KonException ex) {
         mViewControl.changed(new ViewEvent.Exception(ex));
     }
 
     // TODO unused
-    public void handleEncryptionErrors(KonMessage message, Contact contact) {
+    public void onEncryptionErrors(KonMessage message, Contact contact) {
         EnumSet<Coder.Error> errors = message.getCoderStatus().getErrors();
         if (errors.contains(Coder.Error.KEY_UNAVAILABLE) ||
                 errors.contains(Coder.Error.INVALID_SIGNATURE) ||
@@ -153,10 +152,10 @@ public final class Control {
             // maybe there is something wrong with the senders key
             this.maySendKeyRequest(contact);
         }
-        this.handleSecurityErrors(message);
+        this.onSecurityErrors(message);
     }
 
-    public void handleSecurityErrors(KonMessage message) {
+    public void onSecurityErrors(KonMessage message) {
         mViewControl.changed(new ViewEvent.SecurityError(message));
     }
 
@@ -165,7 +164,7 @@ public final class Control {
      * receipts): Create, save and process the message.
      * @return true on success or message is a duplicate, false on unexpected failure
      */
-    public boolean newInMessage(MessageIDs ids,
+    public boolean onNewInMessage(MessageIDs ids,
             Optional<Date> serverDate,
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
@@ -226,7 +225,7 @@ public final class Control {
         return newMessage.getID() >= -1;
     }
 
-    public void messageSent(MessageIDs ids) {
+    public void onMessageSent(MessageIDs ids) {
         OutMessage message = findMessage(ids).orElse(null);
         if (message == null)
             return;
@@ -234,7 +233,7 @@ public final class Control {
         message.setStatus(KonMessage.Status.SENT);
     }
 
-    public void setReceived(MessageIDs ids) {
+    public void onMessageReceived(MessageIDs ids) {
         OutMessage message = findMessage(ids).orElse(null);
         if (message == null)
             return;
@@ -242,7 +241,7 @@ public final class Control {
         message.setReceived(ids.jid);
     }
 
-    public void setMessageError(MessageIDs ids, Condition condition, String errorText) {
+    public void onMessageError(MessageIDs ids, Condition condition, String errorText) {
         OutMessage message = findMessage(ids).orElse(null);
         if (message == null)
             return ;
@@ -252,7 +251,7 @@ public final class Control {
     /**
      * Inform model (and view) about a received chat state notification.
      */
-    public void processChatState(MessageIDs ids,
+    public void onChatStateNotification(MessageIDs ids,
             Optional<Date> serverDate,
             ChatState chatState) {
         if (serverDate.isPresent()) {
@@ -275,17 +274,17 @@ public final class Control {
         chat.setChatState(contact, chatState);
     }
 
-    public void handlePGPKey(JID jid, byte[] rawKey) {
+    public void onPGPKey(JID jid, byte[] rawKey) {
         Contact contact = ContactList.getInstance().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid: "+jid);
             return;
         }
 
-        this.handlePGPKey(contact, rawKey);
+        this.onPGPKey(contact, rawKey);
     }
 
-    void handlePGPKey(Contact contact, byte[] rawKey) {
+    void onPGPKey(Contact contact, byte[] rawKey) {
         PGPCoderKey key = PGPUtils.readPublicKey(rawKey).orElse(null);
         if (key == null) {
             LOGGER.warning("invalid public PGP key, contact: "+contact);
@@ -309,32 +308,17 @@ public final class Control {
         }
     }
 
-    public void setKey(Contact contact, PGPCoderKey key) {
-        contact.setKey(key.rawKey, key.fingerprint);
-
-        // enable encryption without asking
-        contact.setEncrypted(true);
-
-        // if not set, use uid in key for contact name
-        if (contact.getName().isEmpty() && key.userID != null) {
-            LOGGER.info("full UID in key: '" + key.userID + "'");
-            String contactName = PGPUtils.parseUID(key.userID)[0];
-            if (!contactName.isEmpty())
-                contact.setName(contactName);
-        }
-    }
-
-    public void setBlockedContacts(JID[] jids) {
+    public void onBlockList(JID[] jids) {
         for (JID jid : jids) {
             if (jid.isFull()) {
                 LOGGER.info("ignoring blocking of JID with resource");
                 return;
             }
-            this.setContactBlocking(jid, true);
+            this.onContactBlocked(jid, true);
         }
     }
 
-    public void setContactBlocking(JID jid, boolean blocking) {
+    public void onContactBlocked(JID jid, boolean blocking) {
         Contact contact = ContactList.getInstance().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("ignoring blocking of JID not in contact list");
@@ -458,12 +442,28 @@ public final class Control {
         this.processContent(message);
     }
 
+
+    private void setKey(Contact contact, PGPCoderKey key) {
+        contact.setKey(key.rawKey, key.fingerprint);
+
+        // enable encryption without asking
+        contact.setEncrypted(true);
+
+        // if not set, use uid in key for contact name
+        if (contact.getName().isEmpty() && key.userID != null) {
+            LOGGER.info("full UID in key: '" + key.userID + "'");
+            String contactName = PGPUtils.parseUID(key.userID)[0];
+            if (!contactName.isEmpty())
+                contact.setName(contactName);
+        }
+    }
+
     /**
      * Download attachment for incoming message if present.
      */
     private void processContent(InMessage message) {
         if (!message.getCoderStatus().getErrors().isEmpty()) {
-            this.handleSecurityErrors(message);
+            this.onSecurityErrors(message);
         }
 
         if (message.getContent().getPreview().isPresent()) {
@@ -538,8 +538,6 @@ public final class Control {
     public class ViewControl extends Observable {
 
         public void launch() {
-            new Thread(mClient).start();
-
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
             if (!Account.getInstance().isPresent()) {
                 LOGGER.info("no account found, asking for import...");
@@ -552,14 +550,17 @@ public final class Control {
         }
 
         public void shutDown(boolean exit) {
-            if (mCurrentStatus == Status.SHUTTING_DOWN)
+            if (mShuttingDown)
                 // we were already here
                 return;
 
-            this.disconnect();
+            mShuttingDown = true;
+
             LOGGER.info("Shutting down...");
-            mCurrentStatus = Status.SHUTTING_DOWN;
-            this.changed(new ViewEvent.StatusChanged());
+            this.disconnect();
+
+            this.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
+                    EnumSet.noneOf(Client.ServerFeature.class)));
             try {
                 Database.getInstance().close();
             } catch (RuntimeException ex) {
@@ -587,13 +588,7 @@ public final class Control {
 
         public void disconnect() {
             mChatStateManager.imGone();
-            mCurrentStatus = Status.DISCONNECTING;
-            this.changed(new ViewEvent.StatusChanged());
             mClient.disconnect();
-        }
-
-        public Status getCurrentStatus() {
-            return mCurrentStatus;
         }
 
         public void setStatusText(String newStatus) {
@@ -602,7 +597,6 @@ public final class Control {
             List<String> stats = new ArrayList<>(Arrays.asList(strings));
 
             stats.remove(newStatus);
-
             stats.add(0, newStatus);
 
             if (stats.size() > 20)
@@ -754,17 +748,22 @@ public final class Control {
             this.sendTextMessage(chat, "", file);
         }
 
-        public Optional<BufferedImage> getUserAvatar() {
-            return Avatar.UserAvatar.instance().loadImage();
-        }
-
         public void setUserAvatar(BufferedImage image) {
-            Avatar.UserAvatar avatar = Avatar.UserAvatar.setImage(image);
-            byte[] avatarData = avatar.imageData().orElse(null);
-            if (avatarData == null || avatar.getID().isEmpty())
+            Avatar.UserAvatar newAvatar = Avatar.UserAvatar.setImage(image);
+            byte[] avatarData = newAvatar.imageData().orElse(null);
+            if (avatarData == null || newAvatar.getID().isEmpty())
                 return;
 
-            mClient.publishAvatar(avatar.getID(), avatarData);
+            mClient.publishAvatar(newAvatar.getID(), avatarData);
+        }
+
+        public void unsetUserAvatar(){
+            if (Avatar.UserAvatar.instance().getID().isEmpty())
+                return;
+
+            boolean succ = mClient.deleteAvatar();
+            if (succ)
+                Avatar.UserAvatar.deleteImage();
         }
 
         /* private */
@@ -803,7 +802,7 @@ public final class Control {
                 return account.load(password);
             } catch (KonException ex) {
                 // something wrong with the account, tell view
-                Control.this.handleException(ex);
+                Control.this.onException(ex);
                 return null;
             }
         }

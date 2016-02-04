@@ -58,17 +58,22 @@ public final class SingleChat extends Chat {
     }
 
     public Contact getContact() {
-        return mMember.contact;
+        return mMember.getContact();
+    }
+
+    @Override
+    protected List<Member> getAllMembers() {
+        return Arrays.asList(mMember);
     }
 
     @Override
     public List<Contact> getAllContacts() {
-        return Arrays.asList(mMember.contact);
+        return Arrays.asList(mMember.getContact());
     }
 
     @Override
     public Contact[] getValidContacts() {
-        Contact c = mMember.contact;
+        Contact c = mMember.getContact();
         if (c.isDeleted() || c.isBlocked() && !c.isMe())
             return new Contact[0];
 
@@ -87,18 +92,19 @@ public final class SingleChat extends Chat {
 
     @Override
     public boolean isSendEncrypted() {
-        return mMember.contact.getEncrypted();
+        return mMember.getContact().getEncrypted();
     }
 
     @Override
     public boolean canSendEncrypted() {
-        Contact c = mMember.contact;
+        Contact c = mMember.getContact();
         return !c.isDeleted() && !c.isBlocked() && c.hasKey();
     }
 
     @Override
     public boolean isValid() {
-        return !mMember.contact.isDeleted() && !mMember.contact.isBlocked();
+        Contact c = mMember.getContact();
+        return !c.isDeleted() && !c.isBlocked();
     }
 
     @Override
@@ -108,7 +114,7 @@ public final class SingleChat extends Chat {
 
     @Override
     public void setChatState(Contact contact, ChatState chatState) {
-        if (!contact.equals(mMember.contact)) {
+        if (!contact.equals(mMember.getContact())) {
             LOGGER.warning("wrong contact!?");
             return;
         }

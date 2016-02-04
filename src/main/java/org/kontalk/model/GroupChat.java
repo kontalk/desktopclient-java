@@ -73,12 +73,17 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
             this.addMemberSilent(member);
     }
 
+    @Override
+    protected List<Member> getAllMembers() {
+        return new ArrayList<>(mMemberSet);
+    }
+
     /** Get all contacts (including deleted and user contact). */
     @Override
     public List<Contact> getAllContacts() {
         List<Contact> l = new ArrayList<>(mMemberSet.size());
         for (Member m : mMemberSet)
-            l.add(m.contact);
+            l.add(m.getContact());
 
         return l;
     }
@@ -88,8 +93,9 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         //chat.getContacts().stream().filter(c -> !c.isDeleted());
         Set<Contact> contacts = new HashSet<>();
         for (Member m : mMemberSet) {
-            if (!m.contact.isDeleted() && !m.contact.isMe()) {
-                contacts.add(m.contact);
+            Contact c = m.getContact();
+            if (!c.isDeleted() && !c.isMe()) {
+                contacts.add(m.getContact());
             }
         }
         return contacts.toArray(new Contact[0]);
@@ -126,7 +132,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
             return;
         }
 
-        member.contact.addObserver(this);
+        member.getContact().addObserver(this);
         mMemberSet.add(member);
     }
 
@@ -163,7 +169,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         Member member = mMemberSet.stream().filter(new Predicate<Member>(){
             @Override
             public boolean test(Member t) {
-                return t.contact.equals(contact);
+                return t.getContact().equals(contact);
             }
         }).findFirst().orElse(null);
 
@@ -276,7 +282,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 new Predicate<Member>() {
                     @Override
                     public boolean test(Member t) {
-                        return t.contact.isMe();
+                        return t.getContact().isMe();
                     }
                 }
         );

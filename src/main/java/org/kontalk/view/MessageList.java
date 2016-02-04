@@ -63,6 +63,7 @@ import org.kontalk.model.Chat;
 import org.kontalk.model.CoderStatus;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Member;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.Transmission;
@@ -128,7 +129,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         if (arg instanceof Set ||
                 arg instanceof String ||
                 arg instanceof Boolean ||
-                arg instanceof Chat.Member) {
+                arg instanceof Member) {
             // contacts, subject, read status or chat state changed, nothing
             // to do here
             return;
