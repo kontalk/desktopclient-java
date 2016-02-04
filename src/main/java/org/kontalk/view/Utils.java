@@ -61,6 +61,7 @@ import org.kontalk.misc.KonException;
 import org.kontalk.model.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
+import org.kontalk.model.Member;
 import org.kontalk.system.Config;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
@@ -186,7 +187,7 @@ final class Utils {
         return displayName(contact, Integer.MAX_VALUE);
     }
 
-    private static String displayName(Contact contact, int maxLength) {
+    static String displayName(Contact contact, int maxLength) {
         return displayName(contact, contact.getJID(), maxLength);
     }
 
@@ -241,6 +242,13 @@ final class Utils {
 
     private static String group(String s) {
         return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
+    }
+
+    static String role(Member.Role role) {
+        switch (role) {
+            case OWNER : return "[" + Tr.tr("Group Owner") + "]";
+            default: return "";
+        }
     }
 
     static String mainStatus(Contact c, boolean pre) {
@@ -376,6 +384,17 @@ final class Utils {
             }
         });
         return contacts;
+    }
+
+    static List<Member> memberList(Chat chat) {
+        List<Member> members = new ArrayList<>(chat.getAllMembers());
+        members.sort(new Comparator<Member>() {
+            @Override
+            public int compare(Member m1, Member m2) {
+                return Utils.compareContacts(m1.getContact(), m2.getContact());
+            }
+        });
+        return members;
     }
 
     static int compareContacts(Contact c1, Contact c2) {

@@ -39,10 +39,10 @@ import java.util.List;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.kontalk.model.Chat;
-import org.kontalk.model.Contact;
 import org.kontalk.model.GroupChat;
+import org.kontalk.model.Member;
 import org.kontalk.util.Tr;
-import org.kontalk.view.ComponentUtils.ParticipantsList;
+import org.kontalk.view.ComponentUtils.MemberList;
 
 /**
  * Show and edit thread/chat settings.
@@ -82,10 +82,10 @@ final class ChatDetails extends WebPanel {
                     new WebLabel(Tr.tr("Subject:")), mSubjectField));
 
             groupPanel.add(new WebLabel(Tr.tr("Participants:")));
-            ParticipantsList mParticipantsList = new ParticipantsList(false);
-            List<Contact> chatContacts = Utils.contactList(mChat);
-            mParticipantsList.setContacts(chatContacts);
-            mParticipantsList.setVisibleRowCount(Math.min(chatContacts.size(), 5));
+            MemberList mParticipantsList = new MemberList(false);
+            List<Member> chatMember = Utils.memberList(mChat);
+            mParticipantsList.setMembers(chatMember);
+            mParticipantsList.setVisibleRowCount(Math.min(chatMember.size(), 5));
             groupPanel.add(new ComponentUtils.ScrollPane(mParticipantsList, false).setPreferredWidth(160));
 
             groupPanel.add(new WebSeparator(true, true));

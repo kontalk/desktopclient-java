@@ -74,7 +74,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     @Override
-    protected List<Member> getAllMembers() {
+    public List<Member> getAllMembers() {
         return new ArrayList<>(mMemberSet);
     }
 

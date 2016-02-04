@@ -163,11 +163,9 @@ public abstract class Chat extends Observable implements Observer {
         return (this instanceof GroupChat);
     }
 
-    protected abstract List<Member> getAllMembers();
+    public abstract List<Member> getAllMembers();
 
-    /** Get all contacts (including deleted, blocked and user contact).
-     * TODO remove me
-     */
+    /** Get all contacts (including deleted, blocked and user contact). */
     public abstract List<Contact> getAllContacts();
 
     /** Get valid receiver contacts (without deleted and blocked). */
