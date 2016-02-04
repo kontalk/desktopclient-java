@@ -183,11 +183,11 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         // add message
-        boolean success = mControl.onNewInMessage(ids, optServerDate, content);
+        mControl.onNewInMessage(ids, optServerDate, content);
 
-        // on success, send a 'received' for a request (XEP-0184)
+        // send a 'received' for a receipt request (XEP-0184)
         DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);
-        if (request != null && success && !ids.xmppID.isEmpty()) {
+        if (request != null && !ids.xmppID.isEmpty()) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
             received.addExtension(new DeliveryReceipt(ids.xmppID));
             mClient.sendPacket(received);

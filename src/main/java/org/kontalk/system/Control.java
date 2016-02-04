@@ -163,9 +163,8 @@ public final class Control {
     /**
      * All-in-one method for a new incoming message (except handling server
      * receipts): Create, save and process the message.
-     * @return true on success or message is a duplicate, false on unexpected failure
      */
-    public boolean onNewInMessage(MessageIDs ids,
+    public void onNewInMessage(MessageIDs ids,
             Optional<Date> serverDate,
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
@@ -173,7 +172,7 @@ public final class Control {
         Contact sender = this.getOrCreateContact(ids.jid).orElse(null);
         if (sender == null) {
             LOGGER.warning("can't get contact for message");
-            return false;
+            return;
         }
 
         // decrypt message now to get group id
@@ -189,24 +188,23 @@ public final class Control {
                 GroupControl.getGroupChat(gData, sender).orElse(null) :
                 ChatList.getInstance().getOrCreate(sender, ids.xmppThreadID);
         if (chat == null)
-            return true;
+            return;
 
         InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
                 ids.xmppID, serverDate);
 
         if (newMessage.getID() <= 0)
-            return false;
+            return;
 
         // TODO implement equals()
         if (chat.getMessages().contains(newMessage)) {
             LOGGER.info("message already in chat, dropping this one");
-            return true;
+            return;
         }
-
         boolean added = chat.addMessage(newMessage);
         if (!added) {
             LOGGER.warning("can't add message to chat");
-            return false;
+            return;
         }
 
         GroupCommand com = newMessage.getContent().getGroupCommand().orElse(null);
@@ -222,8 +220,6 @@ public final class Control {
         this.processContent(newMessage);
 
         mViewControl.changed(new ViewEvent.NewMessage(newMessage));
-
-        return newMessage.getID() >= -1;
     }
 
     public void onMessageSent(MessageIDs ids) {
