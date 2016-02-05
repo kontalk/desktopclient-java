@@ -364,8 +364,11 @@ public final class Database {
         return s.isEmpty() ? null : s;
     }
 
-    public static void initialize() throws KonException {
-        INSTANCE = new Database(Kontalk.appDir().resolve(Database.FILENAME));
+    public static void ensureInitialized() throws KonException {
+        if (INSTANCE != null)
+            return;
+
+        INSTANCE = new Database(Kontalk.getInstance().appDir().resolve(Database.FILENAME));
     }
 
     public static Database getInstance() {

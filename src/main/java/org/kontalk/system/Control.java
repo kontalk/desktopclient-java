@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -561,10 +562,13 @@ public final class Control {
             try {
                 Database.getInstance().close();
             } catch (RuntimeException ex) {
-                // ignore
+                LOGGER.log(Level.WARNING, "can't close database", ex);
             }
+
             Config.getInstance().saveToFile();
-            Kontalk.removeLock();
+
+            Kontalk.getInstance().removeLock();
+
             if (exit) {
                 LOGGER.info("exit");
                 System.exit(0);

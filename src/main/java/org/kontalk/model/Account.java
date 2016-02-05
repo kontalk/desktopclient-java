@@ -45,7 +45,7 @@ import org.kontalk.system.Config;
 
 /**
  * The user account. There can only be one.
- * 
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Account {
@@ -205,7 +205,7 @@ public final class Account {
 
     public synchronized static Account getInstance() {
         if (INSTANCE == null) {
-            INSTANCE = new Account(Kontalk.appDir(), Config.getInstance());
+            INSTANCE = new Account(Kontalk.getInstance().appDir(), Config.getInstance());
         }
         return INSTANCE;
     }

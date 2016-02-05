@@ -44,7 +44,6 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.model.ChatList;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
-import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.CryptoUtils;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
@@ -58,29 +57,43 @@ public final class Kontalk {
 
     public static final String VERSION = "3.0.4";
 
-    private static ServerSocket RUN_LOCK = null;
-    private static Path APP_DIR = null;
+    private static Kontalk INSTANCE = null;
 
-    ViewControl mControl = null;
+    private ServerSocket mRunLock = null;
+    private Path mAppDir = null;
 
-    Kontalk() {
+    private static void ensureInitialized() {
         // platform dependent configuration directory
-        this(Paths.get(System.getProperty("user.home"),
+        ensureInitialized(Paths.get(System.getProperty("user.home"),
                 SystemUtils.IS_OS_WINDOWS ? "Kontalk" : ".kontalk"));
     }
 
-    Kontalk(Path appDir) {
-        APP_DIR = appDir.toAbsolutePath();
+    static void ensureInitialized(Path appDir) {
+        if (INSTANCE != null)
+            return;
+
+        INSTANCE = new Kontalk(appDir);
     }
 
-    void start(boolean ui) {
+    public static Kontalk getInstance() {
+        if (INSTANCE == null)
+            throw new IllegalStateException("application not initialized");
+
+        return INSTANCE;
+    }
+
+    private Kontalk(Path appDir) {
+        mAppDir = appDir.toAbsolutePath();
+    }
+
+    int start(boolean ui) {
         // check if already running
         try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
-            RUN_LOCK = new ServerSocket(9871, 10, addr);
+            mRunLock = new ServerSocket(9871, 10, addr);
         } catch(java.net.BindException ex) {
             LOGGER.severe("already running");
-            System.exit(2);
+            return 2;
         } catch(IOException ex) {
             LOGGER.log(Level.WARNING, "can't create socket", ex);
         }
@@ -93,17 +106,17 @@ public final class Kontalk {
         if (jVersion.startsWith("1.7")) {
             View.showWrongJavaVersionDialog();
             LOGGER.severe("java too old: "+jVersion);
-            System.exit(-3);
+            return 3;
         }
 
         // create app directory
-        boolean created = APP_DIR.toFile().mkdirs();
+        boolean created = mAppDir.toFile().mkdirs();
         if (created)
-            LOGGER.info("created application directory: "+APP_DIR);
+            LOGGER.info("created application directory: "+mAppDir);
 
-        if (!Files.isWritable(APP_DIR)) {
-            LOGGER.severe("invalid app directory: "+APP_DIR);
-            return;
+        if (!Files.isWritable(mAppDir)) {
+            LOGGER.severe("invalid app directory: "+mAppDir);
+            return 4;
         }
 
         // logging
@@ -113,7 +126,7 @@ public final class Kontalk {
             if (h instanceof ConsoleHandler)
                 h.setLevel(Level.CONFIG);
         }
-        String logPath = APP_DIR.resolve("debug.log").toString();
+        String logPath = mAppDir.resolve("debug.log").toString();
         Handler fileHandler = null;
         try {
             fileHandler = new FileHandler(logPath, 1024*1000, 1, true);
@@ -134,28 +147,27 @@ public final class Kontalk {
         // register provider
         PGPUtils.registerProvider();
 
-        mControl = Control.create();
+        try {
+            // do now to test if successful
+            Database.ensureInitialized();
+        } catch (KonException ex) {
+            LOGGER.log(Level.SEVERE, "can't initialize database", ex);
+            return 5;
+        }
+
+        final Control.ViewControl control = Control.create();
 
         // handle shutdown signals
         Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
             @Override
             public void run() {
-                // NOTE: logging does not work here anymore already
-                mControl.shutDown(false);
-                System.out.println("shutdown finished");
+                // NOTE: logging does not work here anymore
+                control.shutDown(false);
+                System.out.println("Kontalk: shutdown finished");
             }
         });
 
-        View view = ui ? View.create(mControl).orElse(null) : null;
-
-        try {
-            // do now to test if successful
-            Database.initialize();
-        } catch (KonException ex) {
-            LOGGER.log(Level.SEVERE, "can't initialize database", ex);
-            mControl.shutDown(true);
-            return; // never reached
-        }
+        View view = ui ? View.create(control).orElse(null) : null;
 
         // order matters!
         ContactList.getInstance().load();
@@ -164,48 +176,27 @@ public final class Kontalk {
         if (view != null)
             view.init();
 
-        mControl.launch();
+        control.launch();
 
-        new Thread("Kontalk Main") {
-            @Override
-            public void run() {
-                try {
-                    // wait until exit call
-                    Object lock = new Object();
-                    synchronized (lock) {
-                        lock.wait();
-                    }
-                } catch (InterruptedException ex) {
-                    LOGGER.log(Level.WARNING, "interrupted while waiting", ex);
-                }
-            }
-        }.start();
+        return 0;
     }
 
-    void stop() {
-        if (mControl == null) {
-            LOGGER.warning("not started");
-            return;
+    public Path appDir() {
+        return mAppDir;
+    }
+
+    public boolean removeLock() {
+        if (mRunLock == null) {
+            LOGGER.warning("no lock");
+            return false;
         }
-
-        mControl.shutDown(true);
-    }
-
-    public static Path appDir() {
-        if (APP_DIR == null)
-            throw new IllegalStateException("app dir not initialized");
-
-        return APP_DIR;
-    }
-
-    public static void removeLock() {
-        if (RUN_LOCK != null) {
-            try {
-                RUN_LOCK.close();
-            } catch (IOException ex) {
-                LOGGER.log(Level.WARNING, "can't close run socket", ex);
-            }
+        try {
+            mRunLock.close();
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't close run socket", ex);
+            return false;
         }
+        return true;
     }
 
     /**
@@ -241,10 +232,29 @@ public final class Kontalk {
 
         String appDir = cmd.getOptionValue("d", "");
 
-        Kontalk app = appDir.isEmpty() ?
-                new Kontalk() :
-                new Kontalk(Paths.get(appDir));
-        app.start(!cmd.hasOption("c"));
+        if (!appDir.isEmpty())
+            Kontalk.ensureInitialized(Paths.get(appDir));
+        else
+            Kontalk.ensureInitialized();
+
+        int returnCode = Kontalk.getInstance().start(!cmd.hasOption("c"));
+        if (returnCode != 0)
+            System.exit(returnCode);
+
+        new Thread("Kontalk Main") {
+            @Override
+            public void run() {
+                try {
+                    // wait until exit call
+                    Object lock = new Object();
+                    synchronized (lock) {
+                        lock.wait();
+                    }
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.WARNING, "interrupted while waiting", ex);
+                }
+            }
+        }.start();
     }
 
     private static void showHelp(Options options) {

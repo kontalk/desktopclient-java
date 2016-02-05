@@ -63,7 +63,7 @@ public class Avatar {
         mID = id;
         mFile = file != null ?
                 file :
-                Kontalk.appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
+                Kontalk.getInstance().appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
         mImage = image;
 
         if (mImage != null) {
@@ -152,7 +152,7 @@ public class Avatar {
         }
 
         private static File userFile() {
-            return Kontalk.appDir().resolve(USER_FILENAME + "." + FORMAT).toFile();
+            return Kontalk.getInstance().appDir().resolve(USER_FILENAME + "." + FORMAT).toFile();
         }
 
         public static UserAvatar instance() {
@@ -175,7 +175,7 @@ public class Avatar {
     }
 
     public static void createDir() {
-        boolean created = Kontalk.appDir().resolve(DIR).toFile().mkdir();
+        boolean created = Kontalk.getInstance().appDir().resolve(DIR).toFile().mkdir();
         if (created)
             LOGGER.info("created avatar directory");
     }
