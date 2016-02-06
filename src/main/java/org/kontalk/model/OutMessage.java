@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.model.chat.Chat;
 import org.kontalk.misc.JID;
 import java.net.URI;
 import java.util.Date;

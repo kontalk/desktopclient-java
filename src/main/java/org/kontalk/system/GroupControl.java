@@ -24,12 +24,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.misc.JID;
-import org.kontalk.model.ChatList;
+import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
-import org.kontalk.model.GroupChat;
-import org.kontalk.model.GroupChat.KonGroupChat;
-import org.kontalk.model.GroupMetaData.KonGroupData;
-import org.kontalk.model.Member;
+import org.kontalk.model.chat.GroupChat;
+import org.kontalk.model.chat.GroupChat.KonGroupChat;
+import org.kontalk.model.chat.GroupMetaData.KonGroupData;
+import org.kontalk.model.chat.Member;
 import org.kontalk.model.MessageContent;
 import org.kontalk.model.MessageContent.GroupCommand;
 

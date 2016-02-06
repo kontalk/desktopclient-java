@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -281,7 +282,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         return Integer.compare(mID, o.getID());
     }
 
-    static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
+    public static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
         int id = messageRS.getInt("_id");
 
         String xmppID = Database.getString(messageRS, KonMessage.COL_XMPP_ID);

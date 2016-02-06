@@ -40,7 +40,7 @@ final public class Transmission {
     private static final Logger LOGGER = Logger.getLogger(Transmission.class.getName());
 
     public static final String TABLE = "transmissions";
-    static final String COL_MESSAGE_ID = "message_id";
+    public static final String COL_MESSAGE_ID = "message_id";
     private static final String COL_CONTACT_ID = "user_id";
     private static final String COL_JID = "jid";
     private static final String COL_REC_DATE = "received_date";

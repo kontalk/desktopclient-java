@@ -25,9 +25,9 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
-import org.kontalk.model.Chat;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
-import org.kontalk.model.SingleChat;
+import org.kontalk.model.chat.SingleChat;
 
 /**
  * Manager handling own chat status for all chats.

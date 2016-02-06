@@ -88,7 +88,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
-import org.kontalk.model.Member;
+import org.kontalk.model.chat.Member;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;

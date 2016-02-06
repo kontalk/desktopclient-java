@@ -16,8 +16,11 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.chat;
 
+import org.kontalk.model.chat.Chat;
+import org.kontalk.model.chat.GroupChat;
+import org.kontalk.model.chat.SingleChat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -32,7 +35,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.model.GroupMetaData;
+import org.kontalk.model.Contact;
 import org.kontalk.system.Database;
 
 /**

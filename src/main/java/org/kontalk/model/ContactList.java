@@ -98,7 +98,7 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         return Optional.of(newContact);
     }
 
-    Optional<Contact> get(int id) {
+    public Optional<Contact> get(int id) {
         Contact contact = mIDMap.get(id);
         if (contact == null) {
             LOGGER.warning("can't find contact with ID: " + id);

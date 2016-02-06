@@ -71,7 +71,7 @@ import javax.swing.event.DocumentEvent;
 import org.apache.commons.io.FileUtils;
 import org.apache.tika.Tika;
 import org.jivesoftware.smackx.chatstates.ChatState;
-import org.kontalk.model.Chat;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Config;

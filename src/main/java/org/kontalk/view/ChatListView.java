@@ -38,13 +38,13 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.kontalk.system.Config;
 import org.kontalk.model.KonMessage;
-import org.kontalk.model.Chat;
-import org.kontalk.model.ChatList;
+import org.kontalk.model.chat.Chat;
+import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
-import org.kontalk.model.GroupChat;
-import org.kontalk.model.Member;
+import org.kontalk.model.chat.GroupChat;
+import org.kontalk.model.chat.Member;
 import org.kontalk.model.MessageContent.GroupCommand;
-import org.kontalk.model.SingleChat;
+import org.kontalk.model.chat.SingleChat;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatListView.ChatItem;
 
