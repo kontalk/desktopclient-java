@@ -28,8 +28,8 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.kontalk.model.KonMessage;
-import org.kontalk.model.OutMessage;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.message.OutMessage;
 import org.kontalk.system.Database;
 
 /**

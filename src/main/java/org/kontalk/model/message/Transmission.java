@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.message;
 
 import org.kontalk.misc.JID;
 import java.sql.ResultSet;
@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
 import org.kontalk.system.Database;
 
 /**

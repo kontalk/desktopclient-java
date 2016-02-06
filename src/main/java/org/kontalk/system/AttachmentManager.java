@@ -41,12 +41,12 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.InMessage;
-import org.kontalk.model.KonMessage;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.model.MessageContent.Preview;
-import org.kontalk.model.OutMessage;
+import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.message.MessageContent;
+import org.kontalk.model.message.MessageContent.Attachment;
+import org.kontalk.model.message.MessageContent.Preview;
+import org.kontalk.model.message.OutMessage;
 import org.kontalk.util.MediaUtils;
 
 /**

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.message;
 
 import java.util.EnumSet;
 import org.kontalk.crypto.Coder;

@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.message;
 
 import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
@@ -36,7 +36,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.MessageContent.Preview;
+import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.util.EncodingUtils;
 
 /**

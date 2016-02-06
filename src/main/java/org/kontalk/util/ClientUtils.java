@@ -33,8 +33,8 @@ import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
-import org.kontalk.model.MessageContent.GroupCommand;
-import org.kontalk.model.MessageContent.GroupCommand.OP;
+import org.kontalk.model.message.MessageContent.GroupCommand;
+import org.kontalk.model.message.MessageContent.GroupCommand.OP;
 
 /**
  *

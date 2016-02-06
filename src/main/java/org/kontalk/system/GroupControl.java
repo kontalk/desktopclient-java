@@ -30,8 +30,8 @@ import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.Member;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageContent.GroupCommand;
+import org.kontalk.model.message.MessageContent;
+import org.kontalk.model.message.MessageContent.GroupCommand;
 
 /**
  *

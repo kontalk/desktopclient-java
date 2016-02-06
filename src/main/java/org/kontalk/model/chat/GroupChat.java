@@ -31,7 +31,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.GroupMetaData.MUCData;
-import org.kontalk.model.MessageContent;
+import org.kontalk.model.message.MessageContent;
 
 /**
  * A long-term persistent chat conversation with multiple participants.

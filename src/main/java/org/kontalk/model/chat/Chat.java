@@ -37,8 +37,8 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.model.Contact;
-import org.kontalk.model.KonMessage;
-import org.kontalk.model.Transmission;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.message.Transmission;
 import org.kontalk.system.Database;
 
 /**

@@ -26,9 +26,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.Contact;
-import org.kontalk.model.OutMessage;
-import org.kontalk.model.DecryptMessage;
-import org.kontalk.model.InMessage;
+import org.kontalk.model.message.OutMessage;
+import org.kontalk.model.message.DecryptMessage;
+import org.kontalk.model.message.InMessage;
 import org.kontalk.model.Account;
 
 /**
