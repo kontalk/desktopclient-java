@@ -74,7 +74,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     @Override
-    protected List<Member> getAllMembers() {
+    public List<Member> getAllMembers() {
         return new ArrayList<>(mMemberSet);
     }
 
@@ -341,11 +341,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 new MUCChat(id, members, (MUCData) gData, subject, read, jsonViewSettings);
     }
 
-    public static GroupChat create(List<Contact> contacts, GroupMetaData gData, String subject) {
-        List<Member> members = new ArrayList<>(contacts.size());
-        for (Contact c : contacts) {
-            members.add(new Member(c));
-        }
+    public static GroupChat create(List<Member> members, GroupMetaData gData, String subject) {
         return (gData instanceof KonGroupData) ?
                 new KonGroupChat(members, (KonGroupData) gData, subject) :
                 new MUCChat(members, (MUCData) gData, subject);

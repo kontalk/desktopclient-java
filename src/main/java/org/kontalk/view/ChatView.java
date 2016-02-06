@@ -72,7 +72,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.tika.Tika;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Chat;
-import org.kontalk.model.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Config;
@@ -387,8 +386,7 @@ final class ChatView extends WebPanel implements Observer {
     private void updateOnEDT(Object arg) {
         if (arg instanceof Chat) {
             Chat chat = (Chat) arg;
-            if (!ChatList.getInstance().contains(chat.getID())) {
-                // chat was deleted
+            if (chat.isDeleted()) {
                 MessageList viewList = mChatCache.get(chat.getID());
                 if (viewList != null) {
                     viewList.clearItems();

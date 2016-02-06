@@ -22,6 +22,7 @@ import com.alee.extended.image.WebImage;
 import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.layout.FormLayout;
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.checkbox.WebCheckBox;
@@ -66,6 +67,7 @@ import java.util.Locale;
 import java.util.Optional;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.DefaultListModel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
@@ -86,6 +88,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Member;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
@@ -396,30 +399,23 @@ final class ComponentUtils {
 
         private final DefaultListModel<Contact> mModel;
 
-        public ParticipantsList() {
-            this(true);
-        }
-
         @SuppressWarnings("unchecked")
-        ParticipantsList(boolean selectable) {
+        ParticipantsList() {
             mModel = new DefaultListModel<>();
             this.setModel(mModel);
             this.setFixedCellHeight(25);
 
-            this.setEnabled(selectable);
-            if (selectable) {
-                this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-                this.setSelectionModel(new DefaultListSelectionModel() {
-                    @Override
-                    public void setSelectionInterval(int index0, int index1) {
-                        if(super.isSelectedIndex(index0)) {
-                            super.removeSelectionInterval(index0, index1);
-                        } else {
-                            super.addSelectionInterval(index0, index1);
-                        }
+            this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+            this.setSelectionModel(new DefaultListSelectionModel() {
+                @Override
+                public void setSelectionInterval(int index0, int index1) {
+                    if(super.isSelectedIndex(index0)) {
+                        super.removeSelectionInterval(index0, index1);
+                    } else {
+                        super.addSelectionInterval(index0, index1);
                     }
-                });
-            }
+                }
+            });
 
             this.setCellRenderer(new CellRenderer());
         }
@@ -446,6 +442,77 @@ final class ComponentUtils {
                 this.setText(" " + Utils.displayName(contact));
 
                 this.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0,Color.LIGHT_GRAY));
+
+                return this;
+            }
+        }
+    }
+
+    // NOTE: https://github.com/mgarin/weblaf/issues/153
+    static class MemberList extends WebList {
+
+        private final DefaultListModel<Member> mModel;
+
+        public MemberList() {
+            this(true);
+        }
+
+        @SuppressWarnings("unchecked")
+        MemberList(boolean selectable) {
+            mModel = new DefaultListModel<>();
+            this.setModel(mModel);
+            this.setFixedCellHeight(25);
+
+            this.setEnabled(selectable);
+            if (selectable) {
+                this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                this.setSelectionModel(new DefaultListSelectionModel() {
+                    @Override
+                    public void setSelectionInterval(int index0, int index1) {
+                        if(super.isSelectedIndex(index0)) {
+                            super.removeSelectionInterval(index0, index1);
+                        } else {
+                            super.addSelectionInterval(index0, index1);
+                        }
+                    }
+                });
+            }
+
+            this.setCellRenderer(new CellRenderer());
+        }
+
+        void setMembers(List<Member> members) {
+            mModel.clear();
+
+            for (Member member : members)
+                    mModel.addElement(member);
+        }
+
+        private class CellRenderer extends WebPanel implements ListCellRenderer<Member> {
+            private final WebLabel mNameLabel;
+            private final WebLabel mRoleLabel;
+
+            public CellRenderer() {
+                mNameLabel = new WebLabel();
+                mRoleLabel = new WebLabel();
+                mRoleLabel.setForeground(View.DARK_GREEN);
+
+                this.setMargin(View.MARGIN_DEFAULT);
+                this.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY));
+
+                this.add(new GroupPanel(GroupingType.fillMiddle, View.GAP_DEFAULT,
+                        mNameLabel, Box.createGlue(), mRoleLabel),
+                        BorderLayout.CENTER);
+            }
+
+            @Override
+            public Component getListCellRendererComponent(JList list,
+                    Member member,
+                    int index,
+                    boolean isSelected,
+                    boolean cellHasFocus) {
+                mNameLabel.setText(Utils.displayName(member.getContact(), 25));
+                mRoleLabel.setText(Utils.role(member.getRole()));
 
                 return this;
             }

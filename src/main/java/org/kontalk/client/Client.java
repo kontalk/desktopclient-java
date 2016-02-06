@@ -97,7 +97,7 @@ public final class Client implements StanzaListener, Runnable {
         mFeatures = EnumSet.noneOf(ServerFeature.class);
 
         // setting caps cache
-        File cacheDir = Kontalk.appDir().resolve(CAPS_CACHE_DIR).toFile();
+        File cacheDir = Kontalk.getInstance().appDir().resolve(CAPS_CACHE_DIR).toFile();
         if (cacheDir.mkdir())
             LOGGER.info("created caps cache directory");
 

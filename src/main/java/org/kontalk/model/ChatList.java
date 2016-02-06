@@ -20,7 +20,6 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -89,22 +88,6 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         return Optional.empty();
     }
 
-    /** Get group chat with group ID and containing contact. */
-    public Optional<GroupChat> get(GroupMetaData gData, Contact contact) {
-        for (Chat chat : mMap.values()) {
-            if (!(chat instanceof GroupChat))
-                continue;
-
-            GroupChat groupChat = (GroupChat) chat;
-            if (groupChat.getGroupData().equals(gData) &&
-                    groupChat.getAllContacts().contains(contact)) {
-                return Optional.of(groupChat);
-            }
-        }
-
-        return Optional.empty();
-    }
-
     public Optional<GroupChat> get(GroupMetaData gData) {
         for (Chat chat : mMap.values()) {
             if (!(chat instanceof GroupChat))
@@ -117,15 +100,6 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         }
 
         return Optional.empty();
-    }
-
-    /** Find group chat by group data or create a new chat. */
-    public GroupChat getOrCreate(GroupMetaData gData, Contact contact) {
-        GroupChat chat = this.get(gData, contact).orElse(null);
-        if (chat != null)
-            return chat;;
-
-        return this.createNew(Arrays.asList(contact), gData, "");
     }
 
     public Chat getOrCreate(Contact contact) {
@@ -149,8 +123,12 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         return newChat;
     }
 
-    public GroupChat createNew(List<Contact> contacts, GroupMetaData gData, String subject) {
-        GroupChat newChat = GroupChat.create(contacts, gData, subject);
+    public GroupChat create(List<Member> members, GroupMetaData gData) {
+        return createNew(members, gData, "");
+    }
+
+    public GroupChat createNew(List<Member> members, GroupMetaData gData, String subject) {
+        GroupChat newChat = GroupChat.create(members, gData, subject);
         LOGGER.config("new group chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
@@ -165,10 +143,6 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
         mMap.put(chat.getID(), chat);
         chat.addObserver(this);
-    }
-
-    public boolean contains(int id) {
-        return mMap.containsKey(id);
     }
 
     public boolean contains(Contact contact) {

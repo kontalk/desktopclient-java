@@ -126,7 +126,7 @@ public final class Config extends PropertiesConfiguration {
 
     public synchronized static Config getInstance() {
         if (INSTANCE == null) {
-            INSTANCE = new Config(Kontalk.appDir().resolve(Config.FILENAME));
+            INSTANCE = new Config(Kontalk.getInstance().appDir().resolve(Config.FILENAME));
         }
         return INSTANCE;
     }

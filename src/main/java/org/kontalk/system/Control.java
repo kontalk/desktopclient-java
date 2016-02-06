@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -53,6 +54,7 @@ import org.kontalk.misc.JID;
 import org.kontalk.model.Avatar;
 import org.kontalk.model.GroupChat;
 import org.kontalk.model.GroupMetaData.KonGroupData;
+import org.kontalk.model.Member;
 import org.kontalk.model.MessageContent.Attachment;
 import org.kontalk.model.MessageContent.GroupCommand;
 import org.kontalk.model.ProtoMessage;
@@ -162,21 +164,20 @@ public final class Control {
     /**
      * All-in-one method for a new incoming message (except handling server
      * receipts): Create, save and process the message.
-     * @return true on success or message is a duplicate, false on unexpected failure
      */
-    public boolean onNewInMessage(MessageIDs ids,
+    public void onNewInMessage(MessageIDs ids,
             Optional<Date> serverDate,
             MessageContent content) {
         LOGGER.info("new incoming message, "+ids);
 
-        Contact contact = this.getOrCreateContact(ids.jid).orElse(null);
-        if (contact == null) {
+        Contact sender = this.getOrCreateContact(ids.jid).orElse(null);
+        if (sender == null) {
             LOGGER.warning("can't get contact for message");
-            return false;
+            return;
         }
 
         // decrypt message now to get group id
-        ProtoMessage protoMessage = new ProtoMessage(contact, content);
+        ProtoMessage protoMessage = new ProtoMessage(sender, content);
         if (protoMessage.isEncrypted()) {
             Coder.decryptMessage(protoMessage);
         }
@@ -184,35 +185,34 @@ public final class Control {
         // NOTE: decryption must be successful to select group chat
         KonGroupData gData = protoMessage.getContent().getGroupData().orElse(null);
 
-        // TODO ignore message if it contains unexpected group commands
-
         Chat chat = gData != null ?
-                ChatList.getInstance().getOrCreate(gData, contact) :
-                ChatList.getInstance().getOrCreate(contact, ids.xmppThreadID);
+                GroupControl.getGroupChat(gData, sender).orElse(null) :
+                ChatList.getInstance().getOrCreate(sender, ids.xmppThreadID);
+        if (chat == null)
+            return;
 
         InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
                 ids.xmppID, serverDate);
 
         if (newMessage.getID() <= 0)
-            return false;
+            return;
 
         // TODO implement equals()
         if (chat.getMessages().contains(newMessage)) {
             LOGGER.info("message already in chat, dropping this one");
-            return true;
+            return;
         }
-
         boolean added = chat.addMessage(newMessage);
         if (!added) {
             LOGGER.warning("can't add message to chat");
-            return false;
+            return;
         }
 
         GroupCommand com = newMessage.getContent().getGroupCommand().orElse(null);
         if (com != null) {
             if (chat instanceof GroupChat) {
                 mGroupControl.getInstanceFor((GroupChat) chat)
-                        .onInMessage(com, contact);
+                        .onInMessage(com, sender);
             } else {
                 LOGGER.warning("group command for non-group chat");
             }
@@ -221,8 +221,6 @@ public final class Control {
         this.processContent(newMessage);
 
         mViewControl.changed(new ViewEvent.NewMessage(newMessage));
-
-        return newMessage.getID() >= -1;
     }
 
     public void onMessageSent(MessageIDs ids) {
@@ -564,10 +562,13 @@ public final class Control {
             try {
                 Database.getInstance().close();
             } catch (RuntimeException ex) {
-                // ignore
+                LOGGER.log(Level.WARNING, "can't close database", ex);
             }
+
             Config.getInstance().saveToFile();
-            Kontalk.removeLock();
+
+            Kontalk.getInstance().removeLock();
+
             if (exit) {
                 LOGGER.info("exit");
                 System.exit(0);
@@ -684,21 +685,22 @@ public final class Control {
         }
 
         public void createGroupChat(List<Contact> contacts, String subject) {
+            // user is part of the group
+            List<Member> members = new ArrayList<>(contacts.size()+1);
+            for (Contact c : contacts) {
+                members.add(new Member(c));
+            }
             Contact me = ContactList.getInstance().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
                 return;
             }
+            members.add(new Member(me, Member.Role.OWNER));
 
-            // user should be part of the group
-            List<Contact> withMe = new ArrayList<>(contacts);
-            withMe.add(me);
-
-            // TODO
             KonGroupData gData = GroupControl.newKonGroupData(me.getJID());
             //MUCData gData = GroupControl.newMUCGroupData();
 
-            GroupChat chat = ChatList.getInstance().createNew(withMe,
+            GroupChat chat = ChatList.getInstance().createNew(members,
                     gData,
                     subject);
 

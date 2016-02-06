@@ -21,6 +21,7 @@ package org.kontalk.model;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -71,6 +72,7 @@ public abstract class Chat extends Observable implements Observer {
     private final ChatMessages mMessages;
 
     private boolean mRead;
+    private boolean mDeleted = false;
 
     private ViewSettings mViewSettings;
 
@@ -162,11 +164,9 @@ public abstract class Chat extends Observable implements Observer {
         return (this instanceof GroupChat);
     }
 
-    protected abstract List<Member> getAllMembers();
+    public abstract List<Member> getAllMembers();
 
-    /** Get all contacts (including deleted, blocked and user contact).
-     * TODO remove me
-     */
+    /** Get all contacts (including deleted, blocked and user contact). */
     public abstract List<Contact> getAllContacts();
 
     /** Get valid receiver contacts (without deleted and blocked). */
@@ -209,7 +209,7 @@ public abstract class Chat extends Observable implements Observer {
         db.execUpdate(TABLE, set, mID);
 
         // get receiver for this chat
-        List<Member> oldMembers = this.getAllMembers();
+        List<Member> oldMembers = new ArrayList<>(this.getAllMembers());
 
         // save new members
         for (Member m : members) {
@@ -252,6 +252,11 @@ public abstract class Chat extends Observable implements Observer {
 
         // chat itself
         db.execDelete(TABLE, mID);
+        mDeleted = true;
+    }
+
+    public boolean isDeleted()  {
+        return mDeleted;
     }
 
     protected void changed(Object arg) {
