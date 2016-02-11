@@ -41,7 +41,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
-import org.kontalk.model.ChatList;
+import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;
 import org.kontalk.util.CryptoUtils;

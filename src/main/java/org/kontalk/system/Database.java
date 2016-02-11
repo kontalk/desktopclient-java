@@ -38,11 +38,11 @@ import org.apache.commons.lang.StringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.KonMessage;
-import org.kontalk.model.Chat;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
-import org.kontalk.model.Member;
-import org.kontalk.model.Transmission;
+import org.kontalk.model.chat.Member;
+import org.kontalk.model.message.Transmission;
 import org.kontalk.util.EncodingUtils;
 import org.sqlite.SQLiteConfig;
 

@@ -35,7 +35,7 @@ import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
-import org.kontalk.model.ChatList;
+import org.kontalk.model.chat.ChatList;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
 

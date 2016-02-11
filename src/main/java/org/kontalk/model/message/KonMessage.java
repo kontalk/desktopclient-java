@@ -16,8 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.message;
 
+import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -35,7 +36,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.MessageContent.Preview;
+import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -281,7 +282,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         return Integer.compare(mID, o.getID());
     }
 
-    static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
+    public static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
         int id = messageRS.getInt("_id");
 
         String xmppID = Database.getString(messageRS, KonMessage.COL_XMPP_ID);

@@ -16,15 +16,17 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.message;
 
+import org.kontalk.model.chat.Chat;
 import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.model.MessageContent.Preview;
+import org.kontalk.model.Contact;
+import org.kontalk.model.message.MessageContent.Attachment;
+import org.kontalk.model.message.MessageContent.Preview;
 
 /**
  * Model for an XMPP message that was sent to us.

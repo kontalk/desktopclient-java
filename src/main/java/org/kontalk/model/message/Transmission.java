@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.message;
 
 import org.kontalk.misc.JID;
 import java.sql.ResultSet;
@@ -30,6 +30,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
 import org.kontalk.system.Database;
 
 /**
@@ -40,7 +42,7 @@ final public class Transmission {
     private static final Logger LOGGER = Logger.getLogger(Transmission.class.getName());
 
     public static final String TABLE = "transmissions";
-    static final String COL_MESSAGE_ID = "message_id";
+    public static final String COL_MESSAGE_ID = "message_id";
     private static final String COL_CONTACT_ID = "user_id";
     private static final String COL_JID = "jid";
     private static final String COL_REC_DATE = "received_date";

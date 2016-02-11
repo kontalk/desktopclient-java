@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.message;
 
 import org.kontalk.misc.JID;
 import java.net.URI;
@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.GroupMetaData.KonGroupData;
+import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.util.EncodingUtils;
 
 /**

@@ -54,7 +54,7 @@ import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.JID;
-import org.kontalk.model.OutMessage;
+import org.kontalk.model.message.OutMessage;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
 

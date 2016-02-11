@@ -50,9 +50,9 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.kontalk.model.Contact;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.OutMessage;
-import org.kontalk.model.Transmission;
+import org.kontalk.model.message.MessageContent;
+import org.kontalk.model.message.OutMessage;
+import org.kontalk.model.message.Transmission;
 import org.kontalk.util.CPIMMessage;
 
 /**

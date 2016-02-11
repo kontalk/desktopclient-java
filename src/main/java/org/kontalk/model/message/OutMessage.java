@@ -16,8 +16,9 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.message;
 
+import org.kontalk.model.chat.Chat;
 import org.kontalk.misc.JID;
 import java.net.URI;
 import java.util.Date;
@@ -26,6 +27,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
+import org.kontalk.model.Contact;
 
 /**
  * Model for an XMPP message that we are sending.

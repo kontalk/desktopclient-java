@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.model;
+package org.kontalk.model.chat;
 
 import java.awt.Color;
 import java.sql.ResultSet;
@@ -36,6 +36,9 @@ import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.kontalk.model.Contact;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.message.Transmission;
 import org.kontalk.system.Database;
 
 /**

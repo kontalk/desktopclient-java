@@ -38,7 +38,7 @@ import javax.swing.Box;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringEscapeUtils;
-import org.kontalk.model.ChatList;
+import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.system.Control;

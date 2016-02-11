@@ -30,7 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.commons.lang.ObjectUtils;
 import org.kontalk.model.Avatar;
-import org.kontalk.model.Chat;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.util.MediaUtils;
 

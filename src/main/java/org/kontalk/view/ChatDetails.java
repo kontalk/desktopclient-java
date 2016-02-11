@@ -38,9 +38,9 @@ import java.awt.event.ItemListener;
 import java.util.List;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.kontalk.model.Chat;
-import org.kontalk.model.GroupChat;
-import org.kontalk.model.Member;
+import org.kontalk.model.chat.Chat;
+import org.kontalk.model.chat.GroupChat;
+import org.kontalk.model.chat.Member;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ComponentUtils.MemberList;
 
