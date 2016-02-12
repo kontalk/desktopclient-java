@@ -160,7 +160,7 @@ public class HTTPFileClient {
                 String ext = MediaUtils.extensionForMIME(type);
                 filename = "att_" +
                         org.jivesoftware.smack.util.StringUtils.randomString(4) +
-                        ext;
+                        "." + ext;
             }
 
             // get file size

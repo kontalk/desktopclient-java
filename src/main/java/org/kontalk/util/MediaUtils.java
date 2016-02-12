@@ -47,7 +47,6 @@ public class MediaUtils {
 
     private static OggClip mAudioClip = null;
 
-    /* contains dot! */
     public static String extensionForMIME(String mimeType) {
         MimeType mime = null;
         try {
@@ -55,7 +54,12 @@ public class MediaUtils {
         } catch (MimeTypeException ex) {
             LOGGER.log(Level.WARNING, "can't find mimetype", ex);
         }
-        return StringUtils.defaultIfEmpty(mime != null ? mime.getExtension() : "", ".dat");
+
+        String m = mime != null ? mime.getExtension() : "";
+        // remove dot
+        if (!m.isEmpty())
+            m = m.substring(1);
+        return StringUtils.defaultIfEmpty(m, "dat");
     }
 
     public enum Sound{NOTIFICATION}

@@ -237,8 +237,8 @@ public class AttachmentManager implements Runnable {
             return;
         }
         String id = Integer.toString(message.getID());
-        String dotExt = MediaUtils.extensionForMIME(preview.getMimeType());
-        String filename = id + "_bob" + dotExt;
+        String ext = MediaUtils.extensionForMIME(preview.getMimeType());
+        String filename = id + "_bob." + ext;
         this.writePreview(preview, filename);
 
         message.setPreviewFilename(filename);
@@ -265,7 +265,7 @@ public class AttachmentManager implements Runnable {
                 THUMBNAIL_DIM.height,
                 false);
 
-        String format = MediaUtils.extensionForMIME(THUMBNAIL_MIME).substring(1);
+        String format = MediaUtils.extensionForMIME(THUMBNAIL_MIME);
 
         byte[] bytes = MediaUtils.imageToByteArray(thumb, format);
         if (bytes.length <= 0)
