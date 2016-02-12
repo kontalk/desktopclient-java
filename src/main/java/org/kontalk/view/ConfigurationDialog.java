@@ -23,6 +23,7 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.checkbox.WebCheckBox;
+import com.alee.laf.combobox.WebComboBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
@@ -42,6 +43,8 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.Box;
@@ -61,8 +64,6 @@ import org.kontalk.util.Tr;
 final class ConfigurationDialog extends WebDialog {
     private static final Logger LOGGER = Logger.getLogger(ConfigurationDialog.class.getName());
 
-    private static enum ConfPage {MAIN, ACCOUNT};
-
     private final Config mConf = Config.getInstance();
     private final View mView;
 
@@ -71,7 +72,7 @@ final class ConfigurationDialog extends WebDialog {
 
         mView = view;
         this.setTitle(Tr.tr("Preferences"));
-        this.setSize(550, 500);
+        this.setSize(550, 450);
         this.setResizable(false);
         this.setModal(true);
         this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
@@ -79,9 +80,11 @@ final class ConfigurationDialog extends WebDialog {
         WebTabbedPane tabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
         tabbedPane.setFontSize(View.FONT_SIZE_NORMAL);
         final MainPanel mainPanel = new MainPanel();
+        final NetworkPanel networkPanel = new NetworkPanel();
         final AccountPanel accountPanel = new AccountPanel();
         final PrivacyPanel privacyPanel = new PrivacyPanel();
         tabbedPane.addTab(Tr.tr("Main"), mainPanel);
+        tabbedPane.addTab(Tr.tr("Network"), networkPanel);
         tabbedPane.addTab(Tr.tr("Account"), accountPanel);
         tabbedPane.addTab(Tr.tr("Privacy"), privacyPanel);
 
@@ -102,6 +105,8 @@ final class ConfigurationDialog extends WebDialog {
                 mainPanel.saveConfiguration();
                 accountPanel.saveConfiguration();
                 privacyPanel.saveConfiguration();
+                networkPanel.saveConfiguration();
+
                 ConfigurationDialog.this.dispose();
             }
         });
@@ -112,12 +117,9 @@ final class ConfigurationDialog extends WebDialog {
     }
 
     private class MainPanel extends WebPanel {
-
-        private final WebCheckBox mConnectStartupBox;
         private final WebCheckBox mTrayBox;
         private final WebCheckBox mCloseTrayBox;
         private final WebCheckBox mEnterSendsBox;
-        private final WebCheckBox mRequestAvatars;
         private final WebCheckBox mUserContact;
         private final WebCheckBox mBGBox;
         private final WebFileChooserField mBGChooser;
@@ -128,11 +130,6 @@ final class ConfigurationDialog extends WebDialog {
 
             groupPanel.add(new WebLabel(Tr.tr("Main Settings")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
-
-            mConnectStartupBox = createCheckBox(Tr.tr("Connect on startup"),
-                    "",
-                    mConf.getBoolean(Config.MAIN_CONNECT_STARTUP));
-            groupPanel.add(mConnectStartupBox);
 
             mTrayBox = createCheckBox(Tr.tr("Show tray icon"),
                     "",
@@ -153,11 +150,6 @@ final class ConfigurationDialog extends WebDialog {
                     Tr.tr("Enter key sends text, Control+Enter adds new line - or vice versa"),
                     mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
-
-            mRequestAvatars = createCheckBox(Tr.tr("Download profile pictures"),
-                    Tr.tr("Download contact profile pictures"),
-                    mConf.getBoolean(Config.NET_REQUEST_AVATARS));
-            groupPanel.add(new GroupPanel(mRequestAvatars, new WebSeparator()));
 
             mUserContact = createCheckBox(Tr.tr("Show yourself in contacts"),
                     Tr.tr("Show yourself in the contact list"),
@@ -184,13 +176,11 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void saveConfiguration() {
-            mConf.setProperty(Config.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
             mConf.setProperty(Config.MAIN_TRAY, mTrayBox.isSelected());
             mConf.setProperty(Config.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
             mView.updateTray();
             mConf.setProperty(Config.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
-            mConf.setProperty(Config.NET_REQUEST_AVATARS, mRequestAvatars.isSelected());
             mConf.setProperty(Config.VIEW_USER_CONTACT, mUserContact.isSelected());
             mView.updateContactList();
             String bgPath;
@@ -204,6 +194,60 @@ final class ConfigurationDialog extends WebDialog {
                 mConf.setProperty(Config.VIEW_CHAT_BG, bgPath);
                 mView.reloadChatBG();
             }
+        }
+    }
+
+    private class NetworkPanel extends WebPanel {
+
+        private final WebCheckBox mConnectStartupBox;
+        private final WebCheckBox mRequestAvatars;
+        private final WebComboBox mMaxImgSizeBox;
+        private final LinkedHashMap<Integer, String> mImgResizeMap;
+
+        public NetworkPanel() {
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
+
+            groupPanel.add(new WebLabel(Tr.tr("Network Settings")).setBoldFont());
+            groupPanel.add(new WebSeparator(true, true));
+
+            mConnectStartupBox = createCheckBox(Tr.tr("Connect on startup"),
+                    "",
+                    mConf.getBoolean(Config.MAIN_CONNECT_STARTUP));
+            groupPanel.add(mConnectStartupBox);
+
+            mRequestAvatars = createCheckBox(Tr.tr("Download profile pictures"),
+                    Tr.tr("Download contact profile pictures"),
+                    mConf.getBoolean(Config.NET_REQUEST_AVATARS));
+            groupPanel.add(new GroupPanel(mRequestAvatars, new WebSeparator()));
+
+            mImgResizeMap = new LinkedHashMap<>();
+            mImgResizeMap.put(-1, Tr.tr("Original"));
+            mImgResizeMap.put(300 * 1000, Tr.tr("Small (0.3MP)"));
+            mImgResizeMap.put(500 * 1000, Tr.tr("Medium (0.5MP)"));
+            mImgResizeMap.put(800 * 1000, Tr.tr("Large (0.8MP)"));
+
+            mMaxImgSizeBox = new WebComboBox(new ArrayList<>(mImgResizeMap.values()).toArray());
+            int maxImgSize = mConf.getInt(Config.NET_MAX_IMG_SIZE);
+            int maxImgIndex = new ArrayList<>(mImgResizeMap.keySet()).indexOf(maxImgSize);
+            if (maxImgSize >= 0)
+                mMaxImgSizeBox.setSelectedIndex(maxImgIndex);
+            TooltipManager.addTooltip(mMaxImgSizeBox, Tr.tr("Reduce size of images before sending"));
+
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    new WebLabel(Tr.tr("Resize image attachments:")),
+                    mMaxImgSizeBox,
+                    new WebSeparator()));
+
+            this.add(groupPanel);
+        }
+
+        private void saveConfiguration() {
+            mConf.setProperty(Config.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
+            mConf.setProperty(Config.NET_REQUEST_AVATARS, mRequestAvatars.isSelected());
+
+            mConf.setProperty(Config.NET_MAX_IMG_SIZE,
+                    new ArrayList<>(mImgResizeMap.keySet()).get(mMaxImgSizeBox.getSelectedIndex()));
         }
     }
 
@@ -305,7 +349,7 @@ final class ConfigurationDialog extends WebDialog {
             PersonalKey key = Account.getInstance().getPersonalKey().orElse(null);
             String uid = key != null ? key.getUserId() : null;
             mUserIDArea.setText(uid != null ?
-                    StringUtils.abbreviate(uid, 40) :
+                    StringUtils.abbreviate(uid, 30) :
                     "- "+Tr.tr("no key loaded")+" -");
             if (uid != null)
                 TooltipManager.addTooltip(mUserIDArea, uid);
