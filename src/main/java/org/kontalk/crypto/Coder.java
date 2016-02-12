@@ -146,7 +146,7 @@ public final class Coder {
         return new Encryptor(message).encryptStanza(xml);
     }
 
-    public static Optional<File> encryptAttachment(OutMessage message) {
-        return new Encryptor(message).encryptAttachment();
+    public static Optional<File> encryptAttachment(OutMessage message, File file) {
+        return new Encryptor(message).encryptAttachment(file);
     }
 }

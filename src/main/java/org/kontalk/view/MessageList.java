@@ -202,7 +202,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             }
             Attachment att = m.getContent().getAttachment().orElse(null);
             if (att != null &&
-                    att.getFile().toString().isEmpty()) {
+                    att.getFilePath().toString().isEmpty()) {
                 WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
                 attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
                 attMenuItem.addActionListener(new ActionListener() {

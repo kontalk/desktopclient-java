@@ -257,17 +257,17 @@ public class MessageContent {
         // file name of downloaded file or path to upload file, empty by default
         private Path mFile;
         // MIME of file, empty string by default
-        private final String mMimeType;
-        // size of (decrypted) file in bytes, -1 by default
-        private final long mLength;
+        private String mMimeType;
+        // size of (decrypted) upload file in bytes, -1 by default
+        private long mLength;
         // coder status of file encryption
         private final CoderStatus mCoderStatus;
         // progress downloaded of (encrypted) file in percent
         private int mDownloadProgress = -1;
 
         // used for outgoing attachments
-        public Attachment(Path path, String mimeType, long length) {
-            this(URI.create(""), path, mimeType, length,
+        public Attachment(Path path, String mimeType) {
+            this(URI.create(""), path, mimeType, -1,
                     CoderStatus.createInsecure());
         }
 
@@ -299,8 +299,10 @@ public class MessageContent {
             return mURL;
         }
 
-        public void setURL(URI url){
+        public void update(URI url, String mime, long length){
             mURL = url;
+            mMimeType = mime;
+            mLength = length;
         }
 
         public String getMimeType() {
@@ -314,7 +316,7 @@ public class MessageContent {
        /**
         * Return the filename (download) or path to the local file (upload).
         */
-        public Path getFile() {
+        public Path getFilePath() {
             return mFile;
         }
 
@@ -342,7 +344,7 @@ public class MessageContent {
             return mDownloadProgress;
         }
 
-        /** Set download progress. See .getDownloadProgress() */
+        /** Set download progress. See getDownloadProgress() */
         void setDownloadProgress(int p) {
             mDownloadProgress = p;
         }
@@ -350,7 +352,7 @@ public class MessageContent {
         @Override
         public String toString() {
             return "{ATT:url="+mURL+",file="+mFile+",mime="+mMimeType
-                    +",status="+mCoderStatus+"}";
+                    +"length="+mLength+",status="+mCoderStatus+"}";
         }
 
         // using legacy lib, raw types extend Object

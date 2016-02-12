@@ -169,7 +169,7 @@ final class Decryptor {
         }
 
         // in file
-        File inFile = baseDir.resolve(attachment.getFile()).toFile();
+        File inFile = baseDir.resolve(attachment.getFilePath()).toFile();
         // out file
         String base = FilenameUtils.getBaseName(inFile.getName());
         String ext = FilenameUtils.getExtension(inFile.getName());

@@ -608,7 +608,7 @@ public final class Control {
         }
 
         public Path getFilePath(Attachment attachment) {
-            return mAttachmentManager.filePath(attachment);
+            return mAttachmentManager.absoluteFilePath(attachment);
         }
 
         public Optional<Path> getImagePath(KonMessage message) {
@@ -743,11 +743,11 @@ public final class Control {
         }
 
         public void sendText(Chat chat, String text) {
-            this.sendTextMessage(chat, text, Paths.get(""));
+            this.sendNewMessage(chat, text, Paths.get(""));
         }
 
         public void sendAttachment(Chat chat, Path file){
-            this.sendTextMessage(chat, "", file);
+            this.sendNewMessage(chat, "", file);
         }
 
         public void setUserAvatar(BufferedImage image) {
@@ -770,7 +770,7 @@ public final class Control {
 
         /* private */
 
-        private void sendTextMessage(Chat chat, String text, Path file) {
+        private void sendNewMessage(Chat chat, String text, Path file) {
             Attachment attachment = null;
             if (!file.toString().isEmpty()) {
                 attachment = AttachmentManager.attachmentOrNull(file);
