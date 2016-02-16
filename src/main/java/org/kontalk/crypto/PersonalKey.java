@@ -39,7 +39,6 @@ import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
 import org.bouncycastle.openpgp.bc.BcPGPPublicKeyRing;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
-import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.util.encoders.Hex;
@@ -159,10 +158,7 @@ public final class PersonalKey {
         }
 
         // decrypt private keys
-        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(
-                // TODO need this?
-                new JcaPGPDigestCalculatorProviderBuilder().build()
-        )
+        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder()
                 .setProvider(PGPUtils.PROVIDER)
                 .build(passphrase);
         PGPKeyPair authKeyPair = PGPUtils.decrypt(authKey, decryptor);
