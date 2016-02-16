@@ -18,7 +18,6 @@
 
 package org.kontalk.model.chat;
 
-import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;

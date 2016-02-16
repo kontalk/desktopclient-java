@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.misc.JID;
@@ -270,9 +271,9 @@ public final class Database {
 
         List<String> keyList = new ArrayList<>(set.keySet());
 
-        List<String> vList = new ArrayList<>(keyList.size());
-        for (String key : keyList)
-            vList.add(key + " = ?");
+        List<String> vList = keyList.stream()
+                .map(key -> key + " = ?")
+                .collect(Collectors.toCollection(ArrayList::new));
 
         update += StringUtils.join(vList, ", ") + " WHERE _id == " + id ;
         // note: looks like driver doesn't support "LIMIT"

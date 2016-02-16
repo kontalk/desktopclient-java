@@ -104,6 +104,7 @@ public final class Kontalk {
         // check java version
         String jVersion = System.getProperty("java.version");
         if (jVersion.startsWith("1.7")) {
+            // TODO this won't happen anymore
             View.showWrongJavaVersionDialog();
             LOGGER.severe("java too old: "+jVersion);
             return 3;

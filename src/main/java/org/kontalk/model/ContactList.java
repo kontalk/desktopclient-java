@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -128,12 +127,9 @@ public final class ContactList extends Observable implements Iterable<Contact> {
     }
 
     public Set<Contact> getAll(final boolean withMe) {
-        return new HashSet<>(mJIDMap.values().stream().filter(new Predicate<Contact>(){
-                    @Override
-                    public boolean test(Contact t) {
-                        return withMe || !t.isMe();
-                    }
-        }).collect(Collectors.<Contact>toSet()));
+        return mJIDMap.values().stream()
+                .filter(c -> (withMe || !c.isMe()))
+                .collect(Collectors.toCollection(HashSet::new));
     }
 
     public void delete(Contact contact) {

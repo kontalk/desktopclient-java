@@ -215,17 +215,13 @@ public abstract class Chat extends Observable implements Observer {
         List<Member> oldMembers = new ArrayList<>(this.getAllMembers());
 
         // save new members
-        for (Member m : members) {
-            if (!oldMembers.contains(m)) {
-                m.insert(mID);
-            }
-            oldMembers.remove(m);
-        }
+        members.stream()
+                .filter(m -> !oldMembers.contains(m))
+                .forEach(m -> m.insert(mID));
 
+        oldMembers.removeAll(members);
         // whats left is too much and can be deleted
-        for (Member m : oldMembers) {
-            m.delete();
-        }
+        oldMembers.stream().forEach(m -> m.delete());
     }
 
     void delete() {
@@ -246,10 +242,8 @@ public abstract class Chat extends Observable implements Observer {
             return;
 
         // members
-        boolean allDeleted = true;
-        for (Member member : this.getAllMembers()) {
-            allDeleted &= member.delete();
-        }
+        boolean allDeleted = this.getAllMembers().stream()
+                .allMatch(m -> m.delete());
         if (!allDeleted)
             return;
 

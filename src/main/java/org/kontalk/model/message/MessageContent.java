@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
@@ -566,14 +567,14 @@ public class MessageContent {
                 String subj = EncodingUtils.getJSONString(map, JSON_SUBJECT);
 
                 List<String> a = (List<String>) map.get(JSON_ADDED);
-                List<JID> added = new ArrayList<>(a.size());
-                for (String s: a)
-                    added.add(JID.bare(s));
+                List<JID> added = a.stream()
+                        .map(s -> JID.bare(s))
+                        .collect(Collectors.toList());
 
                 List<String> r = (List<String>) map.get(JSON_REMOVED);
-                List<JID> removed = new ArrayList<>(r.size());
-                for (String s: r)
-                    removed.add(JID.bare(s));
+                List<JID> removed = r.stream()
+                        .map(s -> JID.bare(s))
+                        .collect(Collectors.toList());
 
                 return new GroupCommand(op,
                         added.toArray(new JID[0]), removed.toArray(new JID[0]),

@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.Kontalk;
@@ -686,10 +687,9 @@ public final class Control {
 
         public void createGroupChat(List<Contact> contacts, String subject) {
             // user is part of the group
-            List<Member> members = new ArrayList<>(contacts.size()+1);
-            for (Contact c : contacts) {
-                members.add(new Member(c));
-            }
+            List<Member> members = contacts.stream()
+                    .map(c -> new Member(c))
+                    .collect(Collectors.toCollection(ArrayList::new));
             Contact me = ContactList.getInstance().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");

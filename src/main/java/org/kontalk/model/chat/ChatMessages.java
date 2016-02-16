@@ -28,6 +28,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.system.Database;
@@ -105,16 +106,11 @@ public final class ChatMessages {
     public SortedSet<OutMessage> getPending() {
         this.ensureLoaded();
 
-        SortedSet<OutMessage> s = new TreeSet<>();
-        // TODO performance, probably additional map needed
-        // TODO use lambda in near future
-        for (KonMessage m : mSet) {
-            if (m.getStatus() == KonMessage.Status.PENDING &&
-                    m instanceof OutMessage) {
-                s.add((OutMessage) m);
-            }
-        }
-        return s;
+        return mSet.stream()
+                .filter(m -> m.getStatus() == KonMessage.Status.PENDING
+                        && m instanceof OutMessage)
+                .map(m -> (OutMessage) m)
+                .collect(Collectors.toCollection(TreeSet::new));
     }
 
     /** Get the newest (ie last received) outgoing message. */

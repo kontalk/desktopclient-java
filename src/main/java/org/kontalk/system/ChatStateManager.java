@@ -57,8 +57,8 @@ final class ChatStateManager {
     }
 
     void imGone() {
-        for (MyChatState chatState : mChatStateCache.values())
-            chatState.handleState(ChatState.gone);
+        mChatStateCache.values().stream()
+                .forEach(chatState -> chatState.handleState(ChatState.gone));
     }
 
     private class MyChatState {
