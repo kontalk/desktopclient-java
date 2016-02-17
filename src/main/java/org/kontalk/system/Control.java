@@ -718,14 +718,7 @@ public final class Control {
         }
 
         public void setChatSubject(GroupChat chat, String subject) {
-            if (!chat.isAdministratable()) {
-                LOGGER.warning("not admin");
-                return;
-            }
-            Control.this.createAndSendMessage(chat, MessageContent.groupCommand(
-                    GroupCommand.set(new JID[0], new JID[0], subject)));
-
-            chat.setSubject(subject);
+            mGroupControl.getInstanceFor(chat).onSetSubject(subject);
         }
 
         public void handleOwnChatStateEvent(Chat chat, ChatState state) {
