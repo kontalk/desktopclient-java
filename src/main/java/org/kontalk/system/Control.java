@@ -265,9 +265,10 @@ public final class Control {
             LOGGER.info("can't find contact with jid: "+ids.jid);
             return;
         }
-        // TODO chat states for group chats?
+        // NOTE: assume chat states are only send for single chats
         SingleChat chat = ChatList.getInstance().get(contact, ids.xmppThreadID).orElse(null);
         if (chat == null)
+            // not that important
             return;
 
         chat.setChatState(contact, chatState);

@@ -29,8 +29,6 @@ import org.kontalk.misc.JID;
 /**
  * Immutable meta data fields for a specific group chat protocol implementation.
  *
- * TODO toString() methods
- *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public abstract class GroupMetaData {
