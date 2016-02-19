@@ -138,7 +138,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             @Override
             public void actionPerformed(ActionEvent event) {
                 String text = Tr.tr("Permanently delete this contact?") + "\n" +
-                        View.REMOVE_CONTACT_NOTE;
+                        mView.tr_remove_contact;
                 if (!Utils.confirmDeletion(ContactListView.this, text))
                     return;
                 mView.getControl().deleteContact(

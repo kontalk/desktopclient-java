@@ -164,7 +164,7 @@ final class Notifier {
         WebPanel panel = panel(Tr.tr("Contact was deleted on server"), contact);
 
         String expl = Tr.tr("Remove this contact from your contact list?") + "\n" +
-                View.REMOVE_CONTACT_NOTE;
+                mView.tr_remove_contact;
         panel.add(textArea(expl));
 
         WebNotificationPopup popup = NotificationManager.showNotification(panel,

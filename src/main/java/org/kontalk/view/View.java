@@ -91,8 +91,6 @@ public final class View implements Observer {
 
     static final Dimension AVATAR_LIST_DIM = new Dimension(30, 30);
 
-    static final String REMOVE_CONTACT_NOTE = Tr.tr("Chats and messages will not be deleted.");
-
     private final ViewControl mControl;
     private final TrayManager mTrayManager;
 
@@ -105,6 +103,9 @@ public final class View implements Observer {
     private final ChatView mChatView;
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
+
+    final String tr_remove_contact = Tr.tr("Chats and messages will not be deleted.");
+    final String tr_not_supported = Tr.tr("Not supported by server");
 
     private Control.Status mCurrentStatus;
     private EnumSet<Client.ServerFeature> mServerFeatures;
@@ -208,7 +209,7 @@ public final class View implements Observer {
     private void updateOnEDT(Object arg) {
         if (arg instanceof ViewEvent.StatusChange) {
             ViewEvent.StatusChange statChange = (ViewEvent.StatusChange) arg;
-            this.statusChanged(statChange.status, mServerFeatures);
+            this.statusChanged(statChange.status, statChange.features);
         } else if (arg instanceof ViewEvent.PasswordSet) {
             this.showPasswordDialog(false);
         } else if (arg instanceof ViewEvent.MissingAccount) {
@@ -245,12 +246,13 @@ public final class View implements Observer {
     private void statusChanged(Control.Status status, EnumSet<Client.ServerFeature> features) {
         mCurrentStatus = status;
         mServerFeatures = features;
+
+        mChatView.onStatusChange(status, features);
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Connecting…"));
                 break;
             case CONNECTED:
-                mChatView.setColor(Color.WHITE);
                 mStatusBarLabel.setText(Tr.tr("Connected"));
                 NotificationManager.hideAllNotifications();
                 break;
@@ -258,7 +260,6 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Disconnecting…"));
                 break;
             case DISCONNECTED:
-                mChatView.setColor(Color.LIGHT_GRAY);
                 mStatusBarLabel.setText(Tr.tr("Not connected"));
                 //if (mTrayIcon != null)
                 //    trayIcon.setImage(updatedImage);
@@ -274,7 +275,6 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Connecting failed"));
                 break;
             case ERROR:
-                mChatView.setColor(Color.lightGray);
                 mStatusBarLabel.setText(Tr.tr("Connection error"));
                 break;
             }

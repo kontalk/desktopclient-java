@@ -74,7 +74,7 @@ final class MainFrame extends WebFrame {
     private final WebToggleButton mAddGroupButton;
     private final WebToggleButton mAddContactButton;
 
-    MainFrame(final View view,
+    MainFrame(View view,
             ListView<?, ?> contactList,
             ListView<?, ?> chatList,
             Component content,

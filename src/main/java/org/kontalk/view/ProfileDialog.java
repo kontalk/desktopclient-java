@@ -125,7 +125,7 @@ final class ProfileDialog extends WebDialog {
             TooltipManager.addTooltip(mAvatarImage,
                     mView.currentStatus() != Control.Status.CONNECTED ?
                             Tr.tr("Not connected") :
-                            Tr.tr("Not supported by server"));
+                            mView.tr_not_supported);
 
         groupPanel.add(mAvatarImage);
         groupPanel.add(new WebSeparator(true, true));
