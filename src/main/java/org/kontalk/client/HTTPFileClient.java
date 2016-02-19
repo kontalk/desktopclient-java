@@ -65,6 +65,8 @@ import org.kontalk.util.TrustUtils;
 public class HTTPFileClient {
     private static final Logger LOGGER = Logger.getLogger(HTTPFileClient.class.getName());
 
+    static final String KON_UPLOAD_FEATURE = "http://kontalk.org/extensions/message#upload";
+
     /** Regex used to parse content-disposition headers for download. */
     private static final Pattern CONTENT_DISPOSITION_PATTERN = Pattern
             .compile("attachment;\\s*filename\\s*=\\s*\"([^\"]*)\"");

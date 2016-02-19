@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
@@ -68,20 +69,26 @@ public final class Client implements StanzaListener, Runnable {
 
     private static final String CAPS_CACHE_DIR = "caps_cache";
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
+    private static final Map<String, ServerFeature> FEATURE_MAP;
 
     public enum PresenceCommand {REQUEST, GRANT, DENY};
-    public enum ServerFeature {USER_AVATAR}
+    public enum ServerFeature {USER_AVATAR, ATTACHMENT_UPLOAD}
 
     private enum Command {CONNECT, DISCONNECT};
 
     private final Control mControl;
 
     private final KonMessageSender mMessageSender;
-    private final HashMap<String, ServerFeature> mFeatureMap;
     private final EnumSet<ServerFeature> mFeatures;
 
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
+
+    static {
+        FEATURE_MAP = new HashMap<>();
+        FEATURE_MAP.put(PubSub.NAMESPACE, ServerFeature.USER_AVATAR);
+        FEATURE_MAP.put(HTTPFileClient.KON_UPLOAD_FEATURE, ServerFeature.ATTACHMENT_UPLOAD);
+    }
 
     private Client(Control control) {
         mControl = control;
@@ -92,8 +99,6 @@ public final class Client implements StanzaListener, Runnable {
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
 
-        mFeatureMap = new HashMap<>();
-        mFeatureMap.put(PubSub.NAMESPACE, ServerFeature.USER_AVATAR);
         mFeatures = EnumSet.noneOf(ServerFeature.class);
 
         // setting caps cache
@@ -231,8 +236,8 @@ public final class Client implements StanzaListener, Runnable {
         if (info != null) {
             for (DiscoverInfo.Feature feature: info.getFeatures()) {
                 String var = feature.getVar();
-                if (mFeatureMap.containsKey(var)) {
-                    mFeatures.add(mFeatureMap.get(feature));
+                if (FEATURE_MAP.containsKey(var)) {
+                    mFeatures.add(FEATURE_MAP.get(var));
                 }
             }
         }
