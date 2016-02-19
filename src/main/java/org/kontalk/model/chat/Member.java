@@ -49,7 +49,6 @@ public final class Member {
      */
     public enum Role {DEFAULT, OWNER, ADMIN};
 
-    // many to many relationship requires additional table for members
     public static final String TABLE = "receiver";
     public static final String COL_CONTACT_ID = "user_id";
     public static final String COL_ROLE = "role";
@@ -67,7 +66,7 @@ public final class Member {
     private final Contact mContact;
     private final Role mRole;
 
-    private int id;
+    private int mID;
 
     private ChatState mState = ChatState.gone;
     // note: the Android client does not set active states when only viewing
@@ -85,9 +84,9 @@ public final class Member {
     }
 
     private Member(int id, Contact contact, Role role) {
-        this.id = id;
-        this.mContact = contact;
-        this.mRole = role;
+        mID = id;
+        mContact = contact;
+        mRole = role;
     }
 
     public Contact getContact() {
@@ -119,7 +118,7 @@ public final class Member {
 
     @Override
     public String toString() {
-        return "Mem:c={"+mContact+"}r="+mRole;
+        return "Mem:cont={"+mContact+"},role="+mRole;
     }
 
     public ChatState getState() {
@@ -127,7 +126,7 @@ public final class Member {
     }
 
     boolean insert(int chatID) {
-        if (id > 0) {
+        if (mID > 0) {
             LOGGER.warning("already in database");
             return true;
         }
@@ -136,8 +135,8 @@ public final class Member {
         recValues.add(chatID);
         recValues.add(getContact().getID());
         recValues.add(mRole);
-        id = Database.getInstance().execInsert(TABLE, recValues);
-        if (id <= 0) {
+        mID = Database.getInstance().execInsert(TABLE, recValues);
+        if (mID <= 0) {
             LOGGER.warning("could not insert member");
             return false;
         }
@@ -149,12 +148,12 @@ public final class Member {
     }
 
     boolean delete() {
-        if (id <= 0) {
+        if (mID <= 0) {
             LOGGER.warning("not in database");
             return true;
         }
 
-        return Database.getInstance().execDelete(TABLE, id);
+        return Database.getInstance().execDelete(TABLE, mID);
     }
 
     protected void setState(ChatState state) {

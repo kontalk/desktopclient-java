@@ -22,7 +22,6 @@ import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -79,10 +78,6 @@ public abstract class Chat extends Observable implements Observer {
 
     private ViewSettings mViewSettings;
 
-    protected Chat(Contact contact, String xmppID, String subject) {
-        this(Arrays.asList(new Member(contact)), xmppID, subject, null);
-    }
-
     protected Chat(List<Member> members, String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages(this, true);
         mRead = true;
@@ -102,8 +97,7 @@ public abstract class Chat extends Observable implements Observer {
             return;
         }
 
-        for (Member member : members)
-            member.insert(mID);
+        members.stream().forEach(member -> member.insert(mID));
     }
 
     // used when loading from database
@@ -293,7 +287,7 @@ public abstract class Chat extends Observable implements Observer {
                 LOGGER.warning("not one contact for single chat, id="+id);
                 return null;
             }
-            return new SingleChat(id, members.get(0).getContact(), xmppID, read, jsonViewSettings);
+            return new SingleChat(id, members.get(0), xmppID, read, jsonViewSettings);
         }
     }
 

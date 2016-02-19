@@ -116,7 +116,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     private SingleChat createNew(Contact contact, String xmppThreadID) {
-        SingleChat newChat = new SingleChat(contact, xmppThreadID);
+        SingleChat newChat = new SingleChat(new Member(contact), xmppThreadID);
         LOGGER.config("new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
