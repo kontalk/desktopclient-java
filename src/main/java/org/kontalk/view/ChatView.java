@@ -103,7 +103,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebFileChooser mFileChooser;
     private final WebButton mFileButton;
 
-    private final Map<Integer, MessageList> mChatCache = new HashMap<>();
+    private final Map<Chat, MessageList> mMessageListCache = new HashMap<>();
 
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
@@ -292,13 +292,13 @@ final class ChatView extends WebPanel implements Observer {
 
         chat.addObserver(this);
 
-        if (!mChatCache.containsKey(chat.getID())) {
+        if (!mMessageListCache.containsKey(chat)) {
             MessageList newMessageList = new MessageList(mView, this, chat);
             chat.addObserver(newMessageList);
-            mChatCache.put(chat.getID(), newMessageList);
+            mMessageListCache.put(chat, newMessageList);
         }
         // set to current chat
-        mScrollPane.getViewport().setView(mChatCache.get(chat.getID()));
+        mScrollPane.getViewport().setView(mMessageListCache.get(chat));
         this.onChatChange();
 
         chat.setRead();
@@ -412,12 +412,11 @@ final class ChatView extends WebPanel implements Observer {
         if (arg instanceof Chat) {
             Chat chat = (Chat) arg;
             if (chat.isDeleted()) {
-                MessageList viewList = mChatCache.get(chat.getID());
+                MessageList viewList = mMessageListCache.remove(chat);
                 if (viewList != null) {
                     viewList.clearItems();
                     chat.deleteObserver(viewList);
                 }
-                mChatCache.remove(chat.getID());
                 if(this.getCurrentChat().orElse(null) == chat) {
                     mScrollPane.setViewportView(null);
                     mView.showNothing();
