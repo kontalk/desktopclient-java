@@ -715,7 +715,7 @@ public final class Control {
                     return;
             }
 
-            ChatList.getInstance().delete(chat.getID());
+            ChatList.getInstance().delete(chat);
         }
 
         public void setChatSubject(GroupChat chat, String subject) {

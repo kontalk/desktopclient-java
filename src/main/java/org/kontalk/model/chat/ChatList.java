@@ -21,11 +21,9 @@ package org.kontalk.model.chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -44,15 +42,14 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     private static final ChatList INSTANCE = new ChatList();
 
-    private final Map<Integer, Chat> mMap =
-            Collections.synchronizedMap(new HashMap<Integer, Chat>());
+    private final Set<Chat> mChats = Collections.synchronizedSet(new HashSet<Chat>());
 
     private boolean mUnread = false;
 
     private ChatList() {}
 
     public void load() {
-        assert mMap.isEmpty();
+        assert mChats.isEmpty();
 
         Database db = Database.getInstance();
         try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
@@ -71,12 +68,12 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public Set<Chat> getAll() {
-        return new HashSet<>(mMap.values());
+        return new HashSet<>(mChats);
     }
 
     /** Get single chat with contact and XMPPID. */
     public Optional<SingleChat> get(Contact contact, String xmmpThreadID) {
-        for (Chat chat : mMap.values()) {
+        for (Chat chat : mChats) {
             if (!(chat instanceof SingleChat))
                 continue;
             SingleChat singleChat = (SingleChat) chat;
@@ -89,14 +86,13 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public Optional<GroupChat> get(GroupMetaData gData) {
-        for (Chat chat : mMap.values()) {
+        for (Chat chat : mChats) {
             if (!(chat instanceof GroupChat))
                 continue;
 
             GroupChat groupChat = (GroupChat) chat;
             if (groupChat.getGroupData().equals(gData))
                 return Optional.of(groupChat);
-
         }
 
         return Optional.empty();
@@ -136,12 +132,11 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     private void putSilent(Chat chat) {
-        if (mMap.containsValue(chat)) {
+        boolean succ = mChats.add(chat);
+        if (!succ) {
             LOGGER.warning("chat already in chat list: "+chat);
             return;
         }
-
-        mMap.put(chat.getID(), chat);
         chat.addObserver(this);
     }
 
@@ -150,13 +145,13 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public boolean isEmpty() {
-        return mMap.isEmpty();
+        return mChats.isEmpty();
     }
 
-    public void delete(int id) {
-        Chat chat = mMap.remove(id);
-        if (chat == null) {
-            LOGGER.warning("can't delete chat, not found. id: "+id);
+    public void delete(Chat chat) {
+        boolean succ = mChats.remove(chat);
+        if (!succ) {
+            LOGGER.warning("can't delete chat, not found: "+chat);
             return;
         }
         chat.delete();
@@ -190,7 +185,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
             return;
         }
 
-        for (Chat chat : mMap.values()) {
+        for (Chat chat : mChats) {
             if (!chat.isRead()) {
                 return;
             }
@@ -202,7 +197,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     @Override
     public Iterator<Chat> iterator() {
-        return mMap.values().iterator();
+        return mChats.iterator();
     }
 
     public static ChatList getInstance() {
