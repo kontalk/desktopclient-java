@@ -105,7 +105,6 @@ public final class Member {
         if (!(o instanceof Member))
             return false;
 
-        // TODO dangerous
         return mContact.equals(((Member) o).mContact);
     }
 

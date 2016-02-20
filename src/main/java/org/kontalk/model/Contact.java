@@ -340,6 +340,24 @@ public final class Contact extends Observable {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof Contact))
+            return false;
+
+        return mID == ((Contact) o).mID;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 29 * hash + this.mID;
+        return hash;
+    }
+
+    @Override
     public String toString() {
         return "C:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
                 +",subsc="+mSubStatus;
