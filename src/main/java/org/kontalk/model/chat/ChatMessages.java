@@ -18,7 +18,6 @@
 
 package org.kontalk.model.chat;
 
-import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
@@ -117,19 +116,9 @@ public final class ChatMessages {
     public Optional<OutMessage> getLast(String xmppID) {
         this.ensureLoaded();
 
-        // TODO performance
-        OutMessage message = null;
-        for (KonMessage m: mSet.descendingSet()) {
-            if (m.getXMPPID().equals(xmppID) && m instanceof OutMessage) {
-                message = (OutMessage) m;
-            }
-        }
-
-        if (message == null) {
-            return Optional.empty();
-        }
-
-        return Optional.of(message);
+        return mSet.descendingSet().stream()
+                .filter(m -> m.getXMPPID().equals(xmppID) && m instanceof OutMessage)
+                .map(m -> (OutMessage) m).findFirst();
     }
 
     /** Get the last created message. */
