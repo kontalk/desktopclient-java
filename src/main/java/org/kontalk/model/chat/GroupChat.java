@@ -264,7 +264,13 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
 
     @Override
     public boolean isAdministratable() {
-        return mGroupData.isAdministratable();
+        Member me = mMemberSet.stream()
+                .filter(m -> m.getContact().isMe())
+                .findFirst().orElse(null);
+        if (me == null)
+            return false;
+        Member.Role myRole = me.getRole();
+        return myRole == Member.Role.OWNER || myRole == Member.Role.ADMIN;
     }
 
     private boolean containsMe() {

@@ -34,9 +34,6 @@ import org.kontalk.misc.JID;
 public abstract class GroupMetaData {
     private static final Logger LOGGER = Logger.getLogger(GroupMetaData.class.getName());
 
-    // TODO move role/affiliation data to group chat class
-    abstract boolean isAdministratable();
-
     abstract String toJSON();
 
     /** Data fields specific to a Kontalk group chat (custom protocol). */
@@ -50,11 +47,6 @@ public abstract class GroupMetaData {
         public KonGroupData(JID ownerJID, String id) {
             this.owner = ownerJID;
             this.id = id;
-        }
-
-        @Override
-        boolean isAdministratable() {
-            return owner.isMe();
         }
 
         // using legacy lib, raw types extend Object
@@ -114,12 +106,6 @@ public abstract class GroupMetaData {
         public MUCData(JID room, String password) {
             this.room = room;
             this.password = password;
-        }
-
-        @Override
-        boolean isAdministratable() {
-            // TODO
-            return true;
         }
 
         // using legacy lib, raw types extend Object
