@@ -106,7 +106,7 @@ public final class Member {
             return false;
 
         // TODO dangerous
-        return mContact.equals(o);
+        return mContact.equals(((Member) o).mContact);
     }
 
     @Override
