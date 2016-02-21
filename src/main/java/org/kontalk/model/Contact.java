@@ -309,7 +309,8 @@ public final class Contact extends Observable {
         mEncrypted = false;
         mKey = "";
         mFingerprint = "";
-        mAvatar.delete();
+        if (mAvatar != null)
+            mAvatar.delete();
         mAvatar = null;
 
         this.save();
