@@ -20,6 +20,8 @@ package org.kontalk.misc;
 
 import java.util.Objects;
 import org.apache.commons.lang.StringUtils;
+import org.jxmpp.jid.util.JidUtil;
+import org.jxmpp.stringprep.simple.SimpleXmppStringprep;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.model.Account;
 
@@ -33,6 +35,11 @@ public final class JID {
     private final String mLocal;
     private final String mDomain;
     private final String mResource;
+
+    static {
+        // good to know. For working JID validation
+        SimpleXmppStringprep.setup();
+    }
 
     private JID(String local, String domain, String resource) {
         mLocal = local;
@@ -53,9 +60,12 @@ public final class JID {
     }
 
     public boolean isValid() {
-        // TODO stronger check here.
-        //org.jxmpp.jid.util.JidUtil.validateBareJid(mBareJID);
-        return !mLocal.isEmpty() && !mDomain.isEmpty();
+        if (mLocal.isEmpty() || mDomain.isEmpty())
+            return false;
+
+        // NOTE: domain check could be stronger - complaint with RFC 6122, but
+        // server does not accept special characters
+        return JidUtil.isValidBareJid(this.string());
     }
 
     public boolean isHash() {
