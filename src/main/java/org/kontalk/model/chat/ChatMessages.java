@@ -35,6 +35,8 @@ import org.kontalk.system.Database;
 /**
  * Messages of chat.
  *
+ * Sorted by creation time.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class ChatMessages {
@@ -98,7 +100,7 @@ public final class ChatMessages {
     public NavigableSet<KonMessage> getAll() {
         this.ensureLoaded();
 
-        return mSet;
+        return Collections.unmodifiableNavigableSet(mSet);
     }
 
     /** Get all outgoing messages with status "PENDING" for this chat. */

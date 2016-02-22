@@ -68,7 +68,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public Set<Chat> getAll() {
-        return new HashSet<>(mChats);
+        return Collections.unmodifiableSet(mChats);
     }
 
     /** Get single chat with contact and XMPPID. */

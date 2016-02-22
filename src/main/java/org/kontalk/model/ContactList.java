@@ -22,7 +22,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Observable;
@@ -126,10 +125,11 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         return this.create(myJID, "");
     }
 
-    public Set<Contact> getAll(final boolean withMe) {
-        return mJIDMap.values().stream()
-                .filter(c -> (withMe || !c.isMe()))
-                .collect(Collectors.toCollection(HashSet::new));
+    public Set<Contact> getAll(boolean withMe) {
+        return Collections.unmodifiableSet(
+                mJIDMap.values().stream()
+                        .filter(c -> (withMe || !c.isMe()))
+                        .collect(Collectors.toSet()));
     }
 
     public void delete(Contact contact) {
