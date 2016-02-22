@@ -29,8 +29,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.Timer;
 import javax.swing.Box;
 import javax.swing.ListSelectionModel;
@@ -93,12 +91,12 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        Set<ChatItem> newItems = new HashSet<>();
-        Set<Chat> chats = mChatList.getAll();
-        for (Chat chat: chats)
-            if (!this.containsValue(chat))
-                newItems.add(new ChatItem(chat));
-        this.sync(chats, newItems);
+        this.sync(mChatList.getAll());
+    }
+
+    @Override
+    protected ChatItem newItem(Chat value) {
+        return new ChatItem(value);
     }
 
     void selectLastChat() {

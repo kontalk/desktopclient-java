@@ -195,12 +195,8 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
 
     protected abstract WebPopupMenu rightClickMenu(I item);
 
-    protected boolean containsValue(V value) {
-        return mItems.containsKey(value);
-    }
-
     @SuppressWarnings("unchecked")
-    protected void sync(Set<V> values, Set<I> newItems) {
+    protected boolean sync(Set<V> values) {
         // TODO performance
         // remove old
         for (int i=0; i < mModel.getRowCount(); i++) {
@@ -210,15 +206,24 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
                 item.mValue.deleteObserver(item);
                 mModel.removeRow(i);
                 i--;
+                mItems.remove(item.mValue);
             }
         }
         // add new
-        for (I item : newItems) {
-            item.mValue.addObserver(item);
-            mItems.put(item.mValue, item);
-            mModel.addRow(new Object[]{item});
+        boolean added = false;
+        for (V v: values) {
+            if (!mItems.containsKey(v)) {
+                I item = this.newItem(v);
+                item.mValue.addObserver(item);
+                mItems.put(item.mValue, item);
+                mModel.addRow(new Object[]{item});
+                added = true;
+            }
         }
+        return added;
     }
+
+    protected abstract I newItem(V value);
 
     @SuppressWarnings("unchecked")
     protected I getDisplayedItemAt(int i) {
