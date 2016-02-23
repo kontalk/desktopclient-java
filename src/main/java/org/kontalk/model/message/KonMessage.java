@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -262,6 +263,28 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
     protected void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof KonMessage))
+            return false;
+
+        KonMessage oMessage = (KonMessage) o;
+
+        return mChat.equals(oMessage.mChat)
+                && !mXMPPID.isEmpty() && mXMPPID.equals(oMessage.mXMPPID);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 17 * hash + Objects.hashCode(this.mChat);
+        hash = 17 * hash + Objects.hashCode(this.mXMPPID);
+        return hash;
     }
 
     @Override

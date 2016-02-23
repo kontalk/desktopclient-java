@@ -198,7 +198,6 @@ public final class Control {
         if (newMessage.getID() <= 0)
             return;
 
-        // TODO implement equals()
         if (chat.getMessages().contains(newMessage)) {
             LOGGER.info("message already in chat, dropping this one");
             return;

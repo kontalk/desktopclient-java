@@ -30,7 +30,7 @@ import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.model.Contact;
 
 /**
- * Model for an XMPP message that we are sending.
+ * Model for an XMPP message from the user to a contact.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class OutMessage extends KonMessage {
@@ -123,5 +123,4 @@ public final class OutMessage extends KonMessage {
     public Transmission[] getTransmissions() {
         return mTransmissions;
     }
-
 }

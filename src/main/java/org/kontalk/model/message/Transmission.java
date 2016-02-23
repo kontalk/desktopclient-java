@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -162,5 +163,27 @@ final public class Transmission {
         Date receivedDate = rDate == 0 ? null : new Date(rDate);
 
         return new Transmission(id, contact, jid, receivedDate);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof Transmission))
+            return false;
+
+        Transmission oTransmission = (Transmission) o;
+
+        return mContact.equals(oTransmission.mContact)
+                && mJID.equals(oTransmission.mJID);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 71 * hash + Objects.hashCode(this.mContact);
+        hash = 71 * hash + Objects.hashCode(this.mJID);
+        return hash;
     }
 }

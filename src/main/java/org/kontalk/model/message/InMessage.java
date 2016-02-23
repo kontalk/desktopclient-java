@@ -21,6 +21,7 @@ package org.kontalk.model.message;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.misc.JID;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
@@ -29,7 +30,7 @@ import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.Preview;
 
 /**
- * Model for an XMPP message that was sent to us.
+ * Model for an XMPP message sent to the user.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class InMessage extends KonMessage implements DecryptMessage {
@@ -137,5 +138,24 @@ public final class InMessage extends KonMessage implements DecryptMessage {
     @Override
     public Transmission[] getTransmissions() {
         return new Transmission[]{mTransmission};
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof InMessage))
+            return false;
+
+        return super.equals(o) &&
+                mTransmission.equals(((InMessage) o).mTransmission);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = super.hashCode();
+        hash = 67 * hash + Objects.hashCode(this.mTransmission);
+        return hash;
     }
 }
