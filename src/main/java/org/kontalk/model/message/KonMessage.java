@@ -21,7 +21,6 @@ package org.kontalk.model.message;
 import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -31,6 +30,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
@@ -183,7 +183,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         return mStatus == Status.IN;
     }
 
-    public abstract Transmission[] getTransmissions();
+    public abstract Set<Transmission> getTransmissions();
 
     public String getXMPPID() {
         return mXMPPID;
@@ -290,7 +290,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
     @Override
     public String toString() {
         return "M:id="+mID+",status="+mStatus+",chat="+mChat+",xmppid="+mXMPPID
-                +",transmissions="+Arrays.toString(this.getTransmissions())
+                +",transmissions="+this.getTransmissions()
                 +",date="+mDate+",sdate="+mServerDate
                 +",cont="+mContent
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
@@ -395,7 +395,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         private final Date mDate;
         private final MessageContent mContent;
 
-        protected Transmission[] mTransmissions = null;
+        protected Set<Transmission> mTransmissions = null;
 
         private String mXMPPID = null;
         private Date mServerDate = null;
@@ -414,7 +414,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
             mContent = content;
         }
 
-        private void transmissions(Transmission[] transmission) { mTransmissions = transmission; }
+        private void transmissions(Set<Transmission> transmission) { mTransmissions = transmission; }
 
         private void xmppID(String xmppID) { mXMPPID = xmppID; }
         private void serverDate(Date date) { mServerDate = date; }

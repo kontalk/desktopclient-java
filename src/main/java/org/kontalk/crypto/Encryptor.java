@@ -151,7 +151,7 @@ final class Encryptor {
             message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
             return false;
         }
-        List<Contact> contacts = new ArrayList<>(message.getTransmissions().length);
+        List<Contact> contacts = new ArrayList<>();
         for (Transmission t : message.getTransmissions())
             contacts.add(t.getContact());
         receiverKeys = receiverKeysOrNull(contacts.toArray(new Contact[0]));

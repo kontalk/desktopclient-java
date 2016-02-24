@@ -111,8 +111,7 @@ final class KonMessageSender {
         }
 
         // transmission specific
-        Transmission[] transmissions = message.getTransmissions();
-        ArrayList<Message> sendMessages = new ArrayList<>(transmissions.length);
+        ArrayList<Message> sendMessages = new ArrayList<>();
         for (Transmission transmission: message.getTransmissions()) {
             Message sendMessage = protoMessage.clone();
             JID to = transmission.getJID();

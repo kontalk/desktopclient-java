@@ -21,14 +21,16 @@ package org.kontalk.model.message;
 import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.model.Contact;
@@ -132,9 +134,9 @@ final public class Transmission {
         return "T:id="+mID+",contact="+mContact+",jid="+mJID+",recdate="+mReceivedDate;
     }
 
-    static Transmission[] load(int messageID) {
+    static Set<Transmission> load(int messageID) {
         Database db = Database.getInstance();
-        ArrayList<Transmission> ts = new ArrayList<>();
+        HashSet<Transmission> ts = new HashSet<>();
         try (ResultSet transmissionRS = db.execSelectWhereInsecure(TABLE,
                 COL_MESSAGE_ID + " == " + messageID)) {
             while (transmissionRS.next()) {
@@ -142,11 +144,11 @@ final public class Transmission {
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load transmission(s) from db", ex);
-            return new Transmission[0];
+            return Collections.<Transmission>emptySet();
         }
         if (ts.isEmpty())
             LOGGER.warning("no transmission(s) found, messageID: "+messageID);
-        return ts.toArray(new Transmission[0]);
+        return ts;
     }
 
     private static Transmission load(ResultSet resultSet) throws SQLException {

@@ -69,7 +69,7 @@ public final class ChatMessages {
                 KonMessage.COL_CHAT_ID + " == " + mChat.getID())) {
             while (messageRS.next()) {
                 KonMessage message = KonMessage.load(messageRS, mChat);
-                if (message.getTransmissions().length == 0)
+                if (message.getTransmissions().isEmpty())
                     // ignore broken message
                     continue;
                 this.addSilent(message);

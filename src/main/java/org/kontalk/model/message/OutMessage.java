@@ -21,6 +21,7 @@ package org.kontalk.model.message;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.misc.JID;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Optional;
@@ -36,7 +37,7 @@ import org.kontalk.model.Contact;
 public final class OutMessage extends KonMessage {
     private static final Logger LOGGER = Logger.getLogger(OutMessage.class.getName());
 
-    private final Transmission[] mTransmissions;
+    private final Set<Transmission> mTransmissions;
 
     public OutMessage(Chat chat, Contact[] contacts, MessageContent content, boolean encrypted) {
         super(chat,
@@ -48,18 +49,20 @@ public final class OutMessage extends KonMessage {
                         CoderStatus.createToEncrypt() :
                         CoderStatus.createInsecure());
 
-        Set<Transmission> t = new HashSet<>();
+        Set<Transmission> ts = new HashSet<>();
         for (Contact contact: contacts) {
-            t.add(new Transmission(contact, contact.getJID(), mID));
+            boolean succ = ts.add(new Transmission(contact, contact.getJID(), mID));
+            if (!succ)
+                LOGGER.warning("duplicate contact: "+contact);
         }
-        mTransmissions = t.toArray(new Transmission[0]);
+        mTransmissions = Collections.unmodifiableSet(ts);
     }
 
     // used when loading from database
     protected OutMessage(KonMessage.Builder builder) {
         super(builder);
 
-        mTransmissions = builder.mTransmissions;
+        mTransmissions = Collections.unmodifiableSet(builder.mTransmissions);
     }
 
     public void setReceived(JID jid) {
@@ -120,7 +123,7 @@ public final class OutMessage extends KonMessage {
     }
 
     @Override
-    public Transmission[] getTransmissions() {
+    public Set<Transmission> getTransmissions() {
         return mTransmissions;
     }
 }

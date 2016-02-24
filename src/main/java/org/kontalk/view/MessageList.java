@@ -411,9 +411,9 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             boolean isOut = !mValue.isInMessage();
 
             Date deliveredDate = null;
-            Transmission[] transmissions = mValue.getTransmissions();
-            if (transmissions.length == 1)
-                deliveredDate = transmissions[0].getReceivedDate().orElse(null);
+            Set<Transmission> transmissions = mValue.getTransmissions();
+            if (transmissions.size() == 1)
+                deliveredDate = transmissions.stream().findFirst().get().getReceivedDate().orElse(null);
 
             // status icon
             if (isOut) {
