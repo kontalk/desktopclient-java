@@ -126,4 +126,22 @@ public final class OutMessage extends KonMessage {
     public Set<Transmission> getTransmissions() {
         return mTransmissions;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        // outmessages are only equal to outmessages
+        if (!(o instanceof OutMessage))
+            return false;
+
+        return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = super.hashCode();
+        return hash;
+    }
 }

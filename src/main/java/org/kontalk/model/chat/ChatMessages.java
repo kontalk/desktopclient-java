@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.NavigableSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
@@ -33,9 +34,7 @@ import org.kontalk.model.message.OutMessage;
 import org.kontalk.system.Database;
 
 /**
- * Messages of chat.
- *
- * Sorted by creation time.
+ * All messages of a chat.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -44,7 +43,10 @@ public final class ChatMessages {
 
     private final Chat mChat;
     private final NavigableSet<KonMessage> mSet =
-        Collections.synchronizedNavigableSet(new TreeSet<KonMessage>());
+        Collections.synchronizedNavigableSet(new TreeSet<KonMessage>(
+                (KonMessage o1, KonMessage o2) -> {
+                    return o1.getDate().compareTo(o2.getDate()); }
+        ));
 
     private boolean mLoaded;
 
@@ -57,9 +59,9 @@ public final class ChatMessages {
     private void ensureLoaded() {
         if (mLoaded)
             return;
+        mLoaded = true;
 
         this.loadMessages();
-        mLoaded = true;
     }
 
     private void loadMessages() {
@@ -89,7 +91,7 @@ public final class ChatMessages {
     }
 
     private boolean addSilent(KonMessage message) {
-        if (mSet.contains(message)) {
+        if (this.contains(message)) {
             LOGGER.warning("message already in chat: " + message);
             return false;
         }
@@ -97,10 +99,10 @@ public final class ChatMessages {
         return added;
     }
 
-    public NavigableSet<KonMessage> getAll() {
+    public Set<KonMessage> getAll() {
         this.ensureLoaded();
 
-        return Collections.unmodifiableNavigableSet(mSet);
+        return Collections.unmodifiableSet(mSet);
     }
 
     /** Get all outgoing messages with status "PENDING" for this chat. */
@@ -133,7 +135,8 @@ public final class ChatMessages {
 
     public boolean contains(KonMessage message) {
         this.ensureLoaded();
-        return mSet.contains(message);
+        // TODO ugly stupid workaround (for inconsistency of compareTo() with equal())
+        return mSet.stream().anyMatch(m -> m.equals(message));
     }
 
     public int size() {

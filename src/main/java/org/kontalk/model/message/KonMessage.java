@@ -45,7 +45,7 @@ import org.kontalk.util.EncodingUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public abstract class KonMessage extends Observable implements Comparable<KonMessage> {
+public abstract class KonMessage extends Observable {
     private static final Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
@@ -276,6 +276,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         KonMessage oMessage = (KonMessage) o;
 
         return mChat.equals(oMessage.mChat)
+
                 && !mXMPPID.isEmpty() && mXMPPID.equals(oMessage.mXMPPID);
     }
 
@@ -294,15 +295,6 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
                 +",date="+mDate+",sdate="+mServerDate
                 +",cont="+mContent
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
-    }
-
-    // TODO remove
-    @Override
-    public int compareTo(KonMessage o) {
-        if (this.equals(o))
-            return 0;
-
-        return Integer.compare(mID, o.getID());
     }
 
     public static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
