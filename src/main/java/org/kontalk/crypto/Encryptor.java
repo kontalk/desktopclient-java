@@ -28,13 +28,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
@@ -51,7 +52,6 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.kontalk.model.Contact;
 import org.kontalk.model.message.OutMessage;
-import org.kontalk.model.message.Transmission;
 import org.kontalk.util.CPIMMessage;
 
 /**
@@ -66,7 +66,7 @@ final class Encryptor {
 
     private final OutMessage message;
     private PersonalKey myKey = null;
-    private PGPUtils.PGPCoderKey[] receiverKeys = null;
+    private List<PGPUtils.PGPCoderKey> receiverKeys = null;
 
     Encryptor(OutMessage message) {
         this.message = message;
@@ -93,11 +93,11 @@ final class Encryptor {
 
         // secure the message against replay attacks using Message/CPIM
         String from = myKey.getUserId();
-        StringBuilder to = new StringBuilder();
-        for (PGPUtils.PGPCoderKey k : receiverKeys)
-            to.append(k.userID).append("; ");
+        String to = receiverKeys.stream()
+                .map(key -> key.userID)
+                .collect(Collectors.joining("; "));
 
-        CPIMMessage cpim = new CPIMMessage(from, to.toString(), new Date(), mime, data);
+        CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, data);
         byte[] plainText;
         try {
             plainText = cpim.toByteArray();
@@ -151,10 +151,10 @@ final class Encryptor {
             message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
             return false;
         }
-        List<Contact> contacts = new ArrayList<>();
-        for (Transmission t : message.getTransmissions())
-            contacts.add(t.getContact());
-        receiverKeys = receiverKeysOrNull(contacts.toArray(new Contact[0]));
+        List<Contact> contacts = message.getTransmissions().stream()
+                .map(t -> t.getContact())
+                .collect(Collectors.toList());
+        receiverKeys = receiverKeysOrNull(contacts);
         if (receiverKeys == null) {
             message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
             return false;
@@ -162,15 +162,11 @@ final class Encryptor {
         return true;
     }
 
-    private static PGPUtils.PGPCoderKey[] receiverKeysOrNull(Contact[] contacts) {
-        List<PGPUtils.PGPCoderKey> keys = new ArrayList<>(contacts.length);
-        for (Contact c : contacts) {
-            PGPUtils.PGPCoderKey key = Coder.contactkey(c).orElse(null);
-            if (key == null)
-                return null;
-            keys.add(key);
-        }
-        return keys.toArray(new PGPUtils.PGPCoderKey[0]);
+    private static List<PGPUtils.PGPCoderKey> receiverKeysOrNull(List<Contact> contacts) {
+        List<PGPUtils.PGPCoderKey> keys = contacts.stream()
+                .map(c -> Coder.contactkey(c).orElse(null))
+                .collect(Collectors.toList());
+        return keys.stream().anyMatch(Objects::isNull) ? null : keys;
     }
 
     /**
@@ -180,7 +176,7 @@ final class Encryptor {
      */
     private static void encryptAndSign(
             InputStream plainInput, OutputStream encryptedOutput,
-            PersonalKey myKey, PGPUtils.PGPCoderKey[] receiverKeys)
+            PersonalKey myKey, List<PGPUtils.PGPCoderKey> receiverKeys)
             throws IOException, PGPException {
 
         // setup data encryptor & generator
@@ -190,8 +186,8 @@ final class Encryptor {
 
         // add public key recipients
         PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
-        for (PGPUtils.PGPCoderKey key : receiverKeys)
-            encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(key.encryptKey));
+        receiverKeys.stream().forEach(key ->
+            encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(key.encryptKey)));
 
         OutputStream encryptedOut = encGen.open(encryptedOutput, new byte[BUFFER_SIZE]);
 
