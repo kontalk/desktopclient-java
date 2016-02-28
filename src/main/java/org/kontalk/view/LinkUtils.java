@@ -54,12 +54,12 @@ final class LinkUtils {
             = StyleContext.getDefaultStyleContext().getStyle(StyleContext.DEFAULT_STYLE);
     /** Undoubtedly the best URL regex ever made. */
     private static final Pattern URL_PATTERN = Pattern.compile(
-            "(http[s]?://)?" + // scheme
-            "(\\w+(-+\\w+)*\\.)+" + // sub- and host-level(s)
-            "[a-z]{2,}(:[0-9]+)?" + // TLD and port
-            "(/[^\\s?#/]*)*" + // path
-            "(\\?[^\\s?#]*)*" + // query
-            "(\\#[^\\s?#]*)*", // fragment
+            "(http[s]?://)?" + // scheme; group 1
+            "(\\w+[a-zA-Z_0-9-]*\\w+\\.)+" + // sub- and host-level(s); group 2
+            "[a-z]{2,}(:[0-9]+)?" + // TLD and port; group 3
+            "(/[^\\s?#/]*)*" + // path; group 4
+            "(\\?[^\\s?#]*)*" + // query; group 5
+            "(\\#[^\\s?#]*)*", // fragment; group 6
             Pattern.CASE_INSENSITIVE);
 
     private static final String URL_ATT_NAME = "URL";

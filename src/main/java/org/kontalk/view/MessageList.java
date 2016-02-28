@@ -202,7 +202,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             }
             Attachment att = m.getContent().getAttachment().orElse(null);
             if (att != null &&
-                    att.getFile().toString().isEmpty()) {
+                    att.getFilePath().toString().isEmpty()) {
                 WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
                 attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
                 attMenuItem.addActionListener(new ActionListener() {
@@ -310,7 +310,11 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             }
             mStatusPanel.add(encryptIconLabel);
             // date label
-            WebLabel dateLabel = new WebLabel(Utils.SHORT_DATE_FORMAT.format(mValue.getDate()));
+            Date statusDate = mValue.isInMessage() ?
+                    mValue.getServerDate().orElse(mValue.getDate()) :
+                    mValue.getDate();
+            WebLabel dateLabel = new WebLabel(
+                    Utils.SHORT_DATE_FORMAT.format(statusDate));
             dateLabel.setForeground(Color.GRAY);
             dateLabel.setFontSize(View.FONT_SIZE_TINY);
             mStatusPanel.add(dateLabel);

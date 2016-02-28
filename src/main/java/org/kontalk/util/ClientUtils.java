@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.Message;
 import org.kontalk.client.GroupExtension;
-import org.kontalk.client.GroupExtension.Command;
+import org.kontalk.client.GroupExtension.Type;
 import org.kontalk.client.GroupExtension.Member;
 import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
@@ -94,33 +94,34 @@ public final class ClientUtils {
         switch (op) {
             case LEAVE:
                 // weare leaving
-                return new GroupExtension(gid.id, gid.owner.string(), Command.LEAVE);
+                return new GroupExtension(gid.id, gid.owner.string(), Type.PART);
             case CREATE:
             case SET:
-                Command command;
-                Set<Member> member = new HashSet<>();
+            default:
+                Type command;
+                Set<Member> members = new HashSet<>();
                 String subject = groupCommand.getSubject();
                 if (op == OP.CREATE) {
-                    command = Command.CREATE;
+                    command = Type.CREATE;
                     for (JID added : groupCommand.getAdded())
-                        member.add(new Member(added.string()));
+                        members.add(new Member(added.string()));
                 } else {
-                    command = Command.SET;
+                    command = Type.SET;
                     Set<JID> incl = new HashSet<>();
                     for (JID added : groupCommand.getAdded()) {
                         incl.add(added);
-                        member.add(new Member(added.string(), Member.Type.ADD));
+                        members.add(new Member(added.string(), Member.Operation.ADD));
                     }
                     for (JID removed : groupCommand.getRemoved()) {
                         incl.add(removed);
-                        member.add(new Member(removed.string(), Member.Type.REMOVE));
+                        members.add(new Member(removed.string(), Member.Operation.REMOVE));
                     }
                     if (groupCommand.getAdded().length > 0) {
                         // list all remaining member for the new member
                         for (Contact c : chat.getValidContacts()) {
                             JID old = c.getJID();
                             if (!incl.contains(old))
-                                member.add(new Member(old.string()));
+                                members.add(new Member(old.string()));
                         }
                     }
                 }
@@ -128,29 +129,26 @@ public final class ClientUtils {
                 return new GroupExtension(gid.id,
                         gid.owner.string(),
                         command,
-                        member.toArray(new Member[0]),
-                        subject);
-            default:
-                // can not happen
-                return null;
+                        subject,
+                        members);
         }
     }
 
     /* External to internal */
     public static Optional<GroupCommand> groupExtensionToGroupCommand(
-            Command com,
-            Member[] members,
+            Type com,
+            List<Member> members,
             String subject) {
 
         switch (com) {
             case NONE:
                 return Optional.empty();
             case CREATE:
-                List<JID> jids = new ArrayList<>(members.length);
+                List<JID> jids = new ArrayList<>(members.size());
                 for (Member m: members)
                     jids.add(JID.bare(m.jid));
                 return Optional.of(GroupCommand.create(jids.toArray(new JID[0]), subject));
-            case LEAVE:
+            case PART:
                 return Optional.of(GroupCommand.leave());
             case SET:
                 // TODO

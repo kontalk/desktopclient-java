@@ -109,12 +109,13 @@ public final class OutMessage extends KonMessage {
         this.setStatus(Status.ERROR);
     }
 
-    public void setAttachmentURL(URI url) {
+    /** Update attachment after upload. */
+    public void setUpload(URI url, String mime, long length) {
         MessageContent.Attachment attachment = this.getAttachment();
         if (attachment == null)
             return;
 
-        attachment.setURL(url);
+        attachment.update(url, mime, length);
         this.save();
     }
 

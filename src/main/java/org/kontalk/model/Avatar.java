@@ -163,7 +163,7 @@ public class Avatar {
         }
 
         public static UserAvatar setImage(BufferedImage image) {
-            image = MediaUtils.scale(image, MAX_SIZE, MAX_SIZE, true);
+            image = MediaUtils.scale(image, MAX_SIZE, MAX_SIZE);
             USER_AVATAR = new UserAvatar(image);
             return USER_AVATAR;
         }

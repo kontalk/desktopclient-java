@@ -50,7 +50,6 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.kontalk.model.Contact;
-import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
 import org.kontalk.util.CPIMMessage;
@@ -121,13 +120,7 @@ final class Encryptor {
         return Optional.of(out.toByteArray());
     }
 
-    Optional<File> encryptAttachment() {
-        MessageContent.Attachment attachment = message.getContent().getAttachment().orElse(null);
-        if (attachment == null) {
-            LOGGER.warning("no attachment in out-message");
-            return Optional.empty();
-        }
-
+    Optional<File> encryptAttachment(File file) {
         boolean loaded = this.loadKeys();
         if (!loaded)
             return Optional.empty();
@@ -140,7 +133,7 @@ final class Encryptor {
             return Optional.empty();
         }
 
-        try (FileInputStream in = new FileInputStream(attachment.getFile().toFile());
+        try (FileInputStream in = new FileInputStream(file);
                 FileOutputStream out = new FileOutputStream(tempFile)) {
             encryptAndSign(in, out, myKey, receiverKeys);
         } catch (IOException | PGPException ex) {

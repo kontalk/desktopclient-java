@@ -47,7 +47,6 @@ public class MediaUtils {
 
     private static OggClip mAudioClip = null;
 
-    /* contains dot! */
     public static String extensionForMIME(String mimeType) {
         MimeType mime = null;
         try {
@@ -55,7 +54,12 @@ public class MediaUtils {
         } catch (MimeTypeException ex) {
             LOGGER.log(Level.WARNING, "can't find mimetype", ex);
         }
-        return StringUtils.defaultIfEmpty(mime != null ? mime.getExtension() : "", ".dat");
+
+        String m = mime != null ? mime.getExtension() : "";
+        // remove dot
+        if (!m.isEmpty())
+            m = m.substring(1);
+        return StringUtils.defaultIfEmpty(m, "dat");
     }
 
     public enum Sound{NOTIFICATION}
@@ -114,12 +118,16 @@ public class MediaUtils {
     }
 
     public static boolean writeImage(BufferedImage img, String format, File output) {
+        boolean succ;
         try {
-            return ImageIO.write(img, format, output);
+             succ = ImageIO.write(img, format, output);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't save image", ex);
             return false;
         }
+        if (!succ)
+            LOGGER.warning("can't find writer for format: "+format);
+        return succ;
     }
 
     public static byte[] imageToByteArray(Image image, String format) {
@@ -146,12 +154,28 @@ public class MediaUtils {
     }
 
     /**
-     * Scale image down preserving ratio.
+     * Scale image down to max pixels preserving ratio.
+     * Blocking
+     */
+    public static BufferedImage scale(BufferedImage image, int maxPixels) {
+        int iw = image.getWidth();
+        int ih = image.getHeight();
+
+        double scale = Math.sqrt(maxPixels / (iw * ih * 1.0));
+        System.out.println("iw= "+iw+" ih="+ih+" maxP="+maxPixels+" scale="+scale);
+
+        return toBufferedImage(scaleAsync(image, (int) (iw * scale), (int) (ih * scale)));
+    }
+
+    /**
+     * Scale image down to max width/height preserving ratio.
      * Blocking.
      */
-    public static BufferedImage scale(Image image, int width, int height, boolean max) {
-        image = scaleAsync(image, width, height, max);
+    public static BufferedImage scale(Image image, int width, int height) {
+        return toBufferedImage(scaleAsync(image, width, height, true));
+    }
 
+    private static BufferedImage toBufferedImage(Image image) {
         final CountDownLatch latch = new CountDownLatch(1);
 
         ImageObserver observer = new ImageObserver() {
@@ -180,11 +204,7 @@ public class MediaUtils {
             }
         }
 
-        return toBufferedImage(image);
-    }
-
-    // source: https://stackoverflow.com/a/13605411
-    private static BufferedImage toBufferedImage(Image image) {
+        // convert to buffered image, source: https://stackoverflow.com/a/13605411
         if (image instanceof BufferedImage)
             return (BufferedImage) image;
 
@@ -194,7 +214,7 @@ public class MediaUtils {
             LOGGER.warning("image not loaded yet");
         }
 
-        BufferedImage bimage = new BufferedImage(iw, ih, BufferedImage.TYPE_INT_ARGB);
+        BufferedImage bimage = new BufferedImage(iw, ih, BufferedImage.TYPE_3BYTE_BGR);
 
         Graphics2D bGr = bimage.createGraphics();
         bGr.drawImage(image, 0, 0, null);
@@ -206,7 +226,7 @@ public class MediaUtils {
     /**
      * Scale image down to maximum or minimum of width or height, preserving ratio.
      * Async: returned image may not fully loaded.
-     * 
+     *
      * @param max specifies if image is scaled to maximum or minimum of width/height
      */
     public static Image scaleAsync(Image image, int width, int height, boolean max) {
@@ -221,6 +241,10 @@ public class MediaUtils {
         double sw = width / (iw * 1.0);
         double sh = height / (ih * 1.0);
         double scale = max ? Math.max(sw, sh) : Math.min(sw, sh);
-        return image.getScaledInstance((int) (iw * scale), (int) (ih * scale), Image.SCALE_FAST);
+        return scaleAsync(image, (int) (iw * scale), (int) (ih * scale));
+    }
+
+    private static Image scaleAsync(Image image, int width, int height) {
+        return image.getScaledInstance(width, height, Image.SCALE_FAST);
     }
 }
