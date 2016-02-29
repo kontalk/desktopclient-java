@@ -142,7 +142,7 @@ public final class OutMessage extends KonMessage {
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
+        int hash = 97 * super.hashCode();
         return hash;
     }
 }
