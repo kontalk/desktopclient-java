@@ -113,7 +113,6 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         }
 
         if (changed) {
-            System.out.println("addContacts save");
             this.save();
             this.changed(contacts);
         }

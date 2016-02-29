@@ -162,7 +162,6 @@ public class MediaUtils {
         int ih = image.getHeight();
 
         double scale = Math.sqrt(maxPixels / (iw * ih * 1.0));
-        System.out.println("iw= "+iw+" ih="+ih+" maxP="+maxPixels+" scale="+scale);
 
         return toBufferedImage(scaleAsync(image, (int) (iw * scale), (int) (ih * scale)));
     }
