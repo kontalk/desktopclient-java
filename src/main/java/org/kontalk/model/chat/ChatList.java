@@ -73,29 +73,24 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     /** Get single chat with contact and XMPPID. */
     public Optional<SingleChat> get(Contact contact, String xmmpThreadID) {
-        for (Chat chat : mChats) {
-            if (!(chat instanceof SingleChat))
-                continue;
-            SingleChat singleChat = (SingleChat) chat;
-
-            if (singleChat.getXMPPID().equals(xmmpThreadID)
-                    && singleChat.getContact().equals(contact))
-                return Optional.of(singleChat);
+        synchronized(mChats) {
+            return mChats.stream()
+                    .filter(chat -> chat instanceof SingleChat)
+                    .map(chat -> (SingleChat) chat)
+                    .filter(chat -> chat.getXMPPID().equals(xmmpThreadID)
+                            && chat.getContact().equals(contact))
+                    .findFirst();
         }
-        return Optional.empty();
     }
 
     public Optional<GroupChat> get(GroupMetaData gData) {
-        for (Chat chat : mChats) {
-            if (!(chat instanceof GroupChat))
-                continue;
-
-            GroupChat groupChat = (GroupChat) chat;
-            if (groupChat.getGroupData().equals(gData))
-                return Optional.of(groupChat);
+        synchronized(mChats) {
+            return mChats.stream()
+                    .filter(chat -> chat instanceof GroupChat)
+                    .map(chat -> (GroupChat) chat)
+                    .filter(chat -> chat.getGroupData().equals(gData))
+                    .findFirst();
         }
-
-        return Optional.empty();
     }
 
     public Chat getOrCreate(Contact contact) {
@@ -185,10 +180,9 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
             return;
         }
 
-        for (Chat chat : mChats) {
-            if (!chat.isRead()) {
+        synchronized(mChats) {
+            if (mChats.stream().anyMatch(chat -> !chat.isRead()))
                 return;
-            }
         }
 
         mUnread = false;

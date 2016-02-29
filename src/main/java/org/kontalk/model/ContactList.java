@@ -126,10 +126,12 @@ public final class ContactList extends Observable implements Iterable<Contact> {
     }
 
     public Set<Contact> getAll(boolean withMe) {
-        return Collections.unmodifiableSet(
-                mJIDMap.values().stream()
-                        .filter(c -> (withMe || !c.isMe()))
-                        .collect(Collectors.toSet()));
+        synchronized(mJIDMap) {
+            return Collections.unmodifiableSet(
+                    mJIDMap.values().stream()
+                            .filter(c -> (withMe || !c.isMe()))
+                            .collect(Collectors.toSet()));
+        }
     }
 
     public void delete(Contact contact) {

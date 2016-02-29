@@ -115,20 +115,24 @@ public final class ChatMessages {
     public SortedSet<OutMessage> getPending() {
         this.ensureLoaded();
 
-        return mSortedSet.stream()
-                .filter(m -> m.getStatus() == KonMessage.Status.PENDING
-                        && m instanceof OutMessage)
-                .map(m -> (OutMessage) m)
-                .collect(Collectors.toCollection(TreeSet::new));
+        synchronized(mSortedSet) {
+            return mSortedSet.stream()
+                    .filter(m -> m.getStatus() == KonMessage.Status.PENDING
+                            && m instanceof OutMessage)
+                    .map(m -> (OutMessage) m)
+                    .collect(Collectors.toCollection(TreeSet::new));
+        }
     }
 
     /** Get the newest (ie last received) outgoing message. */
     public Optional<OutMessage> getLast(String xmppID) {
         this.ensureLoaded();
 
-        return mSortedSet.descendingSet().stream()
-                .filter(m -> m.getXMPPID().equals(xmppID) && m instanceof OutMessage)
-                .map(m -> (OutMessage) m).findFirst();
+        synchronized(mSortedSet) {
+            return mSortedSet.descendingSet().stream()
+                    .filter(m -> m.getXMPPID().equals(xmppID) && m instanceof OutMessage)
+                    .map(m -> (OutMessage) m).findFirst();
+        }
     }
 
     /** Get the last created message. */
