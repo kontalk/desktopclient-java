@@ -127,8 +127,8 @@ public final class Control {
             mClient.sendUserPresence(strings.length > 0 ? strings[0] : "");
             // send all pending messages
             for (Chat chat: ChatList.getInstance())
-                for (OutMessage m : chat.getMessages().getPending())
-                    this.sendMessage(m);
+                chat.getMessages().getPending().stream()
+                        .forEach(m -> this.sendMessage(m));
 
             // send public key requests for Kontalk contacts with missing key
             for (Contact contact : ContactList.getInstance())
@@ -342,8 +342,8 @@ public final class Control {
                 return false;
         }
 
-        Contact[] contacts = chat.getValidContacts();
-        if (contacts.length == 0) {
+        List<Contact> contacts = chat.getValidContacts();
+        if (contacts.isEmpty()) {
             LOGGER.warning("can't send message, no (valid) contact(s)");
             return false;
         }

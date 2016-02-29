@@ -87,11 +87,11 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     @Override
-    public Contact[] getValidContacts() {
+    public List<Contact> getValidContacts() {
         return mMemberSet.stream()
                 .map(m -> m.getContact())
                 .filter(c -> (!c.isDeleted() && !c.isMe()))
-                .toArray(Contact[]::new);
+                .collect(Collectors.toList());
     }
 
     public void addContact(Contact contact) {
@@ -240,26 +240,20 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
 
     @Override
     public boolean isSendEncrypted() {
-        boolean encrypted = false;
-        for (Contact c: this.getValidContacts()) {
-            encrypted |= c.getEncrypted();
-        }
-        return encrypted;
+        return this.getValidContacts().stream()
+                .anyMatch(c -> c.getEncrypted());
     }
 
     @Override
     public boolean canSendEncrypted() {
-        Contact[] contacts = this.getValidContacts();
-        boolean encrypted = contacts.length != 0;
-        for (Contact c: contacts) {
-            encrypted &= c.hasKey();
-        }
-        return encrypted;
+        List<Contact> contacts = this.getValidContacts();
+        return !contacts.isEmpty() &&
+                contacts.stream().allMatch(c -> c.hasKey());
     }
 
     @Override
     public boolean isValid() {
-        return this.getValidContacts().length != 0 && this.containsMe();
+        return !this.getValidContacts().isEmpty() && this.containsMe();
     }
 
     @Override

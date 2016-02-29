@@ -167,7 +167,7 @@ public abstract class Chat extends Observable implements Observer {
     public abstract List<Contact> getAllContacts();
 
     /** Get valid receiver contacts (without deleted and blocked). */
-    public abstract Contact[] getValidContacts();
+    public abstract List<Contact> getValidContacts();
 
     /** XMPP thread ID (empty string if not set). */
     public abstract String getXMPPID();

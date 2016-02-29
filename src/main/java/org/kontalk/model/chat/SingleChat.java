@@ -19,6 +19,7 @@
 package org.kontalk.model.chat;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -73,12 +74,12 @@ public final class SingleChat extends Chat {
     }
 
     @Override
-    public Contact[] getValidContacts() {
+    public List<Contact> getValidContacts() {
         Contact c = mMember.getContact();
-        if (c.isDeleted() || c.isBlocked() && !c.isMe())
-            return new Contact[0];
+        if ((c.isDeleted() || c.isBlocked()) && !c.isMe())
+            return Collections.emptyList();
 
-        return new Contact[]{c};
+        return Arrays.asList(c);
     }
 
     @Override

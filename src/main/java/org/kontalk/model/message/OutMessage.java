@@ -24,6 +24,7 @@ import java.net.URI;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -39,7 +40,7 @@ public final class OutMessage extends KonMessage {
 
     private final Set<Transmission> mTransmissions;
 
-    public OutMessage(Chat chat, Contact[] contacts, MessageContent content, boolean encrypted) {
+    public OutMessage(Chat chat, List<Contact> contacts, MessageContent content, boolean encrypted) {
         super(chat,
                 "Kon_" + StringUtils.randomString(8),
                 content,
@@ -50,11 +51,11 @@ public final class OutMessage extends KonMessage {
                         CoderStatus.createInsecure());
 
         Set<Transmission> ts = new HashSet<>();
-        for (Contact contact: contacts) {
+        contacts.stream().forEach(contact -> {
             boolean succ = ts.add(new Transmission(contact, contact.getJID(), mID));
             if (!succ)
                 LOGGER.warning("duplicate contact: "+contact);
-        }
+        });
         mTransmissions = Collections.unmodifiableSet(ts);
     }
 

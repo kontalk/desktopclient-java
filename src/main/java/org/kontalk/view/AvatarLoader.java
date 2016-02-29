@@ -92,9 +92,8 @@ final class AvatarLoader {
                 group = true;
                 // nice to have: group picture
             } else {
-                Contact[] contacts = chat.getValidContacts();
-                if (contacts.length > 0) {
-                    Contact c = contacts[0];
+                Contact c = chat.getValidContacts().stream().findFirst().orElse(null);
+                if (c != null) {
                     a = c.getAvatar().orElse(null);
                     l = c.getName();
                     cc = hash(c.getID());
