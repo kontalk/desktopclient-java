@@ -550,7 +550,7 @@ public class MessageContent {
                     .collect(Collectors.toList());
             json.put(JSON_ADDED, added);
 
-            List<String> removed = mAdded.stream()
+            List<String> removed = mRemoved.stream()
                     .map(jid -> jid.string())
                     .collect(Collectors.toList());
             json.put(JSON_REMOVED, removed);
