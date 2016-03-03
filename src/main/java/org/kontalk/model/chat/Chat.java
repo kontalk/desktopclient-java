@@ -32,6 +32,7 @@ import java.util.Observer;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.ObjectUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -351,14 +352,17 @@ public abstract class Chat extends Observable implements Observer {
         }
 
         @Override
-        public boolean equals(Object obj) {
-            if (this == obj) return true;
+        public boolean equals(Object o) {
+            if (o == this)
+                return true;
 
-            if (!(obj instanceof ViewSettings)) return false;
+            if (!(o instanceof ViewSettings))
+                return false;
 
-            ViewSettings o = (ViewSettings) obj;
-            return mColor.equals(o.mColor) &&
-                    mImagePath.equals(o.mImagePath);
+            ViewSettings ovs = (ViewSettings) o;
+
+            return ObjectUtils.equals(mColor, ovs.mColor) &&
+                    mImagePath.equals(ovs.mImagePath);
         }
 
         @Override
