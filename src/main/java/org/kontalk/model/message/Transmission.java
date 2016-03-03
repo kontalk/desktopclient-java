@@ -129,6 +129,14 @@ final public class Transmission {
         db.execUpdate(TABLE, set, mID);
     }
 
+    boolean delete() {
+        if (mID < 0) {
+            LOGGER.warning("not in database: "+this);
+            return true;
+        }
+        return Database.getInstance().execDelete(TABLE, mID);
+    }
+
     @Override
     public String toString() {
         return "T:id="+mID+",contact="+mContact+",jid="+mJID+",recdate="+mReceivedDate;

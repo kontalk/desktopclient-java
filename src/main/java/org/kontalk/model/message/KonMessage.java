@@ -260,6 +260,18 @@ public abstract class KonMessage extends Observable {
         db.execUpdate(TABLE, set, mID);
     }
 
+    public boolean delete() {
+        boolean succ = this.getTransmissions().stream().allMatch(t -> t.delete());
+        if (!succ)
+            return false;
+
+        if (mID < 0) {
+            LOGGER.warning("not in database: "+this);
+            return true;
+        }
+        return Database.getInstance().execDelete(TABLE, mID);
+    }
+
     protected void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);

@@ -37,7 +37,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.model.Contact;
 import org.kontalk.model.message.KonMessage;
-import org.kontalk.model.message.Transmission;
 import org.kontalk.system.Database;
 
 /**
@@ -221,28 +220,24 @@ public abstract class Chat extends Observable implements Observer {
     void delete() {
         Database db = Database.getInstance();
 
-        String whereMessages = KonMessage.COL_CHAT_ID + " == " + mID;
-
-        // transmissions
-        boolean succ = db.execDeleteWhereInsecure(Transmission.TABLE,
-                Transmission.COL_MESSAGE_ID + " IN (SELECT _id FROM " +
-                        KonMessage.TABLE + " WHERE " + whereMessages + ")");
-        if (!succ)
-            return;
-
         // messages
-        succ = db.execDeleteWhereInsecure(KonMessage.TABLE, whereMessages);
+        boolean succ = this.getMessages().getAll().stream().allMatch(m -> m.delete());
         if (!succ)
             return;
 
         // members
-        boolean allDeleted = this.getAllMembers().stream()
-                .allMatch(m -> m.delete());
-        if (!allDeleted)
+        succ = this.getAllMembers().stream().allMatch(m -> m.delete());
+        if (!succ)
             return;
 
         // chat itself
         db.execDelete(TABLE, mID);
+
+        // all done, commmit deletions
+        succ = db.commit();
+        if (!succ)
+            return;
+
         mDeleted = true;
     }
 

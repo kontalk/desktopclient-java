@@ -94,8 +94,8 @@ public final class Database {
         }
 
         try {
-            // this is already the default
-            mConn.setAutoCommit(true);
+            // setting to false!
+            mConn.setAutoCommit(false);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't set autocommit", ex);
         }
@@ -113,6 +113,7 @@ public final class Database {
             try (Statement stat = mConn.createStatement()) {
                 // set version
                 mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
+                this.commit();
                 this.createTable(stat, Contact.TABLE, Contact.SCHEMA);
                 this.createTable(stat, Chat.TABLE, Chat.SCHEMA);
                 this.createTable(stat, Member.TABLE, Member.SCHEMA);
@@ -188,6 +189,7 @@ public final class Database {
 
         // set new version
         mConn.createStatement().execute("PRAGMA "+UV+" = "+DB_VERSION);
+        this.commit();
         LOGGER.info("updated to version "+DB_VERSION);
     }
 
@@ -195,8 +197,8 @@ public final class Database {
         try {
             if(mConn == null || mConn.isClosed())
                 return;
-            if (!mConn.getAutoCommit())
-                mConn.commit();
+            // just to be sure
+            mConn.commit();
             mConn.close();
         } catch(SQLException ex) {
             LOGGER.log(Level.WARNING, "can't close db", ex);
@@ -253,6 +255,7 @@ public final class Database {
                 Statement.RETURN_GENERATED_KEYS)) {
             insertValues(stat, values);
             stat.executeUpdate();
+            mConn.commit();
             ResultSet keys = stat.getGeneratedKeys();
             return keys.getInt(1);
         } catch (SQLException ex) {
@@ -282,6 +285,7 @@ public final class Database {
         try (PreparedStatement stat = mConn.prepareStatement(update, Statement.RETURN_GENERATED_KEYS)) {
             insertValues(stat, keyList, set);
             stat.executeUpdate();
+            mConn.commit();
             ResultSet keys = stat.getGeneratedKeys();
             return keys.getInt(1);
         } catch (SQLException ex) {
@@ -290,17 +294,23 @@ public final class Database {
         }
     }
 
+    /** Delete one row. Not commited! Call commit() after deletions. */
     public boolean execDelete(String table, int id) {
-        return this.execDeleteWhereInsecure(table, "_id = " + id);
-    }
-
-    public boolean execDeleteWhereInsecure(String table, String where) {
-        LOGGER.info("deleting from table "+table+" where "+where);
+        LOGGER.info("deletion, table: " + table + "; id: " + id);
         try (Statement stat = mConn.createStatement()) {
-            int c = stat.executeUpdate("DELETE FROM " + table + " WHERE " + where);
-            LOGGER.config("...deleted "+c+" rows");
+            stat.executeUpdate("DELETE FROM " + table + " WHERE _id = " + id);
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't delete", ex);
+            return false;
+        }
+        return true;
+    }
+
+    public boolean commit() {
+        try {
+            mConn.commit();
+        } catch (SQLException ex) {
+            LOGGER.log(Level.WARNING, "can't commit", ex);
             return false;
         }
         return true;
