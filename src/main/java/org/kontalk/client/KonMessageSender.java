@@ -19,8 +19,10 @@
 package org.kontalk.client;
 
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
@@ -110,9 +112,29 @@ final class KonMessageSender {
             protoMessage.addExtension(new E2EEncryption(encryptedData));
         }
 
-        // transmission specific
+        Set<Transmission> transmissions = message.getTransmissions();
+
+        String multiAddressHost = mClient.multiAddressHost();
+        if (transmissions.size() > 1 && !multiAddressHost.isEmpty()) {
+            // send one message to multiple receiver using XEP-0033
+            protoMessage.setTo(multiAddressHost);
+            MultipleAddresses addresses = new MultipleAddresses();
+            for (Transmission transmission: transmissions) {
+                JID to = transmission.getJID();
+                if (!to.isValid()) {
+                    LOGGER.warning("invalid JID: "+to);
+                    return false;
+                }
+                addresses.addAddress(MultipleAddresses.Type.to, to.string(), null, null, false, null);
+            }
+            protoMessage.addExtension(addresses);
+
+            return mClient.sendPacket(protoMessage);
+        }
+
+        // onle one receiver or fallback: send one message to each receiver
         ArrayList<Message> sendMessages = new ArrayList<>();
-        for (Transmission transmission: message.getTransmissions()) {
+        for (Transmission transmission: transmissions) {
             Message sendMessage = protoMessage.clone();
             JID to = transmission.getJID();
             if (!to.isValid()) {

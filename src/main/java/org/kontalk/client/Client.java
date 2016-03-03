@@ -43,6 +43,7 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.roster.RosterEntry;
+import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -72,7 +73,7 @@ public final class Client implements StanzaListener, Runnable {
     private static final Map<String, ServerFeature> FEATURE_MAP;
 
     public enum PresenceCommand {REQUEST, GRANT, DENY};
-    public enum ServerFeature {USER_AVATAR, ATTACHMENT_UPLOAD}
+    public enum ServerFeature {USER_AVATAR, ATTACHMENT_UPLOAD, MULTI_ADDRESSING}
 
     private enum Command {CONNECT, DISCONNECT};
 
@@ -88,6 +89,7 @@ public final class Client implements StanzaListener, Runnable {
         FEATURE_MAP = new HashMap<>();
         FEATURE_MAP.put(PubSub.NAMESPACE, ServerFeature.USER_AVATAR);
         FEATURE_MAP.put(HTTPFileClient.KON_UPLOAD_FEATURE, ServerFeature.ATTACHMENT_UPLOAD);
+        FEATURE_MAP.put(MultipleAddresses.NAMESPACE, ServerFeature.MULTI_ADDRESSING);
     }
 
     private Client(Control control) {
@@ -511,6 +513,11 @@ public final class Client implements StanzaListener, Runnable {
 
     void newException(KonException konException) {
         mControl.onException(konException);
+    }
+
+    String multiAddressHost() {
+        return mFeatures.contains(Client.ServerFeature.MULTI_ADDRESSING)
+                && mConn != null ? mConn.getHost() : "";
     }
 
     @Override
