@@ -93,6 +93,10 @@ final class KonMessageSender {
         if (!chat.isGroupChat())
             protoMessage.addExtension(new DeliveryReceiptRequest());
 
+        // TEMP: server bug workaround, always include body
+        if (protoMessage.getBody() == null)
+            protoMessage.setBody("dummy");
+
         if (sendChatState)
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
 
