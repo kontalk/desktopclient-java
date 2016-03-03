@@ -21,6 +21,7 @@ package org.kontalk.model.chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.NavigableSet;
 import java.util.Optional;
@@ -42,13 +43,13 @@ import org.kontalk.system.Database;
 public final class ChatMessages {
     private static final Logger LOGGER = Logger.getLogger(ChatMessages.class.getName());
 
+    private static final Comparator<KonMessage> MESSAGE_COMPARATOR =
+            (KonMessage o1, KonMessage o2) -> o1.getDate().compareTo(o2.getDate());
+
     private final Chat mChat;
     // comparator inconsistent with .equals(); using one set for ordering...
     private final NavigableSet<KonMessage> mSortedSet =
-        Collections.synchronizedNavigableSet(new TreeSet<KonMessage>(
-                (KonMessage o1, KonMessage o2) -> {
-                    return o1.getDate().compareTo(o2.getDate()); }
-        ));
+        Collections.synchronizedNavigableSet(new TreeSet<KonMessage>(MESSAGE_COMPARATOR));
     // ... and one set for .contains()
     private final Set<KonMessage> mContainsSet =
             Collections.synchronizedSet(new HashSet<>());
@@ -120,7 +121,7 @@ public final class ChatMessages {
                     .filter(m -> m.getStatus() == KonMessage.Status.PENDING
                             && m instanceof OutMessage)
                     .map(m -> (OutMessage) m)
-                    .collect(Collectors.toCollection(TreeSet::new));
+                    .collect(Collectors.toCollection(() -> new TreeSet<>(MESSAGE_COMPARATOR)));
         }
     }
 
