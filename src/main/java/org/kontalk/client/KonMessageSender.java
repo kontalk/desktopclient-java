@@ -19,8 +19,9 @@
 package org.kontalk.client;
 
 import java.util.ArrayList;
-import java.util.Set;
+import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -34,7 +35,6 @@ import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.OutMessage;
-import org.kontalk.model.message.Transmission;
 import org.kontalk.system.Control;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
@@ -116,19 +116,16 @@ final class KonMessageSender {
             protoMessage.addExtension(new E2EEncryption(encryptedData));
         }
 
-        Set<Transmission> transmissions = message.getTransmissions();
+        List<JID> JIDs = message.getTransmissions().stream()
+                .map(t -> t.getJID())
+                .collect(Collectors.toList());
 
         String multiAddressHost = mClient.multiAddressHost();
-        if (transmissions.size() > 1 && !multiAddressHost.isEmpty()) {
+        if (JIDs.size() > 1 && !multiAddressHost.isEmpty()) {
             // send one message to multiple receiver using XEP-0033
             protoMessage.setTo(multiAddressHost);
             MultipleAddresses addresses = new MultipleAddresses();
-            for (Transmission transmission: transmissions) {
-                JID to = transmission.getJID();
-                if (!to.isValid()) {
-                    LOGGER.warning("invalid JID: "+to);
-                    return false;
-                }
+            for (JID to: JIDs) {
                 addresses.addAddress(MultipleAddresses.Type.to, to.string(), null, null, false, null);
             }
             protoMessage.addExtension(addresses);
@@ -138,13 +135,8 @@ final class KonMessageSender {
 
         // onle one receiver or fallback: send one message to each receiver
         ArrayList<Message> sendMessages = new ArrayList<>();
-        for (Transmission transmission: transmissions) {
+        for (JID to: JIDs) {
             Message sendMessage = protoMessage.clone();
-            JID to = transmission.getJID();
-            if (!to.isValid()) {
-                LOGGER.warning("invalid JID: "+to);
-                return false;
-            }
             sendMessage.setTo(to.string());
             sendMessages.add(sendMessage);
         }
