@@ -23,7 +23,7 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.model.Contact;
 
 /**
- * An incoming message not saved to database for decryption.
+ * An incoming message used for decryption. Not saved to database.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -83,4 +83,8 @@ public final class ProtoMessage implements DecryptMessage {
         mCoderStatus.setSecurityErrors(errors);
     }
 
+    @Override
+    public String toString() {
+        return "PM:contact="+mContact+",content="+mContent+",codstat="+mCoderStatus;
+    }
 }

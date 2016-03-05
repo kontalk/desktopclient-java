@@ -93,7 +93,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         }
     }
 
-    public Chat getOrCreate(Contact contact) {
+    public SingleChat getOrCreate(Contact contact) {
         return this.getOrCreate(contact, "");
     }
 

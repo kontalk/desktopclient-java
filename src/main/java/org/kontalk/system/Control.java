@@ -54,7 +54,6 @@ import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Avatar;
 import org.kontalk.model.chat.GroupChat;
-import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
@@ -177,20 +176,20 @@ public final class Control {
             return;
         }
 
-        // decrypt message now to get group id
+        // decrypt message now to get possible group data
         ProtoMessage protoMessage = new ProtoMessage(sender, content);
         if (protoMessage.isEncrypted()) {
             Coder.decryptMessage(protoMessage);
         }
 
         // NOTE: decryption must be successful to select group chat
-        KonGroupData gData = protoMessage.getContent().getGroupData().orElse(null);
-
-        Chat chat = gData != null ?
-                GroupControl.getGroupChat(gData, sender).orElse(null) :
+        Chat chat = content.getGroupData().isPresent() ?
+                GroupControl.getGroupChat(content, sender).orElse(null) :
                 ChatList.getInstance().getOrCreate(sender, ids.xmppThreadID);
-        if (chat == null)
+        if (chat == null) {
+            LOGGER.warning("no chat found, message lost: "+protoMessage);
             return;
+        }
 
         InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
                 ids.xmppID, serverDate);

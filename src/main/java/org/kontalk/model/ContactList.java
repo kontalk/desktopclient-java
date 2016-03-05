@@ -118,6 +118,9 @@ public final class ContactList extends Observable implements Iterable<Contact> {
      */
     public Optional<Contact> getMe() {
         JID myJID = Account.getInstance().getUserJID();
+        if (!myJID.isValid())
+            return Optional.empty();
+
         Contact me = this.get(myJID).orElse(null);
         if (me != null)
             return Optional.of(me);

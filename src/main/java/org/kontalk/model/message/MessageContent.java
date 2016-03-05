@@ -530,6 +530,10 @@ public class MessageContent {
             return mAdded;
         }
 
+        public boolean isAddingMe() {
+            return mAdded.stream().anyMatch(jid -> jid.isMe());
+        }
+
         public List<JID> getRemoved() {
             return mRemoved;
         }
