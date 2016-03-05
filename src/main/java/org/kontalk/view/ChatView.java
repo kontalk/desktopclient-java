@@ -56,6 +56,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 import java.io.File;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -71,17 +72,19 @@ import javax.swing.event.DocumentEvent;
 import org.apache.commons.io.FileUtils;
 import org.apache.tika.Tika;
 import org.jivesoftware.smackx.chatstates.ChatState;
+import org.kontalk.client.Client;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Config;
+import org.kontalk.system.Control;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import static org.kontalk.view.View.MARGIN_SMALL;
 
 /**
- * Pane that shows the currently selected chat.
+ * Panel showing the currently selected chat.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatView extends WebPanel implements Observer {
@@ -97,9 +100,10 @@ final class ChatView extends WebPanel implements Observer {
     private final WebTextArea mSendTextArea;
     private final WebLabel mEncryptionStatus;
     private final WebButton mSendButton;
-    private final WebFileChooser fileChooser;
+    private final WebFileChooser mFileChooser;
+    private final WebButton mFileButton;
 
-    private final Map<Integer, MessageList> mChatCache = new HashMap<>();
+    private final Map<Chat, MessageList> mMessageListCache = new HashMap<>();
 
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
@@ -210,10 +214,10 @@ final class ChatView extends WebPanel implements Observer {
             }
         });
         // file chooser button
-        fileChooser = new WebFileChooser();
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        fileChooser.setFileFilter(new CustomFileFilter(AllFilesFilter.ICON,
+        mFileChooser = new WebFileChooser();
+        mFileChooser.setMultiSelectionEnabled(false);
+        mFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        mFileChooser.setFileFilter(new CustomFileFilter(AllFilesFilter.ICON,
                 Tr.tr("Supported files")) {
             @Override
             public boolean accept(File file) {
@@ -223,14 +227,12 @@ final class ChatView extends WebPanel implements Observer {
             }
         });
 //        mAttField.setPreferredWidth(150);
-        WebButton fileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
+        mFileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
                 .setRound(0)
                 .setBottomBgColor(titlePanel.getBackground())
                 .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL);
-        TooltipManager.addTooltip(fileButton,
-                Tr.tr("Send File - max. size:") + " " +
-                        FileUtils.byteCountToDisplaySize(AttachmentManager.MAX_ATT_SIZE));
-        fileButton.addActionListener(new ActionListener() {
+
+        mFileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ChatView.this.showFileDialog();
@@ -240,7 +242,7 @@ final class ChatView extends WebPanel implements Observer {
         mEncryptionStatus = new WebLabel();
 
         WebPanel textBarPanel = new GroupPanel(GroupingType.fillMiddle, 0,
-                fileButton, Box.createGlue(), new GroupPanel(View.GAP_DEFAULT,
+                mFileButton, Box.createGlue(), new GroupPanel(View.GAP_DEFAULT,
                         mEncryptionStatus, mSendButton))
                 .setUndecorated(false)
                 .setWebColoredBackground(false)
@@ -290,13 +292,13 @@ final class ChatView extends WebPanel implements Observer {
 
         chat.addObserver(this);
 
-        if (!mChatCache.containsKey(chat.getID())) {
+        if (!mMessageListCache.containsKey(chat)) {
             MessageList newMessageList = new MessageList(mView, this, chat);
             chat.addObserver(newMessageList);
-            mChatCache.put(chat.getID(), newMessageList);
+            mMessageListCache.put(chat, newMessageList);
         }
         // set to current chat
-        mScrollPane.getViewport().setView(mChatCache.get(chat.getID()));
+        mScrollPane.getViewport().setView(mMessageListCache.get(chat));
         this.onChatChange();
 
         chat.setRead();
@@ -369,6 +371,29 @@ final class ChatView extends WebPanel implements Observer {
         mSendButton.addHotkey(sendHotkey, TooltipWay.up);
     }
 
+    void onStatusChange(Control.Status status, EnumSet<Client.ServerFeature> serverFeature) {
+        Boolean supported = null;
+        switch(status) {
+            case CONNECTED:
+                this.setColor(Color.WHITE);
+                supported = serverFeature.contains(Client.ServerFeature.ATTACHMENT_UPLOAD);
+                break;
+            case DISCONNECTED:
+            case ERROR:
+                this.setColor(Color.LIGHT_GRAY);
+                // don't know, but assume it
+                supported = true;
+                break;
+        }
+        if (supported != null) {
+            TooltipManager.setTooltip(mFileButton, Tr.tr("Send File") + " - " + (supported ?
+                            Tr.tr("max. size:") + " " +
+                            FileUtils.byteCountToDisplaySize(AttachmentManager.MAX_ATT_SIZE) :
+                            mView.tr_not_supported));
+            mFileButton.setForeground(supported ? Color.BLACK : Color.RED);
+        }
+    }
+
     @Override
     public void update(Observable o, final Object arg) {
         if (SwingUtilities.isEventDispatchThread()) {
@@ -387,12 +412,11 @@ final class ChatView extends WebPanel implements Observer {
         if (arg instanceof Chat) {
             Chat chat = (Chat) arg;
             if (chat.isDeleted()) {
-                MessageList viewList = mChatCache.get(chat.getID());
+                MessageList viewList = mMessageListCache.remove(chat);
                 if (viewList != null) {
                     viewList.clearItems();
                     chat.deleteObserver(viewList);
                 }
-                mChatCache.remove(chat.getID());
                 if(this.getCurrentChat().orElse(null) == chat) {
                     mScrollPane.setViewportView(null);
                     mView.showNothing();
@@ -497,11 +521,11 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void showFileDialog() {
-        if (fileChooser.showOpenDialog(ChatView.this) != WebFileChooser.APPROVE_OPTION)
+        if (mFileChooser.showOpenDialog(ChatView.this) != WebFileChooser.APPROVE_OPTION)
             return;
 
-        File file = fileChooser.getSelectedFile();
-        fileChooser.setCurrentDirectory(file.toPath().getParent().toString());
+        File file = mFileChooser.getSelectedFile();
+        mFileChooser.setCurrentDirectory(file.toPath().getParent().toString());
 
         Chat chat = this.getCurrentChat().orElse(null);
         if (chat == null)

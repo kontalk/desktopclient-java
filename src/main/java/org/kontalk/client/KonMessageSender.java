@@ -87,7 +87,7 @@ final class KonMessageSender {
 
         // extensions
 
-        // TODO with group chat? (for muc "NOT RECOMMENDED")
+        // not with group chat (at least not for Kontalk groups or MUC)
         if (!chat.isGroupChat())
             protoMessage.addExtension(new DeliveryReceiptRequest());
 
@@ -111,8 +111,7 @@ final class KonMessageSender {
         }
 
         // transmission specific
-        Transmission[] transmissions = message.getTransmissions();
-        ArrayList<Message> sendMessages = new ArrayList<>(transmissions.length);
+        ArrayList<Message> sendMessages = new ArrayList<>();
         for (Transmission transmission: message.getTransmissions()) {
             Message sendMessage = protoMessage.clone();
             JID to = transmission.getJID();

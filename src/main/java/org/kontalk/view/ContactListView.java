@@ -31,9 +31,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.HashSet;
 import java.util.Observer;
-import java.util.Set;
 import javax.swing.Box;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
@@ -87,12 +85,12 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
     @Override
     protected void updateOnEDT(Object arg) {
-        Set<ContactItem> newItems = new HashSet<>();
-        Set<Contact> contacts = Utils.allContacts();
-        for (Contact contact: contacts)
-            if (!this.containsValue(contact))
-                newItems.add(new ContactItem(contact));
-        this.sync(contacts, newItems);
+        this.sync(Utils.allContacts());
+    }
+
+    @Override
+    protected ContactItem newItem(Contact value) {
+        return new ContactItem(value);
     }
 
     @Override
@@ -138,7 +136,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             @Override
             public void actionPerformed(ActionEvent event) {
                 String text = Tr.tr("Permanently delete this contact?") + "\n" +
-                        View.REMOVE_CONTACT_NOTE;
+                        mView.tr_remove_contact;
                 if (!Utils.confirmDeletion(ContactListView.this, text))
                     return;
                 mView.getControl().deleteContact(

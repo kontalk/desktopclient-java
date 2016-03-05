@@ -22,13 +22,14 @@ import org.kontalk.misc.JID;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
@@ -491,29 +492,33 @@ public class MessageContent {
         }
 
         private final OP mOP;
-        private final JID[] mJIDsAdded;
-        private final JID[] mJIDsRemoved;
+        private final List<JID> mAdded;
+        private final List<JID> mRemoved;
         private final String mSubject;
 
         /** Group creation. */
-        public static GroupCommand create(JID[] added, String subject) {
-            return new GroupCommand(OP.CREATE, added, new JID[0], subject);
+        public static GroupCommand create(List<JID> added, String subject) {
+            return new GroupCommand(OP.CREATE, added, Collections.emptyList(), subject);
         }
 
         /** Group changed. */
-        public static GroupCommand set(JID[] added, JID[] removed, String subject) {
+        public static GroupCommand set(List<JID> added, List<JID> removed, String subject) {
             return new GroupCommand(OP.SET, added, removed, subject);
+        }
+
+        public static GroupCommand set(String subject) {
+            return new GroupCommand(OP.SET, Collections.emptyList(), Collections.emptyList(), subject);
         }
 
         /** Member left. Identified by sender JID */
         public static GroupCommand leave() {
-            return new GroupCommand(OP.LEAVE, new JID[0], new JID[0], "");
+            return new GroupCommand(OP.LEAVE, Collections.emptyList(), Collections.emptyList(), "");
         }
 
-        private GroupCommand(OP operation, JID[] added, JID[] removed, String subject) {
+        private GroupCommand(OP operation, List<JID> added, List<JID> removed, String subject) {
             mOP = operation;
-            mJIDsAdded = added;
-            mJIDsRemoved = removed;
+            mAdded = added;
+            mRemoved = removed;
             mSubject = subject;
         }
 
@@ -521,12 +526,12 @@ public class MessageContent {
             return mOP;
         }
 
-        public JID[] getAdded() {
-            return mJIDsAdded;
+        public List<JID> getAdded() {
+            return mAdded;
         }
 
-        public JID[] getRemoved() {
-            return mJIDsRemoved;
+        public List<JID> getRemoved() {
+            return mRemoved;
         }
 
         public String getSubject() {
@@ -540,14 +545,14 @@ public class MessageContent {
             json.put(JSON_OP, mOP.ordinal());
             EncodingUtils.putJSON(json, JSON_SUBJECT, mSubject);
 
-            List<String> added = new ArrayList(mJIDsAdded.length);
-            for (JID jid: mJIDsAdded)
-                added.add(jid.string());
+            List<String> added = mAdded.stream()
+                    .map(jid -> jid.string())
+                    .collect(Collectors.toList());
             json.put(JSON_ADDED, added);
 
-            List<String> removed = new ArrayList(mJIDsRemoved.length);
-            for (JID jid: mJIDsAdded)
-                removed.add(jid.string());
+            List<String> removed = mAdded.stream()
+                    .map(jid -> jid.string())
+                    .collect(Collectors.toList());
             json.put(JSON_REMOVED, removed);
 
             return json.toJSONString();
@@ -566,19 +571,17 @@ public class MessageContent {
                 String subj = EncodingUtils.getJSONString(map, JSON_SUBJECT);
 
                 List<String> a = (List<String>) map.get(JSON_ADDED);
-                List<JID> added = new ArrayList<>(a.size());
-                for (String s: a)
-                    added.add(JID.bare(s));
+                List<JID> added = a.stream()
+                        .map(s -> JID.bare(s))
+                        .collect(Collectors.toList());
 
                 List<String> r = (List<String>) map.get(JSON_REMOVED);
-                List<JID> removed = new ArrayList<>(r.size());
-                for (String s: r)
-                    removed.add(JID.bare(s));
+                List<JID> removed = r.stream()
+                        .map(s -> JID.bare(s))
+                        .collect(Collectors.toList());
 
-                return new GroupCommand(op,
-                        added.toArray(new JID[0]), removed.toArray(new JID[0]),
-                        subj);
-             }  catch (NullPointerException | ClassCastException ex) {
+                return new GroupCommand(op, added, removed, subj);
+            } catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON group command", ex);
                 LOGGER.log(Level.WARNING, "JSON='"+json+"'");
                 return null;

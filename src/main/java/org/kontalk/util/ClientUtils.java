@@ -19,6 +19,7 @@
 package org.kontalk.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -103,8 +104,8 @@ public final class ClientUtils {
                 String subject = groupCommand.getSubject();
                 if (op == OP.CREATE) {
                     command = Type.CREATE;
-                    for (JID added : groupCommand.getAdded())
-                        members.add(new Member(added.string()));
+                    groupCommand.getAdded().stream().forEach(added ->
+                        members.add(new Member(added.string())));
                 } else {
                     command = Type.SET;
                     Set<JID> incl = new HashSet<>();
@@ -116,7 +117,7 @@ public final class ClientUtils {
                         incl.add(removed);
                         members.add(new Member(removed.string(), Member.Operation.REMOVE));
                     }
-                    if (groupCommand.getAdded().length > 0) {
+                    if (!groupCommand.getAdded().isEmpty()) {
                         // list all remaining member for the new member
                         for (Contact c : chat.getValidContacts()) {
                             JID old = c.getJID();
@@ -147,12 +148,14 @@ public final class ClientUtils {
                 List<JID> jids = new ArrayList<>(members.size());
                 for (Member m: members)
                     jids.add(JID.bare(m.jid));
-                return Optional.of(GroupCommand.create(jids.toArray(new JID[0]), subject));
+                return Optional.of(GroupCommand.create(jids, subject));
             case PART:
                 return Optional.of(GroupCommand.leave());
             case SET:
                 // TODO
-                return Optional.of(GroupCommand.set(new JID[0], new JID[0], subject));
+                return Optional.of(GroupCommand.set(
+                        Collections.emptyList(),
+                        Collections.emptyList(), subject));
             case GET:
             case RESULT:
             default:

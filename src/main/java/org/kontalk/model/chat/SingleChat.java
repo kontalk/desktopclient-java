@@ -19,6 +19,7 @@
 package org.kontalk.model.chat;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -35,26 +36,26 @@ public final class SingleChat extends Chat {
     private final Member mMember;
     private final String mXMPPID;
 
-    SingleChat(Contact contact, String xmppID) {
-        super(contact, xmppID, "");
+    SingleChat(Member member, String xmppID) {
+        super(Arrays.asList(member), xmppID, "", null);
 
-        mMember = new Member(contact);
-        contact.addObserver(this);
-        // note: Kontalk Android client is ignoring the chat id
+        mMember = member;
+        mMember.getContact().addObserver(this);
+        // NOTE: Kontalk Android client is ignoring the chat XMPP-ID
         mXMPPID = xmppID;
     }
 
     // used when loading from database
     SingleChat(int id,
-            Contact contact,
+            Member member,
             String xmppID,
             boolean read,
             String jsonViewSettings
             ) {
         super(id, read, jsonViewSettings);
 
-        mMember = new Member(contact);
-        contact.addObserver(this);
+        mMember = member;
+        mMember.getContact().addObserver(this);
         mXMPPID = xmppID;
     }
 
@@ -73,12 +74,12 @@ public final class SingleChat extends Chat {
     }
 
     @Override
-    public Contact[] getValidContacts() {
+    public List<Contact> getValidContacts() {
         Contact c = mMember.getContact();
-        if (c.isDeleted() || c.isBlocked() && !c.isMe())
-            return new Contact[0];
+        if ((c.isDeleted() || c.isBlocked()) && !c.isMe())
+            return Collections.emptyList();
 
-        return new Contact[]{c};
+        return Arrays.asList(c);
     }
 
     @Override
@@ -148,6 +149,6 @@ public final class SingleChat extends Chat {
 
     @Override
     public String toString() {
-        return "SC:id="+mID+",xmppid="+mXMPPID;
+        return "SC:id="+mID+",xmppid="+mXMPPID+",mem="+mMember;
     }
 }

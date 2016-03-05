@@ -309,7 +309,8 @@ public final class Contact extends Observable {
         mEncrypted = false;
         mKey = "";
         mFingerprint = "";
-        mAvatar.delete();
+        if (mAvatar != null)
+            mAvatar.delete();
         mAvatar = null;
 
         this.save();
@@ -337,6 +338,24 @@ public final class Contact extends Observable {
     private void changed(Object arg) {
         this.setChanged();
         this.notifyObservers(arg);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof Contact))
+            return false;
+
+        return mID == ((Contact) o).mID;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 29 * hash + this.mID;
+        return hash;
     }
 
     @Override

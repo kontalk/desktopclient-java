@@ -18,10 +18,14 @@
 
 package org.kontalk.model.message;
 
+import java.util.Arrays;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.misc.JID;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Logger;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.Contact;
@@ -29,7 +33,7 @@ import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.Preview;
 
 /**
- * Model for an XMPP message that was sent to us.
+ * Model for an XMPP message sent to the user.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class InMessage extends KonMessage implements DecryptMessage {
@@ -53,10 +57,10 @@ public final class InMessage extends KonMessage implements DecryptMessage {
     protected InMessage(KonMessage.Builder builder) {
         super(builder);
 
-        if (builder.mTransmissions.length != 1)
+        if (builder.mTransmissions.size() != 1)
             throw new IllegalArgumentException("builder does not contain one transmission");
 
-        mTransmission = builder.mTransmissions[0];
+        mTransmission = builder.mTransmissions.stream().findAny().get();
     }
 
     @Override
@@ -135,7 +139,26 @@ public final class InMessage extends KonMessage implements DecryptMessage {
     }
 
     @Override
-    public Transmission[] getTransmissions() {
-        return new Transmission[]{mTransmission};
+    public Set<Transmission> getTransmissions() {
+        return new HashSet<>(Arrays.asList(mTransmission));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof InMessage))
+            return false;
+
+        return super.equals(o) &&
+                mTransmission.equals(((InMessage) o).mTransmission);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = super.hashCode();
+        hash = 67 * hash + Objects.hashCode(this.mTransmission);
+        return hash;
     }
 }

@@ -22,9 +22,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
-import java.util.function.Predicate;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
@@ -55,8 +54,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         mGroupData = gData;
         mSubject = subject;
 
-        for (Member member: members)
-            this.addMemberSilent(member);
+        members.stream().forEach(m -> this.addMemberSilent(m));
     }
 
     // used when loading from database
@@ -72,8 +70,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         mGroupData = gData;
         mSubject = subject;
 
-        for (Member member: members)
-            this.addMemberSilent(member);
+        members.stream().forEach(m -> this.addMemberSilent(m));
     }
 
     @Override
@@ -84,24 +81,17 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     /** Get all contacts (including deleted and user contact). */
     @Override
     public List<Contact> getAllContacts() {
-        List<Contact> l = new ArrayList<>(mMemberSet.size());
-        for (Member m : mMemberSet)
-            l.add(m.getContact());
-
-        return l;
+        return mMemberSet.stream()
+                .map(m -> m.getContact())
+                .collect(Collectors.toList());
     }
 
     @Override
-    public Contact[] getValidContacts() {
-        //chat.getContacts().stream().filter(c -> !c.isDeleted());
-        Set<Contact> contacts = new HashSet<>();
-        for (Member m : mMemberSet) {
-            Contact c = m.getContact();
-            if (!c.isDeleted() && !c.isMe()) {
-                contacts.add(m.getContact());
-            }
-        }
-        return contacts.toArray(new Contact[0]);
+    public List<Contact> getValidContacts() {
+        return mMemberSet.stream()
+                .map(m -> m.getContact())
+                .filter(c -> (!c.isDeleted() && !c.isMe()))
+                .collect(Collectors.toList());
     }
 
     public void addContact(Contact contact) {
@@ -123,7 +113,6 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         }
 
         if (changed) {
-            System.out.println("addContacts save");
             this.save();
             this.changed(contacts);
         }
@@ -169,12 +158,9 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
 
     @Override
     public void setChatState(final Contact contact, ChatState chatState) {
-        Member member = mMemberSet.stream().filter(new Predicate<Member>(){
-            @Override
-            public boolean test(Member t) {
-                return t.getContact().equals(contact);
-            }
-        }).findFirst().orElse(null);
+        Member member = mMemberSet.stream()
+                .filter(m -> m.getContact().equals(contact))
+                .findFirst().orElse(null);
 
         if (member == null) {
             LOGGER.warning("can't find member in member set!?");
@@ -253,42 +239,35 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
 
     @Override
     public boolean isSendEncrypted() {
-        boolean encrypted = false;
-        for (Contact c: this.getValidContacts()) {
-            encrypted |= c.getEncrypted();
-        }
-        return encrypted;
+        return this.getValidContacts().stream()
+                .anyMatch(c -> c.getEncrypted());
     }
 
     @Override
     public boolean canSendEncrypted() {
-        Contact[] contacts = this.getValidContacts();
-        boolean encrypted = contacts.length != 0;
-        for (Contact c: contacts) {
-            encrypted &= c.hasKey();
-        }
-        return encrypted;
+        List<Contact> contacts = this.getValidContacts();
+        return !contacts.isEmpty() &&
+                contacts.stream().allMatch(c -> c.hasKey());
     }
 
     @Override
     public boolean isValid() {
-        return this.getValidContacts().length != 0 && this.containsMe();
+        return !this.getValidContacts().isEmpty() && this.containsMe();
     }
 
     @Override
     public boolean isAdministratable() {
-        return mGroupData.isAdministratable();
+        Member me = mMemberSet.stream()
+                .filter(m -> m.getContact().isMe())
+                .findFirst().orElse(null);
+        if (me == null)
+            return false;
+        Member.Role myRole = me.getRole();
+        return myRole == Member.Role.OWNER || myRole == Member.Role.ADMIN;
     }
 
     private boolean containsMe() {
-        return mMemberSet.parallelStream().anyMatch(
-                new Predicate<Member>() {
-                    @Override
-                    public boolean test(Member t) {
-                        return t.getContact().isMe();
-                    }
-                }
-        );
+        return mMemberSet.stream().anyMatch(m -> m.getContact().isMe());
     }
 
     @Override

@@ -57,8 +57,8 @@ final class ChatStateManager {
     }
 
     void imGone() {
-        for (MyChatState chatState : mChatStateCache.values())
-            chatState.handleState(ChatState.gone);
+        mChatStateCache.values().stream()
+                .forEach(chatState -> chatState.handleState(ChatState.gone));
     }
 
     private class MyChatState {
@@ -82,8 +82,8 @@ final class ChatStateManager {
                 mScheduledStateSet = new TimerTask() {
                     @Override
                     public void run() {
-                        // TODO use 'inactive' instead of 'paused' for now as
-                        // 'inactive' currently wont be send at all
+                        // NOTE: using 'inactive' instead of 'paused' here as
+                        // 'inactive' isn't send at all
                         MyChatState.this.handleState(ChatState.inactive);
                     }
                 };

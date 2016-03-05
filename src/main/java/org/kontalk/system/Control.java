@@ -32,6 +32,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.Kontalk;
@@ -126,8 +127,8 @@ public final class Control {
             mClient.sendUserPresence(strings.length > 0 ? strings[0] : "");
             // send all pending messages
             for (Chat chat: ChatList.getInstance())
-                for (OutMessage m : chat.getMessages().getPending())
-                    this.sendMessage(m);
+                chat.getMessages().getPending().stream()
+                        .forEach(m -> this.sendMessage(m));
 
             // send public key requests for Kontalk contacts with missing key
             for (Contact contact : ContactList.getInstance())
@@ -197,7 +198,6 @@ public final class Control {
         if (newMessage.getID() <= 0)
             return;
 
-        // TODO implement equals()
         if (chat.getMessages().contains(newMessage)) {
             LOGGER.info("message already in chat, dropping this one");
             return;
@@ -264,9 +264,10 @@ public final class Control {
             LOGGER.info("can't find contact with jid: "+ids.jid);
             return;
         }
-        // TODO chat states for group chats?
+        // NOTE: assume chat states are only send for single chats
         SingleChat chat = ChatList.getInstance().get(contact, ids.xmppThreadID).orElse(null);
         if (chat == null)
+            // not that important
             return;
 
         chat.setChatState(contact, chatState);
@@ -341,8 +342,8 @@ public final class Control {
                 return false;
         }
 
-        Contact[] contacts = chat.getValidContacts();
-        if (contacts.length == 0) {
+        List<Contact> contacts = chat.getValidContacts();
+        if (contacts.isEmpty()) {
             LOGGER.warning("can't send message, no (valid) contact(s)");
             return false;
         }
@@ -686,10 +687,9 @@ public final class Control {
 
         public void createGroupChat(List<Contact> contacts, String subject) {
             // user is part of the group
-            List<Member> members = new ArrayList<>(contacts.size()+1);
-            for (Contact c : contacts) {
-                members.add(new Member(c));
-            }
+            List<Member> members = contacts.stream()
+                    .map(c -> new Member(c))
+                    .collect(Collectors.toCollection(ArrayList::new));
             Contact me = ContactList.getInstance().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
@@ -714,18 +714,11 @@ public final class Control {
                     return;
             }
 
-            ChatList.getInstance().delete(chat.getID());
+            ChatList.getInstance().delete(chat);
         }
 
         public void setChatSubject(GroupChat chat, String subject) {
-            if (!chat.isAdministratable()) {
-                LOGGER.warning("not admin");
-                return;
-            }
-            Control.this.createAndSendMessage(chat, MessageContent.groupCommand(
-                    GroupCommand.set(new JID[0], new JID[0], subject)));
-
-            chat.setSubject(subject);
+            mGroupControl.getInstanceFor(chat).onSetSubject(subject);
         }
 
         public void handleOwnChatStateEvent(Chat chat, ChatState state) {

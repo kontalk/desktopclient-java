@@ -21,8 +21,10 @@ package org.kontalk.model.message;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.misc.JID;
 import java.net.URI;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -30,15 +32,15 @@ import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.model.Contact;
 
 /**
- * Model for an XMPP message that we are sending.
+ * Model for an XMPP message from the user to a contact.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class OutMessage extends KonMessage {
     private static final Logger LOGGER = Logger.getLogger(OutMessage.class.getName());
 
-    private final Transmission[] mTransmissions;
+    private final Set<Transmission> mTransmissions;
 
-    public OutMessage(Chat chat, Contact[] contacts, MessageContent content, boolean encrypted) {
+    public OutMessage(Chat chat, List<Contact> contacts, MessageContent content, boolean encrypted) {
         super(chat,
                 "Kon_" + StringUtils.randomString(8),
                 content,
@@ -48,18 +50,20 @@ public final class OutMessage extends KonMessage {
                         CoderStatus.createToEncrypt() :
                         CoderStatus.createInsecure());
 
-        Set<Transmission> t = new HashSet<>();
-        for (Contact contact: contacts) {
-            t.add(new Transmission(contact, contact.getJID(), mID));
-        }
-        mTransmissions = t.toArray(new Transmission[0]);
+        Set<Transmission> ts = new HashSet<>();
+        contacts.stream().forEach(contact -> {
+            boolean succ = ts.add(new Transmission(contact, contact.getJID(), mID));
+            if (!succ)
+                LOGGER.warning("duplicate contact: "+contact);
+        });
+        mTransmissions = Collections.unmodifiableSet(ts);
     }
 
     // used when loading from database
     protected OutMessage(KonMessage.Builder builder) {
         super(builder);
 
-        mTransmissions = builder.mTransmissions;
+        mTransmissions = Collections.unmodifiableSet(builder.mTransmissions);
     }
 
     public void setReceived(JID jid) {
@@ -120,8 +124,25 @@ public final class OutMessage extends KonMessage {
     }
 
     @Override
-    public Transmission[] getTransmissions() {
+    public Set<Transmission> getTransmissions() {
         return mTransmissions;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        // outmessages are only equal to outmessages
+        if (!(o instanceof OutMessage))
+            return false;
+
+        return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 97 * super.hashCode();
+        return hash;
+    }
 }

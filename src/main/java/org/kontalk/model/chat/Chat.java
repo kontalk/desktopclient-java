@@ -22,7 +22,6 @@ import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -79,10 +78,6 @@ public abstract class Chat extends Observable implements Observer {
 
     private ViewSettings mViewSettings;
 
-    protected Chat(Contact contact, String xmppID, String subject) {
-        this(Arrays.asList(new Member(contact)), xmppID, subject, null);
-    }
-
     protected Chat(List<Member> members, String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages(this, true);
         mRead = true;
@@ -102,8 +97,7 @@ public abstract class Chat extends Observable implements Observer {
             return;
         }
 
-        for (Member member : members)
-            member.insert(mID);
+        members.stream().forEach(member -> member.insert(mID));
     }
 
     // used when loading from database
@@ -173,7 +167,7 @@ public abstract class Chat extends Observable implements Observer {
     public abstract List<Contact> getAllContacts();
 
     /** Get valid receiver contacts (without deleted and blocked). */
-    public abstract Contact[] getValidContacts();
+    public abstract List<Contact> getValidContacts();
 
     /** XMPP thread ID (empty string if not set). */
     public abstract String getXMPPID();
@@ -215,17 +209,13 @@ public abstract class Chat extends Observable implements Observer {
         List<Member> oldMembers = new ArrayList<>(this.getAllMembers());
 
         // save new members
-        for (Member m : members) {
-            if (!oldMembers.contains(m)) {
-                m.insert(mID);
-            }
-            oldMembers.remove(m);
-        }
+        members.stream()
+                .filter(m -> !oldMembers.contains(m))
+                .forEach(m -> m.insert(mID));
 
+        oldMembers.removeAll(members);
         // whats left is too much and can be deleted
-        for (Member m : oldMembers) {
-            m.delete();
-        }
+        oldMembers.stream().forEach(m -> m.delete());
     }
 
     void delete() {
@@ -246,10 +236,8 @@ public abstract class Chat extends Observable implements Observer {
             return;
 
         // members
-        boolean allDeleted = true;
-        for (Member member : this.getAllMembers()) {
-            allDeleted &= member.delete();
-        }
+        boolean allDeleted = this.getAllMembers().stream()
+                .allMatch(m -> m.delete());
         if (!allDeleted)
             return;
 
@@ -299,7 +287,7 @@ public abstract class Chat extends Observable implements Observer {
                 LOGGER.warning("not one contact for single chat, id="+id);
                 return null;
             }
-            return new SingleChat(id, members.get(0).getContact(), xmppID, read, jsonViewSettings);
+            return new SingleChat(id, members.get(0), xmppID, read, jsonViewSettings);
         }
     }
 

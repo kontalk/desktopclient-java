@@ -31,8 +31,7 @@ public final class ProtoMessage implements DecryptMessage {
 
     private final Contact mContact;
     private final CoderStatus mCoderStatus;
-
-    private MessageContent mContent;
+    private final MessageContent mContent;
 
     public ProtoMessage(Contact contact, MessageContent content) {
         mContact = contact;

@@ -20,24 +20,42 @@ package org.kontalk.misc;
 
 import java.util.Objects;
 import org.apache.commons.lang.StringUtils;
+import org.jxmpp.jid.util.JidUtil;
+import org.jxmpp.stringprep.simple.SimpleXmppStringprep;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.model.Account;
 
 /**
  * A Jabber ID (the address of an XMPP entity). Immutable.
  *
+ * NOTE: manual JID escaping (XEP-0106) is not supported here. Better mark JIDs
+ * e.g. with spaces in local part as invalid.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class JID {
 
+    static {
+        // good to know. For working JID validation
+        SimpleXmppStringprep.setup();
+    }
+
     private final String mLocal;
     private final String mDomain;
     private final String mResource;
+    private final boolean mValid;
 
     private JID(String local, String domain, String resource) {
         mLocal = local;
         mDomain = domain;
         mResource = resource;
+
+        mValid = !mLocal.isEmpty() && !mDomain.isEmpty()
+                // NOTE: domain check could be stronger - compliant with RFC 6122, but
+                // server does not accept most special characters
+                // NOTE: resource not checked
+                && JidUtil.isValidBareJid(
+                        XmppStringUtils.completeJidFrom(mLocal, mDomain));
     }
 
     public String local() {
@@ -53,9 +71,7 @@ public final class JID {
     }
 
     public boolean isValid() {
-        // TODO stronger check here.
-        //org.jxmpp.jid.util.JidUtil.validateBareJid(mBareJID);
-        return !mLocal.isEmpty() && !mDomain.isEmpty();
+        return mValid;
     }
 
     public boolean isHash() {

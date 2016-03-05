@@ -18,17 +18,12 @@
 
 package org.kontalk.model.chat;
 
-import org.kontalk.model.chat.Chat;
-import org.kontalk.model.chat.GroupChat;
-import org.kontalk.model.chat.SingleChat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -47,15 +42,14 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     private static final ChatList INSTANCE = new ChatList();
 
-    private final Map<Integer, Chat> mMap =
-            Collections.synchronizedMap(new HashMap<Integer, Chat>());
+    private final Set<Chat> mChats = Collections.synchronizedSet(new HashSet<Chat>());
 
     private boolean mUnread = false;
 
     private ChatList() {}
 
     public void load() {
-        assert mMap.isEmpty();
+        assert mChats.isEmpty();
 
         Database db = Database.getInstance();
         try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
@@ -74,35 +68,29 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public Set<Chat> getAll() {
-        return new HashSet<>(mMap.values());
+        return Collections.unmodifiableSet(mChats);
     }
 
     /** Get single chat with contact and XMPPID. */
     public Optional<SingleChat> get(Contact contact, String xmmpThreadID) {
-        for (Chat chat : mMap.values()) {
-            if (!(chat instanceof SingleChat))
-                continue;
-            SingleChat singleChat = (SingleChat) chat;
-
-            if (singleChat.getXMPPID().equals(xmmpThreadID)
-                    && singleChat.getContact().equals(contact))
-                return Optional.of(singleChat);
+        synchronized(mChats) {
+            return mChats.stream()
+                    .filter(chat -> chat instanceof SingleChat)
+                    .map(chat -> (SingleChat) chat)
+                    .filter(chat -> chat.getXMPPID().equals(xmmpThreadID)
+                            && chat.getContact().equals(contact))
+                    .findFirst();
         }
-        return Optional.empty();
     }
 
     public Optional<GroupChat> get(GroupMetaData gData) {
-        for (Chat chat : mMap.values()) {
-            if (!(chat instanceof GroupChat))
-                continue;
-
-            GroupChat groupChat = (GroupChat) chat;
-            if (groupChat.getGroupData().equals(gData))
-                return Optional.of(groupChat);
-
+        synchronized(mChats) {
+            return mChats.stream()
+                    .filter(chat -> chat instanceof GroupChat)
+                    .map(chat -> (GroupChat) chat)
+                    .filter(chat -> chat.getGroupData().equals(gData))
+                    .findFirst();
         }
-
-        return Optional.empty();
     }
 
     public Chat getOrCreate(Contact contact) {
@@ -119,7 +107,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     private SingleChat createNew(Contact contact, String xmppThreadID) {
-        SingleChat newChat = new SingleChat(contact, xmppThreadID);
+        SingleChat newChat = new SingleChat(new Member(contact), xmppThreadID);
         LOGGER.config("new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
@@ -139,12 +127,11 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     private void putSilent(Chat chat) {
-        if (mMap.containsValue(chat)) {
+        boolean succ = mChats.add(chat);
+        if (!succ) {
             LOGGER.warning("chat already in chat list: "+chat);
             return;
         }
-
-        mMap.put(chat.getID(), chat);
         chat.addObserver(this);
     }
 
@@ -153,13 +140,13 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public boolean isEmpty() {
-        return mMap.isEmpty();
+        return mChats.isEmpty();
     }
 
-    public void delete(int id) {
-        Chat chat = mMap.remove(id);
-        if (chat == null) {
-            LOGGER.warning("can't delete chat, not found. id: "+id);
+    public void delete(Chat chat) {
+        boolean succ = mChats.remove(chat);
+        if (!succ) {
+            LOGGER.warning("can't delete chat, not found: "+chat);
             return;
         }
         chat.delete();
@@ -193,10 +180,9 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
             return;
         }
 
-        for (Chat chat : mMap.values()) {
-            if (!chat.isRead()) {
+        synchronized(mChats) {
+            if (mChats.stream().anyMatch(chat -> !chat.isRead()))
                 return;
-            }
         }
 
         mUnread = false;
@@ -205,7 +191,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     @Override
     public Iterator<Chat> iterator() {
-        return mMap.values().iterator();
+        return mChats.iterator();
     }
 
     public static ChatList getInstance() {

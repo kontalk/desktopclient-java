@@ -21,15 +21,16 @@ package org.kontalk.model.message;
 import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
@@ -44,7 +45,7 @@ import org.kontalk.util.EncodingUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public abstract class KonMessage extends Observable implements Comparable<KonMessage> {
+public abstract class KonMessage extends Observable {
     private static final Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
@@ -182,7 +183,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         return mStatus == Status.IN;
     }
 
-    public abstract Transmission[] getTransmissions();
+    public abstract Set<Transmission> getTransmissions();
 
     public String getXMPPID() {
         return mXMPPID;
@@ -265,21 +266,34 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof KonMessage))
+            return false;
+
+        KonMessage oMessage = (KonMessage) o;
+
+        return mChat.equals(oMessage.mChat)
+                && !mXMPPID.isEmpty() && mXMPPID.equals(oMessage.mXMPPID);
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 7;
+        hash = 17 * hash + Objects.hashCode(this.mChat);
+        hash = 17 * hash + Objects.hashCode(this.mXMPPID);
+        return hash;
+    }
+
+    @Override
     public String toString() {
         return "M:id="+mID+",status="+mStatus+",chat="+mChat+",xmppid="+mXMPPID
-                +",transmissions="+Arrays.toString(this.getTransmissions())
+                +",transmissions="+this.getTransmissions()
                 +",date="+mDate+",sdate="+mServerDate
                 +",cont="+mContent
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
-    }
-
-    // TODO remove
-    @Override
-    public int compareTo(KonMessage o) {
-        if (this.equals(o))
-            return 0;
-
-        return Integer.compare(mID, o.getID());
     }
 
     public static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
@@ -316,7 +330,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         Date serverDate = sDate == 0 ? null : new Date(sDate);
 
         KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date, content);
-        // TODO one SQL SELECT for each message, performance?
+        // TODO one SQL SELECT for each message, performance? looks ok
         builder.transmissions(Transmission.load(id));
         builder.xmppID(xmppID);
         if (serverDate != null)
@@ -372,7 +386,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
         private final Date mDate;
         private final MessageContent mContent;
 
-        protected Transmission[] mTransmissions = null;
+        protected Set<Transmission> mTransmissions = null;
 
         private String mXMPPID = null;
         private Date mServerDate = null;
@@ -391,7 +405,7 @@ public abstract class KonMessage extends Observable implements Comparable<KonMes
             mContent = content;
         }
 
-        private void transmissions(Transmission[] transmission) { mTransmissions = transmission; }
+        private void transmissions(Set<Transmission> transmission) { mTransmissions = transmission; }
 
         private void xmppID(String xmppID) { mXMPPID = xmppID; }
         private void serverDate(Date date) { mServerDate = date; }

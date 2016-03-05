@@ -36,7 +36,6 @@ import java.awt.event.ActionListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
@@ -144,38 +143,26 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             return;
         }
 
-        if (arg instanceof KonMessage) {
-            this.insertMessage((KonMessage) arg);
-        } else {
-            // check for new messages to add
-            if (this.getModel().getRowCount() < mChat.getMessages().size())
-                this.insertMessages();
+        // check for new messages to add
+        if (this.getModel().getRowCount() < mChat.getMessages().size()) {
+            this.insertMessages();
         }
 
-        if (mChatView.getCurrentChat().orElse(null) == mChat) {
+        if (!mChat.isRead() && mChatView.getCurrentChat().orElse(null) == mChat) {
             mChat.setRead();
         }
     }
 
     private void insertMessages() {
-        Set<MessageItem> newItems = new HashSet<>();
-        Set<KonMessage> messages = mChat.getMessages().getAll();
-        for (KonMessage message: messages) {
-            if (!this.containsValue(message)) {
-                newItems.add(new MessageItem(message));
-                // trigger scrolling
-                mChatView.setScrolling();
-            }
-        }
-        this.sync(messages, newItems);
+        boolean newAdded = this.sync(mChat.getMessages().getAll());
+        if (newAdded)
+            // trigger scrolling
+            mChatView.setScrolling();
     }
 
-    private void insertMessage(KonMessage message) {
-        Set<MessageItem> newItems = new HashSet<>();
-        newItems.add(new MessageItem(message));
-        this.sync(mChat.getMessages().getAll(), newItems);
-        // trigger scrolling
-        mChatView.setScrolling();
+    @Override
+    protected MessageItem newItem(KonMessage value) {
+        return new MessageItem(value);
     }
 
     private void setBackground(Chat.ViewSettings s) {
@@ -424,9 +411,9 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             boolean isOut = !mValue.isInMessage();
 
             Date deliveredDate = null;
-            Transmission[] transmissions = mValue.getTransmissions();
-            if (transmissions.length == 1)
-                deliveredDate = transmissions[0].getReceivedDate().orElse(null);
+            Set<Transmission> transmissions = mValue.getTransmissions();
+            if (transmissions.size() == 1)
+                deliveredDate = transmissions.stream().findFirst().get().getReceivedDate().orElse(null);
 
             // status icon
             if (isOut) {

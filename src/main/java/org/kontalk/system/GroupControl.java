@@ -18,11 +18,11 @@
 
 package org.kontalk.system;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.kontalk.misc.JID;
 import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
@@ -72,17 +72,15 @@ final class GroupControl {
 
         @Override
         void onCreate() {
-            Contact[] contacts = mChat.getValidContacts();
-
             // send create group command
-            List<JID> jids = new ArrayList<>(contacts.length);
-            for (Contact c: contacts)
-                jids.add(c.getJID());
+            List<JID> jids = mChat.getValidContacts().stream()
+                    .map(contact -> contact.getJID())
+                    .collect(Collectors.toList());
 
             mControl.createAndSendMessage(mChat,
                     MessageContent.groupCommand(
                             MessageContent.GroupCommand.create(
-                                    jids.toArray(new JID[0]),
+                                    jids,
                                     mChat.getSubject())
                     )
             );
@@ -90,8 +88,15 @@ final class GroupControl {
 
         @Override
         public void onSetSubject(String subject) {
+            if (!mChat.isAdministratable()) {
+                LOGGER.warning("not admin");
+                return;
+            }
+
             mControl.createAndSendMessage(mChat, MessageContent.groupCommand(
-                    MessageContent.GroupCommand.set(new JID[0], new JID[0], subject)));
+                    GroupCommand.set(subject)));
+
+            mChat.setSubject(subject);
         }
 
         @Override
@@ -127,11 +132,11 @@ final class GroupControl {
                 // add contacts if necessary
                 // TODO design problem here: we need at least the public keys, but user
                 // might dont wanna have group members in contact list
-                for (JID jid : command.getAdded()) {
+                command.getAdded().stream().forEach(jid -> {
                     boolean succ = mControl.getOrCreateContact(jid).isPresent();
                     if (!succ)
                         LOGGER.warning("can't create contact, JID: "+jid);
-                }
+                });
             }
 
             mChat.applyGroupCommand(command, sender);
@@ -139,11 +144,9 @@ final class GroupControl {
     }
 
     ChatControl getInstanceFor(GroupChat chat) {
-        // TODO
-        return (chat instanceof KonGroupChat) ?
-                new KonChatControl((KonGroupChat) chat) :
-        //        new MUCControl((MUCChat) chat);
-                null;
+        if (chat instanceof KonGroupChat)
+                return new KonChatControl((KonGroupChat) chat);
+        throw new IllegalArgumentException("Not implemented for "+chat);
     }
 
     static KonGroupData newKonGroupData(JID myJID) {
