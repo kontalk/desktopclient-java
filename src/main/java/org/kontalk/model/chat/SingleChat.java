@@ -40,9 +40,9 @@ public final class SingleChat extends Chat {
         super(Arrays.asList(member), xmppID, "", null);
 
         mMember = member;
-        mMember.getContact().addObserver(this);
         // NOTE: Kontalk Android client is ignoring the chat XMPP-ID
         mXMPPID = xmppID;
+        mMember.getContact().addObserver(this);
     }
 
     // used when loading from database
@@ -55,8 +55,8 @@ public final class SingleChat extends Chat {
         super(id, read, jsonViewSettings);
 
         mMember = member;
-        mMember.getContact().addObserver(this);
         mXMPPID = xmppID;
+        mMember.getContact().addObserver(this);
     }
 
     public Contact getContact() {
@@ -136,7 +136,9 @@ public final class SingleChat extends Chat {
         if (!(o instanceof SingleChat)) return false;
 
         SingleChat oChat = (SingleChat) o;
-        return mMember.equals(oChat.mMember) && mXMPPID.equals(oChat.mXMPPID);
+        System.out.println(this+" "+oChat);
+        return mMember.equals(oChat.mMember) &&
+                mXMPPID.equals(oChat.mXMPPID);
     }
 
     @Override
