@@ -40,7 +40,6 @@ import org.kontalk.model.message.MessageContent;
 public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     private static final Logger LOGGER = Logger.getLogger(GroupChat.class.getName());
 
-    //private final HashMap<Member, KonChatState> mContactMap = new HashMap<>();
     private final HashSet<Member> mMemberSet = new HashSet<>();
     private final D mGroupData;
 

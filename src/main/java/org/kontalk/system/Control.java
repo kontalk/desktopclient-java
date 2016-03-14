@@ -513,18 +513,18 @@ public final class Control {
         if (contact != null) {
             Chat chat = cl.get(contact, ids.xmppThreadID).orElse(null);
             if (chat != null) {
-                OutMessage m = chat.getMessages().getLast(ids.xmppID).orElse(null);
-                if (m != null)
-                    return Optional.of(m);
+                Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
+                if (optM.isPresent())
+                    return optM;
             }
         }
 
         // fallback: search everywhere
         LOGGER.info("fallback search, IDs: "+ids);
         for (Chat chat: cl) {
-            OutMessage m = chat.getMessages().getLast(ids.xmppID).orElse(null);
-            if (m != null)
-                return Optional.of(m);
+            Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
+            if (optM.isPresent())
+                return optM;
         }
 
         LOGGER.warning("can't find message by IDs: "+ids);
