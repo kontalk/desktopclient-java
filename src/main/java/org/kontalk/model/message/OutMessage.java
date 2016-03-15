@@ -67,26 +67,20 @@ public final class OutMessage extends KonMessage {
     }
 
     public void setReceived(JID jid) {
-        Transmission transmission = null;
-            for (Transmission t: mTransmissions) {
-                if (t.getContact().getJID().equals(jid)) {
-                    transmission = t;
-                    break;
-                }
-            }
+        Transmission transmission = mTransmissions.stream()
+                .filter(t -> t.getContact().getJID().equals(jid))
+                .findFirst().orElse(null);
+        if (transmission == null) {
+            LOGGER.warning("can't find transmission for received status, IDs: "+jid);
+            return;
+        }
 
-            if (transmission == null) {
-                LOGGER.warning("can't find transmission for received status, IDs: "+jid);
-                return;
-            }
+        if (transmission.isReceived())
+            // probably by another client
+            return;
 
-            if (transmission.isReceived())
-                // probably by another client
-                return;
-
-            transmission.setReceived(new Date());
-            // status only dummy value
-            this.changed(mStatus);
+        transmission.setReceived(new Date());
+        this.changed(mStatus);
     }
 
     public void setStatus(Status status) {

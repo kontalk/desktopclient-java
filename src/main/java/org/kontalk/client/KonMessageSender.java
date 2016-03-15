@@ -19,8 +19,11 @@
 package org.kontalk.client;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
@@ -32,7 +35,6 @@ import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.OutMessage;
-import org.kontalk.model.message.Transmission;
 import org.kontalk.system.Control;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
@@ -91,6 +93,10 @@ final class KonMessageSender {
         if (!chat.isGroupChat())
             protoMessage.addExtension(new DeliveryReceiptRequest());
 
+        // TEMP: server bug workaround, always include body
+        if (protoMessage.getBody() == null)
+            protoMessage.setBody("dummy");
+
         if (sendChatState)
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
 
@@ -110,15 +116,27 @@ final class KonMessageSender {
             protoMessage.addExtension(new E2EEncryption(encryptedData));
         }
 
-        // transmission specific
-        ArrayList<Message> sendMessages = new ArrayList<>();
-        for (Transmission transmission: message.getTransmissions()) {
-            Message sendMessage = protoMessage.clone();
-            JID to = transmission.getJID();
-            if (!to.isValid()) {
-                LOGGER.warning("invalid JID: "+to);
-                return false;
+        List<JID> JIDs = message.getTransmissions().stream()
+                .map(t -> t.getJID())
+                .collect(Collectors.toList());
+
+        String multiAddressHost = mClient.multiAddressHost();
+        if (JIDs.size() > 1 && !multiAddressHost.isEmpty()) {
+            // send one message to multiple receiver using XEP-0033
+            protoMessage.setTo(multiAddressHost);
+            MultipleAddresses addresses = new MultipleAddresses();
+            for (JID to: JIDs) {
+                addresses.addAddress(MultipleAddresses.Type.to, to.string(), null, null, false, null);
             }
+            protoMessage.addExtension(addresses);
+
+            return mClient.sendPacket(protoMessage);
+        }
+
+        // onle one receiver or fallback: send one message to each receiver
+        ArrayList<Message> sendMessages = new ArrayList<>();
+        for (JID to: JIDs) {
+            Message sendMessage = protoMessage.clone();
             sendMessage.setTo(to.string());
             sendMessages.add(sendMessage);
         }

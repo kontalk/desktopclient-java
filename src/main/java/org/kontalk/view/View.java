@@ -333,12 +333,23 @@ public final class View implements Observer {
     /* view internal */
 
     void showChat(Contact contact) {
-        this.selectChat(mControl.getOrCreateSingleChat(contact));
+        this.showChat(mControl.getOrCreateSingleChat(contact));
     }
 
-    private void selectChat(Chat chat) {
+    void showChat(Chat chat) {
+        // show by selecting it
         mMainFrame.selectTab(MainFrame.Tab.CHATS);
         mChatListView.setSelectedItem(chat);
+    }
+
+    void selectedChatChanged(Chat chat) {
+        if (mMainFrame.getCurrentTab() != MainFrame.Tab.CHATS)
+            return;
+        mContent.showChat(chat);
+    }
+
+    void showNothing() {
+        mContent.showNothing();
     }
 
     void showContactDetails(Contact contact) {
@@ -356,16 +367,6 @@ public final class View implements Observer {
 
         this.showContactDetails(contact);
         mContent.requestRenameFocus();
-    }
-
-    void showChat(Chat chat) {
-        if (mMainFrame.getCurrentTab() != MainFrame.Tab.CHATS)
-            return;
-        mContent.showChat(chat);
-    }
-
-    void showNothing() {
-        mContent.showNothing();
     }
 
     void clearSearch() {

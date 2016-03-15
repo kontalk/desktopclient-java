@@ -169,7 +169,16 @@ public final class Kontalk {
             }
         });
 
-        View view = ui ? View.create(control).orElse(null) : null;
+        View view;
+        if (ui) {
+            view = View.create(control).orElse(null);
+            if (view == null) {
+                control.shutDown(false);
+                return 5;
+            }
+        } else {
+            view = null;
+        }
 
         // order matters!
         ContactList.getInstance().load();

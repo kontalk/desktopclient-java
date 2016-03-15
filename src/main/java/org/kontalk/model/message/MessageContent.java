@@ -530,6 +530,10 @@ public class MessageContent {
             return mAdded;
         }
 
+        public boolean isAddingMe() {
+            return mAdded.stream().anyMatch(jid -> jid.isMe());
+        }
+
         public List<JID> getRemoved() {
             return mRemoved;
         }
@@ -550,7 +554,7 @@ public class MessageContent {
                     .collect(Collectors.toList());
             json.put(JSON_ADDED, added);
 
-            List<String> removed = mAdded.stream()
+            List<String> removed = mRemoved.stream()
                     .map(jid -> jid.string())
                     .collect(Collectors.toList());
             json.put(JSON_REMOVED, removed);

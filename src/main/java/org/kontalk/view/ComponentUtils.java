@@ -88,6 +88,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.system.Config;
 import org.kontalk.util.Tr;
@@ -369,8 +370,12 @@ final class ComponentUtils {
         }
 
         private void createGroup() {
-            mView.getControl().createGroupChat(mList.getSelectedContacts(),
-                    mSubjectField.getText());
+            GroupChat newChat = mView.getControl().createGroupChat(
+                    mList.getSelectedContacts(),
+                    mSubjectField.getText()).orElse(null);
+
+            if (newChat != null)
+                mView.showChat(newChat);
 
             mSubjectField.setText("");
         }

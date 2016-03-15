@@ -154,7 +154,13 @@ final class GroupControl {
                 org.jivesoftware.smack.util.StringUtils.randomString(8));
     }
 
-    static Optional<GroupChat> getGroupChat(KonGroupData gData, Contact sender) {
+    static Optional<GroupChat> getGroupChat(MessageContent content, Contact sender) {
+        KonGroupData gData = content.getGroupData().orElse(null);
+        if (gData == null) {
+            LOGGER.warning("message does not contain group data");
+            return Optional.empty();
+        }
+
         ChatList chatList = ChatList.getInstance();
 
         // get old...
@@ -174,8 +180,11 @@ final class GroupControl {
             return Optional.empty();
         }
 
-        // NOTE: the message should include a CREATE or ADD group command
-        // if we are here (but all security checks passed so we continue)
+        GroupCommand command = content.getGroupCommand().orElse(null);
+        if (command == null || !command.isAddingMe()) {
+            LOGGER.warning("ignoring unexpected message of unknown group");
+            return Optional.empty();
+        }
 
         return Optional.of(
                 chatList.create(

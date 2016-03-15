@@ -81,7 +81,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
                     return;
 
                 mView.clearSearch();
-                mView.showChat(chat);
+                mView.selectedChatChanged(chat);
                 lastChat = chat;
             }
         });
