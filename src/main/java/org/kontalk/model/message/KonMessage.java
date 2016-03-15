@@ -21,10 +21,10 @@ package org.kontalk.model.message;
 import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,6 +37,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.Contact;
 import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.util.EncodingUtils;
 
@@ -136,22 +137,21 @@ public abstract class KonMessage extends Observable {
         mServerError = new ServerError();
 
         // insert
-        Database db = Database.getInstance();
-        List<Object> values = new LinkedList<>();
-        values.add(mChat.getID());
-        values.add(Database.setString(mXMPPID));
-        values.add(mDate);
-        values.add(mStatus);
+        List<Object> values = Arrays.asList(
+                mChat.getID(),
+                Database.setString(mXMPPID),
+                mDate,
+                mStatus,
         // i simply don't like to save all possible content explicitly in the
         // database, so we use JSON here
-        values.add(mContent.toJSON());
-        values.add(mCoderStatus.getEncryption());
-        values.add(mCoderStatus.getSigning());
-        values.add(mCoderStatus.getErrors());
-        values.add(mServerError.toJSON());
-        values.add(mServerDate);
+                mContent.toJSON(),
+                mCoderStatus.getEncryption(),
+                mCoderStatus.getSigning(),
+                mCoderStatus.getErrors(),
+                mServerError.toJSON(),
+                mServerDate);
 
-        mID = db.execInsert(TABLE, values);
+        mID = Database.getInstance().execInsert(TABLE, values);
         if (mID <= 0) {
             LOGGER.log(Level.WARNING, "db, could not insert message");
         }
@@ -308,7 +308,9 @@ public abstract class KonMessage extends Observable {
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
-    public static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
+    public static KonMessage load(ResultSet messageRS, Chat chat,
+            Map<Integer, Contact> contactMap)
+            throws SQLException {
         int id = messageRS.getInt("_id");
 
         String xmppID = Database.getString(messageRS, KonMessage.COL_XMPP_ID);
@@ -343,7 +345,7 @@ public abstract class KonMessage extends Observable {
 
         KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date, content);
         // TODO one SQL SELECT for each message, performance? looks ok
-        builder.transmissions(Transmission.load(id));
+        builder.transmissions(Transmission.load(id, contactMap));
         builder.xmppID(xmppID);
         if (serverDate != null)
             builder.serverDate(serverDate);

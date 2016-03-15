@@ -21,16 +21,16 @@ package org.kontalk.model.chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
 import org.kontalk.system.Database;
 
 /**
@@ -130,10 +130,10 @@ public final class Member {
             return true;
         }
 
-        List<Object> recValues = new LinkedList<>();
-        recValues.add(chatID);
-        recValues.add(getContact().getID());
-        recValues.add(mRole);
+        List<Object> recValues = Arrays.asList(
+                chatID,
+                getContact().getID(),
+                mRole);
         mID = Database.getInstance().execInsert(TABLE, recValues);
         if (mID <= 0) {
             LOGGER.warning("could not insert member");
@@ -161,7 +161,8 @@ public final class Member {
             mLastActive = new Date();
     }
 
-    static List<Member> load(int chatID) {
+    /** Load Members of a chat. */
+    static List<Member> load(int chatID, Map<Integer, Contact> contactMap) {
         Database db = Database.getInstance();
         String where = COL_CHAT_ID + " == " + chatID;
         ResultSet resultSet;
@@ -178,7 +179,7 @@ public final class Member {
                 int contactID = resultSet.getInt(COL_CONTACT_ID);
                 int r = resultSet.getInt(COL_ROLE);
                 Role role = Role.values()[r];
-                Contact c = ContactList.getInstance().get(contactID).orElse(null);
+                Contact c = contactMap.get(contactID);
                 if (c == null) {
                     LOGGER.warning("can't find contact, ID:"+contactID);
                     continue;

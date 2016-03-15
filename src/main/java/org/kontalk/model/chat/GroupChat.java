@@ -296,27 +296,30 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         return "GC:id="+mID+",gd="+mGroupData+",subject="+mSubject;
     }
 
-    public static final class KonGroupChat extends GroupChat<GroupMetaData.KonGroupData> {
+    public static final class KonGroupChat extends GroupChat<KonGroupData> {
         private KonGroupChat(List<Member> members, KonGroupData gData, String subject) {
             super(members, gData, subject);
         }
 
-        private KonGroupChat(int id, List<Member> members, KonGroupData gData, String subject, boolean read, String jsonViewSettings) {
+        private KonGroupChat(int id, List<Member> members, KonGroupData gData,
+                String subject, boolean read, String jsonViewSettings) {
             super(id, members, gData, subject, read, jsonViewSettings);
         }
     }
 
-    public static final class MUCChat extends GroupChat<GroupMetaData.MUCData> {
-        private MUCChat(List<Member> members, GroupMetaData.MUCData gData, String subject) {
+    public static final class MUCChat extends GroupChat<MUCData> {
+        private MUCChat(List<Member> members, MUCData gData, String subject) {
             super(members, gData, subject);
         }
 
-        private MUCChat(int id, List<Member> members, GroupMetaData.MUCData gData, String subject, boolean read, String jsonViewSettings) {
+        private MUCChat(int id, List<Member> members, MUCData gData,
+                String subject, boolean read, String jsonViewSettings) {
             super(id, members, gData, subject, read, jsonViewSettings);
         }
     }
 
-    static GroupChat create(int id, List<Member> members, GroupMetaData gData, String subject, boolean read, String jsonViewSettings) {
+    static GroupChat create(int id, List<Member> members,
+            GroupMetaData gData, String subject, boolean read, String jsonViewSettings) {
         return (gData instanceof KonGroupData) ?
                 new KonGroupChat(id, members, (KonGroupData) gData, subject, read, jsonViewSettings) :
                 new MUCChat(id, members, (MUCData) gData, subject, read, jsonViewSettings);

@@ -17,9 +17,9 @@
  */
 package org.kontalk.model;
 
-import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import org.kontalk.misc.JID;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -48,13 +48,12 @@ public final class ContactList extends Observable implements Iterable<Contact> {
     /** JID to contact. Without deleted contacts. */
     private final Map<JID, Contact> mJIDMap =
             Collections.synchronizedMap(new HashMap<JID, Contact>());
-    /** Database ID to contact. With deleted contacts. */
-    private final Map<Integer, Contact> mIDMap =
-            Collections.synchronizedMap(new HashMap<Integer, Contact>());
 
     private ContactList() {}
 
-    public void load() {
+    public Map<Integer, Contact> load() {
+        Map<Integer, Contact> contactMap = new HashMap<>();
+
         Database db = Database.getInstance();
         try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
@@ -68,12 +67,14 @@ public final class ContactList extends Observable implements Iterable<Contact> {
                 if (!contact.isDeleted())
                     mJIDMap.put(jid, contact);
 
-                mIDMap.put(contact.getID(), contact);
+                contactMap.put(contact.getID(), contact);
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load contacts from db", ex);
         }
         this.changed(null);
+
+        return contactMap;
     }
 
     /**
@@ -90,18 +91,9 @@ public final class ContactList extends Observable implements Iterable<Contact> {
             return Optional.empty();
 
         mJIDMap.put(newContact.getJID(), newContact);
-        mIDMap.put(newContact.getID(), newContact);
 
         this.changed(newContact);
         return Optional.of(newContact);
-    }
-
-    public Optional<Contact> get(int id) {
-        Contact contact = mIDMap.get(id);
-        if (contact == null) {
-            LOGGER.warning("can't find contact with ID: " + id);
-        }
-        return Optional.ofNullable(contact);
     }
 
     /**

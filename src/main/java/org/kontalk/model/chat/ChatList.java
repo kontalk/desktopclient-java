@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -48,13 +49,13 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     private ChatList() {}
 
-    public void load() {
+    public void load(Map<Integer, Contact> contactMap) {
         assert mChats.isEmpty();
 
         Database db = Database.getInstance();
         try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
             while (chatRS.next()) {
-                Chat chat = Chat.loadOrNull(chatRS);
+                Chat chat = Chat.loadOrNull(chatRS, contactMap);
                 if (chat == null)
                     continue;
                 this.putSilent(chat);

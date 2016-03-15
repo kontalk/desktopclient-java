@@ -20,10 +20,10 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
@@ -96,23 +96,24 @@ public final class Contact extends Observable {
     Contact(JID jid, String name) {
         mJID = jid;
         mName = name;
-        Database db = Database.getInstance();
-        List<Object> values = new LinkedList<>();
-        values.add(mJID);
-        values.add(mName);
-        values.add(mStatus);
-        values.add(mLastSeen);
-        values.add(mEncrypted);
-        values.add(null); // key
-        values.add(null); // fingerprint
-        values.add(null); // avatar id
-        mID = db.execInsert(TABLE, values);
+
+        // insert
+        List<Object> values = Arrays.asList(
+                mJID,
+                mName,
+                mStatus,
+                mLastSeen,
+                mEncrypted,
+                null, // key
+                null, // fingerprint
+                null); // avatar id
+        mID = Database.getInstance().execInsert(TABLE, values);
         if (mID < 1)
             LOGGER.log(Level.WARNING, "could not insert contact");
     }
 
-    // used for loading contacts from database
-    Contact(int id,
+    // loading from database
+    public Contact(int id,
             JID jid,
             String name,
             String status,

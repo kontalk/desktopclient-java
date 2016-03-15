@@ -26,6 +26,7 @@ import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -41,8 +42,9 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
-import org.kontalk.model.chat.ChatList;
+import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
+import org.kontalk.model.chat.ChatList;
 import org.kontalk.system.Control;
 import org.kontalk.util.CryptoUtils;
 import org.kontalk.util.EncodingUtils;
@@ -181,8 +183,9 @@ public final class Kontalk {
         }
 
         // order matters!
-        ContactList.getInstance().load();
-        ChatList.getInstance().load();
+        // TODO move to somewhere else
+        Map<Integer, Contact> contactMap = ContactList.getInstance().load();
+        ChatList.getInstance().load(contactMap);
 
         if (view != null)
             view.init();

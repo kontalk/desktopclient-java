@@ -22,8 +22,8 @@ import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -79,19 +79,18 @@ public abstract class Chat extends Observable implements Observer {
     private ViewSettings mViewSettings;
 
     protected Chat(List<Member> members, String xmppID, String subject, GroupMetaData gData) {
-        mMessages = new ChatMessages(this, true);
+        mMessages = new ChatMessages();
         mRead = true;
         mViewSettings = new ViewSettings();
 
         // insert
-        Database db = Database.getInstance();
-        List<Object> values = new LinkedList<>();
-        values.add(Database.setString(xmppID));
-        values.add(Database.setString(subject));
-        values.add(mRead);
-        values.add(mViewSettings.toJSONString());
-        values.add(Database.setString(gData == null ? "" : gData.toJSON()));
-        mID = db.execInsert(TABLE, values);
+        List<Object> values = Arrays.asList(
+                Database.setString(xmppID),
+                Database.setString(subject),
+                mRead,
+                mViewSettings.toJSONString(),
+                Database.setString(gData == null ? "" : gData.toJSON()));
+        mID = Database.getInstance().execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert chat");
             return;
@@ -103,9 +102,13 @@ public abstract class Chat extends Observable implements Observer {
     // used when loading from database
     protected Chat(int id, boolean read, String jsonViewSettings) {
         mID = id;
-        mMessages = new ChatMessages(this, false);
+        mMessages = new ChatMessages();
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
+    }
+
+    void loadMessages(Map<Integer, Contact> contactMap) {
+        mMessages.load(this, contactMap);
     }
 
     public ChatMessages getMessages() {
@@ -256,7 +259,8 @@ public abstract class Chat extends Observable implements Observer {
         this.changed(o);
     }
 
-    static Chat loadOrNull(ResultSet rs) throws SQLException {
+    static Chat loadOrNull(ResultSet rs, Map<Integer, Contact> contactMap)
+            throws SQLException {
         int id = rs.getInt("_id");
 
         String jsonGD = Database.getString(rs, Chat.COL_GD);
@@ -266,8 +270,8 @@ public abstract class Chat extends Observable implements Observer {
 
         String xmppID = Database.getString(rs, Chat.COL_XMPPID);
 
-        // get members for chat
-        List<Member> members = Member.load(id);
+        // get members of chat
+        List<Member> members = Member.load(id, contactMap);
 
         String subject = Database.getString(rs, Chat.COL_SUBJ);
 
@@ -276,15 +280,19 @@ public abstract class Chat extends Observable implements Observer {
         String jsonViewSettings = Database.getString(rs,
                 Chat.COL_VIEW_SET);
 
+        Chat chat;
         if (gData != null) {
-            return GroupChat.create(id, members, gData, subject, read, jsonViewSettings);
+            chat = GroupChat.create(id, members, gData, subject, read, jsonViewSettings);
         } else {
             if (members.size() != 1) {
                 LOGGER.warning("not one contact for single chat, id="+id);
                 return null;
             }
-            return new SingleChat(id, members.get(0), xmppID, read, jsonViewSettings);
+            chat = new SingleChat(id, members.get(0), xmppID, read, jsonViewSettings);
         }
+
+        chat.loadMessages(contactMap);
+        return chat;
     }
 
     public static class ViewSettings {
