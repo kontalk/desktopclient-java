@@ -43,21 +43,42 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
-    private static final ContactList INSTANCE = new ContactList();
+    private static ContactList INSTANCE = null;
 
+    private final Database mDB;
     /** JID to contact. Without deleted contacts. */
     private final Map<JID, Contact> mJIDMap =
             Collections.synchronizedMap(new HashMap<JID, Contact>());
 
-    private ContactList() {}
+    private ContactList(Database db) {
+        mDB = db;
+    }
 
-    public Map<Integer, Contact> load() {
+    public static ContactList initialize(Database db) {
+        if (INSTANCE != null) {
+            LOGGER.warning("already initialized");
+            return INSTANCE;
+        }
+
+        return INSTANCE = new ContactList(db);
+    }
+
+    // TODO
+    public static ContactList getInstance() {
+        if (INSTANCE == null)
+            throw new IllegalStateException("not initialized");
+
+        return INSTANCE;
+    }
+
+    public Map<Integer, Contact> load(Database db) {
+        assert mJIDMap.isEmpty();
+
         Map<Integer, Contact> contactMap = new HashMap<>();
 
-        Database db = Database.getInstance();
         try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
-                Contact contact = Contact.load(resultSet);
+                Contact contact = Contact.load(db, resultSet);
 
                 JID jid = contact.getJID();
                 if (mJIDMap.containsKey(jid)) {
@@ -77,16 +98,14 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         return contactMap;
     }
 
-    /**
-     * Create and add a new contact.
-     */
+    /** Create and add a new contact. */
     public Optional<Contact> create(JID jid, String name) {
         jid = jid.toBare();
 
         if (!this.isValid(jid))
             return Optional.empty();
 
-        Contact newContact = new Contact(jid, name);
+        Contact newContact = new Contact(mDB, jid, name);
         if (newContact.getID() < 1)
             return Optional.empty();
 
@@ -182,9 +201,5 @@ public final class ContactList extends Observable implements Iterable<Contact> {
     @Override
     public Iterator<Contact> iterator() {
         return mJIDMap.values().iterator();
-    }
-
-    public static ContactList getInstance() {
-        return INSTANCE;
     }
 }

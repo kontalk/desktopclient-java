@@ -43,9 +43,11 @@ public final class AvatarHandler {
     private static final int MAX_SIZE = 1024 * 250;
 
     private final Client mClient;
+    private final ContactList mContactList;
 
-    AvatarHandler(Client client) {
+    AvatarHandler(Client client, ContactList contactList) {
         mClient = client;
+        mContactList = contactList;
 
         Avatar.createDir();
     }
@@ -55,7 +57,7 @@ public final class AvatarHandler {
             // disabled by user
             return;
 
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mContactList.get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid:" + jid);
             return;
@@ -80,7 +82,7 @@ public final class AvatarHandler {
         if (avatarData.length > MAX_SIZE)
             LOGGER.info("avatar data too long: "+avatarData.length);
 
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mContactList.get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid:" + jid);
             return;

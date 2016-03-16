@@ -106,6 +106,7 @@ public abstract class KonMessage extends Observable {
             "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id) " +
             ")";
 
+    private final Database mDB;
     protected final int mID;
     private final Chat mChat;
     private final String mXMPPID;
@@ -120,12 +121,14 @@ public abstract class KonMessage extends Observable {
     protected CoderStatus mCoderStatus;
     protected ServerError mServerError;
 
-    protected KonMessage(Chat chat,
+    protected KonMessage(Database db,
+            Chat chat,
             String xmppID,
             MessageContent content,
             Optional<Date> serverDate,
             Status status,
             CoderStatus coderStatus) {
+        mDB = db;
         mChat = chat;
         mXMPPID = xmppID;
         mDate = new Date();
@@ -151,14 +154,15 @@ public abstract class KonMessage extends Observable {
                 mServerError.toJSON(),
                 mServerDate);
 
-        mID = Database.getInstance().execInsert(TABLE, values);
+        mID = mDB.execInsert(TABLE, values);
         if (mID <= 0) {
             LOGGER.log(Level.WARNING, "db, could not insert message");
         }
     }
 
     // used when loading from database
-    protected KonMessage(Builder builder) {
+    protected KonMessage(Database db, Builder builder) {
+        mDB = db;
         mID = builder.mID;
         mChat = builder.mChat;
         mXMPPID = builder.mXMPPID;
@@ -247,8 +251,7 @@ public abstract class KonMessage extends Observable {
         return mCoderStatus.isEncrypted();
     }
 
-    public void save() {
-        Database db = Database.getInstance();
+    protected void save() {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_STATUS, mStatus);
         set.put(COL_CONTENT, mContent.toJSON());
@@ -257,7 +260,7 @@ public abstract class KonMessage extends Observable {
         set.put(COL_COD_ERR, mCoderStatus.getErrors());
         set.put(COL_SERV_ERR, Database.setString(mServerError.toJSON()));
         set.put(COL_SERV_DATE, mServerDate);
-        db.execUpdate(TABLE, set, mID);
+        mDB.execUpdate(TABLE, set, mID);
     }
 
     public boolean delete() {
@@ -269,7 +272,7 @@ public abstract class KonMessage extends Observable {
             LOGGER.warning("not in database: "+this);
             return true;
         }
-        return Database.getInstance().execDelete(TABLE, mID);
+        return mDB.execDelete(TABLE, mID);
     }
 
     protected void changed(Object arg) {
@@ -308,7 +311,7 @@ public abstract class KonMessage extends Observable {
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
-    public static KonMessage load(ResultSet messageRS, Chat chat,
+    public static KonMessage load(Database db, ResultSet messageRS, Chat chat,
             Map<Integer, Contact> contactMap)
             throws SQLException {
         int id = messageRS.getInt("_id");
@@ -345,14 +348,14 @@ public abstract class KonMessage extends Observable {
 
         KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date, content);
         // TODO one SQL SELECT for each message, performance? looks ok
-        builder.transmissions(Transmission.load(id, contactMap));
+        builder.transmissions(Transmission.load(db, id, contactMap));
         builder.xmppID(xmppID);
         if (serverDate != null)
             builder.serverDate(serverDate);
         builder.coderStatus(coderStatus);
         builder.serverError(serverError);
 
-        return builder.build();
+        return builder.build(db);
     }
 
     public static final class ServerError {
@@ -426,7 +429,7 @@ public abstract class KonMessage extends Observable {
         private void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
         private void serverError(ServerError error) { mServerError = error; }
 
-        private KonMessage build() {
+        private KonMessage build(Database db) {
             if (mTransmissions == null ||
                     mXMPPID == null ||
                     mCoderStatus == null ||
@@ -434,9 +437,9 @@ public abstract class KonMessage extends Observable {
                 throw new IllegalStateException();
 
             if (mStatus == Status.IN)
-                return new InMessage(this);
+                return new InMessage(db, this);
             else
-                return new OutMessage(this);
+                return new OutMessage(db, this);
         }
     }
 }

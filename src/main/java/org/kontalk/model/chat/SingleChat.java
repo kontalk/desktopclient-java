@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Contact;
+import org.kontalk.system.Database;
 
 /**
  *
@@ -36,8 +37,8 @@ public final class SingleChat extends Chat {
     private final Member mMember;
     private final String mXMPPID;
 
-    SingleChat(Member member, String xmppID) {
-        super(Arrays.asList(member), xmppID, "", null);
+    SingleChat(Database db, Member member, String xmppID) {
+        super(db, Arrays.asList(member), xmppID, "", null);
 
         mMember = member;
         // NOTE: Kontalk Android client is ignoring the chat XMPP-ID
@@ -46,13 +47,14 @@ public final class SingleChat extends Chat {
     }
 
     // used when loading from database
-    SingleChat(int id,
+    SingleChat(Database db,
+            int id,
             Member member,
             String xmppID,
             boolean read,
             String jsonViewSettings
             ) {
-        super(id, read, jsonViewSettings);
+        super(db, id, read, jsonViewSettings);
 
         mMember = member;
         mXMPPID = xmppID;

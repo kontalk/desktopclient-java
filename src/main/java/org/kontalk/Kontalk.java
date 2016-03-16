@@ -18,15 +18,12 @@
 
 package org.kontalk;
 
-import org.kontalk.misc.KonException;
-import org.kontalk.system.Database;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Map;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
@@ -42,9 +39,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
-import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
-import org.kontalk.model.chat.ChatList;
+import org.kontalk.misc.KonException;
 import org.kontalk.system.Control;
 import org.kontalk.util.CryptoUtils;
 import org.kontalk.util.EncodingUtils;
@@ -151,15 +146,13 @@ public final class Kontalk {
         // register provider
         PGPUtils.registerProvider();
 
+        Control.ViewControl control;
         try {
-            // do now to test if successful
-            Database.ensureInitialized();
+            control = Control.create(mAppDir);
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't initialize database", ex);
             return 5;
         }
-
-        final Control.ViewControl control = Control.create();
 
         // handle shutdown signals
         Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
@@ -181,11 +174,6 @@ public final class Kontalk {
         } else {
             view = null;
         }
-
-        // order matters!
-        // TODO move to somewhere else
-        Map<Integer, Contact> contactMap = ContactList.getInstance().load();
-        ChatList.getInstance().load(contactMap);
 
         if (view != null)
             view.init();

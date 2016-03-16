@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -84,6 +85,10 @@ public final class Control {
 
     private final ViewControl mViewControl;
 
+    private final Database mDB;
+    private final ContactList mContactList;
+    private final ChatList mChatList;
+
     private final Client mClient;
     private final ChatStateManager mChatStateManager;
     private final AttachmentManager mAttachmentManager;
@@ -93,8 +98,18 @@ public final class Control {
 
     private boolean mShuttingDown = false;
 
-    private Control() {
+    private Control(Path appDir) throws KonException {
         mViewControl = new ViewControl();
+
+        try {
+            mDB = new Database(appDir);
+        } catch (KonException ex) {
+            LOGGER.log(Level.SEVERE, "can't initialize database", ex);
+            throw ex;
+        }
+
+        mContactList = ContactList.initialize(mDB);
+        mChatList = ChatList.initialize(mDB);
 
         mClient = Client.create(this);
         mChatStateManager = new ChatStateManager(mClient);
@@ -102,6 +117,10 @@ public final class Control {
         mRosterHandler = new RosterHandler(this, mClient);
         mAvatarHandler = new AvatarHandler(mClient);
         mGroupControl = new GroupControl(this);
+    }
+
+    public static ViewControl create(Path appDir) throws KonException {
+        return new Control(appDir).mViewControl;
     }
 
     public RosterHandler getRosterHandler() {
@@ -191,7 +210,8 @@ public final class Control {
             return;
         }
 
-        InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
+        // TODO move
+        InMessage newMessage = new InMessage(mDB, protoMessage, chat, ids.jid,
                 ids.xmppID, serverDate);
 
         if (newMessage.getID() <= 0)
@@ -347,7 +367,8 @@ public final class Control {
             return false;
         }
 
-        OutMessage newMessage = new OutMessage(chat, contacts, content,
+        // TODO move
+        OutMessage newMessage = new OutMessage(mDB, chat, contacts, content,
                 chat.isSendEncrypted());
         if (newMessage.getContent().getAttachment().isPresent())
             mAttachmentManager.createImagePreview(newMessage);
@@ -499,12 +520,6 @@ public final class Control {
         }
     }
 
-    /* static */
-
-    public static ViewControl create() {
-        return new Control().mViewControl;
-    }
-
     private static Optional<OutMessage> findMessage(MessageIDs ids) {
         ChatList cl = ChatList.getInstance();
 
@@ -536,6 +551,11 @@ public final class Control {
     public class ViewControl extends Observable {
 
         public void launch() {
+
+            // order matters!
+            Map<Integer, Contact> contactMap = mContactList.load(mDB);
+            mChatList.load(mDB, contactMap);
+
             boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
             if (!Account.getInstance().isPresent()) {
                 LOGGER.info("no account found, asking for import...");
@@ -560,7 +580,7 @@ public final class Control {
             this.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
                     EnumSet.noneOf(Client.ServerFeature.class)));
             try {
-                Database.getInstance().close();
+                mDB.close();
             } catch (RuntimeException ex) {
                 LOGGER.log(Level.WARNING, "can't close database", ex);
             }

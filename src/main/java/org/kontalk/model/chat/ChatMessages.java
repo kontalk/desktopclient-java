@@ -58,13 +58,11 @@ public final class ChatMessages {
     ChatMessages() {
     }
 
-    void load(Chat chat, Map<Integer, Contact> contactMap) {
-        Database db = Database.getInstance();
-
+    void load(Database db, Chat chat, Map<Integer, Contact> contactMap) {
         try (ResultSet messageRS = db.execSelectWhereInsecure(KonMessage.TABLE,
                 KonMessage.COL_CHAT_ID + " == " + chat.getID())) {
             while (messageRS.next()) {
-                KonMessage message = KonMessage.load(messageRS, chat, contactMap);
+                KonMessage message = KonMessage.load(db, messageRS, chat, contactMap);
                 if (message.getTransmissions().isEmpty())
                     // ignore broken message
                     continue;

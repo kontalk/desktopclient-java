@@ -78,6 +78,7 @@ public final class Contact extends Observable {
             COL_AVATAR_ID + " TEXT" +
             ")";
 
+    private final Database mDB;
     private final int mID;
     private JID mJID;
     private String mName;
@@ -92,8 +93,9 @@ public final class Contact extends Observable {
     //private ItemType mType;
     private Avatar mAvatar = null;
 
-    // used for creating new contacts (eg from roster)
-    Contact(JID jid, String name) {
+    // new contact (eg from roster)
+    Contact(Database db, JID jid, String name) {
+        mDB = db;
         mJID = jid;
         mName = name;
 
@@ -107,13 +109,14 @@ public final class Contact extends Observable {
                 null, // key
                 null, // fingerprint
                 null); // avatar id
-        mID = Database.getInstance().execInsert(TABLE, values);
+        mID = mDB.execInsert(TABLE, values);
         if (mID < 1)
             LOGGER.log(Level.WARNING, "could not insert contact");
     }
 
     // loading from database
-    public Contact(int id,
+    public Contact(Database db,
+            int id,
             JID jid,
             String name,
             String status,
@@ -122,6 +125,7 @@ public final class Contact extends Observable {
             String publicKey,
             String fingerprint,
             String avatarID) {
+        mDB = db;
         mID = id;
         mJID = jid;
         mName = name;
@@ -323,7 +327,6 @@ public final class Contact extends Observable {
     }
 
     private void save() {
-        Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
         set.put(COL_NAME, mName);
@@ -333,7 +336,7 @@ public final class Contact extends Observable {
         set.put(COL_PUB_KEY, Database.setString(mKey));
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
         set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.getID() : ""));
-        db.execUpdate(TABLE, set, mID);
+        mDB.execUpdate(TABLE, set, mID);
     }
 
     private void changed(Object arg) {
@@ -365,7 +368,7 @@ public final class Contact extends Observable {
                 +",subsc="+mSubStatus;
     }
 
-    static Contact load(ResultSet rs) throws SQLException {
+    static Contact load(Database db, ResultSet rs) throws SQLException {
         int id = rs.getInt("_id");
         JID jid = JID.bare(rs.getString(Contact.COL_JID));
 
@@ -378,6 +381,7 @@ public final class Contact extends Observable {
         String fp = Database.getString(rs, Contact.COL_KEY_FP);
         String avatarID = Database.getString(rs, Contact.COL_AVATAR_ID);
 
-        return new Contact(id, jid, name, status, Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
+        return new Contact(db, id, jid, name, status,
+                Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
     }
 }

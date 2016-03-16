@@ -124,7 +124,7 @@ public final class Member {
         return mState;
     }
 
-    boolean insert(int chatID) {
+    boolean insert(Database db, int chatID) {
         if (mID > 0) {
             LOGGER.warning("already in database");
             return true;
@@ -134,7 +134,7 @@ public final class Member {
                 chatID,
                 getContact().getID(),
                 mRole);
-        mID = Database.getInstance().execInsert(TABLE, recValues);
+        mID = db.execInsert(TABLE, recValues);
         if (mID <= 0) {
             LOGGER.warning("could not insert member");
             return false;
@@ -142,17 +142,17 @@ public final class Member {
         return true;
     }
 
-    void save() {
+    void save(Database db) {
         // TODO
     }
 
-    boolean delete() {
+    boolean delete(Database db) {
         if (mID <= 0) {
             LOGGER.warning("not in database");
             return true;
         }
 
-        return Database.getInstance().execDelete(TABLE, mID);
+        return db.execDelete(TABLE, mID);
     }
 
     protected void setState(ChatState state) {
@@ -162,8 +162,7 @@ public final class Member {
     }
 
     /** Load Members of a chat. */
-    static List<Member> load(int chatID, Map<Integer, Contact> contactMap) {
-        Database db = Database.getInstance();
+    static List<Member> load(Database db, int chatID, Map<Integer, Contact> contactMap) {
         String where = COL_CHAT_ID + " == " + chatID;
         ResultSet resultSet;
         try {

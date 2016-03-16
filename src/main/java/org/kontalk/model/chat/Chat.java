@@ -70,6 +70,7 @@ public abstract class Chat extends Observable implements Observer {
             COL_GD+" TEXT " +
             ")";
 
+    private final Database mDB;
     protected final int mID;
     private final ChatMessages mMessages;
 
@@ -78,7 +79,8 @@ public abstract class Chat extends Observable implements Observer {
 
     private ViewSettings mViewSettings;
 
-    protected Chat(List<Member> members, String xmppID, String subject, GroupMetaData gData) {
+    protected Chat(Database db, List<Member> members, String xmppID, String subject, GroupMetaData gData) {
+        mDB = db;
         mMessages = new ChatMessages();
         mRead = true;
         mViewSettings = new ViewSettings();
@@ -90,25 +92,26 @@ public abstract class Chat extends Observable implements Observer {
                 mRead,
                 mViewSettings.toJSONString(),
                 Database.setString(gData == null ? "" : gData.toJSON()));
-        mID = Database.getInstance().execInsert(TABLE, values);
+        mID = mDB.execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert chat");
             return;
         }
 
-        members.stream().forEach(member -> member.insert(mID));
+        members.stream().forEach(member -> member.insert(mDB, mID));
     }
 
     // used when loading from database
-    protected Chat(int id, boolean read, String jsonViewSettings) {
+    protected Chat(Database db, int id, boolean read, String jsonViewSettings) {
+        mDB = db;
         mID = id;
         mMessages = new ChatMessages();
         mRead = read;
         mViewSettings = new ViewSettings(this, jsonViewSettings);
     }
 
-    void loadMessages(Map<Integer, Contact> contactMap) {
-        mMessages.load(this, contactMap);
+    void loadMessages(Database db, Map<Integer, Contact> contactMap) {
+        mMessages.load(db, this, contactMap);
     }
 
     public ChatMessages getMessages() {
@@ -200,13 +203,12 @@ public abstract class Chat extends Observable implements Observer {
     abstract void save();
 
     protected void save(List<Member> members, String subject) {
-        Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(subject));
         set.put(COL_READ, mRead);
         set.put(COL_VIEW_SET, mViewSettings.toJSONString());
 
-        db.execUpdate(TABLE, set, mID);
+        mDB.execUpdate(TABLE, set, mID);
 
         // get receiver for this chat
         List<Member> oldMembers = new ArrayList<>(this.getAllMembers());
@@ -214,31 +216,29 @@ public abstract class Chat extends Observable implements Observer {
         // save new members
         members.stream()
                 .filter(m -> !oldMembers.contains(m))
-                .forEach(m -> m.insert(mID));
+                .forEach(m -> m.insert(mDB, mID));
 
         oldMembers.removeAll(members);
         // whats left is too much and can be deleted
-        oldMembers.stream().forEach(m -> m.delete());
+        oldMembers.stream().forEach(m -> m.delete(mDB));
     }
 
     void delete() {
-        Database db = Database.getInstance();
-
         // messages
-        boolean succ = this.getMessages().getAll().stream().allMatch(m -> m.delete());
+        boolean succ = mMessages.getAll().stream().allMatch(m -> m.delete());
         if (!succ)
             return;
 
         // members
-        succ = this.getAllMembers().stream().allMatch(m -> m.delete());
+        succ = this.getAllMembers().stream().allMatch(m -> m.delete(mDB));
         if (!succ)
             return;
 
         // chat itself
-        db.execDelete(TABLE, mID);
+        mDB.execDelete(TABLE, mID);
 
         // all done, commmit deletions
-        succ = db.commit();
+        succ = mDB.commit();
         if (!succ)
             return;
 
@@ -259,7 +259,7 @@ public abstract class Chat extends Observable implements Observer {
         this.changed(o);
     }
 
-    static Chat loadOrNull(ResultSet rs, Map<Integer, Contact> contactMap)
+    static Optional<Chat> load(Database db, ResultSet rs, Map<Integer, Contact> contactMap)
             throws SQLException {
         int id = rs.getInt("_id");
 
@@ -271,7 +271,7 @@ public abstract class Chat extends Observable implements Observer {
         String xmppID = Database.getString(rs, Chat.COL_XMPPID);
 
         // get members of chat
-        List<Member> members = Member.load(id, contactMap);
+        List<Member> members = Member.load(db, id, contactMap);
 
         String subject = Database.getString(rs, Chat.COL_SUBJ);
 
@@ -282,17 +282,17 @@ public abstract class Chat extends Observable implements Observer {
 
         Chat chat;
         if (gData != null) {
-            chat = GroupChat.create(id, members, gData, subject, read, jsonViewSettings);
+            chat = GroupChat.create(db, id, members, gData, subject, read, jsonViewSettings);
         } else {
             if (members.size() != 1) {
                 LOGGER.warning("not one contact for single chat, id="+id);
-                return null;
+                return Optional.empty();
             }
-            chat = new SingleChat(id, members.get(0), xmppID, read, jsonViewSettings);
+            chat = new SingleChat(db, id, members.get(0), xmppID, read, jsonViewSettings);
         }
 
-        chat.loadMessages(contactMap);
-        return chat;
+        chat.loadMessages(db, contactMap);
+        return Optional.of(chat);
     }
 
     public static class ViewSettings {
