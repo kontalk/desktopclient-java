@@ -146,39 +146,15 @@ public final class Kontalk {
         // register provider
         PGPUtils.registerProvider();
 
-        Control.ViewControl control;
+        Control control;
         try {
             control = Control.create(mAppDir);
         } catch (KonException ex) {
-            LOGGER.log(Level.SEVERE, "can't initialize database", ex);
+            LOGGER.log(Level.SEVERE, "can't create application", ex);
             return 5;
         }
 
-        // handle shutdown signals
-        Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
-            @Override
-            public void run() {
-                // NOTE: logging does not work here anymore
-                control.shutDown(false);
-                System.out.println("Kontalk: shutdown finished");
-            }
-        });
-
-        View view;
-        if (ui) {
-            view = View.create(control).orElse(null);
-            if (view == null) {
-                control.shutDown(false);
-                return 5;
-            }
-        } else {
-            view = null;
-        }
-
-        if (view != null)
-            view.init();
-
-        control.launch();
+        control.launch(ui);
 
         return 0;
     }

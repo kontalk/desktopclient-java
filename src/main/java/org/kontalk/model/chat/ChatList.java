@@ -41,40 +41,21 @@ import org.kontalk.system.Database;
 public final class ChatList extends Observable implements Observer, Iterable<Chat> {
     private static final Logger LOGGER = Logger.getLogger(ChatList.class.getName());
 
-    private static ChatList INSTANCE = null;
-
     private final Database mDB;
     private final Set<Chat> mChats = Collections.synchronizedSet(new HashSet<Chat>());
 
     private boolean mUnread = false;
 
-    private ChatList(Database db) {
+    public ChatList(Database db) {
         mDB = db;
     }
 
-    public static ChatList initialize(Database db) {
-        if (INSTANCE != null) {
-            LOGGER.warning("already initialized");
-            return INSTANCE;
-        }
-
-        return INSTANCE = new ChatList(db);
-    }
-
-    // TODO
-    public static ChatList getInstance() {
-        if (INSTANCE == null)
-            throw new IllegalStateException("not initialized");
-
-        return INSTANCE;
-    }
-
-    public void load(Database db, Map<Integer, Contact> contactMap) {
+    public void load(Map<Integer, Contact> contactMap) {
         assert mChats.isEmpty();
 
-        try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
+        try (ResultSet chatRS = mDB.execSelectAll(Chat.TABLE)) {
             while (chatRS.next()) {
-                Chat chat = Chat.load(db, chatRS, contactMap).orElse(null);
+                Chat chat = Chat.load(mDB, chatRS, contactMap).orElse(null);
                 if (chat == null)
                     continue;
                 this.putSilent(chat);

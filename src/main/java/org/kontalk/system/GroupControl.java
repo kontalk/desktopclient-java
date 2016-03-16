@@ -18,14 +18,15 @@
 
 package org.kontalk.system;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.kontalk.misc.JID;
-import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
@@ -34,6 +35,7 @@ import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 
 /**
+ * Control logic for group chat management.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -41,9 +43,11 @@ final class GroupControl {
     private static final Logger LOGGER = Logger.getLogger(GroupControl.class.getName());
 
     private final Control mControl;
+    private final Model mModel;
 
-    GroupControl(Control control) {
+    GroupControl(Control control, Model model) {
         mControl = control;
+        mModel = model;
     }
 
     abstract class ChatControl<C extends GroupChat> {
@@ -127,21 +131,60 @@ final class GroupControl {
                 }
             }
 
-            if (op == MessageContent.GroupCommand.OP.CREATE ||
-                    op == MessageContent.GroupCommand.OP.SET) {
-                // add contacts if necessary
-                // TODO design problem here: we need at least the public keys, but user
-                // might dont wanna have group members in contact list
-                command.getAdded().stream().forEach(jid -> {
-                    boolean succ = mControl.getOrCreateContact(jid).isPresent();
-                    if (!succ)
-                        LOGGER.warning("can't create contact, JID: "+jid);
-                });
+            // apply group command
+            List<Member> added = new ArrayList<>();
+            List<Member> removed = new ArrayList<>();
+            String subject = "";
+
+            switch(command.getOperation()) {
+                case CREATE:
+                    //assert mMemberSet.size() == 1;
+                    //assert mMemberSet.contains(new Member(sender));
+                    added.addAll(JIDsToMembers(command.getAdded()));
+                    if (!added.stream().anyMatch(m -> m.getContact().isMe()))
+                        LOGGER.warning("user not included in new chat");
+
+                    subject = command.getSubject();
+                    break;
+                case LEAVE:
+                    removed.add(new Member(sender));
+                    break;
+                case SET:
+                    added.addAll(JIDsToMembers(command.getAdded()));
+                    for (JID jid : command.getRemoved()) {
+                        Contact contact = mModel.contacts().get(jid).orElse(null);
+                        if (contact == null) {
+                            LOGGER.warning("can't get removed contact, jid="+jid);
+                            continue;
+                        }
+                        removed.add(new Member(contact));
+                    }
+                    subject = command.getSubject();
+                    break;
+                default:
+                    LOGGER.warning("unhandled operation: "+command.getOperation());
             }
 
-            mChat.applyGroupCommand(command, sender);
+            mChat.applyGroupChanges(added, removed, subject);
         }
     }
+
+    private List<Member> JIDsToMembers(List<JID> jids) {
+        List<Member> members = new ArrayList<>();
+        for (JID jid: jids) {
+            // add contacts if necessary
+            // TODO design problem here: we need at least the public keys, but user
+            // might dont wanna have group members in contact list
+            Contact contact = mControl.getOrCreateContact(jid).orElse(null);
+            if (contact == null) {
+                LOGGER.warning("can't get contact, jid: "+jid);
+                continue;
+            }
+            members.add(new Member(contact));
+        }
+        return members;
+    }
+
 
     ChatControl getInstanceFor(GroupChat chat) {
         if (chat instanceof KonGroupChat)
@@ -149,22 +192,15 @@ final class GroupControl {
         throw new IllegalArgumentException("Not implemented for "+chat);
     }
 
-    static KonGroupData newKonGroupData(JID myJID) {
-        return new KonGroupData(myJID,
-                org.jivesoftware.smack.util.StringUtils.randomString(8));
-    }
-
-    static Optional<GroupChat> getGroupChat(MessageContent content, Contact sender) {
+    Optional<GroupChat> getGroupChat(MessageContent content, Contact sender) {
         KonGroupData gData = content.getGroupData().orElse(null);
         if (gData == null) {
             LOGGER.warning("message does not contain group data");
             return Optional.empty();
         }
 
-        ChatList chatList = ChatList.getInstance();
-
         // get old...
-        GroupChat chat = chatList.get(gData).orElse(null);
+        GroupChat chat = mModel.chats().get(gData).orElse(null);
         if (chat != null) {
             if (!chat.getAllContacts().contains(sender)) {
                 LOGGER.warning("chat does not include sender: "+chat);
@@ -187,8 +223,13 @@ final class GroupControl {
         }
 
         return Optional.of(
-                chatList.create(
+                mModel.chats().create(
                         Arrays.asList(new Member(sender, Member.Role.OWNER)),
                         gData));
+    }
+
+    static KonGroupData newKonGroupData(JID myJID) {
+        return new KonGroupData(myJID,
+                org.jivesoftware.smack.util.StringUtils.randomString(8));
     }
 }

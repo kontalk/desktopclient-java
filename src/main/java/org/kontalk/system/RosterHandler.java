@@ -30,8 +30,8 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Model;
 
 /**
  * Process incoming roster and presence changes.
@@ -43,6 +43,7 @@ public final class RosterHandler {
 
     private final Control mControl;
     private final Client mClient;
+    private final Model mModel;
 
     private static final List<String> KEY_SERVERS = Arrays.asList(
             "pgp.mit.edu"
@@ -54,16 +55,17 @@ public final class RosterHandler {
         SERVER_NOT_FOUND
     }
 
-    RosterHandler(Control control, Client client) {
+    RosterHandler(Control control, Client client, Model model) {
         mControl = control;
         mClient = client;
+        mModel = model;
     }
 
     public void onEntryAdded(JID jid,
             String name,
             RosterPacket.ItemType type,
             RosterPacket.ItemStatus itemStatus) {
-        if (ContactList.getInstance().contains(jid)) {
+        if (mModel.contacts().contains(jid)) {
             this.onEntryUpdate(jid, name, type, itemStatus);
             return;
         }
@@ -88,7 +90,7 @@ public final class RosterHandler {
 
     public void onEntryDeleted(JID jid) {
         // note: also called on rename
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
@@ -101,7 +103,7 @@ public final class RosterHandler {
             String name,
             RosterPacket.ItemType type,
             RosterPacket.ItemStatus itemStatus) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
@@ -115,7 +117,7 @@ public final class RosterHandler {
     }
 
     public void onSubscriptionRequest(JID jid, byte[] rawKey) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null)
             return;
 
@@ -131,11 +133,11 @@ public final class RosterHandler {
     }
 
     public void onPresenceUpdate(JID jid, Presence.Type type, String status) {
-        if (this.isMe(jid) && !ContactList.getInstance().contains(jid))
+        if (this.isMe(jid) && !mModel.contacts().contains(jid))
             // don't wanna see myself
             return;
 
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
@@ -144,7 +146,7 @@ public final class RosterHandler {
     }
 
     public void onFingerprintPresence(JID jid, String fingerprint) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
@@ -159,7 +161,7 @@ public final class RosterHandler {
 
     // TODO key IDs can be forged, searching by it is defective by design
     public void onSignaturePresence(JID jid, String signature) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
@@ -214,7 +216,7 @@ public final class RosterHandler {
             return;
         }
 
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+jid);
             return;

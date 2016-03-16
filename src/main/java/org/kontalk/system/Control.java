@@ -27,7 +27,6 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -49,11 +48,10 @@ import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.OutMessage;
-import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Avatar;
+import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.message.MessageContent.Attachment;
@@ -62,6 +60,7 @@ import org.kontalk.model.message.ProtoMessage;
 import org.kontalk.model.chat.SingleChat;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
+import org.kontalk.view.View;
 
 /**
  * Application control logic.
@@ -86,10 +85,8 @@ public final class Control {
     private final ViewControl mViewControl;
 
     private final Database mDB;
-    private final ContactList mContactList;
-    private final ChatList mChatList;
-
     private final Client mClient;
+    private final Model mModel;
     private final ChatStateManager mChatStateManager;
     private final AttachmentManager mAttachmentManager;
     private final RosterHandler mRosterHandler;
@@ -108,19 +105,54 @@ public final class Control {
             throw ex;
         }
 
-        mContactList = ContactList.initialize(mDB);
-        mChatList = ChatList.initialize(mDB);
+        mModel = new Model(mDB);
 
         mClient = Client.create(this);
         mChatStateManager = new ChatStateManager(mClient);
         mAttachmentManager = AttachmentManager.create(this);
-        mRosterHandler = new RosterHandler(this, mClient);
-        mAvatarHandler = new AvatarHandler(mClient);
-        mGroupControl = new GroupControl(this);
+        mRosterHandler = new RosterHandler(this, mClient, mModel);
+        mAvatarHandler = new AvatarHandler(mClient, mModel);
+        mGroupControl = new GroupControl(this, mModel);
     }
 
-    public static ViewControl create(Path appDir) throws KonException {
-        return new Control(appDir).mViewControl;
+    public static Control create(Path appDir) throws KonException {
+        Control control = new Control(appDir);
+
+        // handle shutdown signals
+        Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
+            @Override
+            public void run() {
+                // NOTE: logging does not work here anymore
+                control.mViewControl.shutDown(false);
+                System.out.println("Kontalk: shutdown finished");
+            }
+        });
+
+        return control;
+    }
+
+    public void launch(boolean ui) {
+
+        mModel.load();
+
+        if (ui) {
+            View view = View.create(mViewControl, mModel).orElse(null);
+            if (view == null) {
+                mViewControl.shutDown(false);
+                return;
+            }
+            view.init();
+        }
+
+        boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
+        if (!Account.getInstance().isPresent()) {
+            LOGGER.info("no account found, asking for import...");
+            mViewControl.changed(new ViewEvent.MissingAccount(connect));
+            return;
+        }
+
+        if (connect)
+            mViewControl.connect();
     }
 
     public RosterHandler getRosterHandler() {
@@ -144,18 +176,18 @@ public final class Control {
             String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
             mClient.sendUserPresence(strings.length > 0 ? strings[0] : "");
             // send all pending messages
-            for (Chat chat: ChatList.getInstance())
+            for (Chat chat: mModel.chats())
                 chat.getMessages().getPending().stream()
                         .forEach(m -> this.sendMessage(m));
 
             // send public key requests for Kontalk contacts with missing key
-            for (Contact contact : ContactList.getInstance())
+            for (Contact contact : mModel.contacts())
                 if (contact.getFingerprint().isEmpty())
                     this.maySendKeyRequest(contact);
 
             // TODO check current user avatar on server and upload if necessary
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
-            for (Contact contact : ContactList.getInstance())
+            for (Contact contact : mModel.contacts())
                 contact.setOffline();
         }
     }
@@ -203,8 +235,8 @@ public final class Control {
 
         // NOTE: decryption must be successful to select group chat
         Chat chat = content.getGroupData().isPresent() ?
-                GroupControl.getGroupChat(content, sender).orElse(null) :
-                ChatList.getInstance().getOrCreate(sender, ids.xmppThreadID);
+                mGroupControl.getGroupChat(content, sender).orElse(null) :
+                mModel.chats().getOrCreate(sender, ids.xmppThreadID);
         if (chat == null) {
             LOGGER.warning("no chat found, message lost: "+protoMessage);
             return;
@@ -243,7 +275,7 @@ public final class Control {
     }
 
     public void onMessageSent(MessageIDs ids) {
-        OutMessage message = findMessage(ids).orElse(null);
+        OutMessage message = this.findMessage(ids).orElse(null);
         if (message == null)
             return;
 
@@ -251,7 +283,7 @@ public final class Control {
     }
 
     public void onMessageReceived(MessageIDs ids) {
-        OutMessage message = findMessage(ids).orElse(null);
+        OutMessage message = this.findMessage(ids).orElse(null);
         if (message == null)
             return;
 
@@ -259,7 +291,7 @@ public final class Control {
     }
 
     public void onMessageError(MessageIDs ids, Condition condition, String errorText) {
-        OutMessage message = findMessage(ids).orElse(null);
+        OutMessage message = this.findMessage(ids).orElse(null);
         if (message == null)
             return ;
         message.setServerError(condition.toString(), errorText);
@@ -278,13 +310,13 @@ public final class Control {
                 return;
             }
         }
-        Contact contact = ContactList.getInstance().get(ids.jid).orElse(null);
+        Contact contact = mModel.contacts().get(ids.jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+ids.jid);
             return;
         }
         // NOTE: assume chat states are only send for single chats
-        SingleChat chat = ChatList.getInstance().get(contact, ids.xmppThreadID).orElse(null);
+        SingleChat chat = mModel.chats().get(contact, ids.xmppThreadID).orElse(null);
         if (chat == null)
             // not that important
             return;
@@ -293,7 +325,7 @@ public final class Control {
     }
 
     public void onPGPKey(JID jid, byte[] rawKey) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid: "+jid);
             return;
@@ -337,7 +369,7 @@ public final class Control {
     }
 
     public void onContactBlocked(JID jid, boolean blocking) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("ignoring blocking of JID not in contact list");
             return;
@@ -408,7 +440,7 @@ public final class Control {
     }
 
     Optional<Contact> getOrCreateContact(JID jid) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact != null)
             return Optional.of(contact);
 
@@ -435,7 +467,7 @@ public final class Control {
             name = jid.local();
         }
 
-        Contact newContact = ContactList.getInstance().create(jid, name).orElse(null);
+        Contact newContact = mModel.contacts().create(jid, name).orElse(null);
         if (newContact == null) {
             LOGGER.warning("can't create new contact");
             // TODO tell view
@@ -520,13 +552,11 @@ public final class Control {
         }
     }
 
-    private static Optional<OutMessage> findMessage(MessageIDs ids) {
-        ChatList cl = ChatList.getInstance();
-
+    private Optional<OutMessage> findMessage(MessageIDs ids) {
         // get chat by jid -> thread ID -> message id
-        Contact contact = ContactList.getInstance().get(ids.jid).orElse(null);
+        Contact contact = mModel.contacts().get(ids.jid).orElse(null);
         if (contact != null) {
-            Chat chat = cl.get(contact, ids.xmppThreadID).orElse(null);
+            Chat chat = mModel.chats().get(contact, ids.xmppThreadID).orElse(null);
             if (chat != null) {
                 Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
                 if (optM.isPresent())
@@ -536,7 +566,7 @@ public final class Control {
 
         // fallback: search everywhere
         LOGGER.info("fallback search, IDs: "+ids);
-        for (Chat chat: cl) {
+        for (Chat chat: mModel.chats()) {
             Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
             if (optM.isPresent())
                 return optM;
@@ -549,23 +579,6 @@ public final class Control {
     /* commands from view */
 
     public class ViewControl extends Observable {
-
-        public void launch() {
-
-            // order matters!
-            Map<Integer, Contact> contactMap = mContactList.load(mDB);
-            mChatList.load(mDB, contactMap);
-
-            boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-            if (!Account.getInstance().isPresent()) {
-                LOGGER.info("no account found, asking for import...");
-                this.changed(new ViewEvent.MissingAccount(connect));
-                return;
-            }
-
-            if (connect)
-                this.connect();
-        }
 
         public void shutDown(boolean exit) {
             if (mShuttingDown)
@@ -643,7 +656,7 @@ public final class Control {
 
         public void deleteContact(Contact contact) {
             JID jid = contact.getJID();
-            ContactList.getInstance().delete(contact);
+            mModel.contacts().delete(contact);
 
             Control.this.removeFromRoster(jid);
         }
@@ -658,7 +671,7 @@ public final class Control {
             if (oldJID.equals(newJID))
                 return;
 
-            boolean succ = ContactList.getInstance().changeJID(contact, newJID);
+            boolean succ = mModel.contacts().changeJID(contact, newJID);
             if (!succ)
                 return;
 
@@ -701,7 +714,7 @@ public final class Control {
         /* chats */
 
         public Chat getOrCreateSingleChat(Contact contact) {
-            return ChatList.getInstance().getOrCreate(contact);
+            return mModel.chats().getOrCreate(contact);
         }
 
         public Optional<GroupChat> createGroupChat(List<Contact> contacts, String subject) {
@@ -709,14 +722,14 @@ public final class Control {
             List<Member> members = contacts.stream()
                     .map(c -> new Member(c))
                     .collect(Collectors.toCollection(ArrayList::new));
-            Contact me = ContactList.getInstance().getMe().orElse(null);
+            Contact me = mModel.contacts().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
                 return Optional.empty();
             }
             members.add(new Member(me, Member.Role.OWNER));
 
-            GroupChat chat = ChatList.getInstance().createNew(members,
+            GroupChat chat = mModel.chats().createNew(members,
                     GroupControl.newKonGroupData(me.getJID()),
                     subject);
 
@@ -731,7 +744,7 @@ public final class Control {
                     return;
             }
 
-            ChatList.getInstance().delete(chat);
+            mModel.chats().delete(chat);
         }
 
         public void setChatSubject(GroupChat chat, String subject) {

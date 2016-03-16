@@ -370,9 +370,9 @@ final class Utils {
         return selectedOption == WebOptionPane.OK_OPTION;
     }
 
-    static Set<Contact> allContacts() {
+    static Set<Contact> allContacts(ContactList contactList) {
         boolean showMe = Config.getInstance().getBoolean(Config.VIEW_USER_CONTACT);
-        return ContactList.getInstance().getAll(showMe);
+        return contactList.getAll(showMe);
     }
 
     static List<Contact> contactList(Chat chat) {

@@ -19,18 +19,16 @@
 package org.kontalk.model.chat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jivesoftware.smackx.chatstates.ChatState;
-import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.GroupMetaData.MUCData;
-import org.kontalk.model.message.MessageContent;
 import org.kontalk.system.Database;
 
 /**
@@ -95,33 +93,9 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 .collect(Collectors.toList());
     }
 
-    public void addContact(Contact contact) {
-        this.addMemberSilent(new Member(contact));
-        this.save();
-        this.changed(contact);
-    }
-
-    public void addContacts(List<Contact> contacts) {
-        boolean changed = false;
-        for (Contact c: contacts) {
-            Member m = new Member(c);
-            if (!mMemberSet.contains(m)) {
-                this.addMemberSilent(m);
-                changed = true;
-            } else {
-                LOGGER.info("contact already in chat: "+c);
-            }
-        }
-
-        if (changed) {
-            this.save();
-            this.changed(contacts);
-        }
-    }
-
     private void addMemberSilent(Member member) {
         if (mMemberSet.contains(member)) {
-            LOGGER.warning("contact already in chat: "+member);
+            LOGGER.warning("member already in chat: "+member);
             return;
         }
 
@@ -129,14 +103,12 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         mMemberSet.add(member);
     }
 
-    private void removeContactSilent(Contact contact) {
-        contact.deleteObserver(this);
-        boolean succ = mMemberSet.remove(new Member(contact));
+    private void removeMemberSilent(Member member) {
+        member.getContact().deleteObserver(this);
+        boolean succ = mMemberSet.remove(member);
         if (!succ) {
-            LOGGER.warning("contact not in chat: "+contact);
-            return;
+            LOGGER.warning("member not in chat: "+member);
         }
-        this.save();
     }
 
     public D getGroupData() {
@@ -172,65 +144,18 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         this.changed(member);
     }
 
-    public void applyGroupCommand(MessageContent.GroupCommand command, Contact sender) {
-        switch(command.getOperation()) {
-            case CREATE:
-                assert mMemberSet.size() == 1;
-                assert mMemberSet.contains(new Member(sender));
+    public void applyGroupChanges(List<Member> added, List<Member> removed, String subject) {
+        added.stream().forEach((member) -> this.addMemberSilent(member));
+        removed.stream().forEach((member) -> this.removeMemberSilent(member));
+        if (!subject.isEmpty())
+            mSubject = subject;
 
-                boolean meIn = false;
-                for (JID jid: command.getAdded()) {
-                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
-                    if (contact == null) {
-                        LOGGER.warning("can't find contact, jid: "+jid);
-                        continue;
-                    }
+        this.save();
 
-                    Member member = new Member(contact);
-                    if (mMemberSet.contains(member)) {
-                        LOGGER.warning("member already in chat: "+member);
-                        continue;
-                    }
-                    meIn |= contact.isMe();
-                    this.addMemberSilent(member);
-                }
-
-                if (!meIn)
-                    LOGGER.warning("user JID not included");
-
-                mSubject = command.getSubject();
-                this.save();
-                this.changed(command);
-                break;
-            case LEAVE:
-                this.removeContactSilent(sender);
-                this.save();
-                this.changed(command);
-                break;
-            case SET:
-                for (JID jid : command.getAdded()) {
-                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
-                    if (contact == null) {
-                        LOGGER.warning("can't get added contact, jid="+jid);
-                        continue;
-                    }
-                    this.addMemberSilent(new Member(contact));
-                }
-                for (JID jid : command.getRemoved()) {
-                    Contact contact = ContactList.getInstance().get(jid).orElse(null);
-                    if (contact == null) {
-                        LOGGER.warning("can't get removed contact, jid="+jid);
-                        continue;
-                    }
-                    this.removeContactSilent(contact);
-                }
-                mSubject = command.getSubject();
-                this.save();
-                this.changed(command);
-                break;
-            default:
-                LOGGER.warning("unhandled operation: "+command.getOperation());
-        }
+        if (!added.isEmpty() || !removed.isEmpty())
+            this.changed(Arrays.<Member>asList());
+        if (!subject.isEmpty())
+            this.changed(mSubject);
     }
 
     @Override

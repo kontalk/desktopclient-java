@@ -88,6 +88,7 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.system.Config;
@@ -309,13 +310,15 @@ final class ComponentUtils {
     static class AddGroupChatPanel extends PopupPanel {
 
         private final View mView;
+        private final Model mModel;
         private final WebTextField mSubjectField;
         private final ParticipantsList mList;
 
         private final WebButton mCreateButton;
 
-        AddGroupChatPanel(View view, final Component focusGainer) {
+        AddGroupChatPanel(View view, Model model, final Component focusGainer) {
             mView = view;
+            mModel = model;
 
             GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
             groupPanel.setMargin(View.MARGIN_BIG);
@@ -383,7 +386,7 @@ final class ComponentUtils {
         @Override
         void onShow() {
             List<Contact> contacts = new LinkedList<>();
-            for (Contact c : Utils.allContacts()) {
+            for (Contact c : Utils.allContacts(mModel.contacts())) {
                 if (c.isKontalkUser() && !c.isMe())
                     contacts.add(c);
             }

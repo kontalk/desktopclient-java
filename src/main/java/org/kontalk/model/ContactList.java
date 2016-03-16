@@ -43,42 +43,23 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
-    private static ContactList INSTANCE = null;
-
     private final Database mDB;
     /** JID to contact. Without deleted contacts. */
     private final Map<JID, Contact> mJIDMap =
             Collections.synchronizedMap(new HashMap<JID, Contact>());
 
-    private ContactList(Database db) {
+    ContactList(Database db) {
         mDB = db;
     }
 
-    public static ContactList initialize(Database db) {
-        if (INSTANCE != null) {
-            LOGGER.warning("already initialized");
-            return INSTANCE;
-        }
-
-        return INSTANCE = new ContactList(db);
-    }
-
-    // TODO
-    public static ContactList getInstance() {
-        if (INSTANCE == null)
-            throw new IllegalStateException("not initialized");
-
-        return INSTANCE;
-    }
-
-    public Map<Integer, Contact> load(Database db) {
+    Map<Integer, Contact> load() {
         assert mJIDMap.isEmpty();
 
         Map<Integer, Contact> contactMap = new HashMap<>();
 
-        try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
+        try (ResultSet resultSet = mDB.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
-                Contact contact = Contact.load(db, resultSet);
+                Contact contact = Contact.load(mDB, resultSet);
 
                 JID jid = contact.getJID();
                 if (mJIDMap.containsKey(jid)) {
