@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.Account;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.util.EncodingUtils;
 
@@ -541,7 +542,8 @@ public class MessageContent {
         }
 
         public boolean isAddingMe() {
-            return mAdded.stream().anyMatch(jid -> jid.isMe());
+            JID myJID = Account.getUserJID();
+            return mAdded.stream().anyMatch(jid -> jid.equals(myJID));
         }
 
         public List<JID> getRemoved() {

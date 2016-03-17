@@ -295,7 +295,7 @@ public final class Contact extends Observable {
     }
 
     public boolean isMe() {
-        return mJID.isMe();
+        return mJID.isValid() && mJID.equals(Account.getUserJID());
     }
 
     public boolean isKontalkUser(){
