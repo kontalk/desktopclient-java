@@ -33,7 +33,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
@@ -81,9 +80,9 @@ public class AttachmentManager implements Runnable {
     // TODO get this from server
     private static final URI UPLOAD_URI = URI.create("https://beta.kontalk.net:5980/upload");
 
-    private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
-
     private final Control mControl;
+
+    private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
     private final Path mAttachmentDir;
     private final Path mPreviewDir;
 
@@ -108,7 +107,7 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    private AttachmentManager(Path baseDir, Control control) {
+    private AttachmentManager(Control control, Path baseDir) {
         mControl = control;
         mAttachmentDir = baseDir.resolve(ATT_DIRNAME);
         if (mAttachmentDir.toFile().mkdir())
@@ -117,6 +116,16 @@ public class AttachmentManager implements Runnable {
         mPreviewDir = baseDir.resolve(PREVIEW_DIRNAME);
         if (mPreviewDir.toFile().mkdir())
             LOGGER.info("created preview directory");
+    }
+
+    static AttachmentManager create(Control control, Path appDir) {
+        AttachmentManager manager = new AttachmentManager(control, appDir);
+
+        Thread thread = new Thread(manager, "Attachment Transfer");
+        thread.setDaemon(true);
+        thread.start();
+
+        return manager;
     }
 
     void queueUpload(OutMessage message) {
@@ -381,16 +390,6 @@ public class AttachmentManager implements Runnable {
 
     public static boolean isImage(String mimeType) {
         return mimeType.startsWith("image");
-    }
-
-    static AttachmentManager create(Control control) {
-        AttachmentManager manager = new AttachmentManager(Kontalk.getInstance().appDir(), control);
-
-        Thread thread = new Thread(manager, "Attachment Transfer");
-        thread.setDaemon(true);
-        thread.start();
-
-        return manager;
     }
 
     /**

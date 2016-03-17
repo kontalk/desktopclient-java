@@ -20,6 +20,7 @@ package org.kontalk.client;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -51,7 +52,6 @@ import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
 import org.jivesoftware.smackx.disco.packet.DiscoverInfo;
 import org.jivesoftware.smackx.pubsub.packet.PubSub;
-import org.kontalk.Kontalk;
 import org.kontalk.system.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
@@ -92,7 +92,7 @@ public final class Client implements StanzaListener, Runnable {
         FEATURE_MAP.put(MultipleAddresses.NAMESPACE, ServerFeature.MULTI_ADDRESSING);
     }
 
-    private Client(Control control) {
+    private Client(Control control, Path appDir) {
         mControl = control;
         //mLimited = limited;
 
@@ -104,7 +104,7 @@ public final class Client implements StanzaListener, Runnable {
         mFeatures = EnumSet.noneOf(ServerFeature.class);
 
         // setting caps cache
-        File cacheDir = Kontalk.getInstance().appDir().resolve(CAPS_CACHE_DIR).toFile();
+        File cacheDir = appDir.resolve(CAPS_CACHE_DIR).toFile();
         if (cacheDir.mkdir())
             LOGGER.info("created caps cache directory");
 
@@ -117,8 +117,8 @@ public final class Client implements StanzaListener, Runnable {
                 new SimpleDirectoryPersistentCache(cacheDir));
     }
 
-    public static Client create(Control control) {
-        Client client = new Client(control);
+    public static Client create(Control control, Path appDir) {
+        Client client = new Client(control, appDir);
 
         Thread clientThread = new Thread(client, "Client Connector");
         clientThread.setDaemon(true);

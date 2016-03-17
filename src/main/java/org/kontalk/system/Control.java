@@ -108,9 +108,9 @@ public final class Control {
 
         mModel = new Model(mDB, appDir);
 
-        mClient = Client.create(this);
+        mClient = Client.create(this, appDir);
         mChatStateManager = new ChatStateManager(mClient);
-        mAttachmentManager = AttachmentManager.create(this);
+        mAttachmentManager = AttachmentManager.create(this, appDir);
         mRosterHandler = new RosterHandler(this, mClient, mModel);
         mAvatarHandler = new AvatarHandler(mClient, mModel);
         mGroupControl = new GroupControl(this, mModel);
