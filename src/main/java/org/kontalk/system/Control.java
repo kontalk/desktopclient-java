@@ -98,6 +98,8 @@ public final class Control {
     public Control(Path appDir) throws KonException {
         mViewControl = new ViewControl();
 
+        Config.initialize(appDir);
+
         try {
             mDB = new Database(appDir);
         } catch (KonException ex) {
