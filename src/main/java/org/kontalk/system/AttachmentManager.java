@@ -18,7 +18,6 @@
 
 package org.kontalk.system;
 
-import org.kontalk.model.Account;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -188,7 +187,7 @@ public class AttachmentManager implements Runnable {
             //mime = "application/octet-stream";
         }
 
-        HTTPFileClient client = createClientOrNull();
+        HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
@@ -227,7 +226,7 @@ public class AttachmentManager implements Runnable {
             return;
         }
 
-        HTTPFileClient client = createClientOrNull();
+        HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
@@ -351,6 +350,16 @@ public class AttachmentManager implements Runnable {
         LOGGER.info("to file: "+newFile);
     }
 
+    private HTTPFileClient clientOrNull(){
+        PersonalKey key = mControl.myKey().orElse(null);
+        if (key == null)
+            return null;
+
+        return new HTTPFileClient(key.getServerLoginKey(),
+                key.getBridgeCertificate(),
+                Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
+    }
+
     @Override
     public void run() {
         while (true) {
@@ -401,17 +410,5 @@ public class AttachmentManager implements Runnable {
             return null;
         }
         return new Attachment(path, mimeType);
-    }
-
-    private static HTTPFileClient createClientOrNull(){
-        PersonalKey key = Account.getInstance().getPersonalKey().orElse(null);
-        if (key == null) {
-            LOGGER.log(Level.WARNING, "personal key not loaded");
-            return null;
-        }
-
-        return new HTTPFileClient(key.getServerLoginKey(),
-                key.getBridgeCertificate(),
-                Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
     }
 }

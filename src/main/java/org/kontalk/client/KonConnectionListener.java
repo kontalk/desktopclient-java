@@ -24,7 +24,6 @@ import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.XMPPConnection;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.Account;
 import org.kontalk.system.Control;
 
 /**
@@ -35,10 +34,13 @@ final class KonConnectionListener implements ConnectionListener {
     private static final Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());
 
     private final Client mClient;
+    private final Control mControl;
+
     private boolean mConnected = false;
 
-    KonConnectionListener(Client client) {
+    KonConnectionListener(Client client, Control control) {
         mClient = client;
+        mControl = control;
     }
 
     @Override
@@ -51,7 +53,7 @@ final class KonConnectionListener implements ConnectionListener {
     public void authenticated(XMPPConnection connection, boolean resumed) {
         JID jid = JID.bare(connection.getUser());
         LOGGER.info("as "+jid);
-        Account.getInstance().setJID(jid);
+        mControl.onAuthenticated(jid);
     }
 
     @Override

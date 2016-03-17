@@ -200,7 +200,7 @@ public final class View implements Observer {
     }
 
     void showConfig() {
-        JDialog configFrame = new ConfigurationDialog(mMainFrame, this);
+        JDialog configFrame = new ConfigurationDialog(mMainFrame, this, mModel);
         configFrame.setVisible(true);
     }
 

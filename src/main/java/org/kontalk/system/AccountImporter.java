@@ -21,7 +21,6 @@ package org.kontalk.system;
 import org.kontalk.model.Account;
 import java.io.IOException;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -42,11 +41,13 @@ public final class AccountImporter extends Observable implements Callback.Handle
 
     static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
 
+    private final Account mAccount;
+
     private char[] mPassword = null;
     private boolean mAborted = false;
 
-    public AccountImporter(Observer o) {
-        this.addObserver(o);
+    AccountImporter(Account account) {
+        mAccount = account;
     }
 
     public void fromZipFile(String zipFilePath, char[] password) {
@@ -111,7 +112,7 @@ public final class AccountImporter extends Observable implements Callback.Handle
 
     private void set(byte[] privateKeyData, char[] password) {
         try {
-            Account.getInstance().setAccount(privateKeyData, password);
+            mAccount.setAccount(privateKeyData, password);
         } catch (KonException ex) {
             this.changed(ex);
             return;

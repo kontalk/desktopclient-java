@@ -55,6 +55,8 @@ import org.kontalk.system.Config;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Account;
+import org.kontalk.model.Model;
+import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.Tr;
 
 /**
@@ -66,11 +68,14 @@ final class ConfigurationDialog extends WebDialog {
 
     private final Config mConf = Config.getInstance();
     private final View mView;
+    private final Model mModel;
 
-    ConfigurationDialog(JFrame owner, final View view) {
+    ConfigurationDialog(JFrame owner, View view, Model model) {
         super(owner);
 
         mView = view;
+        mModel = model;
+
         this.setTitle(Tr.tr("Preferences"));
         this.setSize(550, 450);
         this.setResizable(false);
@@ -306,13 +311,16 @@ final class ConfigurationDialog extends WebDialog {
             this.updateKey();
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT, fpLabelPanel, mFingerprintArea));
 
-            final WebButton passButton = new WebButton(getPassTitle());
+            final WebButton passButton = new WebButton(getPassTitle(mModel.account()));
             passButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    WebDialog passDialog = createPassDialog(ConfigurationDialog.this);
+                    WebDialog passDialog = createPassDialog(
+                            ConfigurationDialog.this,
+                            mModel.account(),
+                            mView.getControl());
                     passDialog.setVisible(true);
-                    passButton.setText(getPassTitle());
+                    passButton.setText(getPassTitle(mModel.account()));
                 }
             });
             groupPanel.add(passButton);
@@ -323,7 +331,7 @@ final class ConfigurationDialog extends WebDialog {
                 public void actionPerformed(ActionEvent e) {
                     mView.showImportWizard(false);
                     AccountPanel.this.updateKey();
-                    passButton.setText(getPassTitle());
+                    passButton.setText(getPassTitle(mModel.account()));
                 }
             });
             groupPanel.add(importButton);
@@ -346,7 +354,7 @@ final class ConfigurationDialog extends WebDialog {
         }
 
         private void updateKey() {
-            PersonalKey key = Account.getInstance().getPersonalKey().orElse(null);
+            PersonalKey key = mModel.account().getPersonalKey().orElse(null);
             String uid = key != null ? key.getUserId() : null;
             mUserIDArea.setText(uid != null ?
                     StringUtils.abbreviate(uid, 30) :
@@ -414,20 +422,20 @@ final class ConfigurationDialog extends WebDialog {
         return checkBox;
     }
 
-    private static String getPassTitle() {
-        return Account.getInstance().isPasswordProtected() ?
+    private static String getPassTitle(Account account) {
+        return account.isPasswordProtected() ?
                 Tr.tr("Change key password") :
                 Tr.tr("Set key password");
     }
 
-    private static WebDialog createPassDialog(WebDialog parent) {
-        final WebDialog passDialog = new WebDialog(parent, getPassTitle(), true);
+    private static WebDialog createPassDialog(WebDialog parent, Account account, ViewControl control) {
+        final WebDialog passDialog = new WebDialog(parent, getPassTitle(account), true);
         passDialog.setLayout(new BorderLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
         passDialog.setResizable(false);
 
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
 
-        boolean passSet = Account.getInstance().isPasswordProtected();
+        boolean passSet = account.isPasswordProtected();
         final ComponentUtils.PassPanel passPanel = new ComponentUtils.PassPanel(passSet) {
            @Override
            void onValidInput() {
@@ -450,7 +458,7 @@ final class ConfigurationDialog extends WebDialog {
                     return;
                 }
                 try {
-                    Account.getInstance().setPassword(oldPassword, newPassword);
+                    control.setAccountPassword(oldPassword, newPassword);
                 } catch(KonException ex) {
                     LOGGER.log(Level.WARNING, "can't set new password", ex);
                     if (ex.getError() == KonException.Error.CHANGE_PASS_COPY)

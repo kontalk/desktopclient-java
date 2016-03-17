@@ -148,7 +148,7 @@ public final class Client implements StanzaListener, Runnable {
                         validateCertificate);
 
         // connection listener
-        mConn.addConnectionListener(new KonConnectionListener(this));
+        mConn.addConnectionListener(new KonConnectionListener(this, mControl));
 
         Roster roster = Roster.getInstanceFor(mConn);
         // subscriptions handled by roster handler

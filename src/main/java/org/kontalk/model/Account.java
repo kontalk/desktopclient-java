@@ -35,7 +35,6 @@ import org.apache.commons.io.IOUtils;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
 import org.jivesoftware.smack.util.StringUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
@@ -133,10 +132,6 @@ public final class Account {
         Config.getInstance().setProperty(Config.ACC_JID, jid.string());
     }
 
-    public JID getUserJID() {
-        return JID.bare(Config.getInstance().getString(Config.ACC_JID));
-    }
-
     private void writePrivateKey(byte[] privateKeyData,
             char[] oldPassword,
             char[] newPassword)
@@ -203,10 +198,7 @@ public final class Account {
         return new File(mKeyDir.toString(), filename).isFile();
     }
 
-    public synchronized static Account getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new Account(Kontalk.getInstance().appDir(), Config.getInstance());
-        }
-        return INSTANCE;
+    public static JID getUserJID() {
+        return JID.bare(Config.getInstance().getString(Config.ACC_JID));
     }
 }

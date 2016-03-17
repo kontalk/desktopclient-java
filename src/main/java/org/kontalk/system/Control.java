@@ -193,6 +193,10 @@ public final class Control {
         }
     }
 
+    public void onAuthenticated(JID jid) {
+        mModel.account().setJID(jid);
+    }
+
     public void onException(KonException ex) {
         mViewControl.changed(new ViewEvent.Exception(ex));
     }
@@ -673,6 +677,10 @@ public final class Control {
             mClient.sendUserPresence(newStatus);
         }
 
+        public void setAccountPassword(char[] oldPass, char[] newPass) throws KonException {
+            mModel.account().setPassword(oldPass, newPass);
+        }
+
         public Path getFilePath(Attachment attachment) {
             return mAttachmentManager.absoluteFilePath(attachment);
         }
@@ -842,7 +850,7 @@ public final class Control {
         }
 
         private PersonalKey keyOrNull(char[] password) {
-            Account account = Account.getInstance();
+            Account account = mModel.account();
             PersonalKey key = account.getPersonalKey().orElse(null);
             if (key != null)
                 return key;
@@ -868,6 +876,11 @@ public final class Control {
         void changed(ViewEvent event) {
             this.setChanged();
             this.notifyObservers(event);
+        }
+
+        // TODO
+        public AccountImporter createAccountImporter() {
+            return new AccountImporter(mModel.account());
         }
     }
 }
