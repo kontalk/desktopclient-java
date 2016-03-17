@@ -18,9 +18,11 @@
 
 package org.kontalk.model;
 
+import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.logging.Logger;
+import org.kontalk.model.Avatar.UserAvatar;
 import org.kontalk.model.chat.ChatList;
 import org.kontalk.system.Config;
 import org.kontalk.system.Database;
@@ -32,14 +34,22 @@ import org.kontalk.system.Database;
 public final class Model {
     private static final Logger LOGGER = Logger.getLogger(Model.class.getName());
 
+    private final Path mAppDir;
+
     private final ContactList mContactList;
     private final ChatList mChatList;
     private final Account mAccount;
 
+    private UserAvatar mUserAvatar;
+
     public Model(Database db, Path appDir) {
-        mAccount = new Account(appDir, Config.getInstance());
+        mAppDir = appDir;
+
+        mAccount = new Account(mAppDir, Config.getInstance());
         mContactList = new ContactList(db);
         mChatList = new ChatList(db);
+
+        mUserAvatar = new UserAvatar(mAppDir);
     }
 
     public Account account() {
@@ -54,9 +64,22 @@ public final class Model {
         return mChatList;
     }
 
+    public UserAvatar userAvatar() {
+        return mUserAvatar;
+    }
+
     public void load() {
         // order matters!
         Map<Integer, Contact> contactMap = mContactList.load();
         mChatList.load(contactMap);
+    }
+
+    public UserAvatar newUserAvatar(BufferedImage image) {
+        return UserAvatar.create(image, mAppDir);
+    }
+
+    public void deleteAvatar() {
+        mUserAvatar.delete();
+        mUserAvatar = new UserAvatar(mAppDir);
     }
 }

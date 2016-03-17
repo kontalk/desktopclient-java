@@ -142,7 +142,7 @@ final class MainFrame extends WebFrame {
         statusMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                WebDialog statusDialog = new ProfileDialog(mView);
+                WebDialog statusDialog = new ProfileDialog(mView, model);
                 statusDialog.setVisible(true);
             }
         });

@@ -38,6 +38,12 @@ import org.kontalk.util.XMPPUtils;
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
  *
+ * TODO group chats need some weaker entity here: not deletable,
+ * not shown in ui contact list(?), but with public key
+ *
+ * idea: "deletable" or / "weak" field: contact gets deleted
+ * when no group chat exists anymore
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Contact extends Observable {

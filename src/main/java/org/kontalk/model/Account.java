@@ -53,8 +53,6 @@ public final class Account {
     private static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
     private static final String BRIDGE_CERT_FILENAME = "kontalk-login.crt";
 
-    private static Account INSTANCE = null;
-
     private final Path mKeyDir;
     private final Config mConf;
 
@@ -198,6 +196,7 @@ public final class Account {
         return new File(mKeyDir.toString(), filename).isFile();
     }
 
+    // TODO
     public static JID getUserJID() {
         return JID.bare(Config.getInstance().getString(Config.ACC_JID));
     }

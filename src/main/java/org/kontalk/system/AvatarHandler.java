@@ -19,6 +19,7 @@
 package org.kontalk.system;
 
 import java.awt.image.BufferedImage;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -45,11 +46,11 @@ public final class AvatarHandler {
     private final Client mClient;
     private final Model mModel;
 
-    AvatarHandler(Client client, Model model) {
+    AvatarHandler(Client client, Model model, Path appDir) {
         mClient = client;
         mModel = model;
 
-        Avatar.createDir();
+        Avatar.createDir(appDir);
     }
 
     public void onNotify(JID jid, String id) {

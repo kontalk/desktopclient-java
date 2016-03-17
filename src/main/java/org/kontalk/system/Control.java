@@ -112,7 +112,7 @@ public final class Control {
         mChatStateManager = new ChatStateManager(mClient);
         mAttachmentManager = AttachmentManager.create(this, appDir);
         mRosterHandler = new RosterHandler(this, mClient, mModel);
-        mAvatarHandler = new AvatarHandler(mClient, mModel);
+        mAvatarHandler = new AvatarHandler(mClient, mModel, appDir);
         mGroupControl = new GroupControl(this, mModel);
     }
 
@@ -815,7 +815,7 @@ public final class Control {
         }
 
         public void setUserAvatar(BufferedImage image) {
-            Avatar.UserAvatar newAvatar = Avatar.UserAvatar.setImage(image);
+            Avatar.UserAvatar newAvatar = mModel.newUserAvatar(image);
             byte[] avatarData = newAvatar.imageData().orElse(null);
             if (avatarData == null || newAvatar.getID().isEmpty())
                 return;
@@ -824,12 +824,12 @@ public final class Control {
         }
 
         public void unsetUserAvatar(){
-            if (Avatar.UserAvatar.instance().getID().isEmpty())
+            if (mModel.userAvatar().getID().isEmpty())
                 return;
 
             boolean succ = mClient.deleteAvatar();
             if (succ)
-                Avatar.UserAvatar.deleteImage();
+                mModel.deleteAvatar();
         }
 
         /* private */
