@@ -61,7 +61,7 @@ public final class Account {
 
     private PersonalKey mKey = null;
 
-    private Account(Path keyDir, Config config) {
+    Account(Path keyDir, Config config) {
         mKeyDir = keyDir;
         mConf = config;
     }

@@ -18,9 +18,11 @@
 
 package org.kontalk.model;
 
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.logging.Logger;
 import org.kontalk.model.chat.ChatList;
+import org.kontalk.system.Config;
 import org.kontalk.system.Database;
 
 /**
@@ -32,10 +34,16 @@ public final class Model {
 
     private final ContactList mContactList;
     private final ChatList mChatList;
+    private final Account mAccount;
 
-    public Model(Database db) {
+    public Model(Database db, Path appDir) {
+        mAccount = new Account(appDir, Config.getInstance());
         mContactList = new ContactList(db);
         mChatList = new ChatList(db);
+    }
+
+    public Account account() {
+        return mAccount;
     }
 
     public ContactList contacts() {

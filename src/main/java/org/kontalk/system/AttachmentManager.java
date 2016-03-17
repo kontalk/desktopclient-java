@@ -175,7 +175,10 @@ public class AttachmentManager implements Runnable {
         // if text will be encrypted, always encrypt attachment too
         boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
         if (encrypt) {
-            File encryptFile = Coder.encryptAttachment(message, file).orElse(null);
+            PersonalKey myKey = mControl.myKey().orElse(null);
+            File encryptFile = myKey == null ?
+                    null :
+                    Coder.encryptAttachment(myKey, message, file).orElse(null);
             if (!file.equals(original))
                 file.delete();
             if (encryptFile == null)
@@ -255,7 +258,8 @@ public class AttachmentManager implements Runnable {
 
         // decrypt file
         if (attachment.getCoderStatus().isEncrypted()) {
-            Coder.decryptAttachment(message, mAttachmentDir);
+            mControl.myKey().ifPresent(mk ->
+                    Coder.decryptAttachment(mk, message, mAttachmentDir));
         }
 
         // create preview if not in message

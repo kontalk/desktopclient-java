@@ -96,7 +96,7 @@ public final class Client implements StanzaListener, Runnable {
         mControl = control;
         //mLimited = limited;
 
-        mMessageSender = new KonMessageSender(this, mControl);
+        mMessageSender = new KonMessageSender(this);
 
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;

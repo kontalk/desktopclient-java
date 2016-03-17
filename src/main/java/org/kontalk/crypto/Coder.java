@@ -22,14 +22,12 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.Contact;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.DecryptMessage;
 import org.kontalk.model.message.InMessage;
-import org.kontalk.model.Account;
 
 /**
  * Static methods for decryption and encryption of a message.
@@ -88,14 +86,6 @@ public final class Coder {
 
     private static final HashMap<Contact, PGPCoderKey> KEY_MAP = new HashMap<>();
 
-    static PersonalKey myKeyOrNull() {
-        PersonalKey myKey = Account.getInstance().getPersonalKey().orElse(null);
-        if (myKey == null)
-            LOGGER.log(Level.WARNING, "can't get personal key");
-
-        return myKey;
-    }
-
     public static Optional<PGPCoderKey> contactkey(Contact contact) {
         if (KEY_MAP.containsKey(contact)) {
             PGPCoderKey key = KEY_MAP.get(contact);
@@ -120,8 +110,8 @@ public final class Coder {
      * Decrypt and verify the body of a message. Sets the encryption and signing
      * status of the message and errors that may occur are saved to the message.
      */
-    public static boolean decryptMessage(DecryptMessage message) {
-        return new Decryptor(message).decryptMessage();
+    public static boolean decryptMessage(PersonalKey myKey, DecryptMessage message) {
+        return new Decryptor(myKey, message).decryptMessage();
     }
 
     /**
@@ -129,8 +119,8 @@ public final class Coder {
      * signing status of the message attachment and errors that may occur are
      * saved to the message.
      */
-    public static void decryptAttachment(InMessage message, Path baseDir) {
-        new Decryptor(message).decryptAttachment(baseDir);
+    public static void decryptAttachment(PersonalKey myKey, InMessage message, Path baseDir) {
+        new Decryptor(myKey, message).decryptAttachment(baseDir);
     }
 
     /**
@@ -138,15 +128,15 @@ public final class Coder {
      * Errors that may occur are saved to the message.
      * @return the encrypted and signed text.
      */
-    public static Optional<byte[]> encryptMessage(OutMessage message) {
-        return new Encryptor(message).encryptMessage();
+    public static Optional<byte[]> encryptMessage(PersonalKey myKey, OutMessage message) {
+        return new Encryptor(myKey, message).encryptMessage();
     }
 
-    public static Optional<byte[]> encryptStanza(OutMessage message, String xml) {
-        return new Encryptor(message).encryptStanza(xml);
+    public static Optional<byte[]> encryptStanza(PersonalKey myKey, OutMessage message, String xml) {
+        return new Encryptor(myKey, message).encryptStanza(xml);
     }
 
-    public static Optional<File> encryptAttachment(OutMessage message, File file) {
-        return new Encryptor(message).encryptAttachment(file);
+    public static Optional<File> encryptAttachment(PersonalKey myKey, OutMessage message, File file) {
+        return new Encryptor(myKey, message).encryptAttachment(file);
     }
 }

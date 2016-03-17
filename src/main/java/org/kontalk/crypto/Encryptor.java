@@ -64,11 +64,13 @@ final class Encryptor {
     // should always be a power of 2
     private static final int BUFFER_SIZE = 1 << 8;
 
+    private final PersonalKey myKey;
     private final OutMessage message;
-    private PersonalKey myKey = null;
+
     private List<PGPUtils.PGPCoderKey> receiverKeys = null;
 
-    Encryptor(OutMessage message) {
+    Encryptor(PersonalKey myKey, OutMessage message) {
+        this.myKey = myKey;
         this.message = message;
     }
 
@@ -146,11 +148,6 @@ final class Encryptor {
     }
 
     private boolean loadKeys() {
-        myKey = Coder.myKeyOrNull();
-        if (myKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
-            return false;
-        }
         List<Contact> contacts = message.getTransmissions().stream()
                 .map(t -> t.getContact())
                 .collect(Collectors.toList());

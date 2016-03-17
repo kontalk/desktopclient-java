@@ -37,6 +37,7 @@ import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
+import org.kontalk.client.KonMessageSender;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
@@ -105,7 +106,7 @@ public final class Control {
             throw ex;
         }
 
-        mModel = new Model(mDB);
+        mModel = new Model(mDB, appDir);
 
         mClient = Client.create(this);
         mChatStateManager = new ChatStateManager(mClient);
@@ -145,7 +146,7 @@ public final class Control {
         }
 
         boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-        if (!Account.getInstance().isPresent()) {
+        if (!mModel.account().isPresent()) {
             LOGGER.info("no account found, asking for import...");
             mViewControl.changed(new ViewEvent.MissingAccount(connect));
             return;
@@ -230,7 +231,7 @@ public final class Control {
         // decrypt message now to get possible group data
         ProtoMessage protoMessage = new ProtoMessage(sender, content);
         if (protoMessage.isEncrypted()) {
-            Coder.decryptMessage(protoMessage);
+            this.myKey().ifPresent(mk -> Coder.decryptMessage(mk, protoMessage));
         }
 
         // NOTE: decryption must be successful to select group chat
@@ -413,11 +414,36 @@ public final class Control {
      }
 
     boolean sendMessage(OutMessage message) {
-        if (message.getContent().getAttachment().isPresent() &&
-                !message.getContent().getAttachment().get().hasURL()) {
+        MessageContent content = message.getContent();
+        if (content.getAttachment().isPresent() &&
+                !content.getAttachment().get().hasURL()) {
             // continue later...
             mAttachmentManager.queueUpload(message);
             return false;
+        }
+
+        // prepare encrypted content
+        if (message.isSendEncrypted()) {
+            PersonalKey myKey = this.myKey().orElse(null);
+            if (myKey == null)
+                return false;
+
+            Chat chat = message.getChat();
+            byte[] encryptedData;
+            if (content.isComplex() || chat.isGroupChat()) {
+                String stanza = KonMessageSender.rawMessage(content, chat, true).toXML().toString();
+                encryptedData = Coder.encryptStanza(myKey, message, stanza).orElse(null);
+            } else {
+                encryptedData = Coder.encryptMessage(myKey, message).orElse(null);
+            }
+            // check also for security errors just to be sure
+            if (encryptedData == null || !message.getCoderStatus().getErrors().isEmpty()) {
+                LOGGER.warning("encryption failed");
+                message.setStatus(KonMessage.Status.ERROR);
+                this.onSecurityErrors(message);
+                return false;
+            }
+            content.setEncryptedData(encryptedData);
         }
 
         boolean sent = mClient.sendMessage(message,
@@ -455,6 +481,14 @@ public final class Control {
         mClient.sendPresenceSubscription(jid, command);
     }
 
+    Optional<PersonalKey> myKey() {
+        Optional<PersonalKey> myKey = mModel.account().getPersonalKey();
+        if (!myKey.isPresent()) {
+            LOGGER.log(Level.WARNING, "can't get personal key");
+        }
+        return myKey;
+    }
+
     /* private */
 
     private Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
@@ -487,12 +521,11 @@ public final class Control {
         if (!message.isEncrypted()) {
             LOGGER.info("message not encrypted");
         } else {
-            Coder.decryptMessage(message);
+            this.myKey().ifPresent(mk -> Coder.decryptMessage(mk, message));
         }
 
         this.processContent(message);
     }
-
 
     private void setKey(Contact contact, PGPCoderKey key) {
         contact.setKey(key.rawKey, key.fingerprint);

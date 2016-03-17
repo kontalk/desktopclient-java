@@ -29,6 +29,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
+import org.kontalk.crypto.Coder;
 import org.kontalk.model.Contact;
 import org.kontalk.system.Database;
 
@@ -117,6 +118,11 @@ public final class OutMessage extends KonMessage {
 
         attachment.update(url, mime, length);
         this.save();
+    }
+
+    public boolean isSendEncrypted() {
+        return mCoderStatus.getEncryption() != Coder.Encryption.NOT ||
+                mCoderStatus.getSigning() != Coder.Signing.NOT;
     }
 
     @Override

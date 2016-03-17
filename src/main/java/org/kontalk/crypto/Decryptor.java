@@ -74,18 +74,16 @@ final class Decryptor {
     }
 
     private final DecryptMessage mMessage;
-    // nullable
     private final PersonalKey mMyKey;
+
     // nullable
     private final PGPUtils.PGPCoderKey mSenderKey;
 
-    Decryptor(DecryptMessage message) {
+    Decryptor(PersonalKey myKey, DecryptMessage message) {
+        mMyKey = myKey;
         mMessage = message;
 
-        mMyKey = Coder.myKeyOrNull();
-
-        // if sender signing key not found -> decryption possible, signature
-        // verification will not be possible
+        // if sender signing key not found -> can decrypt but not verify
         mSenderKey = Coder.contactkey(message.getContact()).orElse(null);
     }
 
@@ -93,11 +91,6 @@ final class Decryptor {
     boolean decryptMessage() {
         if (!mMessage.isEncrypted()) {
             LOGGER.warning("message not encrypted");
-            return false;
-        }
-
-        if (mMyKey == null) {
-            mMessage.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
             return false;
         }
 
