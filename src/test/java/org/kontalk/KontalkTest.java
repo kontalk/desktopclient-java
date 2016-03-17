@@ -28,7 +28,6 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Ignore;
 
@@ -82,17 +81,6 @@ public class KontalkTest {
         System.out.println("appDir");
         Path result = Kontalk.getInstance().appDir();
         assertEquals(result, APP_DIR);
-    }
-
-    /**
-     * Test of removeLock method, of class Kontalk.
-     */
-    @Test
-    public void testRemoveLock() {
-        System.out.println("removeLock");
-        Kontalk.getInstance().start(false);
-        boolean succ = Kontalk.getInstance().removeLock();
-        assertTrue(succ);
     }
 
     /**

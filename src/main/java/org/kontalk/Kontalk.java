@@ -148,11 +148,22 @@ public final class Kontalk {
 
         Control control;
         try {
-            control = Control.create(mAppDir);
+            control = new Control(mAppDir);
         } catch (KonException ex) {
             LOGGER.log(Level.SEVERE, "can't create application", ex);
             return 5;
         }
+
+        // handle shutdown signals/System.exit() calls
+        Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
+            @Override
+            public void run() {
+                // NOTE: logging does not work here anymore
+                control.shutDown(false);
+                Kontalk.this.removeLock();
+                System.out.println("Kontalk: shutdown finished");
+            }
+        });
 
         control.launch(ui);
 
@@ -163,7 +174,7 @@ public final class Kontalk {
         return mAppDir;
     }
 
-    public boolean removeLock() {
+    private boolean removeLock() {
         if (mRunLock == null) {
             LOGGER.warning("no lock");
             return false;

@@ -35,7 +35,6 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
-import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
 import org.kontalk.client.KonMessageSender;
 import org.kontalk.crypto.Coder;
@@ -96,7 +95,7 @@ public final class Control {
 
     private boolean mShuttingDown = false;
 
-    private Control(Path appDir) throws KonException {
+    public Control(Path appDir) throws KonException {
         mViewControl = new ViewControl();
 
         try {
@@ -116,22 +115,6 @@ public final class Control {
         mGroupControl = new GroupControl(this, mModel);
     }
 
-    public static Control create(Path appDir) throws KonException {
-        Control control = new Control(appDir);
-
-        // handle shutdown signals
-        Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
-            @Override
-            public void run() {
-                // NOTE: logging does not work here anymore
-                control.mViewControl.shutDown(false);
-                System.out.println("Kontalk: shutdown finished");
-            }
-        });
-
-        return control;
-    }
-
     public void launch(boolean ui) {
 
         mModel.load();
@@ -139,7 +122,7 @@ public final class Control {
         if (ui) {
             View view = View.create(mViewControl, mModel).orElse(null);
             if (view == null) {
-                mViewControl.shutDown(false);
+                this.shutDown(false);
                 return;
             }
             view.init();
@@ -154,6 +137,32 @@ public final class Control {
 
         if (connect)
             mViewControl.connect();
+    }
+
+    public void shutDown(boolean exit) {
+        if (mShuttingDown)
+            // we were already here
+            return;
+
+        mShuttingDown = true;
+
+        LOGGER.info("Shutting down...");
+        mViewControl.disconnect();
+
+        mViewControl.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
+                EnumSet.noneOf(Client.ServerFeature.class)));
+        try {
+            mDB.close();
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.WARNING, "can't close database", ex);
+        }
+
+        Config.getInstance().saveToFile();
+
+        if (exit) {
+            LOGGER.info("exit");
+            System.exit(0);
+        }
     }
 
     public RosterHandler getRosterHandler() {
@@ -415,7 +424,7 @@ public final class Control {
         }
 
         return this.sendMessage(newMessage);
-     }
+    }
 
     boolean sendMessage(OutMessage message) {
         MessageContent content = message.getContent();
@@ -617,32 +626,8 @@ public final class Control {
 
     public class ViewControl extends Observable {
 
-        public void shutDown(boolean exit) {
-            if (mShuttingDown)
-                // we were already here
-                return;
-
-            mShuttingDown = true;
-
-            LOGGER.info("Shutting down...");
-            this.disconnect();
-
-            this.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
-                    EnumSet.noneOf(Client.ServerFeature.class)));
-            try {
-                mDB.close();
-            } catch (RuntimeException ex) {
-                LOGGER.log(Level.WARNING, "can't close database", ex);
-            }
-
-            Config.getInstance().saveToFile();
-
-            Kontalk.getInstance().removeLock();
-
-            if (exit) {
-                LOGGER.info("exit");
-                System.exit(0);
-            }
+        public void shutDown() {
+            Control.this.shutDown(true);
         }
 
         public void connect() {
