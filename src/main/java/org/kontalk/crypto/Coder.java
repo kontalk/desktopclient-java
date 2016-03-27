@@ -59,7 +59,7 @@ public final class Coder {
     public static enum Error {
         /** Some unknown error. */
         UNKNOWN_ERROR,
-        /** Own personal key not found. */
+        /** Own personal key not found. Unused. */
         MY_KEY_UNAVAILABLE,
         /** Public key of sender not found. */
         KEY_UNAVAILABLE,

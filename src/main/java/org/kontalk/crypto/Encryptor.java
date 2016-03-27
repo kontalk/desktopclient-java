@@ -67,8 +67,6 @@ final class Encryptor {
     private final PersonalKey myKey;
     private final OutMessage message;
 
-    private List<PGPUtils.PGPCoderKey> receiverKeys = null;
-
     Encryptor(PersonalKey myKey, OutMessage message) {
         this.myKey = myKey;
         this.message = message;
@@ -89,8 +87,8 @@ final class Encryptor {
             return Optional.empty();
         }
 
-        boolean loaded = this.loadKeys();
-        if (!loaded)
+        List<PGPUtils.PGPCoderKey> receiverKeys = this.loadKeysOrNull();
+        if (receiverKeys == null)
             return Optional.empty();
 
         // secure the message against replay attacks using Message/CPIM
@@ -123,8 +121,8 @@ final class Encryptor {
     }
 
     Optional<File> encryptAttachment(File file) {
-        boolean loaded = this.loadKeys();
-        if (!loaded)
+        List<PGPUtils.PGPCoderKey> receiverKeys = this.loadKeysOrNull();
+        if (receiverKeys == null)
             return Optional.empty();
 
         File tempFile;
@@ -147,23 +145,18 @@ final class Encryptor {
         return Optional.of(tempFile);
     }
 
-    private boolean loadKeys() {
+    private List<PGPUtils.PGPCoderKey> loadKeysOrNull() {
         List<Contact> contacts = message.getTransmissions().stream()
                 .map(t -> t.getContact())
                 .collect(Collectors.toList());
-        receiverKeys = receiverKeysOrNull(contacts);
-        if (receiverKeys == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
-            return false;
-        }
-        return true;
-    }
-
-    private static List<PGPUtils.PGPCoderKey> receiverKeysOrNull(List<Contact> contacts) {
-        List<PGPUtils.PGPCoderKey> keys = contacts.stream()
+        List<PGPUtils.PGPCoderKey> receiverKeys = contacts.stream()
                 .map(c -> Coder.contactkey(c).orElse(null))
                 .collect(Collectors.toList());
-        return keys.stream().anyMatch(Objects::isNull) ? null : keys;
+        if (receiverKeys.stream().anyMatch(Objects::isNull)) {
+            message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
+            return null;
+        }
+        return receiverKeys;
     }
 
     /**
