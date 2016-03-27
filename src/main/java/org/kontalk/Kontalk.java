@@ -54,32 +54,16 @@ public final class Kontalk {
 
     public static final String VERSION = "3.0.4";
 
-    private static Kontalk INSTANCE = null;
-
+    private final Path mAppDir;
     private ServerSocket mRunLock = null;
-    private Path mAppDir = null;
 
-    private static void ensureInitialized() {
+    Kontalk() {
         // platform dependent configuration directory
-        ensureInitialized(Paths.get(System.getProperty("user.home"),
+        this(Paths.get(System.getProperty("user.home"),
                 SystemUtils.IS_OS_WINDOWS ? "Kontalk" : ".kontalk"));
     }
 
-    static void ensureInitialized(Path appDir) {
-        if (INSTANCE != null)
-            return;
-
-        INSTANCE = new Kontalk(appDir);
-    }
-
-    public static Kontalk getInstance() {
-        if (INSTANCE == null)
-            throw new IllegalStateException("application not initialized");
-
-        return INSTANCE;
-    }
-
-    private Kontalk(Path appDir) {
+    Kontalk(Path appDir) {
         mAppDir = appDir.toAbsolutePath();
     }
 
@@ -170,10 +154,6 @@ public final class Kontalk {
         return 0;
     }
 
-    public Path appDir() {
-        return mAppDir;
-    }
-
     private boolean removeLock() {
         if (mRunLock == null) {
             LOGGER.warning("no lock");
@@ -221,13 +201,13 @@ public final class Kontalk {
 
         String appDir = cmd.getOptionValue("d", "");
 
-        if (!appDir.isEmpty())
-            Kontalk.ensureInitialized(Paths.get(appDir));
-        else
-            Kontalk.ensureInitialized();
+        Kontalk app = !appDir.isEmpty() ?
+                new Kontalk(Paths.get(appDir)) :
+                new Kontalk();
 
-        int returnCode = Kontalk.getInstance().start(!cmd.hasOption("c"));
+        int returnCode = app.start(!cmd.hasOption("c"));
         if (returnCode != 0)
+            // didn't work
             System.exit(returnCode);
 
         new Thread("Kontalk Main") {
