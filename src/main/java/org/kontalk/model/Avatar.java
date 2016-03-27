@@ -29,7 +29,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.util.MediaUtils;
 
 
@@ -64,7 +63,7 @@ public class Avatar {
         mID = id;
         mFile = file != null ?
                 file :
-                Kontalk.getInstance().appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
+                Model.appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
         mImage = image;
 
         if (mImage != null) {
@@ -184,7 +183,6 @@ public class Avatar {
             return null;
         }
         return out.toByteArray();
-
     }
 }
 

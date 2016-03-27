@@ -816,7 +816,7 @@ public final class Control {
 
             boolean succ = mClient.deleteAvatar();
             if (succ)
-                mModel.deleteAvatar();
+                mModel.deleteUserAvatar();
         }
 
         /* private */

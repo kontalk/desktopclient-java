@@ -21,7 +21,6 @@ package org.kontalk.model;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.util.Map;
-import java.util.logging.Logger;
 import org.kontalk.model.Avatar.UserAvatar;
 import org.kontalk.model.chat.ChatList;
 import org.kontalk.system.Config;
@@ -32,8 +31,8 @@ import org.kontalk.system.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Model {
-    private static final Logger LOGGER = Logger.getLogger(Model.class.getName());
 
+    private static Path APP_DIR;
     private final Path mAppDir;
 
     private final ContactList mContactList;
@@ -43,7 +42,7 @@ public final class Model {
     private UserAvatar mUserAvatar;
 
     public Model(Database db, Path appDir) {
-        mAppDir = appDir;
+        mAppDir = APP_DIR = appDir;
 
         mAccount = new Account(mAppDir, Config.getInstance());
         mContactList = new ContactList(db);
@@ -78,8 +77,13 @@ public final class Model {
         return UserAvatar.create(image, mAppDir);
     }
 
-    public void deleteAvatar() {
+    public void deleteUserAvatar() {
         mUserAvatar.delete();
         mUserAvatar = new UserAvatar(mAppDir);
+    }
+
+    // TODO
+    static Path appDir() {
+        return APP_DIR;
     }
 }
