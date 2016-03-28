@@ -69,9 +69,10 @@ public final class Kontalk {
 
     int start(boolean ui) {
         // check if already running
+        int port = (1 << 14) + (1 << 15) + mAppDir.hashCode() % (1 << 14);
         try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
-            mRunLock = new ServerSocket(9871, 10, addr);
+            mRunLock = new ServerSocket(port, 10, addr);
         } catch(java.net.BindException ex) {
             LOGGER.severe("already running");
             return 2;
@@ -127,7 +128,7 @@ public final class Kontalk {
         // fix crypto restriction
         CryptoUtils.removeCryptographyRestrictions();
 
-        // register provider
+        // register security provider
         PGPUtils.registerProvider();
 
         Control control;
