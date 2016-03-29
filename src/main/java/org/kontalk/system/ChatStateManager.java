@@ -18,10 +18,10 @@
 
 package org.kontalk.system;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
@@ -38,7 +38,7 @@ final class ChatStateManager {
     private static final int COMPOSING_TO_PAUSED = 15; // seconds
 
     private final Client mClient;
-    private final Map<Chat, MyChatState> mChatStateCache = new HashMap<>();
+    private final Map<Chat, MyChatState> mChatStateCache = new WeakHashMap<>();
     private final Timer mTimer = new Timer("Chat State Timer", true);
 
     public ChatStateManager(Client client) {
