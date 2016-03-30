@@ -34,6 +34,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Model;
 import org.kontalk.system.Database;
 
 /**
@@ -62,15 +63,13 @@ final public class Transmission {
             "FOREIGN KEY ("+COL_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
-    private final Database mDB;
     private final int mID;
 
     private final Contact mContact;
     private final JID mJID;
     private Date mReceivedDate;
 
-    Transmission(Database db, Contact contact, JID jid, int messageID) {
-        mDB = db;
+    Transmission(Contact contact, JID jid, int messageID) {
         mContact = contact;
         mJID = jid;
         mReceivedDate = null;
@@ -79,7 +78,6 @@ final public class Transmission {
     }
 
     private Transmission(Database db, int id, Contact contact, JID jid, Date receivedDate) {
-        mDB = db;
         mID = id;
         mContact = contact;
         mJID = jid;
@@ -114,7 +112,7 @@ final public class Transmission {
                 mJID,
                 mReceivedDate);
 
-        int id = mDB.execInsert(TABLE, values);
+        int id = Model.database().execInsert(TABLE, values);
         if (id <= 0) {
             LOGGER.log(Level.WARNING, "could not insert");
             return -2;
@@ -125,7 +123,7 @@ final public class Transmission {
     private void save() {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_REC_DATE, mReceivedDate);
-        mDB.execUpdate(TABLE, set, mID);
+        Model.database().execUpdate(TABLE, set, mID);
     }
 
     boolean delete() {
@@ -133,7 +131,7 @@ final public class Transmission {
             LOGGER.warning("not in database: "+this);
             return true;
         }
-        return mDB.execDelete(TABLE, mID);
+        return Model.database().execDelete(TABLE, mID);
     }
 
     @Override
@@ -141,7 +139,8 @@ final public class Transmission {
         return "T:id="+mID+",contact="+mContact+",jid="+mJID+",recdate="+mReceivedDate;
     }
 
-    static Set<Transmission> load(Database db, int messageID, Map<Integer, Contact> contactMap) {
+    static Set<Transmission> load(int messageID, Map<Integer, Contact> contactMap) {
+        Database db = Model.database();
         HashSet<Transmission> ts = new HashSet<>();
         try (ResultSet transmissionRS = db.execSelectWhereInsecure(TABLE,
                 COL_MESSAGE_ID + " == " + messageID)) {

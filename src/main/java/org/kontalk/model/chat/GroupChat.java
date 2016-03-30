@@ -46,8 +46,8 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     // TODO overwrite encryption=OFF field
     private boolean mForceEncryptionOff = false;
 
-    private GroupChat(Database db, List<Member> members, D gData, String subject) {
-        super(db, members, "", subject, gData);
+    private GroupChat(List<Member> members, D gData, String subject) {
+        super(members, "", subject, gData);
 
         mGroupData = gData;
         mSubject = subject;
@@ -56,7 +56,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     // used when loading from database
-    private GroupChat(Database db,
+    private GroupChat(
             int id,
             List<Member> members,
             D gData,
@@ -64,7 +64,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
             boolean read,
             String jsonViewSettings
             ) {
-        super(db, id, read, jsonViewSettings);
+        super(id, read, jsonViewSettings);
 
         mGroupData = gData;
         mSubject = subject;
@@ -224,39 +224,38 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     public static final class KonGroupChat extends GroupChat<KonGroupData> {
-        private KonGroupChat(Database db, List<Member> members,
-                KonGroupData gData, String subject) {
-            super(db, members, gData, subject);
+        private KonGroupChat(List<Member> members, KonGroupData gData, String subject) {
+            super(members, gData, subject);
         }
 
-        private KonGroupChat(Database db, int id, List<Member> members,
+        private KonGroupChat(int id, List<Member> members,
                 KonGroupData gData, String subject, boolean read, String jsonViewSettings) {
-            super(db, id, members, gData, subject, read, jsonViewSettings);
+            super(id, members, gData, subject, read, jsonViewSettings);
         }
     }
 
     public static final class MUCChat extends GroupChat<MUCData> {
-        private MUCChat(Database db, List<Member> members, MUCData gData, String subject) {
-            super(db, members, gData, subject);
+        private MUCChat(List<Member> members, MUCData gData, String subject) {
+            super(members, gData, subject);
         }
 
-        private MUCChat(Database db, int id, List<Member> members, MUCData gData,
+        private MUCChat(int id, List<Member> members, MUCData gData,
                 String subject, boolean read, String jsonViewSettings) {
-            super(db, id, members, gData, subject, read, jsonViewSettings);
+            super(id, members, gData, subject, read, jsonViewSettings);
         }
     }
 
-    static GroupChat create(Database db, int id, List<Member> members,
+    static GroupChat create(int id, List<Member> members,
             GroupMetaData gData, String subject, boolean read, String jsonViewSettings) {
         return (gData instanceof KonGroupData) ?
-                new KonGroupChat(db, id, members, (KonGroupData) gData, subject, read, jsonViewSettings) :
-                new MUCChat(db, id, members, (MUCData) gData, subject, read, jsonViewSettings);
+                new KonGroupChat(id, members, (KonGroupData) gData, subject, read, jsonViewSettings) :
+                new MUCChat(id, members, (MUCData) gData, subject, read, jsonViewSettings);
     }
 
-    public static GroupChat create(Database db, List<Member> members, GroupMetaData gData, String subject) {
+    static GroupChat create(Database db, List<Member> members, GroupMetaData gData, String subject) {
         return (gData instanceof KonGroupData) ?
-                new KonGroupChat(db, members, (KonGroupData) gData, subject) :
-                new MUCChat(db, members, (MUCData) gData, subject);
+                new KonGroupChat(members, (KonGroupData) gData, subject) :
+                new MUCChat(members, (MUCData) gData, subject);
     }
 
 }

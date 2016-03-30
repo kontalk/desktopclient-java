@@ -35,7 +35,7 @@ import org.kontalk.system.Database;
 /**
  * Global list of all contacts.
  *
- * Does not contain deleted user (only accessible by database ID).
+ * Does not contain deleted user.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -43,23 +43,21 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
-    private final Database mDB;
     /** JID to contact. Without deleted contacts. */
     private final Map<JID, Contact> mJIDMap =
             Collections.synchronizedMap(new HashMap<JID, Contact>());
 
-    ContactList(Database db) {
-        mDB = db;
-    }
+    ContactList() {}
 
     Map<Integer, Contact> load() {
         assert mJIDMap.isEmpty();
 
         Map<Integer, Contact> contactMap = new HashMap<>();
 
-        try (ResultSet resultSet = mDB.execSelectAll(Contact.TABLE)) {
+        Database db = Model.database();
+        try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
-                Contact contact = Contact.load(mDB, resultSet);
+                Contact contact = Contact.load(db, resultSet);
 
                 JID jid = contact.getJID();
                 if (mJIDMap.containsKey(jid)) {
@@ -86,7 +84,7 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         if (!this.isValid(jid))
             return Optional.empty();
 
-        Contact newContact = new Contact(mDB, jid, name);
+        Contact newContact = new Contact(jid, name);
         if (newContact.getID() < 1)
             return Optional.empty();
 
