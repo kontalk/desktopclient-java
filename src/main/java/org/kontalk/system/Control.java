@@ -18,6 +18,8 @@
 
 package org.kontalk.system;
 
+import org.kontalk.persistence.Config;
+import org.kontalk.persistence.Database;
 import org.kontalk.model.Account;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;

@@ -40,10 +40,10 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.crypto.X509Bridge;
 import org.kontalk.misc.JID;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 
 /**
- * The user account. There can only be one.
+ * The user account.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */

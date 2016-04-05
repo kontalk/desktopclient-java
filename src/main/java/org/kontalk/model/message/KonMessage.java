@@ -35,7 +35,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;

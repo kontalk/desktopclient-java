@@ -91,7 +91,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
 

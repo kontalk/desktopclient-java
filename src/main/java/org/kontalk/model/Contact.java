@@ -31,7 +31,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
 

@@ -16,12 +16,11 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.system;
+package org.kontalk.persistence;
 
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.ConfigurationException;
@@ -29,7 +28,6 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.kontalk.util.Tr;
 
 /**
- *
  * Global configuration options.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
@@ -82,7 +80,7 @@ public final class Config extends PropertiesConfiguration {
         try {
             this.load(configFile.toString());
         } catch (ConfigurationException ex) {
-            LOGGER.info("Configuration not found. Using default values");
+            LOGGER.info("configuration file not found; using default values");
         }
 
         this.setFileName(configFile.toString());
@@ -111,11 +109,9 @@ public final class Config extends PropertiesConfiguration {
         map.put(MAIN_TRAY_CLOSE, false);
         map.put(MAIN_ENTER_SENDS, true);
 
-        for(Entry<String, Object> e : map.entrySet()) {
-            if (!this.containsKey(e.getKey())) {
-                this.setProperty(e.getKey(), e.getValue());
-            }
-        }
+        map.entrySet().stream()
+                .filter(e -> !this.containsKey(e.getKey()))
+                .forEach(e -> this.setProperty(e.getKey(), e.getValue()));
     }
 
     public void saveToFile() {
@@ -126,7 +122,7 @@ public final class Config extends PropertiesConfiguration {
         }
     }
 
-    static void initialize(Path appDir) {
+    public static void initialize(Path appDir) {
         if (INSTANCE != null) {
             LOGGER.warning("already initialized");
             return;
@@ -135,7 +131,7 @@ public final class Config extends PropertiesConfiguration {
         INSTANCE = new Config(appDir.resolve(Config.FILENAME));
     }
 
-    public synchronized static Config getInstance() {
+    public static Config getInstance() {
         if (INSTANCE == null)
             throw new IllegalStateException("not initialized");
 

@@ -51,7 +51,7 @@ import javax.swing.Box;
 import javax.swing.JFrame;
 import javax.swing.text.NumberFormatter;
 import org.apache.commons.lang.StringUtils;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Account;

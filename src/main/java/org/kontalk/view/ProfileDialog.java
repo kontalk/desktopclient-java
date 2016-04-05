@@ -49,7 +49,7 @@ import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.ObjectUtils;
 import org.kontalk.client.Client;
 import org.kontalk.model.Model;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;

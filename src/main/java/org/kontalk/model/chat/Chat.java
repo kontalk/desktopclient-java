@@ -39,7 +39,7 @@ import org.json.simple.JSONValue;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.message.KonMessage;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.

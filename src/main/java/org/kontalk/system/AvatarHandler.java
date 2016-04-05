@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import org.kontalk.persistence.Config;
 import java.awt.image.BufferedImage;
 import java.util.Arrays;
 import java.util.List;

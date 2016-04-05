@@ -54,7 +54,7 @@ import javax.swing.Icon;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.Kontalk;
 import org.kontalk.model.Model;
 import org.kontalk.system.Control;

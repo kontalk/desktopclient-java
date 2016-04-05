@@ -35,7 +35,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 
 /**
  * A transmission of one message.

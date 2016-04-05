@@ -62,7 +62,7 @@ import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.model.chat.Member;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;

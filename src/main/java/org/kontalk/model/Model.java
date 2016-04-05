@@ -32,8 +32,8 @@ import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.ProtoMessage;
-import org.kontalk.system.Config;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Config;
+import org.kontalk.persistence.Database;
 import org.kontalk.util.ClientUtils;
 
 /**

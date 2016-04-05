@@ -34,7 +34,7 @@ import javax.swing.Box;
 import javax.swing.ListSelectionModel;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.ChatList;

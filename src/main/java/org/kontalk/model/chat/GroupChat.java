@@ -29,7 +29,7 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Contact;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.GroupMetaData.MUCData;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 
 /**
  * A long-term persistent chat conversation with multiple participants.
