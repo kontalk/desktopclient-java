@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.Account;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.util.EncodingUtils;
 
@@ -49,6 +50,8 @@ public class MessageContent {
     private final String mPlainText;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
+    // temporary encrypted data, not saved to database
+    private byte[] mEncryptedData;
     // attachment (file url, path and metadata)
     private final Attachment mAttachment;
     // small preview file of attachment
@@ -122,11 +125,19 @@ public class MessageContent {
         return mEncryptedContent;
     }
 
-    public void setDecryptedContent(MessageContent decryptedContent) {
+    void setDecryptedContent(MessageContent decryptedContent) {
         assert mDecryptedContent == null;
         mDecryptedContent = decryptedContent;
         // deleting encrypted data!
         mEncryptedContent = "";
+    }
+
+    public Optional<byte[]> getEncryptedData() {
+        return Optional.ofNullable(mEncryptedData);
+    }
+
+    public void setEncryptedData(byte[] encryptedData) {
+        mEncryptedData = encryptedData;
     }
 
     public Optional<Preview> getPreview() {
@@ -531,7 +542,8 @@ public class MessageContent {
         }
 
         public boolean isAddingMe() {
-            return mAdded.stream().anyMatch(jid -> jid.isMe());
+            JID myJID = Account.getUserJID();
+            return mAdded.stream().anyMatch(jid -> jid.equals(myJID));
         }
 
         public List<JID> getRemoved() {

@@ -36,7 +36,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.message.KonMessage;
@@ -72,7 +71,7 @@ public final class Database {
 
     private Connection mConn = null;
 
-    private Database(Path path) throws KonException {
+    Database(Path appDir) throws KonException {
         // load the sqlite-JDBC driver using the current class loader
         try {
             Class.forName("org.sqlite.JDBC");
@@ -82,6 +81,7 @@ public final class Database {
         }
 
         // create database connection
+        Path path = appDir.resolve(FILENAME);
         SQLiteConfig config = new SQLiteConfig();
         config.enforceForeignKeys(true);
         try {
@@ -373,19 +373,5 @@ public final class Database {
 
     public static String setString(String s) {
         return s.isEmpty() ? null : s;
-    }
-
-    public static void ensureInitialized() throws KonException {
-        if (INSTANCE != null)
-            return;
-
-        INSTANCE = new Database(Kontalk.getInstance().appDir().resolve(Database.FILENAME));
-    }
-
-    public static Database getInstance() {
-        if (INSTANCE == null)
-            throw new IllegalStateException("database not initialized");
-
-        return INSTANCE;
     }
 }

@@ -21,10 +21,10 @@ package org.kontalk.model.message;
 import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,6 +37,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.system.Database;
 import org.kontalk.crypto.Coder;
+import org.kontalk.model.Contact;
 import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.util.EncodingUtils;
 
@@ -105,6 +106,7 @@ public abstract class KonMessage extends Observable {
             "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id) " +
             ")";
 
+    private final Database mDB;
     protected final int mID;
     private final Chat mChat;
     private final String mXMPPID;
@@ -119,12 +121,14 @@ public abstract class KonMessage extends Observable {
     protected CoderStatus mCoderStatus;
     protected ServerError mServerError;
 
-    protected KonMessage(Chat chat,
+    protected KonMessage(Database db,
+            Chat chat,
             String xmppID,
             MessageContent content,
             Optional<Date> serverDate,
             Status status,
             CoderStatus coderStatus) {
+        mDB = db;
         mChat = chat;
         mXMPPID = xmppID;
         mDate = new Date();
@@ -136,29 +140,29 @@ public abstract class KonMessage extends Observable {
         mServerError = new ServerError();
 
         // insert
-        Database db = Database.getInstance();
-        List<Object> values = new LinkedList<>();
-        values.add(mChat.getID());
-        values.add(Database.setString(mXMPPID));
-        values.add(mDate);
-        values.add(mStatus);
+        List<Object> values = Arrays.asList(
+                mChat.getID(),
+                Database.setString(mXMPPID),
+                mDate,
+                mStatus,
         // i simply don't like to save all possible content explicitly in the
         // database, so we use JSON here
-        values.add(mContent.toJSON());
-        values.add(mCoderStatus.getEncryption());
-        values.add(mCoderStatus.getSigning());
-        values.add(mCoderStatus.getErrors());
-        values.add(mServerError.toJSON());
-        values.add(mServerDate);
+                mContent.toJSON(),
+                mCoderStatus.getEncryption(),
+                mCoderStatus.getSigning(),
+                mCoderStatus.getErrors(),
+                mServerError.toJSON(),
+                mServerDate);
 
-        mID = db.execInsert(TABLE, values);
+        mID = mDB.execInsert(TABLE, values);
         if (mID <= 0) {
             LOGGER.log(Level.WARNING, "db, could not insert message");
         }
     }
 
     // used when loading from database
-    protected KonMessage(Builder builder) {
+    protected KonMessage(Database db, Builder builder) {
+        mDB = db;
         mID = builder.mID;
         mChat = builder.mChat;
         mXMPPID = builder.mXMPPID;
@@ -247,8 +251,7 @@ public abstract class KonMessage extends Observable {
         return mCoderStatus.isEncrypted();
     }
 
-    public void save() {
-        Database db = Database.getInstance();
+    protected void save() {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_STATUS, mStatus);
         set.put(COL_CONTENT, mContent.toJSON());
@@ -257,7 +260,7 @@ public abstract class KonMessage extends Observable {
         set.put(COL_COD_ERR, mCoderStatus.getErrors());
         set.put(COL_SERV_ERR, Database.setString(mServerError.toJSON()));
         set.put(COL_SERV_DATE, mServerDate);
-        db.execUpdate(TABLE, set, mID);
+        mDB.execUpdate(TABLE, set, mID);
     }
 
     public boolean delete() {
@@ -269,7 +272,7 @@ public abstract class KonMessage extends Observable {
             LOGGER.warning("not in database: "+this);
             return true;
         }
-        return Database.getInstance().execDelete(TABLE, mID);
+        return mDB.execDelete(TABLE, mID);
     }
 
     protected void changed(Object arg) {
@@ -308,7 +311,9 @@ public abstract class KonMessage extends Observable {
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
-    public static KonMessage load(ResultSet messageRS, Chat chat) throws SQLException {
+    public static KonMessage load(Database db, ResultSet messageRS, Chat chat,
+            Map<Integer, Contact> contactMap)
+            throws SQLException {
         int id = messageRS.getInt("_id");
 
         String xmppID = Database.getString(messageRS, KonMessage.COL_XMPP_ID);
@@ -343,14 +348,14 @@ public abstract class KonMessage extends Observable {
 
         KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date, content);
         // TODO one SQL SELECT for each message, performance? looks ok
-        builder.transmissions(Transmission.load(id));
+        builder.transmissions(Transmission.load(db, id, contactMap));
         builder.xmppID(xmppID);
         if (serverDate != null)
             builder.serverDate(serverDate);
         builder.coderStatus(coderStatus);
         builder.serverError(serverError);
 
-        return builder.build();
+        return builder.build(db);
     }
 
     public static final class ServerError {
@@ -424,7 +429,7 @@ public abstract class KonMessage extends Observable {
         private void coderStatus(CoderStatus coderStatus) { mCoderStatus = coderStatus; }
         private void serverError(ServerError error) { mServerError = error; }
 
-        private KonMessage build() {
+        private KonMessage build(Database db) {
             if (mTransmissions == null ||
                     mXMPPID == null ||
                     mCoderStatus == null ||
@@ -432,9 +437,9 @@ public abstract class KonMessage extends Observable {
                 throw new IllegalStateException();
 
             if (mStatus == Status.IN)
-                return new InMessage(this);
+                return new InMessage(db, this);
             else
-                return new OutMessage(this);
+                return new OutMessage(db, this);
         }
     }
 }

@@ -27,7 +27,6 @@ import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
@@ -35,7 +34,6 @@ import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.OutMessage;
-import org.kontalk.system.Control;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
 
@@ -43,15 +41,13 @@ import org.kontalk.util.EncodingUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class KonMessageSender {
+public final class KonMessageSender {
     private static final Logger LOGGER = Logger.getLogger(KonMessageSender.class.getName());
 
     private final Client mClient;
-    private final Control mControl;
 
-    KonMessageSender(Client client, Control control) {
+    KonMessageSender(Client client) {
         mClient = client;
-        mControl = control;
     }
 
     boolean sendMessage(OutMessage message, boolean sendChatState) {
@@ -73,9 +69,7 @@ final class KonMessageSender {
             return false;
         }
 
-        boolean encrypted =
-                message.getCoderStatus().getEncryption() != Coder.Encryption.NOT ||
-                message.getCoderStatus().getSigning() != Coder.Signing.NOT;
+        boolean encrypted = message.isSendEncrypted();
 
         Chat chat = message.getChat();
 
@@ -101,16 +95,9 @@ final class KonMessageSender {
             protoMessage.addExtension(new ChatStateExtension(ChatState.active));
 
         if (encrypted) {
-            byte[] encryptedData = content.isComplex() || chat.isGroupChat() ?
-                        Coder.encryptStanza(message,
-                                rawMessage(content, chat, true).toXML().toString()).orElse(null) :
-                        Coder.encryptMessage(message).orElse(null);
-            // check also for security errors just to be sure
-            if (encryptedData == null ||
-                    !message.getCoderStatus().getErrors().isEmpty()) {
-                LOGGER.warning("encryption failed");
-                message.setStatus(KonMessage.Status.ERROR);
-                mControl.onSecurityErrors(message);
+            byte[] encryptedData = content.getEncryptedData().orElse(null);
+            if (encryptedData == null) {
+                LOGGER.warning("no encrypted data");
                 return false;
             }
             protoMessage.addExtension(new E2EEncryption(encryptedData));
@@ -144,7 +131,7 @@ final class KonMessageSender {
         return mClient.sendPackets(sendMessages.toArray(new Message[0]));
     }
 
-    private static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
+    public static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
         Message smackMessage = new Message();
 
         // text

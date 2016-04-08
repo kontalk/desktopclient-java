@@ -43,8 +43,8 @@ public final class AcknowledgedListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza p) {
-        // NOTE: the packet is not the acknowledgement itself but the packet that
-        // is acknowledged
+        // NOTE: the packet is not the acknowledgement itself but the packet
+        // that is acknowledged
         if (!(p instanceof Message)) {
             // we are only interested in acks for messages
             return;
@@ -54,8 +54,8 @@ public final class AcknowledgedListener implements StanzaListener {
         LOGGER.config("for message: "+m);
 
         if (DeliveryReceipt.from(m) != null) {
-            // this is an ack for a 'received' message send by
-            // KonMessageListener (XEP-0184), nothing must be done
+            // this is an ack for a 'received' message (XEP-0184) send by
+            // KonMessageListener, ignore
             return;
         }
 

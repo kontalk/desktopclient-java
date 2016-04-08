@@ -48,7 +48,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.ObjectUtils;
 import org.kontalk.client.Client;
-import org.kontalk.model.Avatar;
+import org.kontalk.model.Model;
 import org.kontalk.system.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.MediaUtils;
@@ -71,7 +71,7 @@ final class ProfileDialog extends WebDialog {
 
     private BufferedImage mNewImage = null;
 
-    ProfileDialog(View view) {
+    ProfileDialog(View view, Model model) {
         mView = view;
 
         this.setTitle(Tr.tr("User Profile"));
@@ -91,7 +91,7 @@ final class ProfileDialog extends WebDialog {
         groupPanel.add(new WebLabel(Tr.tr("Your profile picture:")));
 
         mAvatarImage = new WebImage();
-        mOldImage = mNewImage = Avatar.UserAvatar.instance().loadImage().orElse(null);
+        mOldImage = mNewImage = model.userAvatar().loadImage().orElse(null);
         this.setImage(mOldImage);
 
         //mAvatarImage.setDisplayType(DisplayType.fitComponent);

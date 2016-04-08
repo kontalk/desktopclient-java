@@ -17,9 +17,9 @@
  */
 package org.kontalk.model;
 
-import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import org.kontalk.misc.JID;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -43,22 +43,23 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
-    private static final ContactList INSTANCE = new ContactList();
-
+    private final Database mDB;
     /** JID to contact. Without deleted contacts. */
     private final Map<JID, Contact> mJIDMap =
             Collections.synchronizedMap(new HashMap<JID, Contact>());
-    /** Database ID to contact. With deleted contacts. */
-    private final Map<Integer, Contact> mIDMap =
-            Collections.synchronizedMap(new HashMap<Integer, Contact>());
 
-    private ContactList() {}
+    ContactList(Database db) {
+        mDB = db;
+    }
 
-    public void load() {
-        Database db = Database.getInstance();
-        try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
+    Map<Integer, Contact> load() {
+        assert mJIDMap.isEmpty();
+
+        Map<Integer, Contact> contactMap = new HashMap<>();
+
+        try (ResultSet resultSet = mDB.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
-                Contact contact = Contact.load(resultSet);
+                Contact contact = Contact.load(mDB, resultSet);
 
                 JID jid = contact.getJID();
                 if (mJIDMap.containsKey(jid)) {
@@ -68,40 +69,31 @@ public final class ContactList extends Observable implements Iterable<Contact> {
                 if (!contact.isDeleted())
                     mJIDMap.put(jid, contact);
 
-                mIDMap.put(contact.getID(), contact);
+                contactMap.put(contact.getID(), contact);
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load contacts from db", ex);
         }
         this.changed(null);
+
+        return contactMap;
     }
 
-    /**
-     * Create and add a new contact.
-     */
+    /** Create and add a new contact. */
     public Optional<Contact> create(JID jid, String name) {
         jid = jid.toBare();
 
         if (!this.isValid(jid))
             return Optional.empty();
 
-        Contact newContact = new Contact(jid, name);
+        Contact newContact = new Contact(mDB, jid, name);
         if (newContact.getID() < 1)
             return Optional.empty();
 
         mJIDMap.put(newContact.getJID(), newContact);
-        mIDMap.put(newContact.getID(), newContact);
 
         this.changed(newContact);
         return Optional.of(newContact);
-    }
-
-    public Optional<Contact> get(int id) {
-        Contact contact = mIDMap.get(id);
-        if (contact == null) {
-            LOGGER.warning("can't find contact with ID: " + id);
-        }
-        return Optional.ofNullable(contact);
     }
 
     /**
@@ -117,7 +109,7 @@ public final class ContactList extends Observable implements Iterable<Contact> {
      * if not yet in the list.
      */
     public Optional<Contact> getMe() {
-        JID myJID = Account.getInstance().getUserJID();
+        JID myJID = Account.getUserJID();
         if (!myJID.isValid())
             return Optional.empty();
 
@@ -190,9 +182,5 @@ public final class ContactList extends Observable implements Iterable<Contact> {
     @Override
     public Iterator<Contact> iterator() {
         return mJIDMap.values().iterator();
-    }
-
-    public static ContactList getInstance() {
-        return INSTANCE;
     }
 }

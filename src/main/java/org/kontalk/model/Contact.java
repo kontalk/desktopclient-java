@@ -20,10 +20,10 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
@@ -37,6 +37,12 @@ import org.kontalk.util.XMPPUtils;
 
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
+ *
+ * TODO group chats need some weaker entity here: not deletable,
+ * not shown in ui contact list(?), but with public key
+ *
+ * idea: "deletable" or / "weak" field: contact gets deleted
+ * when no group chat exists anymore
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -78,6 +84,7 @@ public final class Contact extends Observable {
             COL_AVATAR_ID + " TEXT" +
             ")";
 
+    private final Database mDB;
     private final int mID;
     private JID mJID;
     private String mName;
@@ -92,27 +99,30 @@ public final class Contact extends Observable {
     //private ItemType mType;
     private Avatar mAvatar = null;
 
-    // used for creating new contacts (eg from roster)
-    Contact(JID jid, String name) {
+    // new contact (eg from roster)
+    Contact(Database db, JID jid, String name) {
+        mDB = db;
         mJID = jid;
         mName = name;
-        Database db = Database.getInstance();
-        List<Object> values = new LinkedList<>();
-        values.add(mJID);
-        values.add(mName);
-        values.add(mStatus);
-        values.add(mLastSeen);
-        values.add(mEncrypted);
-        values.add(null); // key
-        values.add(null); // fingerprint
-        values.add(null); // avatar id
-        mID = db.execInsert(TABLE, values);
+
+        // insert
+        List<Object> values = Arrays.asList(
+                mJID,
+                mName,
+                mStatus,
+                mLastSeen,
+                mEncrypted,
+                null, // key
+                null, // fingerprint
+                null); // avatar id
+        mID = mDB.execInsert(TABLE, values);
         if (mID < 1)
             LOGGER.log(Level.WARNING, "could not insert contact");
     }
 
-    // used for loading contacts from database
-    Contact(int id,
+    // loading from database
+    public Contact(Database db,
+            int id,
             JID jid,
             String name,
             String status,
@@ -121,6 +131,7 @@ public final class Contact extends Observable {
             String publicKey,
             String fingerprint,
             String avatarID) {
+        mDB = db;
         mID = id;
         mJID = jid;
         mName = name;
@@ -290,7 +301,7 @@ public final class Contact extends Observable {
     }
 
     public boolean isMe() {
-        return mJID.isMe();
+        return mJID.isValid() && mJID.equals(Account.getUserJID());
     }
 
     public boolean isKontalkUser(){
@@ -322,7 +333,6 @@ public final class Contact extends Observable {
     }
 
     private void save() {
-        Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
         set.put(COL_NAME, mName);
@@ -332,7 +342,7 @@ public final class Contact extends Observable {
         set.put(COL_PUB_KEY, Database.setString(mKey));
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
         set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.getID() : ""));
-        db.execUpdate(TABLE, set, mID);
+        mDB.execUpdate(TABLE, set, mID);
     }
 
     private void changed(Object arg) {
@@ -364,7 +374,7 @@ public final class Contact extends Observable {
                 +",subsc="+mSubStatus;
     }
 
-    static Contact load(ResultSet rs) throws SQLException {
+    static Contact load(Database db, ResultSet rs) throws SQLException {
         int id = rs.getInt("_id");
         JID jid = JID.bare(rs.getString(Contact.COL_JID));
 
@@ -377,6 +387,7 @@ public final class Contact extends Observable {
         String fp = Database.getString(rs, Contact.COL_KEY_FP);
         String avatarID = Database.getString(rs, Contact.COL_AVATAR_ID);
 
-        return new Contact(id, jid, name, status, Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
+        return new Contact(db, id, jid, name, status,
+                Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
     }
 }

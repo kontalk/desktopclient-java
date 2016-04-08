@@ -35,8 +35,8 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
-import org.kontalk.Kontalk;
 import org.kontalk.client.Client;
+import org.kontalk.client.KonMessageSender;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
@@ -48,11 +48,10 @@ import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.OutMessage;
-import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Avatar;
+import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.message.MessageContent.Attachment;
@@ -61,6 +60,7 @@ import org.kontalk.model.message.ProtoMessage;
 import org.kontalk.model.chat.SingleChat;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
+import org.kontalk.view.View;
 
 /**
  * Application control logic.
@@ -84,7 +84,9 @@ public final class Control {
 
     private final ViewControl mViewControl;
 
+    private final Database mDB;
     private final Client mClient;
+    private final Model mModel;
     private final ChatStateManager mChatStateManager;
     private final AttachmentManager mAttachmentManager;
     private final RosterHandler mRosterHandler;
@@ -93,15 +95,76 @@ public final class Control {
 
     private boolean mShuttingDown = false;
 
-    private Control() {
+    public Control(Path appDir) throws KonException {
         mViewControl = new ViewControl();
 
-        mClient = Client.create(this);
+        Config.initialize(appDir);
+
+        try {
+            mDB = new Database(appDir);
+        } catch (KonException ex) {
+            LOGGER.log(Level.SEVERE, "can't initialize database", ex);
+            throw ex;
+        }
+
+        mModel = new Model(mDB, appDir);
+
+        mClient = Client.create(this, appDir);
         mChatStateManager = new ChatStateManager(mClient);
-        mAttachmentManager = AttachmentManager.create(this);
-        mRosterHandler = new RosterHandler(this, mClient);
-        mAvatarHandler = new AvatarHandler(mClient);
-        mGroupControl = new GroupControl(this);
+        mAttachmentManager = AttachmentManager.create(this, appDir);
+        mRosterHandler = new RosterHandler(this, mClient, mModel);
+        mAvatarHandler = new AvatarHandler(mClient, mModel, appDir);
+        mGroupControl = new GroupControl(this, mModel);
+    }
+
+    public void launch(boolean ui) {
+
+        mModel.load();
+
+        if (ui) {
+            View view = View.create(mViewControl, mModel).orElse(null);
+            if (view == null) {
+                this.shutDown(false);
+                return;
+            }
+            view.init();
+        }
+
+        boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
+        if (!mModel.account().isPresent()) {
+            LOGGER.info("no account found, asking for import...");
+            mViewControl.changed(new ViewEvent.MissingAccount(connect));
+            return;
+        }
+
+        if (connect)
+            mViewControl.connect();
+    }
+
+    public void shutDown(boolean exit) {
+        if (mShuttingDown)
+            // we were already here
+            return;
+
+        mShuttingDown = true;
+
+        LOGGER.info("Shutting down...");
+        mViewControl.disconnect();
+
+        mViewControl.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
+                EnumSet.noneOf(Client.ServerFeature.class)));
+        try {
+            mDB.close();
+        } catch (RuntimeException ex) {
+            LOGGER.log(Level.WARNING, "can't close database", ex);
+        }
+
+        Config.getInstance().saveToFile();
+
+        if (exit) {
+            LOGGER.info("exit");
+            System.exit(0);
+        }
     }
 
     public RosterHandler getRosterHandler() {
@@ -125,20 +188,24 @@ public final class Control {
             String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
             mClient.sendUserPresence(strings.length > 0 ? strings[0] : "");
             // send all pending messages
-            for (Chat chat: ChatList.getInstance())
+            for (Chat chat: mModel.chats())
                 chat.getMessages().getPending().stream()
                         .forEach(m -> this.sendMessage(m));
 
             // send public key requests for Kontalk contacts with missing key
-            for (Contact contact : ContactList.getInstance())
+            for (Contact contact : mModel.contacts())
                 if (contact.getFingerprint().isEmpty())
                     this.maySendKeyRequest(contact);
 
             // TODO check current user avatar on server and upload if necessary
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
-            for (Contact contact : ContactList.getInstance())
+            for (Contact contact : mModel.contacts())
                 contact.setOffline();
         }
+    }
+
+    public void onAuthenticated(JID jid) {
+        mModel.account().setJID(jid);
     }
 
     public void onException(KonException ex) {
@@ -179,19 +246,20 @@ public final class Control {
         // decrypt message now to get possible group data
         ProtoMessage protoMessage = new ProtoMessage(sender, content);
         if (protoMessage.isEncrypted()) {
-            Coder.decryptMessage(protoMessage);
+            this.myKey().ifPresent(mk -> Coder.decryptMessage(mk, protoMessage));
         }
 
         // NOTE: decryption must be successful to select group chat
         Chat chat = content.getGroupData().isPresent() ?
-                GroupControl.getGroupChat(content, sender).orElse(null) :
-                ChatList.getInstance().getOrCreate(sender, ids.xmppThreadID);
+                mGroupControl.getGroupChat(content, sender).orElse(null) :
+                mModel.chats().getOrCreate(sender, ids.xmppThreadID);
         if (chat == null) {
             LOGGER.warning("no chat found, message lost: "+protoMessage);
             return;
         }
 
-        InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
+        // TODO move
+        InMessage newMessage = new InMessage(mDB, protoMessage, chat, ids.jid,
                 ids.xmppID, serverDate);
 
         if (newMessage.getID() <= 0)
@@ -223,7 +291,7 @@ public final class Control {
     }
 
     public void onMessageSent(MessageIDs ids) {
-        OutMessage message = findMessage(ids).orElse(null);
+        OutMessage message = this.findMessage(ids).orElse(null);
         if (message == null)
             return;
 
@@ -231,7 +299,7 @@ public final class Control {
     }
 
     public void onMessageReceived(MessageIDs ids) {
-        OutMessage message = findMessage(ids).orElse(null);
+        OutMessage message = this.findMessage(ids).orElse(null);
         if (message == null)
             return;
 
@@ -239,7 +307,7 @@ public final class Control {
     }
 
     public void onMessageError(MessageIDs ids, Condition condition, String errorText) {
-        OutMessage message = findMessage(ids).orElse(null);
+        OutMessage message = this.findMessage(ids).orElse(null);
         if (message == null)
             return ;
         message.setServerError(condition.toString(), errorText);
@@ -258,13 +326,13 @@ public final class Control {
                 return;
             }
         }
-        Contact contact = ContactList.getInstance().get(ids.jid).orElse(null);
+        Contact contact = mModel.contacts().get(ids.jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+ids.jid);
             return;
         }
         // NOTE: assume chat states are only send for single chats
-        SingleChat chat = ChatList.getInstance().get(contact, ids.xmppThreadID).orElse(null);
+        SingleChat chat = mModel.chats().get(contact, ids.xmppThreadID).orElse(null);
         if (chat == null)
             // not that important
             return;
@@ -273,7 +341,7 @@ public final class Control {
     }
 
     public void onPGPKey(JID jid, byte[] rawKey) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid: "+jid);
             return;
@@ -317,7 +385,7 @@ public final class Control {
     }
 
     public void onContactBlocked(JID jid, boolean blocking) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("ignoring blocking of JID not in contact list");
             return;
@@ -347,7 +415,8 @@ public final class Control {
             return false;
         }
 
-        OutMessage newMessage = new OutMessage(chat, contacts, content,
+        // TODO move
+        OutMessage newMessage = new OutMessage(mDB, chat, contacts, content,
                 chat.isSendEncrypted());
         if (newMessage.getContent().getAttachment().isPresent())
             mAttachmentManager.createImagePreview(newMessage);
@@ -357,14 +426,39 @@ public final class Control {
         }
 
         return this.sendMessage(newMessage);
-     }
+    }
 
     boolean sendMessage(OutMessage message) {
-        if (message.getContent().getAttachment().isPresent() &&
-                !message.getContent().getAttachment().get().hasURL()) {
+        MessageContent content = message.getContent();
+        if (content.getAttachment().isPresent() &&
+                !content.getAttachment().get().hasURL()) {
             // continue later...
             mAttachmentManager.queueUpload(message);
             return false;
+        }
+
+        // prepare encrypted content
+        if (message.isSendEncrypted()) {
+            PersonalKey myKey = this.myKey().orElse(null);
+            if (myKey == null)
+                return false;
+
+            Chat chat = message.getChat();
+            byte[] encryptedData;
+            if (content.isComplex() || chat.isGroupChat()) {
+                String stanza = KonMessageSender.rawMessage(content, chat, true).toXML().toString();
+                encryptedData = Coder.encryptStanza(myKey, message, stanza).orElse(null);
+            } else {
+                encryptedData = Coder.encryptMessage(myKey, message).orElse(null);
+            }
+            // check also for security errors just to be sure
+            if (encryptedData == null || !message.getCoderStatus().getErrors().isEmpty()) {
+                LOGGER.warning("encryption failed");
+                message.setStatus(KonMessage.Status.ERROR);
+                this.onSecurityErrors(message);
+                return false;
+            }
+            content.setEncryptedData(encryptedData);
         }
 
         boolean sent = mClient.sendMessage(message,
@@ -387,7 +481,7 @@ public final class Control {
     }
 
     Optional<Contact> getOrCreateContact(JID jid) {
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact != null)
             return Optional.of(contact);
 
@@ -402,6 +496,14 @@ public final class Control {
         mClient.sendPresenceSubscription(jid, command);
     }
 
+    Optional<PersonalKey> myKey() {
+        Optional<PersonalKey> myKey = mModel.account().getPersonalKey();
+        if (!myKey.isPresent()) {
+            LOGGER.log(Level.WARNING, "can't get personal key");
+        }
+        return myKey;
+    }
+
     /* private */
 
     private Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
@@ -414,7 +516,7 @@ public final class Control {
             name = jid.local();
         }
 
-        Contact newContact = ContactList.getInstance().create(jid, name).orElse(null);
+        Contact newContact = mModel.contacts().create(jid, name).orElse(null);
         if (newContact == null) {
             LOGGER.warning("can't create new contact");
             // TODO tell view
@@ -434,12 +536,11 @@ public final class Control {
         if (!message.isEncrypted()) {
             LOGGER.info("message not encrypted");
         } else {
-            Coder.decryptMessage(message);
+            this.myKey().ifPresent(mk -> Coder.decryptMessage(mk, message));
         }
 
         this.processContent(message);
     }
-
 
     private void setKey(Contact contact, PGPCoderKey key) {
         contact.setKey(key.rawKey, key.fingerprint);
@@ -499,32 +600,24 @@ public final class Control {
         }
     }
 
-    /* static */
-
-    public static ViewControl create() {
-        return new Control().mViewControl;
-    }
-
-    private static Optional<OutMessage> findMessage(MessageIDs ids) {
-        ChatList cl = ChatList.getInstance();
-
+    private Optional<OutMessage> findMessage(MessageIDs ids) {
         // get chat by jid -> thread ID -> message id
-        Contact contact = ContactList.getInstance().get(ids.jid).orElse(null);
+        Contact contact = mModel.contacts().get(ids.jid).orElse(null);
         if (contact != null) {
-            Chat chat = cl.get(contact, ids.xmppThreadID).orElse(null);
+            Chat chat = mModel.chats().get(contact, ids.xmppThreadID).orElse(null);
             if (chat != null) {
-                OutMessage m = chat.getMessages().getLast(ids.xmppID).orElse(null);
-                if (m != null)
-                    return Optional.of(m);
+                Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
+                if (optM.isPresent())
+                    return optM;
             }
         }
 
         // fallback: search everywhere
         LOGGER.info("fallback search, IDs: "+ids);
-        for (Chat chat: cl) {
-            OutMessage m = chat.getMessages().getLast(ids.xmppID).orElse(null);
-            if (m != null)
-                return Optional.of(m);
+        for (Chat chat: mModel.chats()) {
+            Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
+            if (optM.isPresent())
+                return optM;
         }
 
         LOGGER.warning("can't find message by IDs: "+ids);
@@ -535,44 +628,8 @@ public final class Control {
 
     public class ViewControl extends Observable {
 
-        public void launch() {
-            boolean connect = Config.getInstance().getBoolean(Config.MAIN_CONNECT_STARTUP);
-            if (!Account.getInstance().isPresent()) {
-                LOGGER.info("no account found, asking for import...");
-                this.changed(new ViewEvent.MissingAccount(connect));
-                return;
-            }
-
-            if (connect)
-                this.connect();
-        }
-
-        public void shutDown(boolean exit) {
-            if (mShuttingDown)
-                // we were already here
-                return;
-
-            mShuttingDown = true;
-
-            LOGGER.info("Shutting down...");
-            this.disconnect();
-
-            this.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
-                    EnumSet.noneOf(Client.ServerFeature.class)));
-            try {
-                Database.getInstance().close();
-            } catch (RuntimeException ex) {
-                LOGGER.log(Level.WARNING, "can't close database", ex);
-            }
-
-            Config.getInstance().saveToFile();
-
-            Kontalk.getInstance().removeLock();
-
-            if (exit) {
-                LOGGER.info("exit");
-                System.exit(0);
-            }
+        public void shutDown() {
+            Control.this.shutDown(true);
         }
 
         public void connect() {
@@ -607,6 +664,10 @@ public final class Control {
             mClient.sendUserPresence(newStatus);
         }
 
+        public void setAccountPassword(char[] oldPass, char[] newPass) throws KonException {
+            mModel.account().setPassword(oldPass, newPass);
+        }
+
         public Path getFilePath(Attachment attachment) {
             return mAttachmentManager.absoluteFilePath(attachment);
         }
@@ -623,7 +684,7 @@ public final class Control {
 
         public void deleteContact(Contact contact) {
             JID jid = contact.getJID();
-            ContactList.getInstance().delete(contact);
+            mModel.contacts().delete(contact);
 
             Control.this.removeFromRoster(jid);
         }
@@ -638,7 +699,7 @@ public final class Control {
             if (oldJID.equals(newJID))
                 return;
 
-            boolean succ = ContactList.getInstance().changeJID(contact, newJID);
+            boolean succ = mModel.contacts().changeJID(contact, newJID);
             if (!succ)
                 return;
 
@@ -681,7 +742,7 @@ public final class Control {
         /* chats */
 
         public Chat getOrCreateSingleChat(Contact contact) {
-            return ChatList.getInstance().getOrCreate(contact);
+            return mModel.chats().getOrCreate(contact);
         }
 
         public Optional<GroupChat> createGroupChat(List<Contact> contacts, String subject) {
@@ -689,14 +750,14 @@ public final class Control {
             List<Member> members = contacts.stream()
                     .map(c -> new Member(c))
                     .collect(Collectors.toCollection(ArrayList::new));
-            Contact me = ContactList.getInstance().getMe().orElse(null);
+            Contact me = mModel.contacts().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
                 return Optional.empty();
             }
             members.add(new Member(me, Member.Role.OWNER));
 
-            GroupChat chat = ChatList.getInstance().createNew(members,
+            GroupChat chat = mModel.chats().createNew(members,
                     GroupControl.newKonGroupData(me.getJID()),
                     subject);
 
@@ -711,7 +772,7 @@ public final class Control {
                     return;
             }
 
-            ChatList.getInstance().delete(chat);
+            mModel.chats().delete(chat);
         }
 
         public void setChatSubject(GroupChat chat, String subject) {
@@ -741,7 +802,7 @@ public final class Control {
         }
 
         public void setUserAvatar(BufferedImage image) {
-            Avatar.UserAvatar newAvatar = Avatar.UserAvatar.setImage(image);
+            Avatar.UserAvatar newAvatar = mModel.newUserAvatar(image);
             byte[] avatarData = newAvatar.imageData().orElse(null);
             if (avatarData == null || newAvatar.getID().isEmpty())
                 return;
@@ -750,12 +811,12 @@ public final class Control {
         }
 
         public void unsetUserAvatar(){
-            if (Avatar.UserAvatar.instance().getID().isEmpty())
+            if (mModel.userAvatar().getID().isEmpty())
                 return;
 
             boolean succ = mClient.deleteAvatar();
             if (succ)
-                Avatar.UserAvatar.deleteImage();
+                mModel.deleteUserAvatar();
         }
 
         /* private */
@@ -776,7 +837,7 @@ public final class Control {
         }
 
         private PersonalKey keyOrNull(char[] password) {
-            Account account = Account.getInstance();
+            Account account = mModel.account();
             PersonalKey key = account.getPersonalKey().orElse(null);
             if (key != null)
                 return key;
@@ -802,6 +863,11 @@ public final class Control {
         void changed(ViewEvent event) {
             this.setChanged();
             this.notifyObservers(event);
+        }
+
+        // TODO
+        public AccountImporter createAccountImporter() {
+            return new AccountImporter(mModel.account());
         }
     }
 }

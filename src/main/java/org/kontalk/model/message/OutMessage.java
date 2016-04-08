@@ -29,7 +29,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
+import org.kontalk.crypto.Coder;
 import org.kontalk.model.Contact;
+import org.kontalk.system.Database;
 
 /**
  * Model for an XMPP message from the user to a contact.
@@ -40,8 +42,9 @@ public final class OutMessage extends KonMessage {
 
     private final Set<Transmission> mTransmissions;
 
-    public OutMessage(Chat chat, List<Contact> contacts, MessageContent content, boolean encrypted) {
-        super(chat,
+    public OutMessage(Database db, Chat chat, List<Contact> contacts,
+            MessageContent content, boolean encrypted) {
+        super(db, chat,
                 "Kon_" + StringUtils.randomString(8),
                 content,
                 Optional.<Date>empty(),
@@ -52,7 +55,7 @@ public final class OutMessage extends KonMessage {
 
         Set<Transmission> ts = new HashSet<>();
         contacts.stream().forEach(contact -> {
-            boolean succ = ts.add(new Transmission(contact, contact.getJID(), mID));
+            boolean succ = ts.add(new Transmission(db, contact, contact.getJID(), mID));
             if (!succ)
                 LOGGER.warning("duplicate contact: "+contact);
         });
@@ -60,8 +63,8 @@ public final class OutMessage extends KonMessage {
     }
 
     // used when loading from database
-    protected OutMessage(KonMessage.Builder builder) {
-        super(builder);
+    protected OutMessage(Database db, KonMessage.Builder builder) {
+        super(db, builder);
 
         mTransmissions = Collections.unmodifiableSet(builder.mTransmissions);
     }
@@ -115,6 +118,11 @@ public final class OutMessage extends KonMessage {
 
         attachment.update(url, mime, length);
         this.save();
+    }
+
+    public boolean isSendEncrypted() {
+        return mCoderStatus.getEncryption() != Coder.Encryption.NOT ||
+                mCoderStatus.getSigning() != Coder.Signing.NOT;
     }
 
     @Override

@@ -23,7 +23,6 @@ import org.apache.commons.lang.StringUtils;
 import org.jxmpp.jid.util.JidUtil;
 import org.jxmpp.stringprep.simple.SimpleXmppStringprep;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.model.Account;
 
 /**
  * A Jabber ID (the address of an XMPP entity). Immutable.
@@ -80,11 +79,6 @@ public final class JID {
 
     public boolean isFull() {
         return !mResource.isEmpty();
-    }
-
-    public boolean isMe() {
-        return this.isValid() &&
-                this.equals(Account.getInstance().getUserJID());
     }
 
     public JID toBare() {

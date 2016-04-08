@@ -47,9 +47,8 @@ import org.kontalk.client.Client;
 import org.kontalk.system.Config;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.chat.Chat;
-import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
+import org.kontalk.model.Model;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.EncodingUtils;
@@ -92,8 +91,9 @@ public final class View implements Observer {
     static final Dimension AVATAR_LIST_DIM = new Dimension(30, 30);
 
     private final ViewControl mControl;
-    private final TrayManager mTrayManager;
+    private final Model mModel;
 
+    private final TrayManager mTrayManager;
     private final Notifier mNotifier;
 
     private final SearchPanel mSearchPanel;
@@ -110,51 +110,65 @@ public final class View implements Observer {
     private Control.Status mCurrentStatus;
     private EnumSet<Client.ServerFeature> mServerFeatures;
 
-    private View(ViewControl control) {
+    private View(ViewControl control, Model model) {
         mControl = control;
+        mModel = model;
 
         WebLookAndFeel.install();
-
         ToolTipManager.sharedInstance().setInitialDelay(200);
-
-        mContactListView = new ContactListView(this, ContactList.getInstance());
-        ContactList.getInstance().addObserver(mContactListView);
-        mChatListView = new ChatListView(this, ChatList.getInstance());
-        ChatList.getInstance().addObserver(mChatListView);
 
         // chat view
         mChatView = new ChatView(this);
-        ChatList.getInstance().addObserver(mChatView);
-
         // content area
         mContent = new Content(this, mChatView);
+
+        mContactListView = new ContactListView(this, mModel);
+        mChatListView = new ChatListView(this, mModel.chats());
 
         // search panel
         mSearchPanel = new SearchPanel(
                 new ListView[]{mContactListView, mChatListView},
                 mChatView);
-
         // status bar
         WebStatusBar statusBar = new WebStatusBar();
         mStatusBarLabel = new WebStatusLabel(" ");
         statusBar.add(mStatusBarLabel);
-
         // main frame
-        mMainFrame = new MainFrame(this, mContactListView, mChatListView,
+        mMainFrame = new MainFrame(this, mModel, mContactListView, mChatListView,
                 mContent, mSearchPanel, statusBar);
-        mMainFrame.setVisible(true);
-
         // tray
-        mTrayManager = new TrayManager(this, mMainFrame);
-        ChatList.getInstance().addObserver(mTrayManager);
-
-        // hotkeys
-        this.setHotkeys();
-
+        mTrayManager = new TrayManager(this, mModel, mMainFrame);
         // notifier
         mNotifier = new Notifier(this);
 
+        // register observer
+        mModel.contacts().addObserver(mContactListView);
+        mModel.chats().addObserver(mChatListView);
+        mModel.chats().addObserver(mChatView);
+        mModel.chats().addObserver(mTrayManager);
+
+        this.setHotkeys();
+
         this.statusChanged(Control.Status.DISCONNECTED, EnumSet.noneOf(Client.ServerFeature.class));
+
+        mMainFrame.setVisible(true);
+    }
+
+    public static Optional<View> create(ViewControl control, Model model) {
+        View view;
+        try {
+            view = invokeAndWait(new Callable<View>() {
+                @Override
+                public View call() throws Exception {
+                    return new View(control, model);
+                }
+            });
+        } catch (ExecutionException | InterruptedException ex) {
+            LOGGER.log(Level.WARNING, "can't start view", ex);
+            return Optional.empty();
+        }
+        control.addObserver(view);
+        return Optional.of(view);
     }
 
     void setHotkeys() {
@@ -171,7 +185,7 @@ public final class View implements Observer {
             public void run() {
                 View.this.mChatListView.selectLastChat();
 
-                if (ChatList.getInstance().isEmpty())
+                if (mModel.chats().isEmpty())
                     mMainFrame.selectTab(MainFrame.Tab.CONTACT);
             }
         });
@@ -186,7 +200,7 @@ public final class View implements Observer {
     }
 
     void showConfig() {
-        JDialog configFrame = new ConfigurationDialog(mMainFrame, this);
+        JDialog configFrame = new ConfigurationDialog(mMainFrame, this, mModel);
         configFrame.setVisible(true);
     }
 
@@ -327,7 +341,7 @@ public final class View implements Observer {
     void callShutDown() {
         // trigger save if contact details are shown
         mContent.showNothing();
-        mControl.shutDown(true);
+        mControl.shutDown();
     }
 
     /* view internal */
@@ -411,23 +425,6 @@ public final class View implements Observer {
     }
 
     /* static */
-
-    public static Optional<View> create(final ViewControl control) {
-        View view;
-        try {
-            view = invokeAndWait(new Callable<View>() {
-                @Override
-                public View call() throws Exception {
-                    return new View(control);
-                }
-            });
-        } catch (ExecutionException | InterruptedException ex) {
-            LOGGER.log(Level.WARNING, "can't start view", ex);
-            return Optional.empty();
-        }
-        control.addObserver(view);
-        return Optional.of(view);
-    }
 
     private static <T> T invokeAndWait(Callable<T> callable)
             throws InterruptedException, ExecutionException {

@@ -18,7 +18,6 @@
 
 package org.kontalk.system;
 
-import org.kontalk.model.Account;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -34,7 +33,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
@@ -82,9 +80,9 @@ public class AttachmentManager implements Runnable {
     // TODO get this from server
     private static final URI UPLOAD_URI = URI.create("https://beta.kontalk.net:5980/upload");
 
-    private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
-
     private final Control mControl;
+
+    private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
     private final Path mAttachmentDir;
     private final Path mPreviewDir;
 
@@ -109,7 +107,7 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    private AttachmentManager(Path baseDir, Control control) {
+    private AttachmentManager(Control control, Path baseDir) {
         mControl = control;
         mAttachmentDir = baseDir.resolve(ATT_DIRNAME);
         if (mAttachmentDir.toFile().mkdir())
@@ -118,6 +116,16 @@ public class AttachmentManager implements Runnable {
         mPreviewDir = baseDir.resolve(PREVIEW_DIRNAME);
         if (mPreviewDir.toFile().mkdir())
             LOGGER.info("created preview directory");
+    }
+
+    static AttachmentManager create(Control control, Path appDir) {
+        AttachmentManager manager = new AttachmentManager(control, appDir);
+
+        Thread thread = new Thread(manager, "Attachment Transfer");
+        thread.setDaemon(true);
+        thread.start();
+
+        return manager;
     }
 
     void queueUpload(OutMessage message) {
@@ -175,7 +183,10 @@ public class AttachmentManager implements Runnable {
         // if text will be encrypted, always encrypt attachment too
         boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
         if (encrypt) {
-            File encryptFile = Coder.encryptAttachment(message, file).orElse(null);
+            PersonalKey myKey = mControl.myKey().orElse(null);
+            File encryptFile = myKey == null ?
+                    null :
+                    Coder.encryptAttachment(myKey, message, file).orElse(null);
             if (!file.equals(original))
                 file.delete();
             if (encryptFile == null)
@@ -185,7 +196,7 @@ public class AttachmentManager implements Runnable {
             //mime = "application/octet-stream";
         }
 
-        HTTPFileClient client = createClientOrNull();
+        HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
@@ -224,7 +235,7 @@ public class AttachmentManager implements Runnable {
             return;
         }
 
-        HTTPFileClient client = createClientOrNull();
+        HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
@@ -255,7 +266,8 @@ public class AttachmentManager implements Runnable {
 
         // decrypt file
         if (attachment.getCoderStatus().isEncrypted()) {
-            Coder.decryptAttachment(message, mAttachmentDir);
+            mControl.myKey().ifPresent(mk ->
+                    Coder.decryptAttachment(mk, message, mAttachmentDir));
         }
 
         // create preview if not in message
@@ -347,6 +359,16 @@ public class AttachmentManager implements Runnable {
         LOGGER.info("to file: "+newFile);
     }
 
+    private HTTPFileClient clientOrNull(){
+        PersonalKey key = mControl.myKey().orElse(null);
+        if (key == null)
+            return null;
+
+        return new HTTPFileClient(key.getServerLoginKey(),
+                key.getBridgeCertificate(),
+                Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
+    }
+
     @Override
     public void run() {
         while (true) {
@@ -370,16 +392,6 @@ public class AttachmentManager implements Runnable {
         return mimeType.startsWith("image");
     }
 
-    static AttachmentManager create(Control control) {
-        AttachmentManager manager = new AttachmentManager(Kontalk.getInstance().appDir(), control);
-
-        Thread thread = new Thread(manager, "Attachment Transfer");
-        thread.setDaemon(true);
-        thread.start();
-
-        return manager;
-    }
-
     /**
      * Create a new attachment for a given file denoted by its path.
      */
@@ -397,17 +409,5 @@ public class AttachmentManager implements Runnable {
             return null;
         }
         return new Attachment(path, mimeType);
-    }
-
-    private static HTTPFileClient createClientOrNull(){
-        PersonalKey key = Account.getInstance().getPersonalKey().orElse(null);
-        if (key == null) {
-            LOGGER.log(Level.WARNING, "personal key not loaded");
-            return null;
-        }
-
-        return new HTTPFileClient(key.getServerLoginKey(),
-                key.getBridgeCertificate(),
-                Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
     }
 }

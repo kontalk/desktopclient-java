@@ -36,9 +36,8 @@ import javax.swing.Box;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringEscapeUtils;
-import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
+import org.kontalk.model.Model;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ContactListView.ContactItem;
@@ -49,12 +48,12 @@ import org.kontalk.view.ContactListView.ContactItem;
  */
 final class ContactListView extends ListView<ContactItem, Contact> implements Observer {
 
-    private final ContactList mContactList;
+    private final Model mModel;
 
-    ContactListView(final View view, ContactList contactList) {
+    ContactListView(final View view, Model model) {
         super(view, true);
 
-        mContactList = contactList;
+        mModel = model;
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -85,7 +84,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
     @Override
     protected void updateOnEDT(Object arg) {
-        this.sync(Utils.allContacts());
+        this.sync(Utils.allContacts(mModel.contacts()));
     }
 
     @Override
@@ -147,7 +146,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         menu.add(deleteItem);
 
         // dont allow creation of more than one chat for a contact
-        newItem.setVisible(!ChatList.getInstance().contains(item.mValue));
+        newItem.setVisible(!mModel.chats().contains(item.mValue));
 
         if (item.mValue.isBlocked()) {
             blockItem.setVisible(false);

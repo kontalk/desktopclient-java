@@ -26,7 +26,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
-import org.kontalk.Kontalk;
 import org.kontalk.util.Tr;
 
 /**
@@ -70,7 +69,8 @@ public final class Config extends PropertiesConfiguration {
     //public static final String DEFAULT_SERV_NET = "kontalk.net";
     public static final String DEFAULT_SERV_HOST = "beta.kontalk.net";
     public static final int DEFAULT_SERV_PORT = 5999;
-    private static final String DEFAULT_XMPP_STATUS =
+
+    private final String mDefaultXMPPStatus =
             Tr.tr("Hey, I'm using Kontalk on my PC!");
 
     private Config(Path configFile) {
@@ -102,7 +102,7 @@ public final class Config extends PropertiesConfiguration {
         map.put(VIEW_USER_CONTACT, false);
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_SEND_ROSTER_NAME, false);
-        map.put(NET_STATUS_LIST, new String[]{DEFAULT_XMPP_STATUS});
+        map.put(NET_STATUS_LIST, new String[]{mDefaultXMPPStatus});
         map.put(NET_AUTO_SUBSCRIPTION, false);
         map.put(NET_REQUEST_AVATARS, true);
         map.put(NET_MAX_IMG_SIZE, -1);
@@ -126,10 +126,19 @@ public final class Config extends PropertiesConfiguration {
         }
     }
 
-    public synchronized static Config getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = new Config(Kontalk.getInstance().appDir().resolve(Config.FILENAME));
+    static void initialize(Path appDir) {
+        if (INSTANCE != null) {
+            LOGGER.warning("already initialized");
+            return;
         }
+
+        INSTANCE = new Config(appDir.resolve(Config.FILENAME));
+    }
+
+    public synchronized static Config getInstance() {
+        if (INSTANCE == null)
+            throw new IllegalStateException("not initialized");
+
         return INSTANCE;
     }
 }

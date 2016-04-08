@@ -48,7 +48,6 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.kontalk.misc.KonException;
 import org.kontalk.system.AccountImporter;
-import org.kontalk.model.Account;
 import org.kontalk.util.Tr;
 
 /**
@@ -276,7 +275,8 @@ final class ImportDialog extends WebDialog {
         private boolean mWaiting = false;
 
         ResultPanel() {
-            mImporter = new AccountImporter(this);
+            mImporter = mView.getControl().createAccountImporter();
+            mImporter.addObserver(this);
 
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
             groupPanel.setMargin(View.MARGIN_BIG);
@@ -379,7 +379,7 @@ final class ImportDialog extends WebDialog {
             char[] newPass = mPassPanel.getNewPassword().orElse(null);
             if (newPass != null && newPass.length > 0) {
                 try {
-                    Account.getInstance().setPassword(new char[0], newPass);
+                    mView.getControl().setAccountPassword(new char[0], newPass);
                 } catch (KonException ex) {
                     LOGGER.log(Level.WARNING, "can't set password", ex);
                     return;

@@ -27,8 +27,6 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import org.junit.Ignore;
 
@@ -48,7 +46,6 @@ public class KontalkTest {
     @BeforeClass
     public static void setUpClass() {
         APP_DIR = TEMP_FOLDER.getRoot().toPath().resolve("app_dir");
-        Kontalk.ensureInitialized(APP_DIR);
     }
 
     @AfterClass
@@ -69,40 +66,10 @@ public class KontalkTest {
     @Test
     public void testStart() {
         System.out.println("start");
-        int returnCode = Kontalk.getInstance().start(false);
+        Kontalk app = new Kontalk(APP_DIR);
+        int returnCode = app.start(false);
         assertEquals(returnCode, 0);
         // TODO stop
-    }
-
-    /**
-     * Test of appDir method, of class Kontalk.
-     */
-    @Test
-    public void testAppDir() {
-        System.out.println("appDir");
-        Path result = Kontalk.getInstance().appDir();
-        assertEquals(result, APP_DIR);
-    }
-
-    /**
-     * Test of removeLock method, of class Kontalk.
-     */
-    @Test
-    public void testRemoveLock() {
-        System.out.println("removeLock");
-        Kontalk.getInstance().start(false);
-        boolean succ = Kontalk.getInstance().removeLock();
-        assertTrue(succ);
-    }
-
-    /**
-     * Test of getInstance method, of class Kontalk.
-     */
-    @Test
-    public void testGetInstance() {
-        System.out.println("getInstance");
-        Kontalk result = Kontalk.getInstance();
-        assertNotNull(result);
     }
 
     /**

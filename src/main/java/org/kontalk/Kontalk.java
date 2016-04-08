@@ -18,8 +18,6 @@
 
 package org.kontalk;
 
-import org.kontalk.misc.KonException;
-import org.kontalk.system.Database;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -41,8 +39,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
-import org.kontalk.model.chat.ChatList;
-import org.kontalk.model.ContactList;
+import org.kontalk.misc.KonException;
 import org.kontalk.system.Control;
 import org.kontalk.util.CryptoUtils;
 import org.kontalk.util.EncodingUtils;
@@ -57,40 +54,25 @@ public final class Kontalk {
 
     public static final String VERSION = "3.0.4";
 
-    private static Kontalk INSTANCE = null;
-
+    private final Path mAppDir;
     private ServerSocket mRunLock = null;
-    private Path mAppDir = null;
 
-    private static void ensureInitialized() {
+    Kontalk() {
         // platform dependent configuration directory
-        ensureInitialized(Paths.get(System.getProperty("user.home"),
+        this(Paths.get(System.getProperty("user.home"),
                 SystemUtils.IS_OS_WINDOWS ? "Kontalk" : ".kontalk"));
     }
 
-    static void ensureInitialized(Path appDir) {
-        if (INSTANCE != null)
-            return;
-
-        INSTANCE = new Kontalk(appDir);
-    }
-
-    public static Kontalk getInstance() {
-        if (INSTANCE == null)
-            throw new IllegalStateException("application not initialized");
-
-        return INSTANCE;
-    }
-
-    private Kontalk(Path appDir) {
+    Kontalk(Path appDir) {
         mAppDir = appDir.toAbsolutePath();
     }
 
     int start(boolean ui) {
         // check if already running
+        int port = (1 << 14) + (1 << 15) + mAppDir.hashCode() % (1 << 14);
         try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
-            mRunLock = new ServerSocket(9871, 10, addr);
+            mRunLock = new ServerSocket(port, 10, addr);
         } catch(java.net.BindException ex) {
             LOGGER.severe("already running");
             return 2;
@@ -146,57 +128,34 @@ public final class Kontalk {
         // fix crypto restriction
         CryptoUtils.removeCryptographyRestrictions();
 
-        // register provider
+        // register security provider
         PGPUtils.registerProvider();
 
+        Control control;
         try {
-            // do now to test if successful
-            Database.ensureInitialized();
+            control = new Control(mAppDir);
         } catch (KonException ex) {
-            LOGGER.log(Level.SEVERE, "can't initialize database", ex);
+            LOGGER.log(Level.SEVERE, "can't create application", ex);
             return 5;
         }
 
-        final Control.ViewControl control = Control.create();
-
-        // handle shutdown signals
+        // handle shutdown signals/System.exit() calls
         Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
             @Override
             public void run() {
                 // NOTE: logging does not work here anymore
                 control.shutDown(false);
+                Kontalk.this.removeLock();
                 System.out.println("Kontalk: shutdown finished");
             }
         });
 
-        View view;
-        if (ui) {
-            view = View.create(control).orElse(null);
-            if (view == null) {
-                control.shutDown(false);
-                return 5;
-            }
-        } else {
-            view = null;
-        }
-
-        // order matters!
-        ContactList.getInstance().load();
-        ChatList.getInstance().load();
-
-        if (view != null)
-            view.init();
-
-        control.launch();
+        control.launch(ui);
 
         return 0;
     }
 
-    public Path appDir() {
-        return mAppDir;
-    }
-
-    public boolean removeLock() {
+    private boolean removeLock() {
         if (mRunLock == null) {
             LOGGER.warning("no lock");
             return false;
@@ -243,13 +202,13 @@ public final class Kontalk {
 
         String appDir = cmd.getOptionValue("d", "");
 
-        if (!appDir.isEmpty())
-            Kontalk.ensureInitialized(Paths.get(appDir));
-        else
-            Kontalk.ensureInitialized();
+        Kontalk app = !appDir.isEmpty() ?
+                new Kontalk(Paths.get(appDir)) :
+                new Kontalk();
 
-        int returnCode = Kontalk.getInstance().start(!cmd.hasOption("c"));
+        int returnCode = app.start(!cmd.hasOption("c"));
         if (returnCode != 0)
+            // didn't work
             System.exit(returnCode);
 
         new Thread("Kontalk Main") {

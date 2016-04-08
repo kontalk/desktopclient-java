@@ -56,6 +56,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import org.kontalk.system.Config;
 import org.kontalk.Kontalk;
+import org.kontalk.model.Model;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 
@@ -75,6 +76,7 @@ final class MainFrame extends WebFrame {
     private final WebToggleButton mAddContactButton;
 
     MainFrame(View view,
+            Model model,
             ListView<?, ?> contactList,
             ListView<?, ?> chatList,
             Component content,
@@ -140,7 +142,7 @@ final class MainFrame extends WebFrame {
         statusMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                WebDialog statusDialog = new ProfileDialog(mView);
+                WebDialog statusDialog = new ProfileDialog(mView, model);
                 statusDialog.setVisible(true);
             }
         });
@@ -212,7 +214,7 @@ final class MainFrame extends WebFrame {
                 // TODO different button
                 Utils.getIcon("ic_ui_add.png"),
                 Tr.tr("Create a new group chat"),
-                new ComponentUtils.AddGroupChatPanel(mView, this));
+                new ComponentUtils.AddGroupChatPanel(mView, model, this));
         WebPanel chatPanel = new GroupPanel(GroupingType.fillFirst, false,
                 chatPane, mAddGroupButton);
         chatPanel.setPaintSides(false, false, false, false);

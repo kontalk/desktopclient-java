@@ -23,6 +23,7 @@ import java.sql.SQLException;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
@@ -31,6 +32,7 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import org.kontalk.model.Contact;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.system.Database;
@@ -46,7 +48,6 @@ public final class ChatMessages {
     private static final Comparator<KonMessage> MESSAGE_COMPARATOR =
             (KonMessage o1, KonMessage o2) -> o1.getDate().compareTo(o2.getDate());
 
-    private final Chat mChat;
     // comparator inconsistent with .equals(); using one set for ordering...
     private final NavigableSet<KonMessage> mSortedSet =
         Collections.synchronizedNavigableSet(new TreeSet<KonMessage>(MESSAGE_COMPARATOR));
@@ -54,29 +55,14 @@ public final class ChatMessages {
     private final Set<KonMessage> mContainsSet =
             Collections.synchronizedSet(new HashSet<>());
 
-    private boolean mLoaded;
-
-    ChatMessages(Chat chat, boolean newChat) {
-        mChat = chat;
-        // don't load from db if chat is just created
-        mLoaded = newChat;
+    ChatMessages() {
     }
 
-    private void ensureLoaded() {
-        if (mLoaded)
-            return;
-        mLoaded = true;
-
-        this.loadMessages();
-    }
-
-    private void loadMessages() {
-        Database db = Database.getInstance();
-
+    void load(Database db, Chat chat, Map<Integer, Contact> contactMap) {
         try (ResultSet messageRS = db.execSelectWhereInsecure(KonMessage.TABLE,
-                KonMessage.COL_CHAT_ID + " == " + mChat.getID())) {
+                KonMessage.COL_CHAT_ID + " == " + chat.getID())) {
             while (messageRS.next()) {
-                KonMessage message = KonMessage.load(messageRS, mChat);
+                KonMessage message = KonMessage.load(db, messageRS, chat, contactMap);
                 if (message.getTransmissions().isEmpty())
                     // ignore broken message
                     continue;
@@ -91,8 +77,6 @@ public final class ChatMessages {
      * Add message to chat without notifying other components.
      */
     boolean add(KonMessage message) {
-        this.ensureLoaded();
-
         return this.addSilent(message);
     }
 
@@ -107,15 +91,11 @@ public final class ChatMessages {
     }
 
     public Set<KonMessage> getAll() {
-        this.ensureLoaded();
-
         return Collections.unmodifiableSet(mSortedSet);
     }
 
     /** Get all outgoing messages with status "PENDING" for this chat. */
     public SortedSet<OutMessage> getPending() {
-        this.ensureLoaded();
-
         synchronized(mSortedSet) {
             return mSortedSet.stream()
                     .filter(m -> m.getStatus() == KonMessage.Status.PENDING
@@ -127,8 +107,6 @@ public final class ChatMessages {
 
     /** Get the newest (ie last received) outgoing message. */
     public Optional<OutMessage> getLast(String xmppID) {
-        this.ensureLoaded();
-
         synchronized(mSortedSet) {
             return mSortedSet.descendingSet().stream()
                     .filter(m -> m.getXMPPID().equals(xmppID) && m instanceof OutMessage)
@@ -138,24 +116,20 @@ public final class ChatMessages {
 
     /** Get the last created message. */
     public Optional<KonMessage> getLast() {
-        this.ensureLoaded();
         return mSortedSet.isEmpty() ?
                 Optional.<KonMessage>empty() :
                 Optional.of(mSortedSet.last());
     }
 
     public boolean contains(KonMessage message) {
-        this.ensureLoaded();
         return mContainsSet.contains(message);
     }
 
     public int size() {
-        this.ensureLoaded();
         return mSortedSet.size();
     }
 
     public boolean isEmpty() {
-        this.ensureLoaded();
         return mSortedSet.isEmpty();
     }
 }

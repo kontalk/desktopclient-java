@@ -24,6 +24,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -40,21 +41,21 @@ import org.kontalk.system.Database;
 public final class ChatList extends Observable implements Observer, Iterable<Chat> {
     private static final Logger LOGGER = Logger.getLogger(ChatList.class.getName());
 
-    private static final ChatList INSTANCE = new ChatList();
-
+    private final Database mDB;
     private final Set<Chat> mChats = Collections.synchronizedSet(new HashSet<Chat>());
 
     private boolean mUnread = false;
 
-    private ChatList() {}
+    public ChatList(Database db) {
+        mDB = db;
+    }
 
-    public void load() {
+    public void load(Map<Integer, Contact> contactMap) {
         assert mChats.isEmpty();
 
-        Database db = Database.getInstance();
-        try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
+        try (ResultSet chatRS = mDB.execSelectAll(Chat.TABLE)) {
             while (chatRS.next()) {
-                Chat chat = Chat.loadOrNull(chatRS);
+                Chat chat = Chat.load(mDB, chatRS, contactMap).orElse(null);
                 if (chat == null)
                     continue;
                 this.putSilent(chat);
@@ -107,7 +108,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     private SingleChat createNew(Contact contact, String xmppThreadID) {
-        SingleChat newChat = new SingleChat(new Member(contact), xmppThreadID);
+        SingleChat newChat = new SingleChat(mDB, new Member(contact), xmppThreadID);
         LOGGER.config("new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
@@ -119,7 +120,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public GroupChat createNew(List<Member> members, GroupMetaData gData, String subject) {
-        GroupChat newChat = GroupChat.create(members, gData, subject);
+        GroupChat newChat = GroupChat.create(mDB, members, gData, subject);
         LOGGER.config("new group chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
@@ -192,9 +193,5 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     @Override
     public Iterator<Chat> iterator() {
         return mChats.iterator();
-    }
-
-    public static ChatList getInstance() {
-        return INSTANCE;
     }
 }

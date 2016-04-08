@@ -19,6 +19,7 @@
 package org.kontalk.system;
 
 import java.awt.image.BufferedImage;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -28,7 +29,7 @@ import org.kontalk.client.Client;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Avatar;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
+import org.kontalk.model.Model;
 import org.kontalk.util.MediaUtils;
 
 /**
@@ -43,11 +44,13 @@ public final class AvatarHandler {
     private static final int MAX_SIZE = 1024 * 250;
 
     private final Client mClient;
+    private final Model mModel;
 
-    AvatarHandler(Client client) {
+    AvatarHandler(Client client, Model model, Path appDir) {
         mClient = client;
+        mModel = model;
 
-        Avatar.createDir();
+        Avatar.createDir(appDir);
     }
 
     public void onNotify(JID jid, String id) {
@@ -55,7 +58,7 @@ public final class AvatarHandler {
             // disabled by user
             return;
 
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid:" + jid);
             return;
@@ -80,7 +83,7 @@ public final class AvatarHandler {
         if (avatarData.length > MAX_SIZE)
             LOGGER.info("avatar data too long: "+avatarData.length);
 
-        Contact contact = ContactList.getInstance().get(jid).orElse(null);
+        Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.warning("can't find contact with jid:" + jid);
             return;

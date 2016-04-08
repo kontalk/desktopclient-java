@@ -22,13 +22,13 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.kontalk.Kontalk;
 import org.kontalk.util.MediaUtils;
 
 
@@ -63,7 +63,7 @@ public class Avatar {
         mID = id;
         mFile = file != null ?
                 file :
-                Kontalk.getInstance().appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
+                Model.appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
         mImage = image;
 
         if (mImage != null) {
@@ -123,18 +123,21 @@ public class Avatar {
         private static final int MAX_SIZE = 150;
         private static final String USER_FILENAME = "avatar";
 
-        private static UserAvatar USER_AVATAR = null;
-
         private byte[] mImageData = null;
 
         /** Saved user Avatar. */
-        UserAvatar() {
-            super(userFile());
+        UserAvatar(Path appDir) {
+            super(userFile(appDir));
         }
 
         /** New user Avatar. ID generated from image. */
-        UserAvatar(BufferedImage image) {
-            super(id(image), userFile(), image);
+        private UserAvatar(BufferedImage image, Path appDir) {
+            super(id(image), userFile(appDir), image);
+        }
+
+        static UserAvatar create(BufferedImage image, Path appDir) {
+            image = MediaUtils.scale(image, MAX_SIZE, MAX_SIZE);
+            return new UserAvatar(image, appDir);
         }
 
         @Override
@@ -151,31 +154,13 @@ public class Avatar {
             return Optional.ofNullable(mImageData);
         }
 
-        private static File userFile() {
-            return Kontalk.getInstance().appDir().resolve(USER_FILENAME + "." + FORMAT).toFile();
-        }
-
-        public static UserAvatar instance() {
-            if (USER_AVATAR == null) {
-                USER_AVATAR = new UserAvatar();
-            }
-            return USER_AVATAR;
-        }
-
-        public static UserAvatar setImage(BufferedImage image) {
-            image = MediaUtils.scale(image, MAX_SIZE, MAX_SIZE);
-            USER_AVATAR = new UserAvatar(image);
-            return USER_AVATAR;
-        }
-
-        public static void deleteImage() {
-            USER_AVATAR.delete();
-            USER_AVATAR = new UserAvatar();
+        private static File userFile(Path appDir) {
+            return appDir.resolve(USER_FILENAME + "." + FORMAT).toFile();
         }
     }
 
-    public static void createDir() {
-        boolean created = Kontalk.getInstance().appDir().resolve(DIR).toFile().mkdir();
+    public static void createDir(Path appDir) {
+        boolean created = appDir.resolve(DIR).toFile().mkdir();
         if (created)
             LOGGER.info("created avatar directory");
     }
@@ -198,7 +183,6 @@ public class Avatar {
             return null;
         }
         return out.toByteArray();
-
     }
 }
 

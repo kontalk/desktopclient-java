@@ -21,11 +21,11 @@ package org.kontalk.model.message;
 import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
 import org.kontalk.system.Database;
 
 /**
@@ -63,13 +62,15 @@ final public class Transmission {
             "FOREIGN KEY ("+COL_CONTACT_ID+") REFERENCES "+Contact.TABLE+" (_id) " +
             ")";
 
+    private final Database mDB;
     private final int mID;
 
     private final Contact mContact;
     private final JID mJID;
     private Date mReceivedDate;
 
-    Transmission(Contact contact, JID jid, int messageID) {
+    Transmission(Database db, Contact contact, JID jid, int messageID) {
+        mDB = db;
         mContact = contact;
         mJID = jid;
         mReceivedDate = null;
@@ -77,7 +78,8 @@ final public class Transmission {
         mID = this.insert(messageID);
     }
 
-    private Transmission(int id, Contact contact, JID jid, Date receivedDate) {
+    private Transmission(Database db, int id, Contact contact, JID jid, Date receivedDate) {
+        mDB = db;
         mID = id;
         mContact = contact;
         mJID = jid;
@@ -106,15 +108,13 @@ final public class Transmission {
     }
 
     private int insert(int messageID) {
-        Database db = Database.getInstance();
+        List<Object> values = Arrays.asList(
+                messageID,
+                mContact.getID(),
+                mJID,
+                mReceivedDate);
 
-        List<Object> values = new LinkedList<>();
-        values.add(messageID);
-        values.add(mContact.getID());
-        values.add(mJID);
-        values.add(mReceivedDate);
-
-        int id = db.execInsert(TABLE, values);
+        int id = mDB.execInsert(TABLE, values);
         if (id <= 0) {
             LOGGER.log(Level.WARNING, "could not insert");
             return -2;
@@ -123,10 +123,9 @@ final public class Transmission {
     }
 
     private void save() {
-        Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_REC_DATE, mReceivedDate);
-        db.execUpdate(TABLE, set, mID);
+        mDB.execUpdate(TABLE, set, mID);
     }
 
     boolean delete() {
@@ -134,7 +133,7 @@ final public class Transmission {
             LOGGER.warning("not in database: "+this);
             return true;
         }
-        return Database.getInstance().execDelete(TABLE, mID);
+        return mDB.execDelete(TABLE, mID);
     }
 
     @Override
@@ -142,13 +141,12 @@ final public class Transmission {
         return "T:id="+mID+",contact="+mContact+",jid="+mJID+",recdate="+mReceivedDate;
     }
 
-    static Set<Transmission> load(int messageID) {
-        Database db = Database.getInstance();
+    static Set<Transmission> load(Database db, int messageID, Map<Integer, Contact> contactMap) {
         HashSet<Transmission> ts = new HashSet<>();
         try (ResultSet transmissionRS = db.execSelectWhereInsecure(TABLE,
                 COL_MESSAGE_ID + " == " + messageID)) {
             while (transmissionRS.next()) {
-                ts.add(load(transmissionRS));
+                ts.add(load(db, transmissionRS, contactMap));
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load transmission(s) from db", ex);
@@ -159,11 +157,13 @@ final public class Transmission {
         return ts;
     }
 
-    private static Transmission load(ResultSet resultSet) throws SQLException {
+    private static Transmission load(Database db, ResultSet resultSet,
+            Map<Integer, Contact> contactMap)
+            throws SQLException {
         int id = resultSet.getInt("_id");
 
         int contactID = resultSet.getInt(COL_CONTACT_ID);
-        Contact contact = ContactList.getInstance().get(contactID).orElse(null);
+        Contact contact = contactMap.get(contactID);
         if (contact == null) {
             LOGGER.warning("can't find contact in db, id: "+contactID);
             return null;
@@ -172,7 +172,7 @@ final public class Transmission {
         long rDate = resultSet.getLong(COL_REC_DATE);
         Date receivedDate = rDate == 0 ? null : new Date(rDate);
 
-        return new Transmission(id, contact, jid, receivedDate);
+        return new Transmission(db, id, contact, jid, receivedDate);
     }
 
     @Override
