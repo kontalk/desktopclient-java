@@ -33,8 +33,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Observer;
 import javax.swing.Box;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
@@ -43,7 +41,7 @@ import org.kontalk.util.Tr;
 import org.kontalk.view.ContactListView.ContactItem;
 
 /**
- * Display all contact (aka contacts) in a brief list.
+ * Display all contacts in a brief list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ContactListView extends ListView<ContactItem, Contact> implements Observer {
@@ -54,18 +52,6 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         super(view, true);
 
         mModel = model;
-
-        // actions triggered by selection
-        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-            @Override
-            public void valueChanged(ListSelectionEvent e) {
-                Contact contact = ContactListView.this.getSelectedValue().orElse(null);
-                if (contact == null)
-                    return;
-
-                mView.showContactDetails(contact);
-            }
-        });
 
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
@@ -90,6 +76,11 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     @Override
     protected ContactItem newItem(Contact value) {
         return new ContactItem(value);
+    }
+
+    @Override
+    protected void selectionChanged(Contact value) {
+        mView.showContactDetails(value);
     }
 
     @Override

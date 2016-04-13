@@ -53,6 +53,8 @@ import javax.swing.RowFilter.Entry;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
 import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
@@ -124,6 +126,32 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         // use custom renderer
         this.setDefaultRenderer(TableItem.class, new TableRenderer());
 
+        // actions triggered by selection
+        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+
+            private V lastValue = null;
+
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                if (e.getValueIsAdjusting())
+                    return;
+
+                V value = ListView.this.getSelectedValue().orElse(null);
+                if (value == null) {
+                    // note: this happens also on right-click for some reason
+                    return;
+                }
+                // if event is caused by filtering, dont do anything
+                if (lastValue == value)
+                    return;
+
+                lastValue = value;
+                mView.clearSearch();
+
+                ListView.this.selectionChanged(value);
+            }
+        });
+
         // trigger editing to forward mouse events
         this.addMouseMotionListener(new MouseMotionListener() {
                 @Override
@@ -192,6 +220,8 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         WebPopupMenu menu = this.rightClickMenu(item);
         menu.show(this, e.getX(), e.getY());
     }
+
+    protected void selectionChanged(V value){};
 
     protected abstract WebPopupMenu rightClickMenu(I item);
 
