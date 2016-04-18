@@ -28,13 +28,13 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.lang.StringUtils;
 import org.apache.http.util.EncodingUtils;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPEncryptedDataList;
@@ -339,7 +339,7 @@ final class Decryptor {
      * The decrypted content of a message is in CPIM format.
      */
     private static MessageContent parseCPIMOrNull(DecryptMessage message, String cpim,
-            String myUid, Optional<String> senderKeyUID) {
+            String myUID, Optional<String> senderKeyUID) {
 
         CPIMMessage cpimMessage;
         try {
@@ -361,15 +361,17 @@ final class Decryptor {
         //    LOGGER.warning("MIME type mismatch");
         //}
 
-        // check that the recipient matches the full uid of the personal key
-        if (!StringUtils.defaultString(cpimMessage.getTo()).contains(myUid)) {
-            LOGGER.warning("destination does not match personal key");
+        // check that the recipient matches the full UID of the personal key
+
+        if (!Arrays.asList(cpimMessage.getTo()).stream()
+                .anyMatch(s -> s.contains(myUID))) {
+            LOGGER.warning("receiver list does not include own UID");
             errors.add(Coder.Error.INVALID_RECIPIENT);
         }
-        // check that the sender matches the full uid of the sender's key
+        // check that the sender matches the full UID of the sender's key
         if (senderKeyUID.isPresent() &&
                 !senderKeyUID.get().equals(cpimMessage.getFrom())) {
-            LOGGER.warning("sender doesn't match sender's key");
+            LOGGER.warning("sender does not match UID in public key of sender");
             errors.add(Coder.Error.INVALID_SENDER);
         }
 

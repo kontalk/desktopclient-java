@@ -93,11 +93,11 @@ final class Encryptor {
 
         // secure the message against replay attacks using Message/CPIM
         String from = myKey.getUserId();
-        String to = receiverKeys.stream()
+        String[] tos = receiverKeys.stream()
                 .map(key -> key.userID)
-                .collect(Collectors.joining("; "));
+                .toArray(String[]::new);
 
-        CPIMMessage cpim = new CPIMMessage(from, to, new Date(), mime, data);
+        CPIMMessage cpim = new CPIMMessage(from, tos, new Date(), mime, data);
         byte[] plainText;
         try {
             plainText = cpim.toByteArray();
