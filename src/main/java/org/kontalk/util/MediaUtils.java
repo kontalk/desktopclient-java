@@ -28,8 +28,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.imageio.ImageIO;
@@ -37,6 +35,7 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
 import org.apache.tika.mime.MimeTypes;
+import org.kontalk.misc.Callback;
 
 /**
  *
@@ -175,7 +174,7 @@ public class MediaUtils {
     }
 
     private static BufferedImage toBufferedImage(Image image) {
-        final CountDownLatch latch = new CountDownLatch(1);
+        final Callback.Synchronizer syncer = new Callback.Synchronizer();
 
         ImageObserver observer = new ImageObserver() {
             @Override
@@ -186,21 +185,13 @@ public class MediaUtils {
                 }
 
                 // scaling done, continue with calling thread
-                latch.countDown();
+                syncer.sync();
                 return false;
             }
         };
 
         if (image.getWidth(observer) == -1) {
-            boolean succ = false;
-            try {
-                succ = latch.await(5, TimeUnit.SECONDS);
-            } catch (InterruptedException ex) {
-                LOGGER.log(Level.WARNING, "interrupted", ex);
-            }
-            if (!succ) {
-                LOGGER.warning("await failed");
-            }
+            syncer.waitForSync();
         }
 
         // convert to buffered image, source: https://stackoverflow.com/a/13605411

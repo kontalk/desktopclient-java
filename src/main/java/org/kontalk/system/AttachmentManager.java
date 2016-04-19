@@ -411,4 +411,18 @@ public class AttachmentManager implements Runnable {
         }
         return new Attachment(path, mimeType);
     }
+
+    public static class Slot {
+        final URI uploadURL;
+        final URI downloadURL;
+
+        public Slot() {
+            this(URI.create(""), URI.create(""));
+        }
+
+        public Slot(URI uploadURI, URI downloadURL) {
+            this.uploadURL = uploadURI;
+            this.downloadURL = downloadURL;
+        }
+    }
 }

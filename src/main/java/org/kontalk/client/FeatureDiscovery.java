@@ -18,7 +18,7 @@
 
 package org.kontalk.client;
 
-import java.util.EnumSet;
+import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,12 +61,12 @@ public final class FeatureDiscovery {
     }
 
     /** (server) service discovery, XEP-0030. */
-    static EnumSet<Feature> discover(XMPPConnection conn) {
+    static EnumMap<Feature, String> discover(XMPPConnection conn) {
         // NOTE: smack automatically creates instances of SDM and CapsM and connects them
         ServiceDiscoveryManager discoManager = ServiceDiscoveryManager.getInstanceFor(conn);
 
         // 1. get features from server
-        EnumSet<Feature> features = discover(discoManager, conn.getServiceName());
+        EnumMap<Feature, String> features = discover(discoManager, conn.getServiceName());
 
         DiscoverItems items = null;
         try {
@@ -80,15 +80,15 @@ public final class FeatureDiscovery {
 
         // 2. get features from server items
         for (DiscoverItems.Item item: items.getItems()) {
-            features.addAll(discover(discoManager, item.getEntityID()));
+            features.putAll(discover(discoManager, item.getEntityID()));
         }
 
         LOGGER.info("supported server features: "+features);
         return features;
     }
 
-    private static EnumSet<Feature> discover(ServiceDiscoveryManager dm, String entity) {
-        EnumSet<Feature> features = EnumSet.noneOf(Feature.class);
+    private static EnumMap<Feature, String> discover(ServiceDiscoveryManager dm, String entity) {
+        EnumMap<Feature, String> features = new EnumMap<>(FeatureDiscovery.Feature.class);
         DiscoverInfo info;
         try {
             // blocking
@@ -110,7 +110,7 @@ public final class FeatureDiscovery {
         for (DiscoverInfo.Feature feature: info.getFeatures()) {
             String var = feature.getVar();
             if (FEATURE_MAP.containsKey(var)) {
-                features.add(FEATURE_MAP.get(var));
+                features.put(FEATURE_MAP.get(var), entity);
             }
         }
 

@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +53,7 @@ import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.JID;
 import org.kontalk.model.message.OutMessage;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
 
@@ -73,10 +75,11 @@ public final class Client implements StanzaListener, Runnable {
     private final Control mControl;
 
     private final KonMessageSender mMessageSender;
-    private final EnumSet<FeatureDiscovery.Feature> mFeatures;
+    private final EnumMap<FeatureDiscovery.Feature, String> mFeatures;
 
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
+    private HTTPFileSlotRequester mSlotRequester = null;
 
     private Client(Control control, Path appDir) {
         mControl = control;
@@ -87,7 +90,7 @@ public final class Client implements StanzaListener, Runnable {
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
 
-        mFeatures = EnumSet.noneOf(FeatureDiscovery.Feature.class);
+        mFeatures = new EnumMap<>(FeatureDiscovery.Feature.class);
 
         // setting caps cache
         File cacheDir = appDir.resolve(CAPS_CACHE_DIR).toFile();
@@ -207,7 +210,12 @@ public final class Client implements StanzaListener, Runnable {
         }
 
         mFeatures.clear();
-        mFeatures.addAll(FeatureDiscovery.discover(mConn));
+        mFeatures.putAll(FeatureDiscovery.discover(mConn));
+
+        mSlotRequester = mFeatures.containsKey(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD) ?
+                new HTTPFileSlotRequester(mConn,
+                        JID.bare(mFeatures.get(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD))) :
+                null;
 
         // Caps, XEP-0115
         // NOTE: caps manager is automatically used by Smack
@@ -256,6 +264,7 @@ public final class Client implements StanzaListener, Runnable {
         this.newStatus(Control.Status.CONNECTED);
     }
 
+
     public void disconnect() {
         synchronized (this) {
             if (mConn != null && mConn.isConnected()) {
@@ -277,6 +286,12 @@ public final class Client implements StanzaListener, Runnable {
         if (user == null)
             return Optional.empty();
         return Optional.of(JID.full(user));
+    }
+
+    public EnumSet<FeatureDiscovery.Feature> getServerFeature() {
+        EnumSet<FeatureDiscovery.Feature> e = EnumSet.noneOf(FeatureDiscovery.Feature.class);
+        e.addAll(mFeatures.keySet());
+        return e;
     }
 
     public boolean sendMessage(OutMessage message, boolean sendChatState) {
@@ -445,7 +460,7 @@ public final class Client implements StanzaListener, Runnable {
             LOGGER.warning("no avatar sender");
             return;
         }
-        if (mFeatures.contains(FeatureDiscovery.Feature.USER_AVATAR)) {
+        if (mFeatures.containsKey(FeatureDiscovery.Feature.USER_AVATAR)) {
             mAvatarSendReceiver.publish(id, data);
         } else {
             LOGGER.warning("not supported by server");
@@ -458,12 +473,22 @@ public final class Client implements StanzaListener, Runnable {
             return false;
         }
 
-        if (mFeatures.contains(FeatureDiscovery.Feature.USER_AVATAR)) {
+        if (mFeatures.containsKey(FeatureDiscovery.Feature.USER_AVATAR)) {
             return mAvatarSendReceiver.delete();
         } else {
             LOGGER.warning("not supported by server");
             return false;
         }
+    }
+
+    /** Request upload slot (XEP-0636). Blocking */
+    public AttachmentManager.Slot getUploadSlot(String name, long length, String mime) {
+        if (mSlotRequester == null) {
+            LOGGER.warning("no slot requester");
+            return new AttachmentManager.Slot();
+        }
+
+        return mSlotRequester.getSlot(name, length, mime);
     }
 
     /* package internal*/
@@ -472,7 +497,7 @@ public final class Client implements StanzaListener, Runnable {
         if (status != Control.Status.CONNECTED)
             mFeatures.clear();
 
-        mControl.onStatusChange(status, mFeatures.clone());
+        mControl.onStatusChange(status, this.getServerFeature());
     }
 
     void newException(KonException konException) {
@@ -480,7 +505,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     String multiAddressHost() {
-        return mFeatures.contains(FeatureDiscovery.Feature.MULTI_ADDRESSING)
+        return mFeatures.containsKey(FeatureDiscovery.Feature.MULTI_ADDRESSING)
                 && mConn != null ? mConn.getHost() : "";
     }
 
