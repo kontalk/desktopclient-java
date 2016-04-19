@@ -72,7 +72,7 @@ import javax.swing.event.DocumentEvent;
 import org.apache.commons.io.FileUtils;
 import org.apache.tika.Tika;
 import org.jivesoftware.smackx.chatstates.ChatState;
-import org.kontalk.client.Client;
+import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.system.AttachmentManager;
@@ -371,12 +371,12 @@ final class ChatView extends WebPanel implements Observer {
         mSendButton.addHotkey(sendHotkey, TooltipWay.up);
     }
 
-    void onStatusChange(Control.Status status, EnumSet<Client.ServerFeature> serverFeature) {
+    void onStatusChange(Control.Status status, EnumSet<FeatureDiscovery.Feature> serverFeature) {
         Boolean supported = null;
         switch(status) {
             case CONNECTED:
                 this.setColor(Color.WHITE);
-                supported = serverFeature.contains(Client.ServerFeature.ATTACHMENT_UPLOAD);
+                supported = serverFeature.contains(FeatureDiscovery.Feature.KON_FILE_UPLOAD);
                 break;
             case DISCONNECTED:
             case ERROR:

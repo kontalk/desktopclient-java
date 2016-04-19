@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
+import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.client.KonMessageSender;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
@@ -154,7 +155,7 @@ public final class Control {
         mViewControl.disconnect();
 
         mViewControl.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
-                EnumSet.noneOf(Client.ServerFeature.class)));
+                EnumSet.noneOf(FeatureDiscovery.Feature.class)));
         try {
             mDB.close();
         } catch (RuntimeException ex) {
@@ -183,7 +184,7 @@ public final class Control {
 
     /* events from network client */
 
-    public void onStatusChange(Status status, EnumSet<Client.ServerFeature> features) {
+    public void onStatusChange(Status status, EnumSet<FeatureDiscovery.Feature> features) {
         mViewControl.changed(new ViewEvent.StatusChange(status, features));
 
         if (status == Status.CONNECTED) {
