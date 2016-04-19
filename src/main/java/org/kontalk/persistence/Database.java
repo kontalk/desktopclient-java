@@ -16,7 +16,7 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package org.kontalk.system;
+package org.kontalk.persistence;
 
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -59,8 +59,6 @@ import org.sqlite.SQLiteConfig;
 public final class Database {
     private static final Logger LOGGER = Logger.getLogger(Database.class.getName());
 
-    private static Database INSTANCE = null;
-
     public static final String SQL_ID = "_id INTEGER PRIMARY KEY AUTOINCREMENT, ";
 
     private static final String FILENAME = "kontalk_db.sqlite";
@@ -71,7 +69,7 @@ public final class Database {
 
     private Connection mConn = null;
 
-    Database(Path appDir) throws KonException {
+    public Database(Path appDir) throws KonException {
         // load the sqlite-JDBC driver using the current class loader
         try {
             Class.forName("org.sqlite.JDBC");
@@ -193,7 +191,7 @@ public final class Database {
         LOGGER.info("updated to version "+DB_VERSION);
     }
 
-    synchronized void close() {
+    public synchronized void close() {
         try {
             if(mConn == null || mConn.isClosed())
                 return;

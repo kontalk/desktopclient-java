@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import org.kontalk.persistence.Config;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;

@@ -32,7 +32,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.model.Contact;
-import org.kontalk.system.Database;
+import org.kontalk.model.Model;
+import org.kontalk.persistence.Database;
 
 /**
  * The global list of all chats.
@@ -41,21 +42,17 @@ import org.kontalk.system.Database;
 public final class ChatList extends Observable implements Observer, Iterable<Chat> {
     private static final Logger LOGGER = Logger.getLogger(ChatList.class.getName());
 
-    private final Database mDB;
     private final Set<Chat> mChats = Collections.synchronizedSet(new HashSet<Chat>());
 
     private boolean mUnread = false;
 
-    public ChatList(Database db) {
-        mDB = db;
-    }
-
     public void load(Map<Integer, Contact> contactMap) {
         assert mChats.isEmpty();
 
-        try (ResultSet chatRS = mDB.execSelectAll(Chat.TABLE)) {
+        Database db = Model.database();
+        try (ResultSet chatRS = db.execSelectAll(Chat.TABLE)) {
             while (chatRS.next()) {
-                Chat chat = Chat.load(mDB, chatRS, contactMap).orElse(null);
+                Chat chat = Chat.load(db, chatRS, contactMap).orElse(null);
                 if (chat == null)
                     continue;
                 this.putSilent(chat);
@@ -108,7 +105,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     private SingleChat createNew(Contact contact, String xmppThreadID) {
-        SingleChat newChat = new SingleChat(mDB, new Member(contact), xmppThreadID);
+        SingleChat newChat = new SingleChat(new Member(contact), xmppThreadID);
         LOGGER.config("new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);
@@ -120,7 +117,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public GroupChat createNew(List<Member> members, GroupMetaData gData, String subject) {
-        GroupChat newChat = GroupChat.create(mDB, members, gData, subject);
+        GroupChat newChat = GroupChat.create(Model.database(), members, gData, subject);
         LOGGER.config("new group chat: "+newChat);
         this.putSilent(newChat);
         this.changed(newChat);

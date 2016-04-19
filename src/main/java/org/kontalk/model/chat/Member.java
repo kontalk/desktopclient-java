@@ -31,7 +31,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Contact;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 
 /**
  * A contact association with a chat.

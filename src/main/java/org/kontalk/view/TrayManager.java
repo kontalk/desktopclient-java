@@ -36,7 +36,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
 import org.kontalk.model.Model;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.Tr;
 
 /**

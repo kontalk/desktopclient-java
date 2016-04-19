@@ -52,7 +52,7 @@ import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
 import org.jivesoftware.smackx.disco.packet.DiscoverInfo;
 import org.jivesoftware.smackx.pubsub.packet.PubSub;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.JID;

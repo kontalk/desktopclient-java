@@ -31,7 +31,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
 
@@ -84,7 +84,6 @@ public final class Contact extends Observable {
             COL_AVATAR_ID + " TEXT" +
             ")";
 
-    private final Database mDB;
     private final int mID;
     private JID mJID;
     private String mName;
@@ -100,8 +99,7 @@ public final class Contact extends Observable {
     private Avatar mAvatar = null;
 
     // new contact (eg from roster)
-    Contact(Database db, JID jid, String name) {
-        mDB = db;
+    Contact(JID jid, String name) {
         mJID = jid;
         mName = name;
 
@@ -115,13 +113,13 @@ public final class Contact extends Observable {
                 null, // key
                 null, // fingerprint
                 null); // avatar id
-        mID = mDB.execInsert(TABLE, values);
+        mID = Model.database().execInsert(TABLE, values);
         if (mID < 1)
             LOGGER.log(Level.WARNING, "could not insert contact");
     }
 
     // loading from database
-    public Contact(Database db,
+    public Contact(
             int id,
             JID jid,
             String name,
@@ -131,7 +129,6 @@ public final class Contact extends Observable {
             String publicKey,
             String fingerprint,
             String avatarID) {
-        mDB = db;
         mID = id;
         mJID = jid;
         mName = name;
@@ -342,7 +339,7 @@ public final class Contact extends Observable {
         set.put(COL_PUB_KEY, Database.setString(mKey));
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
         set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.getID() : ""));
-        mDB.execUpdate(TABLE, set, mID);
+        Model.database().execUpdate(TABLE, set, mID);
     }
 
     private void changed(Object arg) {
@@ -387,7 +384,7 @@ public final class Contact extends Observable {
         String fp = Database.getString(rs, Contact.COL_KEY_FP);
         String avatarID = Database.getString(rs, Contact.COL_AVATAR_ID);
 
-        return new Contact(db, id, jid, name, status,
+        return new Contact(id, jid, name, status,
                 Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
     }
 }

@@ -18,6 +18,8 @@
 
 package org.kontalk.system;
 
+import org.kontalk.persistence.Config;
+import org.kontalk.persistence.Database;
 import org.kontalk.model.Account;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
@@ -107,13 +109,13 @@ public final class Control {
             throw ex;
         }
 
-        mModel = new Model(mDB, appDir);
+        mModel = Model.setup(mDB, appDir);
 
         mClient = Client.create(this, appDir);
         mChatStateManager = new ChatStateManager(mClient);
         mAttachmentManager = AttachmentManager.create(this, appDir);
         mRosterHandler = new RosterHandler(this, mClient, mModel);
-        mAvatarHandler = new AvatarHandler(mClient, mModel, appDir);
+        mAvatarHandler = new AvatarHandler(mClient, mModel);
         mGroupControl = new GroupControl(this, mModel);
     }
 
@@ -258,22 +260,10 @@ public final class Control {
             return;
         }
 
-        // TODO move
-        InMessage newMessage = new InMessage(mDB, protoMessage, chat, ids.jid,
-                ids.xmppID, serverDate);
-
-        if (newMessage.getID() <= 0)
+        InMessage newMessage = mModel.createInMessage(
+                protoMessage, chat, ids, serverDate).orElse(null);
+        if (newMessage == null)
             return;
-
-        if (chat.getMessages().contains(newMessage)) {
-            LOGGER.info("message already in chat, dropping this one");
-            return;
-        }
-        boolean added = chat.addMessage(newMessage);
-        if (!added) {
-            LOGGER.warning("can't add message to chat");
-            return;
-        }
 
         GroupCommand com = newMessage.getContent().getGroupCommand().orElse(null);
         if (com != null) {
@@ -415,15 +405,13 @@ public final class Control {
             return false;
         }
 
-        // TODO move
-        OutMessage newMessage = new OutMessage(mDB, chat, contacts, content,
-                chat.isSendEncrypted());
+        OutMessage newMessage = mModel.createOutMessage(
+                chat, contacts, content).orElse(null);
+        if (newMessage == null)
+            return false;
+
         if (newMessage.getContent().getAttachment().isPresent())
             mAttachmentManager.createImagePreview(newMessage);
-        boolean added = chat.addMessage(newMessage);
-        if (!added) {
-            LOGGER.warning("could not add outgoing message to chat");
-        }
 
         return this.sendMessage(newMessage);
     }
@@ -802,7 +790,7 @@ public final class Control {
         }
 
         public void setUserAvatar(BufferedImage image) {
-            Avatar.UserAvatar newAvatar = mModel.newUserAvatar(image);
+            Avatar.UserAvatar newAvatar = mModel.setUserAvatar(image);
             byte[] avatarData = newAvatar.imageData().orElse(null);
             if (avatarData == null || newAvatar.getID().isEmpty())
                 return;

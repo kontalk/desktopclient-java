@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import org.kontalk.persistence.Config;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;

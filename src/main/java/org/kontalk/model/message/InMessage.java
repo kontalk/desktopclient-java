@@ -31,7 +31,6 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.model.Contact;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.Preview;
-import org.kontalk.system.Database;
 
 /**
  * Model for an XMPP message sent to the user.
@@ -42,9 +41,9 @@ public final class InMessage extends KonMessage implements DecryptMessage {
 
     private final Transmission mTransmission;
 
-    public InMessage(Database db, ProtoMessage proto, Chat chat, JID from,
+    public InMessage(ProtoMessage proto, Chat chat, JID from,
             String xmppID, Optional<Date> serverDate) {
-        super(db,
+        super(
                 chat,
                 xmppID,
                 proto.getContent(),
@@ -52,12 +51,12 @@ public final class InMessage extends KonMessage implements DecryptMessage {
                 Status.IN,
                 proto.getCoderStatus());
 
-        mTransmission = new Transmission(db, proto.getContact(), from, mID);
+        mTransmission = new Transmission(proto.getContact(), from, mID);
     }
 
     // used when loading from database
-    protected InMessage(Database db, KonMessage.Builder builder) {
-        super(db, builder);
+    protected InMessage(KonMessage.Builder builder) {
+        super(builder);
 
         if (builder.mTransmissions.size() != 1)
             throw new IllegalArgumentException("builder does not contain one transmission");

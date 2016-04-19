@@ -135,9 +135,9 @@ public class Avatar {
             super(id(image), userFile(appDir), image);
         }
 
-        static UserAvatar create(BufferedImage image, Path appDir) {
+        static UserAvatar create(BufferedImage image) {
             image = MediaUtils.scale(image, MAX_SIZE, MAX_SIZE);
-            return new UserAvatar(image, appDir);
+            return new UserAvatar(image, Model.appDir());
         }
 
         @Override
@@ -159,13 +159,13 @@ public class Avatar {
         }
     }
 
-    public static void createDir(Path appDir) {
+    static void createStorageDir(Path appDir) {
         boolean created = appDir.resolve(DIR).toFile().mkdir();
         if (created)
             LOGGER.info("created avatar directory");
     }
 
-    public static Avatar deleted() {
+    static Avatar deleted() {
         return new Avatar("");
     }
 

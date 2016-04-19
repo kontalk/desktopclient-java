@@ -35,7 +35,7 @@ import java.util.stream.Collectors;
 import org.kontalk.model.Contact;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.OutMessage;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 
 /**
  * All messages of a chat.

@@ -37,8 +37,9 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Model;
 import org.kontalk.model.message.KonMessage;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 
 /**
  * A model for a conversation thread consisting of an ordered list of messages.
@@ -70,7 +71,6 @@ public abstract class Chat extends Observable implements Observer {
             COL_GD+" TEXT " +
             ")";
 
-    private final Database mDB;
     protected final int mID;
     private final ChatMessages mMessages;
 
@@ -79,8 +79,7 @@ public abstract class Chat extends Observable implements Observer {
 
     private ViewSettings mViewSettings;
 
-    protected Chat(Database db, List<Member> members, String xmppID, String subject, GroupMetaData gData) {
-        mDB = db;
+    protected Chat(List<Member> members, String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages();
         mRead = true;
         mViewSettings = new ViewSettings();
@@ -92,18 +91,17 @@ public abstract class Chat extends Observable implements Observer {
                 mRead,
                 mViewSettings.toJSONString(),
                 Database.setString(gData == null ? "" : gData.toJSON()));
-        mID = mDB.execInsert(TABLE, values);
+        mID = Model.database().execInsert(TABLE, values);
         if (mID < 1) {
             LOGGER.warning("couldn't insert chat");
             return;
         }
 
-        members.stream().forEach(member -> member.insert(mDB, mID));
+        members.stream().forEach(member -> member.insert(Model.database(), mID));
     }
 
     // used when loading from database
-    protected Chat(Database db, int id, boolean read, String jsonViewSettings) {
-        mDB = db;
+    protected Chat(int id, boolean read, String jsonViewSettings) {
         mID = id;
         mMessages = new ChatMessages();
         mRead = read;
@@ -208,7 +206,8 @@ public abstract class Chat extends Observable implements Observer {
         set.put(COL_READ, mRead);
         set.put(COL_VIEW_SET, mViewSettings.toJSONString());
 
-        mDB.execUpdate(TABLE, set, mID);
+        Database db = Model.database();
+        db.execUpdate(TABLE, set, mID);
 
         // get receiver for this chat
         List<Member> oldMembers = new ArrayList<>(this.getAllMembers());
@@ -216,11 +215,11 @@ public abstract class Chat extends Observable implements Observer {
         // save new members
         members.stream()
                 .filter(m -> !oldMembers.contains(m))
-                .forEach(m -> m.insert(mDB, mID));
+                .forEach(m -> m.insert(db, mID));
 
         oldMembers.removeAll(members);
         // whats left is too much and can be deleted
-        oldMembers.stream().forEach(m -> m.delete(mDB));
+        oldMembers.stream().forEach(m -> m.delete(db));
     }
 
     void delete() {
@@ -230,15 +229,16 @@ public abstract class Chat extends Observable implements Observer {
             return;
 
         // members
-        succ = this.getAllMembers().stream().allMatch(m -> m.delete(mDB));
+        succ = this.getAllMembers().stream().allMatch(m -> m.delete(Model.database()));
         if (!succ)
             return;
 
         // chat itself
-        mDB.execDelete(TABLE, mID);
+        Database db = Model.database();
+        db.execDelete(TABLE, mID);
 
         // all done, commmit deletions
-        succ = mDB.commit();
+        succ = db.commit();
         if (!succ)
             return;
 
@@ -282,13 +282,13 @@ public abstract class Chat extends Observable implements Observer {
 
         Chat chat;
         if (gData != null) {
-            chat = GroupChat.create(db, id, members, gData, subject, read, jsonViewSettings);
+            chat = GroupChat.create(id, members, gData, subject, read, jsonViewSettings);
         } else {
             if (members.size() != 1) {
                 LOGGER.warning("not one contact for single chat, id="+id);
                 return Optional.empty();
             }
-            chat = new SingleChat(db, id, members.get(0), xmppID, read, jsonViewSettings);
+            chat = new SingleChat(id, members.get(0), xmppID, read, jsonViewSettings);
         }
 
         chat.loadMessages(db, contactMap);

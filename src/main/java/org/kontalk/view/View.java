@@ -44,7 +44,7 @@ import java.util.EnumSet;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import org.kontalk.client.Client;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;

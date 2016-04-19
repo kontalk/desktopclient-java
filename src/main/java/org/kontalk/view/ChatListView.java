@@ -32,9 +32,7 @@ import java.awt.event.ActionListener;
 import java.util.Timer;
 import javax.swing.Box;
 import javax.swing.ListSelectionModel;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.ChatList;
@@ -59,32 +57,6 @@ final class ChatListView extends ListView<ChatItem, Chat> {
         mChatList = chatList;
 
         this.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        // actions triggered by selection
-        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-
-            Chat lastChat = null;
-
-            @Override
-            public void valueChanged(ListSelectionEvent e) {
-                if (e.getValueIsAdjusting())
-                    return;
-
-                Chat chat = ChatListView.this.getSelectedValue().orElse(null);
-                if (chat == null) {
-                    // note: this happens also on righ-click for some reason
-                    return;
-                }
-
-                // if event is caused by filtering, dont do anything
-                if (lastChat == chat)
-                    return;
-
-                mView.clearSearch();
-                mView.selectedChatChanged(chat);
-                lastChat = chat;
-            }
-        });
 
         this.updateOnEDT(null);
     }
@@ -120,6 +92,11 @@ final class ChatListView extends ListView<ChatItem, Chat> {
         }
         ChatItem chatItem = this.getSelectedItem();
         mView.getControl().deleteChat(chatItem.mValue);
+    }
+
+    @Override
+    protected void selectionChanged(Chat value) {
+        mView.selectedChatChanged(value);
     }
 
     @Override

@@ -76,7 +76,7 @@ import org.kontalk.client.Client;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.system.AttachmentManager;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;

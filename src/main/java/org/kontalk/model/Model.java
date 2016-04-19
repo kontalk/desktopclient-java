@@ -20,20 +20,32 @@ package org.kontalk.model;
 
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
+import java.util.Date;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.logging.Logger;
 import org.kontalk.model.Avatar.UserAvatar;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.ChatList;
-import org.kontalk.system.Config;
-import org.kontalk.system.Database;
+import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.MessageContent;
+import org.kontalk.model.message.OutMessage;
+import org.kontalk.model.message.ProtoMessage;
+import org.kontalk.persistence.Config;
+import org.kontalk.persistence.Database;
+import org.kontalk.util.ClientUtils;
 
 /**
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Model {
+    private static final Logger LOGGER = Logger.getLogger(Model.class.getName());
 
+    private static Model INSTANCE = null;
     private static Path APP_DIR;
-    private final Path mAppDir;
+    private static Database DATABASE;
 
     private final ContactList mContactList;
     private final ChatList mChatList;
@@ -41,14 +53,26 @@ public final class Model {
 
     private UserAvatar mUserAvatar;
 
-    public Model(Database db, Path appDir) {
-        mAppDir = APP_DIR = appDir;
+    private Model(Database db, Path appDir) {
+        DATABASE = db;
+        APP_DIR = appDir;
 
-        mAccount = new Account(mAppDir, Config.getInstance());
-        mContactList = new ContactList(db);
-        mChatList = new ChatList(db);
+        mAccount = new Account(APP_DIR, Config.getInstance());
+        mContactList = new ContactList();
+        mChatList = new ChatList();
 
-        mUserAvatar = new UserAvatar(mAppDir);
+        mUserAvatar = new UserAvatar(APP_DIR);
+
+        Avatar.createStorageDir(appDir);
+    }
+
+    public static Model setup(Database db, Path appDir) {
+        if (INSTANCE != null) {
+            LOGGER.warning("already set up");
+            return INSTANCE;
+        }
+
+        return INSTANCE = new Model(db, appDir);
     }
 
     public Account account() {
@@ -73,17 +97,59 @@ public final class Model {
         mChatList.load(contactMap);
     }
 
-    public UserAvatar newUserAvatar(BufferedImage image) {
-        return UserAvatar.create(image, mAppDir);
+    public UserAvatar setUserAvatar(BufferedImage image) {
+        return UserAvatar.create(image);
+    }
+
+    public Optional<InMessage> createInMessage(ProtoMessage protoMessage,
+            Chat chat, ClientUtils.MessageIDs ids, Optional<Date> serverDate) {
+        InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
+        ids.xmppID, serverDate);
+
+        if (newMessage.getID() <= 0)
+            return Optional.empty();
+
+        if (chat.getMessages().contains(newMessage)) {
+            LOGGER.info("message already in chat, dropping this one");
+            return Optional.empty();
+        }
+        boolean added = chat.addMessage(newMessage);
+        if (!added) {
+            LOGGER.warning("can't add message to chat");
+            return Optional.empty();
+        }
+        return Optional.of(newMessage);
+    }
+
+    public Optional<OutMessage> createOutMessage(Chat chat,
+            List<Contact> contacts, MessageContent content) {
+        OutMessage newMessage = new OutMessage(chat, contacts, content,
+                chat.isSendEncrypted());
+
+        boolean added = chat.addMessage(newMessage);
+        if (!added) {
+            LOGGER.warning("could not add outgoing message to chat");
+            return Optional.empty();
+        }
+        return Optional.of(newMessage);
     }
 
     public void deleteUserAvatar() {
         mUserAvatar.delete();
-        mUserAvatar = new UserAvatar(mAppDir);
+        mUserAvatar = new UserAvatar(APP_DIR);
     }
 
-    // TODO
     static Path appDir() {
+        if (APP_DIR == null)
+            throw new IllegalStateException("model not set up");
+
         return APP_DIR;
+    }
+
+    public static Database database(){
+        if (DATABASE == null)
+            throw new IllegalStateException("model not set up");
+
+        return DATABASE;
     }
 }

@@ -31,7 +31,6 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.Contact;
-import org.kontalk.system.Database;
 
 /**
  * Model for an XMPP message from the user to a contact.
@@ -42,9 +41,10 @@ public final class OutMessage extends KonMessage {
 
     private final Set<Transmission> mTransmissions;
 
-    public OutMessage(Database db, Chat chat, List<Contact> contacts,
+    public OutMessage(Chat chat, List<Contact> contacts,
             MessageContent content, boolean encrypted) {
-        super(db, chat,
+        super(
+                chat,
                 "Kon_" + StringUtils.randomString(8),
                 content,
                 Optional.<Date>empty(),
@@ -55,7 +55,7 @@ public final class OutMessage extends KonMessage {
 
         Set<Transmission> ts = new HashSet<>();
         contacts.stream().forEach(contact -> {
-            boolean succ = ts.add(new Transmission(db, contact, contact.getJID(), mID));
+            boolean succ = ts.add(new Transmission(contact, contact.getJID(), mID));
             if (!succ)
                 LOGGER.warning("duplicate contact: "+contact);
         });
@@ -63,8 +63,8 @@ public final class OutMessage extends KonMessage {
     }
 
     // used when loading from database
-    protected OutMessage(Database db, KonMessage.Builder builder) {
-        super(db, builder);
+    protected OutMessage(KonMessage.Builder builder) {
+        super(builder);
 
         mTransmissions = Collections.unmodifiableSet(builder.mTransmissions);
     }
