@@ -572,14 +572,13 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             }
 
             // image thumbnail preview
-            Path imagePath = mView.getControl().getImagePath(mValue).orElse(null);
-            Path image = imagePath != null ? imagePath : Paths.get("");
-            mAttPanel.setImage(image);
+            Path imagePath = mView.getControl().getImagePath(mValue).orElse(Paths.get(""));
+            mAttPanel.setImage(imagePath);
 
             // link to the file
             Path linkPath = mView.getControl().getFilePath(att);
             if (!linkPath.toString().isEmpty()) {
-                mAttPanel.setLink(image.toString().isEmpty() ?
+                mAttPanel.setLink(imagePath.toString().isEmpty() ?
                         linkPath.getFileName().toString() :
                         "",
                         linkPath);

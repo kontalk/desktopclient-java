@@ -819,7 +819,7 @@ public final class Control {
         private void sendNewMessage(Chat chat, String text, Path file) {
             Attachment attachment = null;
             if (!file.toString().isEmpty()) {
-                attachment = AttachmentManager.attachmentOrNull(file);
+                attachment = AttachmentManager.createAttachmentOrNull(file);
                 if (attachment == null)
                     return;
             }

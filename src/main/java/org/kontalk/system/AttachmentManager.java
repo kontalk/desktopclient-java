@@ -34,6 +34,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
 import org.kontalk.client.Client;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.client.HTTPFileClient;
@@ -79,6 +80,20 @@ public class AttachmentManager implements Runnable {
             "audio/3gpp",
             "audio/mpeg3",
             "audio/wav");
+
+    public static class Slot {
+        final URI uploadURL;
+        final URI downloadURL;
+
+        public Slot() {
+            this(URI.create(""), URI.create(""));
+        }
+
+        public Slot(URI uploadURI, URI downloadURL) {
+            this.uploadURL = uploadURI;
+            this.downloadURL = downloadURL;
+        }
+    }
 
     private static final URI LEGACY_UPLOAD_URI = URI.create("https://beta.kontalk.net:5980/upload");
     private static final String ENCRYPT_MIME = "application/octet-stream";
@@ -158,7 +173,7 @@ public class AttachmentManager implements Runnable {
         File file = original = attachment.getFilePath().toFile();
         String mime = attachment.getMimeType();
 
-        if(isImage(attachment.getMimeType())) {
+        if(isImage(mime)) {
             int maxImgSize = Config.getInstance().getInt(Config.NET_MAX_IMG_SIZE);
             if (maxImgSize > 0) {
                 BufferedImage img = MediaUtils.readImage(file).orElse(null);
@@ -300,7 +315,7 @@ public class AttachmentManager implements Runnable {
             this.createImagePreview(message);
     }
 
-    public void savePreview(InMessage message) {
+    void savePreview(InMessage message) {
         Preview preview = message.getContent().getPreview().orElse(null);
         if (preview == null) {
             LOGGER.warning("no preview in message: "+message);
@@ -322,7 +337,12 @@ public class AttachmentManager implements Runnable {
         }
         Path path = absoluteFilePath(att);
 
-        if (!isImage(att.getMimeType()))
+        String mime = att.getMimeType();
+        if (mime.isEmpty())
+            // guess from file
+            mime = mimeForFile(path);
+
+        if (!isImage(mime))
             return false;
 
         BufferedImage image = MediaUtils.readImage(path);
@@ -394,6 +414,10 @@ public class AttachmentManager implements Runnable {
                 Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
     }
 
+    private static boolean isImage(String mimeType) {
+        return mimeType.startsWith("image");
+    }
+
     @Override
     public void run() {
         while (true) {
@@ -413,40 +437,31 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    public static boolean isImage(String mimeType) {
-        return mimeType.startsWith("image");
-    }
-
     /**
      * Create a new attachment for a given file denoted by its path.
      */
-    static Attachment attachmentOrNull(Path path) {
-        File file = path.toFile();
-        if (!file.isFile() || !file.canRead()) {
-            LOGGER.warning("invalid attachment file: "+path);
+    static Attachment createAttachmentOrNull(Path path) {
+        if (!Files.isReadable(path)) {
+            LOGGER.warning("file not readable: "+path);
             return null;
         }
-        String mimeType;
-        try {
-            mimeType = Files.probeContentType(path);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't get attachment mime type", ex);
+
+        String mimeType = mimeForFile(path);
+        if (mimeType.isEmpty()) {
+            LOGGER.warning("no mime type for file: "+path);
             return null;
         }
+
         return new Attachment(path, mimeType);
     }
 
-    public static class Slot {
-        final URI uploadURL;
-        final URI downloadURL;
-
-        public Slot() {
-            this(URI.create(""), URI.create(""));
+    private static String mimeForFile(Path path) {
+        String mime = null;
+        try {
+            mime = Files.probeContentType(path);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't probe type", ex);
         }
-
-        public Slot(URI uploadURI, URI downloadURL) {
-            this.uploadURL = uploadURI;
-            this.downloadURL = downloadURL;
-        }
+        return StringUtils.defaultString(mime);
     }
 }

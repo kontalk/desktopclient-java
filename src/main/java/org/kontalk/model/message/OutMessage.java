@@ -116,7 +116,7 @@ public final class OutMessage extends KonMessage {
         if (attachment == null)
             return;
 
-        attachment.update(url, mime, length);
+        attachment.updateUploaded(url, mime, length);
         this.save();
     }
 

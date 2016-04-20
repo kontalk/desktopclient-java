@@ -287,7 +287,8 @@ public class MessageContent {
         public Attachment(URI url, String mimeType, long length,
                 boolean encrypted) {
             this(url, Paths.get(""), mimeType, length,
-                    encrypted ? CoderStatus.createEncrypted() :
+                    encrypted ?
+                            CoderStatus.createEncrypted() :
                             CoderStatus.createInsecure()
             );
         }
@@ -311,7 +312,7 @@ public class MessageContent {
             return mURL;
         }
 
-        public void update(URI url, String mime, long length){
+        void updateUploaded(URI url, String mime, long length){
             mURL = url;
             mMimeType = mime;
             mLength = length;
