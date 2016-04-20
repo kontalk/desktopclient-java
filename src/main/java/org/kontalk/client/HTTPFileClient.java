@@ -55,6 +55,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.kontalk.misc.KonException;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.TrustUtils;
 
@@ -160,9 +161,7 @@ public class HTTPFileClient {
                 // fallback
                 String type = StringUtils.defaultString(entity.getContentType().getValue());
                 String ext = MediaUtils.extensionForMIME(type);
-                filename = "att_" +
-                        org.jivesoftware.smack.util.StringUtils.randomString(4) +
-                        "." + ext;
+                filename = "att_" + EncodingUtils.randomString(4) + "." + ext;
             }
 
             // get file size

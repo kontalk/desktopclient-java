@@ -25,6 +25,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONObject;
 
@@ -93,5 +94,9 @@ public final class EncodingUtils {
             LOGGER.log(Level.WARNING, "invalid URI", ex);
         }
         return URI.create("");
+    }
+
+    public static String randomString(int length) {
+        return RandomStringUtils.randomAlphanumeric(length);
     }
 }
