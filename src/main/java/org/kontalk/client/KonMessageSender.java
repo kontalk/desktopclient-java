@@ -73,7 +73,9 @@ public final class KonMessageSender {
 
         Chat chat = message.getChat();
 
-        Message protoMessage = encrypted ? new Message() : rawMessage(content, chat, false);
+        Message protoMessage = encrypted ?
+                new Message() :
+                rawMessage(content, chat, false);
 
         protoMessage.setType(Message.Type.chat);
         protoMessage.setStanzaId(message.getXMPPID());
@@ -134,13 +136,18 @@ public final class KonMessageSender {
     public static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
         Message smackMessage = new Message();
 
-        // text
+        MessageContent.Attachment att = content.getAttachment().orElse(null);
+
+        // text body
         String text = content.getPlainText();
+        if (text.isEmpty() && att != null) {
+            // use attachment URL as body
+            text = att.getURL().toString();
+        }
         if (!text.isEmpty())
-            smackMessage.setBody(content.getPlainText());
+            smackMessage.setBody(text);
 
         // attachment
-        MessageContent.Attachment att = content.getAttachment().orElse(null);
         if (att != null) {
             OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
                     att.getMimeType(), att.getLength(), encrypted);
