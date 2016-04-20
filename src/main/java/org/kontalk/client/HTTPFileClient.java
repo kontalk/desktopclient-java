@@ -25,6 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyManagementException;
@@ -39,6 +40,7 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.SSLContext;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
@@ -46,8 +48,10 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
@@ -104,12 +108,10 @@ public class HTTPFileClient {
     }
 
     /**
-     * Downloads to a directory represented by a {@link File} object,
-     * determining the file name from the Content-Disposition header.
+     * Download file to directory.
      * @param url URL of file
      * @param base base directory in which the download is saved
-     * @return the absolute path of the downloaded file, empty if the file could
-     * not be downloaded
+     * @return absolute path of downloaded file, empty if download failed
      */
     public Path download(URI url, Path base, ProgressListener listener) throws KonException {
         if (mHTTPClient == null) {
@@ -144,12 +146,10 @@ public class HTTPFileClient {
                 throw new KonException(KonException.Error.DOWNLOAD_RESPONSE);
             }
 
-            // get filename
+            // try getting filename from header
             String filename = "";
             Header dispHeader = response.getFirstHeader("Content-Disposition");
-            if (dispHeader == null) {
-                LOGGER.warning("no content header");
-            } else {
+            if (dispHeader != null) {
                 filename = parseContentDisposition(dispHeader.getValue());
                 // never trust incoming data
                 filename = Paths.get(filename).getFileName().toString();
@@ -157,6 +157,7 @@ public class HTTPFileClient {
                     LOGGER.warning("can't parse filename in content: "+dispHeader.getValue());
                 }
             }
+            // NOTE: could try getting the extension (and filename) from URL, security?
             if (filename.isEmpty()) {
                 // fallback
                 String type = StringUtils.defaultString(entity.getContentType().getValue());
@@ -179,12 +180,18 @@ public class HTTPFileClient {
             final long fileSize = s;
             mCurrentListener.updateProgress(s < 0 ? -2 : 0);
 
-            File destination = new File(base.toString(), filename);
-            if (destination.exists()) {
-                LOGGER.warning("file already exists: "+destination.getAbsolutePath());
-                return Paths.get("");
+            Path destination = Paths.get(base.toString(), filename);
+            if (Files.exists(destination)) {
+                destination = Paths.get(base.toString(),
+                        FilenameUtils.getBaseName(filename) +
+                                "_" + EncodingUtils.randomString(4) +
+                                "." + FilenameUtils.getExtension(filename));
+                if (Files.exists(destination)) {
+                    LOGGER.warning("not possible");
+                    return Paths.get("");
+                }
             }
-            try (FileOutputStream out = new FileOutputStream(destination)){
+            try (FileOutputStream out = new FileOutputStream(destination.toFile())){
                 CountingOutputStream cOut = new CountingOutputStream(out) {
                     @Override
                     protected synchronized void afterWrite(int n) {
@@ -209,7 +216,7 @@ public class HTTPFileClient {
             mCurrentRequest = null;
             mCurrentListener = null;
 
-            return Paths.get(destination.getAbsolutePath());
+            return destination.toAbsolutePath();
         } finally {
             try {
                 response.close();
@@ -221,14 +228,23 @@ public class HTTPFileClient {
     }
 
     /**
-     * Upload a file.
-     * @param file file to download
-     * @param url the upload URL pointing to the upload service
-     * @param mime mime-type of file
-     * @param encrypted is the file encrypted?
+     * Upload file using a PUT request.
      * @return the URL the file can be downloaded with.
      */
-    public URI upload(File file, URI url, String mime, boolean encrypted) throws KonException {
+    public void upload(File file, URI uploadURL, String mime, boolean encrypted) throws KonException {
+        this.upload(file, uploadURL, mime, encrypted, false);
+    }
+
+    /**
+     * Upload file using a POST request and parse download URL from response.
+     * @return the URL the uploaded file can be downloaded with.
+     */
+    public URI uploadLegacy(File file, URI url, String mime, boolean encrypted) throws KonException {
+        return this.upload(file, url, mime, encrypted, true);
+    }
+
+    private URI upload(File file, URI url, String mime, boolean encrypted, boolean legacy)
+            throws KonException {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
@@ -236,7 +252,9 @@ public class HTTPFileClient {
         }
 
         // request type
-        HttpPost req = new HttpPost(url);
+        HttpEntityEnclosingRequestBase req = legacy ?
+                new HttpPost(url) :
+                new HttpPut(url);
         req.setHeader("Content-Type", mime);
         if (encrypted)
             req.addHeader(HEADER_MESSAGE_FLAGS, "encrypted");
@@ -263,6 +281,9 @@ public class HTTPFileClient {
                 LOGGER.warning("unexpected response code: " + code);
                 throw new KonException(KonException.Error.UPLOAD_RESPONSE);
             }
+
+            if (!legacy)
+                return null;
 
             HttpEntity entity = response.getEntity();
             if (entity == null) {

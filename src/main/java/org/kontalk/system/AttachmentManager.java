@@ -203,7 +203,7 @@ public class AttachmentManager implements Runnable {
 
         URI url;
         try {
-            url = client.upload(file, UPLOAD_URI, mime, encrypt);
+            url = client.uploadLegacy(file, UPLOAD_URI, mime, encrypt);
         } catch (KonException ex) {
             LOGGER.warning("upload failed, attachment: "+attachment);
             message.setStatus(KonMessage.Status.ERROR);
