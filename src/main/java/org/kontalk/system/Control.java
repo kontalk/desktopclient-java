@@ -790,6 +790,12 @@ public final class Control {
             this.sendNewMessage(chat, "", file);
         }
 
+        public void sendAgain(OutMessage outMessage) {
+            Control.this.sendMessage(outMessage);
+        }
+
+        /* avatar */
+
         public void setUserAvatar(BufferedImage image) {
             Avatar.UserAvatar newAvatar = mModel.setUserAvatar(image);
             byte[] avatarData = newAvatar.imageData().orElse(null);
