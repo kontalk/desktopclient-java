@@ -57,6 +57,7 @@ import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.DecryptMessage;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.util.CPIMMessage;
+import org.kontalk.util.ClientUtils;
 import org.kontalk.util.XMPPUtils;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -391,7 +392,7 @@ final class Decryptor {
                 return null;
             }
             LOGGER.config("decrypted XML: "+m.toXML());
-            decryptedContent = KonMessageListener.parseMessageContent(m);
+            decryptedContent = ClientUtils.parseMessageContent(m);
         } else {
             // text/plain MIME type for simple text messages
             decryptedContent = MessageContent.plainText(content);
