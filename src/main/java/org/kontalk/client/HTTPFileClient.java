@@ -120,7 +120,7 @@ public class HTTPFileClient {
                 throw new KonException(KonException.Error.DOWNLOAD_CREATE);
         }
 
-        LOGGER.info("from URL=" + url+ "...");
+        LOGGER.config("from URL=" + url+ " ...");
         mCurrentRequest = new HttpGet(url);
         mCurrentListener = listener;
 
@@ -258,6 +258,8 @@ public class HTTPFileClient {
         req.setHeader("Content-Type", mime);
         if (encrypted)
             req.addHeader(HEADER_MESSAGE_FLAGS, "encrypted");
+
+        LOGGER.config("to URL=" + url+ " ...");
 
         // execute request
         CloseableHttpResponse response;

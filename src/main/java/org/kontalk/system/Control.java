@@ -412,7 +412,7 @@ public final class Control {
             return false;
 
         if (newMessage.getContent().getAttachment().isPresent())
-            mAttachmentManager.createImagePreview(newMessage);
+            mAttachmentManager.mayCreateImagePreview(newMessage);
 
         return this.sendMessage(newMessage);
     }

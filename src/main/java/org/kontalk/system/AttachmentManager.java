@@ -312,7 +312,7 @@ public class AttachmentManager implements Runnable {
 
         // create preview if not in message
         if (!message.getContent().getPreview().isPresent())
-            this.createImagePreview(message);
+            this.mayCreateImagePreview(message);
     }
 
     void savePreview(InMessage message) {
@@ -329,7 +329,7 @@ public class AttachmentManager implements Runnable {
         message.setPreviewFilename(filename);
     }
 
-    boolean createImagePreview(KonMessage message) {
+    boolean mayCreateImagePreview(KonMessage message) {
         Attachment att = message.getContent().getAttachment().orElse(null);
         if (att == null) {
             LOGGER.warning("no attachment in message: "+message);
@@ -401,7 +401,7 @@ public class AttachmentManager implements Runnable {
             return;
         }
 
-        LOGGER.info("to file: "+newFile);
+        LOGGER.config("to file: "+newFile);
     }
 
     private HTTPFileClient clientOrNull(){
@@ -412,10 +412,6 @@ public class AttachmentManager implements Runnable {
         return new HTTPFileClient(key.getServerLoginKey(),
                 key.getBridgeCertificate(),
                 Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
-    }
-
-    private static boolean isImage(String mimeType) {
-        return mimeType.startsWith("image");
     }
 
     @Override
@@ -463,5 +459,9 @@ public class AttachmentManager implements Runnable {
             LOGGER.log(Level.WARNING, "can't probe type", ex);
         }
         return StringUtils.defaultString(mime);
+    }
+
+    private static boolean isImage(String mimeType) {
+        return mimeType.startsWith("image");
     }
 }
