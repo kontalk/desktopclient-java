@@ -42,12 +42,14 @@ import org.kontalk.misc.JID;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.MessageContent;
+import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.MessageContent.GroupCommand.OP;
+import org.kontalk.model.message.MessageContent.Preview;
 
 /**
  * Static utilities as interface between client and control.
- * 
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class ClientUtils {
@@ -97,34 +99,34 @@ public final class ClientUtils {
     public static MessageContent parseMessageContent(Message m) {
         // default body
         String plainText = StringUtils.defaultString(m.getBody());
+
         // encryption extension (RFC 3923), decrypted later
         String encrypted = "";
         ExtensionElement encryptionExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
         if (encryptionExt instanceof E2EEncryption) {
-            if (m.getBody() != null) {
-                LOGGER.config("message contains encryption and body (ignoring body): " + m.getBody());
-            }
+            if (m.getBody() != null)
+                LOGGER.config("message contains encryption and body (ignoring body): "+m.getBody());
             E2EEncryption encryption = (E2EEncryption) encryptionExt;
             encrypted = EncodingUtils.bytesToBase64(encryption.getData());
         }
+
         // Bits of Binary: preview for file attachment
-        MessageContent.Preview preview = null;
+        Preview preview = null;
         ExtensionElement bobExt = m.getExtension(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE);
         if (bobExt instanceof BitsOfBinary) {
             BitsOfBinary bob = (BitsOfBinary) bobExt;
             String mime = StringUtils.defaultString(bob.getType());
             byte[] bits = bob.getContents();
-            if (bits == null) {
+            if (bits == null)
                 bits = new byte[0];
-            }
-            if (mime.isEmpty() || bits.length <= 0) {
-                LOGGER.warning("invalid BOB data: " + bob.toXML());
-            } else {
-                preview = new MessageContent.Preview(bits, mime);
-            }
+            if (mime.isEmpty() || bits.length <= 0)
+                LOGGER.warning("invalid BOB data: "+bob.toXML());
+            else
+                preview = new Preview(bits, mime);
         }
+
         // Out of Band Data: a URI to a file
-        MessageContent.Attachment attachment = null;
+        Attachment attachment = null;
         ExtensionElement oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
         if (oobExt instanceof OutOfBandData) {
             OutOfBandData oobData = (OutOfBandData) oobExt;
@@ -135,18 +137,34 @@ public final class ClientUtils {
                 LOGGER.log(Level.WARNING, "can't parse URL", ex);
                 url = URI.create("");
             }
-            attachment = new MessageContent.Attachment(url, oobData.getMime() != null ? oobData.getMime() : "", oobData.getLength(), oobData.isEncrypted());
+            attachment = new MessageContent.Attachment(url,
+                    oobData.getMime() != null ? oobData.getMime() : "",
+                    oobData.getLength(),
+                    oobData.isEncrypted());
+
+            // body text is maybe URI, for clients that dont understand OOB,
+            // but we do, don't save it twice
+            if (plainText.equals(url.toString()));
+                plainText = "";
         }
+
         // group command
         KonGroupData gid = null;
         GroupCommand groupCommand = null;
-        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE);
+        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME,
+                GroupExtension.NAMESPACE);
         if (groupExt instanceof GroupExtension) {
             GroupExtension group = (GroupExtension) groupExt;
             gid = new KonGroupData(JID.bare(group.getOwner()), group.getID());
-            groupCommand = ClientUtils.groupExtensionToGroupCommand(group.getType(), group.getMembers(), group.getSubject()).orElse(null);
+            groupCommand = ClientUtils.groupExtensionToGroupCommand(
+                    group.getType(), group.getMembers(), group.getSubject()).orElse(null);
         }
-        return new MessageContent.Builder(plainText, encrypted).attachment(attachment).preview(preview).groupData(gid).groupCommand(groupCommand).build();
+
+        return new MessageContent.Builder(plainText, encrypted)
+                .attachment(attachment)
+                .preview(preview)
+                .groupData(gid)
+                .groupCommand(groupCommand).build();
     }
 
     /* Internal to external */
