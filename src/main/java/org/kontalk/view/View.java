@@ -43,7 +43,7 @@ import java.awt.Dimension;
 import java.util.EnumSet;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
-import org.kontalk.client.Client;
+import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.persistence.Config;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.chat.Chat;
@@ -108,7 +108,7 @@ public final class View implements Observer {
     final String tr_not_supported = Tr.tr("Not supported by server");
 
     private Control.Status mCurrentStatus;
-    private EnumSet<Client.ServerFeature> mServerFeatures;
+    private EnumSet<FeatureDiscovery.Feature> mServerFeatures;
 
     private View(ViewControl control, Model model) {
         mControl = control;
@@ -149,7 +149,7 @@ public final class View implements Observer {
 
         this.setHotkeys();
 
-        this.statusChanged(Control.Status.DISCONNECTED, EnumSet.noneOf(Client.ServerFeature.class));
+        this.statusChanged(Control.Status.DISCONNECTED, EnumSet.noneOf(FeatureDiscovery.Feature.class));
 
         mMainFrame.setVisible(true);
     }
@@ -195,7 +195,7 @@ public final class View implements Observer {
         return mCurrentStatus;
     }
 
-    EnumSet<Client.ServerFeature> serverFeatures() {
+    EnumSet<FeatureDiscovery.Feature> serverFeatures() {
         return mServerFeatures;
     }
 
@@ -257,7 +257,7 @@ public final class View implements Observer {
         }
     }
 
-    private void statusChanged(Control.Status status, EnumSet<Client.ServerFeature> features) {
+    private void statusChanged(Control.Status status, EnumSet<FeatureDiscovery.Feature> features) {
         mCurrentStatus = status;
         mServerFeatures = features;
 

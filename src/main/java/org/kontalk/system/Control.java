@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
+import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.client.KonMessageSender;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
@@ -113,7 +114,7 @@ public final class Control {
 
         mClient = Client.create(this, appDir);
         mChatStateManager = new ChatStateManager(mClient);
-        mAttachmentManager = AttachmentManager.create(this, appDir);
+        mAttachmentManager = AttachmentManager.create(this, mClient, appDir);
         mRosterHandler = new RosterHandler(this, mClient, mModel);
         mAvatarHandler = new AvatarHandler(mClient, mModel);
         mGroupControl = new GroupControl(this, mModel);
@@ -154,7 +155,7 @@ public final class Control {
         mViewControl.disconnect();
 
         mViewControl.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
-                EnumSet.noneOf(Client.ServerFeature.class)));
+                EnumSet.noneOf(FeatureDiscovery.Feature.class)));
         try {
             mDB.close();
         } catch (RuntimeException ex) {
@@ -183,7 +184,7 @@ public final class Control {
 
     /* events from network client */
 
-    public void onStatusChange(Status status, EnumSet<Client.ServerFeature> features) {
+    public void onStatusChange(Status status, EnumSet<FeatureDiscovery.Feature> features) {
         mViewControl.changed(new ViewEvent.StatusChange(status, features));
 
         if (status == Status.CONNECTED) {
@@ -411,7 +412,7 @@ public final class Control {
             return false;
 
         if (newMessage.getContent().getAttachment().isPresent())
-            mAttachmentManager.createImagePreview(newMessage);
+            mAttachmentManager.mayCreateImagePreview(newMessage);
 
         return this.sendMessage(newMessage);
     }
@@ -789,6 +790,12 @@ public final class Control {
             this.sendNewMessage(chat, "", file);
         }
 
+        public void sendAgain(OutMessage outMessage) {
+            Control.this.sendMessage(outMessage);
+        }
+
+        /* avatar */
+
         public void setUserAvatar(BufferedImage image) {
             Avatar.UserAvatar newAvatar = mModel.setUserAvatar(image);
             byte[] avatarData = newAvatar.imageData().orElse(null);
@@ -812,7 +819,7 @@ public final class Control {
         private void sendNewMessage(Chat chat, String text, Path file) {
             Attachment attachment = null;
             if (!file.toString().isEmpty()) {
-                attachment = AttachmentManager.attachmentOrNull(file);
+                attachment = AttachmentManager.createAttachmentOrNull(file);
                 if (attachment == null)
                     return;
             }

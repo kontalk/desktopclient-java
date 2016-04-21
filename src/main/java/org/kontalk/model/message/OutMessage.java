@@ -28,9 +28,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.model.Contact;
+import org.kontalk.util.EncodingUtils;
 
 /**
  * Model for an XMPP message from the user to a contact.
@@ -45,7 +45,7 @@ public final class OutMessage extends KonMessage {
             MessageContent content, boolean encrypted) {
         super(
                 chat,
-                "Kon_" + StringUtils.randomString(8),
+                "Kon_" + EncodingUtils.randomString(8),
                 content,
                 Optional.<Date>empty(),
                 Status.PENDING,
@@ -116,7 +116,7 @@ public final class OutMessage extends KonMessage {
         if (attachment == null)
             return;
 
-        attachment.update(url, mime, length);
+        attachment.updateUploaded(url, mime, length);
         this.save();
     }
 

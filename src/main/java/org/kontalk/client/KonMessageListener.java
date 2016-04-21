@@ -18,11 +18,8 @@
 
 package org.kontalk.client;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.lang.StringUtils;
@@ -43,15 +40,10 @@ import org.jivesoftware.smackx.pubsub.packet.PubSubNamespace;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.misc.JID;
-import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.MessageContent;
-import org.kontalk.model.message.MessageContent.Attachment;
-import org.kontalk.model.message.MessageContent.GroupCommand;
-import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.system.Control;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.ClientUtils.MessageIDs;
-import org.kontalk.util.EncodingUtils;
 
 /**
  * Listen and handle all incoming XMPP message packets.
@@ -170,7 +162,7 @@ final public class KonMessageListener implements StanzaListener {
         // must be an incoming message
 
         // get content/text from body and/or encryption/url extension
-        MessageContent content = parseMessageContent(m);
+        MessageContent content = ClientUtils.parseMessageContent(m);
 
         // make sure not to save a message without content
         if (content.isEmpty()) {
@@ -216,71 +208,5 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         LOGGER.warning("unhandled");
-    }
-
-    public static MessageContent parseMessageContent(Message m) {
-        // default body
-        String plainText = StringUtils.defaultString(m.getBody());
-
-        // encryption extension (RFC 3923), decrypted later
-        String encrypted = "";
-        ExtensionElement encryptionExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
-        if (encryptionExt instanceof E2EEncryption) {
-            if (m.getBody() != null)
-                LOGGER.config("message contains encryption and body (ignoring body): "+m.getBody());
-            E2EEncryption encryption = (E2EEncryption) encryptionExt;
-            encrypted = EncodingUtils.bytesToBase64(encryption.getData());
-        }
-
-        // Bits of Binary: preview for file attachment
-        Preview preview = null;
-        ExtensionElement bobExt = m.getExtension(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE);
-        if (bobExt instanceof BitsOfBinary) {
-            BitsOfBinary bob = (BitsOfBinary) bobExt;
-            String mime = StringUtils.defaultString(bob.getType());
-            byte[] bits = bob.getContents();
-            if (bits == null)
-                bits = new byte[0];
-            if (mime.isEmpty() || bits.length <= 0)
-                LOGGER.warning("invalid BOB data: "+bob.toXML());
-            else
-                preview = new Preview(bits, mime);
-        }
-
-        // Out of Band Data: a URI to a file
-        Attachment attachment = null;
-        ExtensionElement oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
-        if (oobExt instanceof OutOfBandData) {
-            OutOfBandData oobData = (OutOfBandData) oobExt;
-            URI url;
-            try {
-                url = new URI(oobData.getUrl());
-            } catch (URISyntaxException ex) {
-                LOGGER.log(Level.WARNING, "can't parse URL", ex);
-                url = URI.create("");
-            }
-            attachment = new MessageContent.Attachment(url,
-                    oobData.getMime() != null ? oobData.getMime() : "",
-                    oobData.getLength(),
-                    oobData.isEncrypted());
-        }
-
-        // group command
-        KonGroupData gid = null;
-        GroupCommand groupCommand = null;
-        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME,
-                GroupExtension.NAMESPACE);
-        if (groupExt instanceof GroupExtension) {
-            GroupExtension group = (GroupExtension) groupExt;
-            gid = new KonGroupData(JID.bare(group.getOwner()), group.getID());
-            groupCommand = ClientUtils.groupExtensionToGroupCommand(
-                    group.getType(), group.getMembers(), group.getSubject()).orElse(null);
-        }
-
-        return new MessageContent.Builder(plainText, encrypted)
-                .attachment(attachment)
-                .preview(preview)
-                .groupData(gid)
-                .groupCommand(groupCommand).build();
     }
 }

@@ -19,12 +19,18 @@
 package org.kontalk.misc;
 
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Callback<V> {
+    private static final Logger LOGGER = Logger.getLogger(Callback.class.getName());
+
     public final V value;
     public final Optional<Exception> exception;
 
@@ -45,5 +51,26 @@ public final class Callback<V> {
 
     public interface Handler<V> {
         void handle(Callback<V> callback);
+    }
+
+    public static class Synchronizer {
+        private final CountDownLatch mLatch = new CountDownLatch(1);
+
+        public void sync() {
+            mLatch.countDown();
+        }
+
+        public boolean waitForSync() {
+            boolean succ = false;
+            try {
+                succ = mLatch.await(5, TimeUnit.SECONDS);
+            } catch (InterruptedException ex) {
+                LOGGER.log(Level.WARNING, "interrupted", ex);
+            }
+            if (!succ) {
+                LOGGER.warning("await failed, timeout reached");
+            }
+            return succ;
+        }
     }
 }

@@ -47,7 +47,7 @@ import java.util.List;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.ObjectUtils;
-import org.kontalk.client.Client;
+import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.model.Model;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
@@ -98,7 +98,7 @@ final class ProfileDialog extends WebDialog {
         //setTransferHandler ( new ImageDragHandler ( image1, i1 ) );
 
         // permanent, user has to re-open the dialog on change
-        final boolean supported = mView.serverFeatures().contains(Client.ServerFeature.USER_AVATAR);
+        final boolean supported = mView.serverFeatures().contains(FeatureDiscovery.Feature.USER_AVATAR);
         mAvatarImage.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {

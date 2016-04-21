@@ -65,6 +65,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
+import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
@@ -73,6 +74,7 @@ import org.kontalk.view.ComponentUtils.AttachmentPanel;
 
 /**
  * View all messages of one chat in a left/right MIM style list.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
@@ -176,13 +178,14 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
 
         final KonMessage m = item.mValue;
         if (m instanceof InMessage) {
+            InMessage im = (InMessage) m;
             if (m.isEncrypted()) {
                 WebMenuItem decryptMenuItem = new WebMenuItem(Tr.tr("Decrypt"));
                 decryptMenuItem.setToolTipText(Tr.tr("Retry decrypting message"));
                 decryptMenuItem.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent event) {
-                        mView.getControl().decryptAgain((InMessage) m);
+                        mView.getControl().decryptAgain(im);
                     }
                 });
                 menu.add(decryptMenuItem);
@@ -195,10 +198,22 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 attMenuItem.addActionListener(new ActionListener() {
                     @Override
                     public void actionPerformed(ActionEvent event) {
-                        mView.getControl().downloadAgain((InMessage) m);
+                        mView.getControl().downloadAgain(im);
                     }
                 });
                 menu.add(attMenuItem);
+            }
+        } else if (m instanceof OutMessage) {
+            if (m.getStatus() == KonMessage.Status.ERROR) {
+                WebMenuItem sendMenuItem = new WebMenuItem(Tr.tr("Retry"));
+                sendMenuItem.setToolTipText(Tr.tr("Retry sending message"));
+                sendMenuItem.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent event) {
+                        mView.getControl().sendAgain((OutMessage) m);
+                    }
+                });
+                menu.add(sendMenuItem);
             }
         }
 
@@ -557,14 +572,13 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             }
 
             // image thumbnail preview
-            Path imagePath = mView.getControl().getImagePath(mValue).orElse(null);
-            Path image = imagePath != null ? imagePath : Paths.get("");
-            mAttPanel.setImage(image);
+            Path imagePath = mView.getControl().getImagePath(mValue).orElse(Paths.get(""));
+            mAttPanel.setImage(imagePath);
 
             // link to the file
             Path linkPath = mView.getControl().getFilePath(att);
             if (!linkPath.toString().isEmpty()) {
-                mAttPanel.setLink(image.toString().isEmpty() ?
+                mAttPanel.setLink(imagePath.toString().isEmpty() ?
                         linkPath.getFileName().toString() :
                         "",
                         linkPath);

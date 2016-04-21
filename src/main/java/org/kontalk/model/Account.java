@@ -34,13 +34,13 @@ import java.util.logging.Logger;
 import org.apache.commons.io.IOUtils;
 import org.bouncycastle.bcpg.ArmoredOutputStream;
 import org.bouncycastle.openpgp.PGPException;
-import org.jivesoftware.smack.util.StringUtils;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.crypto.X509Bridge;
 import org.kontalk.misc.JID;
 import org.kontalk.persistence.Config;
+import org.kontalk.util.EncodingUtils;
 
 /**
  * The user account.
@@ -141,7 +141,7 @@ public final class Account {
         // new password
         boolean unset = newPassword.length == 0;
         if (unset)
-            newPassword = StringUtils.randomString(40).toCharArray();
+            newPassword = EncodingUtils.randomString(40).toCharArray();
 
         // write new
         try {

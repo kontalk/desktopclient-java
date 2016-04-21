@@ -34,6 +34,9 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.kontalk.client.Client;
+import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
@@ -65,7 +68,7 @@ public class AttachmentManager implements Runnable {
     public static final String THUMBNAIL_MIME = "image/jpeg";
     public static final int MAX_ATT_SIZE = 10 * 1024 * 1024;
 
-    // server and Android client do not want other types
+    // server (?) and Android client do not want other types
     public static final List<String> SUPPORTED_MIME_TYPES = Arrays.asList(
             "text/plain",
             "text/x-vcard",
@@ -78,10 +81,25 @@ public class AttachmentManager implements Runnable {
             "audio/mpeg3",
             "audio/wav");
 
-    // TODO get this from server
-    private static final URI UPLOAD_URI = URI.create("https://beta.kontalk.net:5980/upload");
+    public static class Slot {
+        final URI uploadURL;
+        final URI downloadURL;
+
+        public Slot() {
+            this(URI.create(""), URI.create(""));
+        }
+
+        public Slot(URI uploadURI, URI downloadURL) {
+            this.uploadURL = uploadURI;
+            this.downloadURL = downloadURL;
+        }
+    }
+
+    private static final URI LEGACY_UPLOAD_URI = URI.create("https://beta.kontalk.net:5980/upload");
+    private static final String ENCRYPT_MIME = "application/octet-stream";
 
     private final Control mControl;
+    private final Client mClient;
 
     private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
     private final Path mAttachmentDir;
@@ -108,8 +126,9 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    private AttachmentManager(Control control, Path baseDir) {
+    private AttachmentManager(Control control, Client client, Path baseDir) {
         mControl = control;
+        mClient = client;
         mAttachmentDir = baseDir.resolve(ATT_DIRNAME);
         if (mAttachmentDir.toFile().mkdir())
             LOGGER.info("created attachment directory");
@@ -119,8 +138,8 @@ public class AttachmentManager implements Runnable {
             LOGGER.info("created preview directory");
     }
 
-    static AttachmentManager create(Control control, Path appDir) {
-        AttachmentManager manager = new AttachmentManager(control, appDir);
+    static AttachmentManager create(Control control, Client client, Path appDir) {
+        AttachmentManager manager = new AttachmentManager(control, client, appDir);
 
         Thread thread = new Thread(manager, "Attachment Transfer");
         thread.setDaemon(true);
@@ -154,7 +173,7 @@ public class AttachmentManager implements Runnable {
         File file = original = attachment.getFilePath().toFile();
         String mime = attachment.getMimeType();
 
-        if(isImage(attachment.getMimeType())) {
+        if(isImage(mime)) {
             int maxImgSize = Config.getInstance().getInt(Config.NET_MAX_IMG_SIZE);
             if (maxImgSize > 0) {
                 BufferedImage img = MediaUtils.readImage(file).orElse(null);
@@ -181,6 +200,10 @@ public class AttachmentManager implements Runnable {
             }
         }
 
+        // use old file server or new upload service with XEP-0363?
+        boolean legacyUpload = !mClient.getServerFeature()
+                .contains(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
+
         // if text will be encrypted, always encrypt attachment too
         boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
         if (encrypt) {
@@ -193,36 +216,52 @@ public class AttachmentManager implements Runnable {
             if (encryptFile == null)
                 return;
             file = encryptFile;
-            // mime (and length) actually changed, but the server can't handle the truth
-            //mime = "application/octet-stream";
+            // NOTE: legacy upload service doesn't accept encrypted mime
+            if (!legacyUpload) {
+                mime = ENCRYPT_MIME;
+            }
         }
+
+        long length = file.length();
 
         HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
-        URI url;
-        try {
-            url = client.upload(file, UPLOAD_URI, mime, encrypt);
-        } catch (KonException ex) {
-            LOGGER.warning("upload failed, attachment: "+attachment);
-            message.setStatus(KonMessage.Status.ERROR);
-            mControl.onException(ex);
-            return;
+        URI downloadURL;
+        if (legacyUpload) {
+            try {
+                downloadURL = client.uploadLegacy(file, LEGACY_UPLOAD_URI, mime, encrypt);
+            } catch (KonException ex) {
+                LOGGER.warning("legacy upload failed, attachment: "+attachment);
+                message.setStatus(KonMessage.Status.ERROR);
+                mControl.onException(ex);
+                return;
+            }
+        } else {
+            Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
+            try {
+                client.upload(file, uploadSlot.uploadURL, mime, encrypt);
+            } catch (KonException ex) {
+                LOGGER.warning("upload failed, attachment: "+attachment);
+                message.setStatus(KonMessage.Status.ERROR);
+                mControl.onException(ex);
+                return;
+            }
+            downloadURL = uploadSlot.downloadURL;
         }
 
-        long length = file.length();
         if (!file.equals(original))
             file.delete();
 
-        if (url.toString().isEmpty()) {
+        if (downloadURL.toString().isEmpty()) {
             LOGGER.warning("url empty: "+attachment);
             return;
         }
 
-        message.setUpload(url, mime, length);
+        message.setUpload(downloadURL, mime, length);
 
-        LOGGER.info("upload successful, URL="+url);
+        LOGGER.info("upload successful, URL="+downloadURL);
 
         // make sure not to loop
         if (attachment.hasURL())
@@ -273,10 +312,10 @@ public class AttachmentManager implements Runnable {
 
         // create preview if not in message
         if (!message.getContent().getPreview().isPresent())
-            this.createImagePreview(message);
+            this.mayCreateImagePreview(message);
     }
 
-    public void savePreview(InMessage message) {
+    void savePreview(InMessage message) {
         Preview preview = message.getContent().getPreview().orElse(null);
         if (preview == null) {
             LOGGER.warning("no preview in message: "+message);
@@ -290,7 +329,7 @@ public class AttachmentManager implements Runnable {
         message.setPreviewFilename(filename);
     }
 
-    boolean createImagePreview(KonMessage message) {
+    boolean mayCreateImagePreview(KonMessage message) {
         Attachment att = message.getContent().getAttachment().orElse(null);
         if (att == null) {
             LOGGER.warning("no attachment in message: "+message);
@@ -298,7 +337,12 @@ public class AttachmentManager implements Runnable {
         }
         Path path = absoluteFilePath(att);
 
-        if (!isImage(att.getMimeType()))
+        String mime = att.getMimeType();
+        if (mime.isEmpty())
+            // guess from file
+            mime = mimeForFile(path);
+
+        if (!isImage(mime))
             return false;
 
         BufferedImage image = MediaUtils.readImage(path);
@@ -357,7 +401,7 @@ public class AttachmentManager implements Runnable {
             return;
         }
 
-        LOGGER.info("to file: "+newFile);
+        LOGGER.config("to file: "+newFile);
     }
 
     private HTTPFileClient clientOrNull(){
@@ -389,26 +433,35 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    public static boolean isImage(String mimeType) {
-        return mimeType.startsWith("image");
-    }
-
     /**
      * Create a new attachment for a given file denoted by its path.
      */
-    static Attachment attachmentOrNull(Path path) {
-        File file = path.toFile();
-        if (!file.isFile() || !file.canRead()) {
-            LOGGER.warning("invalid attachment file: "+path);
+    static Attachment createAttachmentOrNull(Path path) {
+        if (!Files.isReadable(path)) {
+            LOGGER.warning("file not readable: "+path);
             return null;
         }
-        String mimeType;
-        try {
-            mimeType = Files.probeContentType(path);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't get attachment mime type", ex);
+
+        String mimeType = mimeForFile(path);
+        if (mimeType.isEmpty()) {
+            LOGGER.warning("no mime type for file: "+path);
             return null;
         }
+
         return new Attachment(path, mimeType);
+    }
+
+    private static String mimeForFile(Path path) {
+        String mime = null;
+        try {
+            mime = Files.probeContentType(path);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't probe type", ex);
+        }
+        return StringUtils.defaultString(mime);
+    }
+
+    private static boolean isImage(String mimeType) {
+        return mimeType.startsWith("image");
     }
 }

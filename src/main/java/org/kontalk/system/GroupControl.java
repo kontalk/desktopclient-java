@@ -33,6 +33,7 @@ import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.GroupCommand;
+import org.kontalk.util.EncodingUtils;
 
 /**
  * Control logic for group chat management.
@@ -229,7 +230,6 @@ final class GroupControl {
     }
 
     static KonGroupData newKonGroupData(JID myJID) {
-        return new KonGroupData(myJID,
-                org.jivesoftware.smack.util.StringUtils.randomString(8));
+        return new KonGroupData(myJID, EncodingUtils.randomString(8));
     }
 }

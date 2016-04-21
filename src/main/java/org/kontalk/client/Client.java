@@ -22,10 +22,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
@@ -44,19 +43,17 @@ import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.roster.RosterEntry;
-import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
-import org.jivesoftware.smackx.disco.packet.DiscoverInfo;
-import org.jivesoftware.smackx.pubsub.packet.PubSub;
 import org.kontalk.persistence.Config;
 import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.JID;
 import org.kontalk.model.message.OutMessage;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
 
@@ -70,27 +67,19 @@ public final class Client implements StanzaListener, Runnable {
 
     private static final String CAPS_CACHE_DIR = "caps_cache";
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
-    private static final Map<String, ServerFeature> FEATURE_MAP;
 
     public enum PresenceCommand {REQUEST, GRANT, DENY};
-    public enum ServerFeature {USER_AVATAR, ATTACHMENT_UPLOAD, MULTI_ADDRESSING}
 
     private enum Command {CONNECT, DISCONNECT};
 
     private final Control mControl;
 
     private final KonMessageSender mMessageSender;
-    private final EnumSet<ServerFeature> mFeatures;
+    private final EnumMap<FeatureDiscovery.Feature, String> mFeatures;
 
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
-
-    static {
-        FEATURE_MAP = new HashMap<>();
-        FEATURE_MAP.put(PubSub.NAMESPACE, ServerFeature.USER_AVATAR);
-        FEATURE_MAP.put(HTTPFileClient.KON_UPLOAD_FEATURE, ServerFeature.ATTACHMENT_UPLOAD);
-        FEATURE_MAP.put(MultipleAddresses.NAMESPACE, ServerFeature.MULTI_ADDRESSING);
-    }
+    private HTTPFileSlotRequester mSlotRequester = null;
 
     private Client(Control control, Path appDir) {
         mControl = control;
@@ -101,7 +90,7 @@ public final class Client implements StanzaListener, Runnable {
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
 
-        mFeatures = EnumSet.noneOf(ServerFeature.class);
+        mFeatures = new EnumMap<>(FeatureDiscovery.Feature.class);
 
         // setting caps cache
         File cacheDir = appDir.resolve(CAPS_CACHE_DIR).toFile();
@@ -220,30 +209,13 @@ public final class Client implements StanzaListener, Runnable {
             }
         }
 
-        // (server) service discovery, XEP-0030
-        // NOTE: smack automatically creates instances of SDM and CapsM and connects them
-        ServiceDiscoveryManager discoManager = ServiceDiscoveryManager.getInstanceFor(mConn);
-        DiscoverInfo info = null;
-        try {
-            // blocking
-            // NOTE: null parameter does not work
-             info = discoManager.discoverInfo(mConn.getServiceName());
-        } catch (SmackException.NoResponseException |
-                XMPPException.XMPPErrorException |
-                SmackException.NotConnectedException ex) {
-            LOGGER.log(Level.WARNING, "can't get service discovery info");
-        }
-
         mFeatures.clear();
-        if (info != null) {
-            for (DiscoverInfo.Feature feature: info.getFeatures()) {
-                String var = feature.getVar();
-                if (FEATURE_MAP.containsKey(var)) {
-                    mFeatures.add(FEATURE_MAP.get(var));
-                }
-            }
-        }
-        LOGGER.info("supported server features: "+mFeatures);
+        mFeatures.putAll(FeatureDiscovery.discover(mConn));
+
+        mSlotRequester = mFeatures.containsKey(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD) ?
+                new HTTPFileSlotRequester(mConn,
+                        JID.bare(mFeatures.get(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD))) :
+                null;
 
         // Caps, XEP-0115
         // NOTE: caps manager is automatically used by Smack
@@ -292,6 +264,7 @@ public final class Client implements StanzaListener, Runnable {
         this.newStatus(Control.Status.CONNECTED);
     }
 
+
     public void disconnect() {
         synchronized (this) {
             if (mConn != null && mConn.isConnected()) {
@@ -313,6 +286,12 @@ public final class Client implements StanzaListener, Runnable {
         if (user == null)
             return Optional.empty();
         return Optional.of(JID.full(user));
+    }
+
+    public EnumSet<FeatureDiscovery.Feature> getServerFeature() {
+        EnumSet<FeatureDiscovery.Feature> e = EnumSet.noneOf(FeatureDiscovery.Feature.class);
+        e.addAll(mFeatures.keySet());
+        return e;
     }
 
     public boolean sendMessage(OutMessage message, boolean sendChatState) {
@@ -481,7 +460,7 @@ public final class Client implements StanzaListener, Runnable {
             LOGGER.warning("no avatar sender");
             return;
         }
-        if (mFeatures.contains(Client.ServerFeature.USER_AVATAR)) {
+        if (mFeatures.containsKey(FeatureDiscovery.Feature.USER_AVATAR)) {
             mAvatarSendReceiver.publish(id, data);
         } else {
             LOGGER.warning("not supported by server");
@@ -494,12 +473,22 @@ public final class Client implements StanzaListener, Runnable {
             return false;
         }
 
-        if (mFeatures.contains(Client.ServerFeature.USER_AVATAR)) {
+        if (mFeatures.containsKey(FeatureDiscovery.Feature.USER_AVATAR)) {
             return mAvatarSendReceiver.delete();
         } else {
             LOGGER.warning("not supported by server");
             return false;
         }
+    }
+
+    /** Request upload slot (XEP-0636). Blocking */
+    public AttachmentManager.Slot getUploadSlot(String name, long length, String mime) {
+        if (mSlotRequester == null) {
+            LOGGER.warning("no slot requester");
+            return new AttachmentManager.Slot();
+        }
+
+        return mSlotRequester.getSlot(name, length, mime);
     }
 
     /* package internal*/
@@ -508,7 +497,7 @@ public final class Client implements StanzaListener, Runnable {
         if (status != Control.Status.CONNECTED)
             mFeatures.clear();
 
-        mControl.onStatusChange(status, mFeatures.clone());
+        mControl.onStatusChange(status, this.getServerFeature());
     }
 
     void newException(KonException konException) {
@@ -516,7 +505,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     String multiAddressHost() {
-        return mFeatures.contains(Client.ServerFeature.MULTI_ADDRESSING)
+        return mFeatures.containsKey(FeatureDiscovery.Feature.MULTI_ADDRESSING)
                 && mConn != null ? mConn.getHost() : "";
     }
 
