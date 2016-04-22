@@ -24,7 +24,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -48,9 +47,7 @@ import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.InputStreamEntity;
@@ -231,35 +228,22 @@ public class HTTPFileClient {
      * Upload file using a PUT request.
      * @return the URL the file can be downloaded with.
      */
-    public void upload(File file, URI uploadURL, String mime, boolean encrypted) throws KonException {
-        this.upload(file, uploadURL, mime, encrypted, false);
-    }
-
-    /**
-     * Upload file using a POST request and parse download URL from response.
-     * @return the URL the uploaded file can be downloaded with.
-     */
-    public URI uploadLegacy(File file, URI url, String mime, boolean encrypted) throws KonException {
-        return this.upload(file, url, mime, encrypted, true);
-    }
-
-    private URI upload(File file, URI url, String mime, boolean encrypted, boolean legacy)
+    public void upload(File file, URI uploadURL, String mime, boolean encrypted)
             throws KonException {
+
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
                 throw new KonException(KonException.Error.UPLOAD_CREATE);
         }
 
-        // request type
-        HttpEntityEnclosingRequestBase req = legacy ?
-                new HttpPost(url) :
-                new HttpPut(url);
+        // request
+        HttpPut req = new HttpPut(uploadURL);
         req.setHeader("Content-Type", mime);
         if (encrypted)
             req.addHeader(HEADER_MESSAGE_FLAGS, "encrypted");
 
-        LOGGER.config("to URL=" + url+ " ...");
+        LOGGER.config("to URL=" + uploadURL+ " ...");
 
         // execute request
         CloseableHttpResponse response;
@@ -275,44 +259,18 @@ public class HTTPFileClient {
             throw new KonException(KonException.Error.UPLOAD_EXECUTE);
         }
 
-        // get URL from response entity
-        String downloadURL;
         try {
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
                 LOGGER.warning("unexpected response code: " + code);
                 throw new KonException(KonException.Error.UPLOAD_RESPONSE);
             }
-
-            if (!legacy)
-                return null;
-
-            HttpEntity entity = response.getEntity();
-            if (entity == null) {
-                LOGGER.warning("no upload response entity");
-                throw new KonException(KonException.Error.UPLOAD_RESPONSE);
-            }
-
-            downloadURL = EntityUtils.toString(entity);
-
-            // release http connection resource
-            EntityUtils.consume(entity);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't get url from response", ex);
-            throw new KonException(KonException.Error.UPLOAD_RESPONSE);
         } finally {
            try {
                 response.close();
             } catch (IOException ex) {
                 LOGGER.log(Level.WARNING, "can't close response", ex);
             }
-        }
-
-        try {
-            return new URI(downloadURL);
-        } catch (URISyntaxException ex) {
-            LOGGER.log(Level.WARNING, "can't parse URI", ex);
-            throw new KonException(KonException.Error.UPLOAD_RESPONSE);
         }
     }
 
