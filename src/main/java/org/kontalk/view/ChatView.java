@@ -221,9 +221,7 @@ final class ChatView extends WebPanel implements Observer {
                 Tr.tr("Supported files")) {
             @Override
             public boolean accept(File file) {
-                return file.length() <= AttachmentManager.MAX_ATT_SIZE &&
-                        AttachmentManager.SUPPORTED_MIME_TYPES.contains(
-                                TIKA_INSTANCE.detect(file.getName()));
+                return file.length() <= AttachmentManager.MAX_ATT_SIZE;
             }
         });
 //        mAttField.setPreferredWidth(150);

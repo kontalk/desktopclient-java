@@ -27,8 +27,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
@@ -67,19 +65,6 @@ public class AttachmentManager implements Runnable {
     public static final Dimension THUMBNAIL_DIM = new Dimension(300, 200);
     public static final String THUMBNAIL_MIME = "image/jpeg";
     public static final int MAX_ATT_SIZE = 10 * 1024 * 1024;
-
-    // server (?) and Android client do not want other types
-    public static final List<String> SUPPORTED_MIME_TYPES = Arrays.asList(
-            "text/plain",
-            "text/x-vcard",
-            "text/vcard",
-            "image/gif",
-            "image/png",
-            "image/jpeg",
-            "image/jpg",
-            "audio/3gpp",
-            "audio/mpeg3",
-            "audio/wav");
 
     public static class Slot {
         final URI uploadURL;
