@@ -34,7 +34,6 @@ import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.client.Client;
-import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
@@ -80,7 +79,6 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    private static final URI LEGACY_UPLOAD_URI = URI.create("https://beta.kontalk.net:5980/upload");
     private static final String ENCRYPT_MIME = "application/octet-stream";
 
     private final Control mControl;
@@ -185,10 +183,6 @@ public class AttachmentManager implements Runnable {
             }
         }
 
-        // use old file server or new upload service with XEP-0363?
-        boolean legacyUpload = !mClient.getServerFeature()
-                .contains(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
-
         // if text will be encrypted, always encrypt attachment too
         boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
         if (encrypt) {
@@ -201,52 +195,35 @@ public class AttachmentManager implements Runnable {
             if (encryptFile == null)
                 return;
             file = encryptFile;
-            // NOTE: legacy upload service doesn't accept encrypted mime
-            if (!legacyUpload) {
-                mime = ENCRYPT_MIME;
-            }
+            mime = ENCRYPT_MIME;
         }
-
-        long length = file.length();
 
         HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
-        URI downloadURL;
-        if (legacyUpload) {
-            try {
-                downloadURL = client.uploadLegacy(file, LEGACY_UPLOAD_URI, mime, encrypt);
-            } catch (KonException ex) {
-                LOGGER.warning("legacy upload failed, attachment: "+attachment);
-                message.setStatus(KonMessage.Status.ERROR);
-                mControl.onException(ex);
-                return;
-            }
-        } else {
-            Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
-            try {
-                client.upload(file, uploadSlot.uploadURL, mime, encrypt);
-            } catch (KonException ex) {
-                LOGGER.warning("upload failed, attachment: "+attachment);
-                message.setStatus(KonMessage.Status.ERROR);
-                mControl.onException(ex);
-                return;
-            }
-            downloadURL = uploadSlot.downloadURL;
+        long length = file.length();
+        Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
+        try {
+            client.upload(file, uploadSlot.uploadURL, mime, encrypt);
+        } catch (KonException ex) {
+            LOGGER.warning("upload failed, attachment: "+attachment);
+            message.setStatus(KonMessage.Status.ERROR);
+            mControl.onException(ex);
+            return;
         }
 
         if (!file.equals(original))
             file.delete();
 
-        if (downloadURL.toString().isEmpty()) {
+        if (uploadSlot.downloadURL.toString().isEmpty()) {
             LOGGER.warning("url empty: "+attachment);
             return;
         }
 
-        message.setUpload(downloadURL, mime, length);
+        message.setUpload(uploadSlot.downloadURL, mime, length);
 
-        LOGGER.info("upload successful, URL="+downloadURL);
+        LOGGER.info("upload successful, URL="+uploadSlot.downloadURL);
 
         // make sure not to loop
         if (attachment.hasURL())
