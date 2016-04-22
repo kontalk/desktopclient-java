@@ -152,6 +152,11 @@ public class AttachmentManager implements Runnable {
             return;
         }
 
+        if (!mClient.isConnected()) {
+            LOGGER.info("can't upload, not connected");
+            return;
+        }
+
         File original;
         File file = original = attachment.getFilePath().toFile();
         String mime = attachment.getMimeType();
@@ -204,6 +209,13 @@ public class AttachmentManager implements Runnable {
 
         long length = file.length();
         Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
+
+        if (uploadSlot.uploadURL.toString().isEmpty() ||
+                uploadSlot.downloadURL.toString().isEmpty()) {
+            LOGGER.warning("empty slot: "+attachment);
+            return;
+        }
+
         try {
             client.upload(file, uploadSlot.uploadURL, mime, encrypt);
         } catch (KonException ex) {
@@ -215,11 +227,6 @@ public class AttachmentManager implements Runnable {
 
         if (!file.equals(original))
             file.delete();
-
-        if (uploadSlot.downloadURL.toString().isEmpty()) {
-            LOGGER.warning("url empty: "+attachment);
-            return;
-        }
 
         message.setUpload(uploadSlot.downloadURL, mime, length);
 
