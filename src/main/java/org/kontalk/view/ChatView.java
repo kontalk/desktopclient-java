@@ -374,7 +374,8 @@ final class ChatView extends WebPanel implements Observer {
         switch(status) {
             case CONNECTED:
                 this.setColor(Color.WHITE);
-                supported = serverFeature.contains(FeatureDiscovery.Feature.KON_FILE_UPLOAD);
+                supported = serverFeature.contains(
+                        FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
                 break;
             case DISCONNECTED:
             case ERROR:
