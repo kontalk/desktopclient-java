@@ -50,6 +50,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
@@ -110,7 +111,8 @@ public class HTTPFileClient {
      * @param base base directory in which the download is saved
      * @return absolute path of downloaded file, empty if download failed
      */
-    public Path download(URI url, Path base, ProgressListener listener) throws KonException {
+    public synchronized Path download(URI url, Path base, ProgressListener listener)
+            throws KonException {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
@@ -122,15 +124,15 @@ public class HTTPFileClient {
         mCurrentListener = listener;
 
         // execute request
-        CloseableHttpResponse response;
+        CloseableHttpResponse response = null;
         try {
-            response = mHTTPClient.execute(mCurrentRequest);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't execute request", ex);
-            throw new KonException(KonException.Error.DOWNLOAD_EXECUTE);
-        }
+            try {
+                response = mHTTPClient.execute(mCurrentRequest);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't execute request", ex);
+                throw new KonException(KonException.Error.DOWNLOAD_EXECUTE);
+            }
 
-        try {
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
                 LOGGER.warning("unexpected response code: " + code);
@@ -209,18 +211,11 @@ public class HTTPFileClient {
             // release http connection resource
             EntityUtils.consumeQuietly(entity);
 
-            // TODO
-            mCurrentRequest = null;
-            mCurrentListener = null;
-
             return destination.toAbsolutePath();
         } finally {
-            try {
-                response.close();
-            } catch (IOException ex) {
-                LOGGER.log(Level.WARNING, "can't close response", ex);
-                // TODO can't use this client anymore(?)
-            }
+            HttpClientUtils.closeQuietly(response);
+            mCurrentRequest = null;
+            mCurrentListener = null;
         }
     }
 
@@ -228,7 +223,7 @@ public class HTTPFileClient {
      * Upload file using a PUT request.
      * @return the URL the file can be downloaded with.
      */
-    public void upload(File file, URI uploadURL, String mime, boolean encrypted)
+    public synchronized void upload(File file, URI uploadURL, String mime, boolean encrypted)
             throws KonException {
 
         if (mHTTPClient == null) {
@@ -246,31 +241,28 @@ public class HTTPFileClient {
         LOGGER.config("to URL=" + uploadURL+ " ...");
 
         // execute request
-        CloseableHttpResponse response;
-        try(FileInputStream in = new FileInputStream(file)) {
-            req.setEntity(new InputStreamEntity(in, file.length()));
-
-            mCurrentRequest = req;
-
-            //response = execute(currentRequest);
-            response = mHTTPClient.execute(mCurrentRequest);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't upload file", ex);
-            throw new KonException(KonException.Error.UPLOAD_EXECUTE);
-        }
-
+        CloseableHttpResponse response = null;
         try {
+            try(FileInputStream in = new FileInputStream(file)) {
+                req.setEntity(new InputStreamEntity(in, file.length()));
+
+                mCurrentRequest = req;
+
+                //response = execute(currentRequest);
+                response = mHTTPClient.execute(mCurrentRequest);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't upload file", ex);
+                throw new KonException(KonException.Error.UPLOAD_EXECUTE);
+            }
+
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
                 LOGGER.warning("unexpected response code: " + code);
                 throw new KonException(KonException.Error.UPLOAD_RESPONSE);
             }
         } finally {
-           try {
-                response.close();
-            } catch (IOException ex) {
-                LOGGER.log(Level.WARNING, "can't close response", ex);
-            }
+            HttpClientUtils.closeQuietly(response);
+            mCurrentRequest = null;
         }
     }
 
