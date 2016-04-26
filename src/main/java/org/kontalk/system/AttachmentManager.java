@@ -161,6 +161,7 @@ public class AttachmentManager implements Runnable {
         File file = original = attachment.getFilePath().toFile();
         String mime = attachment.getMimeType();
 
+        // maybe resize image for smaller payload
         if(isImage(mime)) {
             int maxImgSize = Config.getInstance().getInt(Config.NET_MAX_IMG_SIZE);
             if (maxImgSize > 0) {
@@ -200,7 +201,8 @@ public class AttachmentManager implements Runnable {
             if (encryptFile == null)
                 return;
             file = encryptFile;
-            mime = ENCRYPT_MIME;
+            // Note: continue using original MIME type, Android client needs it
+            //mime = ENCRYPT_MIME;
         }
 
         HTTPFileClient client = this.clientOrNull();
