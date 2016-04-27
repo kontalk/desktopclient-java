@@ -365,7 +365,7 @@ public class MessageContent {
         @Override
         public String toString() {
             return "{ATT:url="+mURL+",file="+mFile+",mime="+mMimeType
-                    +"length="+mLength+",status="+mCoderStatus+"}";
+                    +",length="+mLength+",status="+mCoderStatus+"}";
         }
 
         // using legacy lib, raw types extend Object

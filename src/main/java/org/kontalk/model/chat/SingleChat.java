@@ -137,7 +137,6 @@ public final class SingleChat extends Chat {
         if (!(o instanceof SingleChat)) return false;
 
         SingleChat oChat = (SingleChat) o;
-        System.out.println(this+" "+oChat);
         return mMember.equals(oChat.mMember) &&
                 mXMPPID.equals(oChat.mXMPPID);
     }
