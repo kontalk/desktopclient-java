@@ -141,7 +141,7 @@ final class Utils {
         WebTextArea area = new WebTextArea();
         area.setEditable(false);
         area.setOpaque(false);
-        area.setFontName(Font.MONOSPACED);
+        area.setFontName(Font.DIALOG);
         area.setFontSizeAndStyle(13, true, false);
         return area;
     }

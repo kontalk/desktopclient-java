@@ -24,6 +24,7 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
@@ -175,18 +176,20 @@ final class AvatarLoader {
                 text.substring(0, 1).toUpperCase() :
                 FALLBACK_LETTER;
 
-        graphics.setFont(new Font(Font.MONOSPACED, Font.BOLD, size));
+        graphics.setFont(new Font(Font.DIALOG, Font.PLAIN, size));
         graphics.setColor(LETTER_COLOR);
         graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
                 RenderingHints.VALUE_ANTIALIAS_ON);
+
         FontMetrics fm = graphics.getFontMetrics();
-        int w = fm.stringWidth(letter);
-        int h = fm.getHeight();
-        int d = fm.getDescent();
+        Rectangle2D r = fm.getStringBounds(letter, graphics);
+
         graphics.drawString(letter,
-                 (size / 2.0f) - (w / 2.0f),
-                 // adjust to font baseline
-                 (size / 2.0f) + (h / 2.0f) - d);
+                (size - (int) r.getWidth()) / 2.0f,
+                // adjust to font baseline
+                // Note: not centered for letters with descent (drawing under
+                // the baseline), dont know how to get that
+                (size - (int) r.getHeight()) / 2.0f + fm.getAscent());
 
         return img;
     }
