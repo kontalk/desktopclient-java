@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,6 +27,8 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.radiobutton.WebRadioButton;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.slider.WebSlider;
+import com.alee.laf.text.WebTextArea;
+import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.swing.UnselectableButtonGroup;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -38,6 +40,7 @@ import java.awt.event.ItemListener;
 import java.util.List;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
@@ -146,6 +149,19 @@ final class ChatDetails extends WebPanel {
                 mImgChooser));
         UnselectableButtonGroup.group(mColorOpt, mImgOpt);
         groupPanel.add(new WebSeparator());
+
+        String xmppID = mChat.getXMPPID();
+        if (!xmppID.isEmpty()) {
+            WebTextArea xmppIDArea = new WebTextArea().setBoldFont();
+            xmppIDArea.setEditable(false);
+            xmppIDArea.setOpaque(false);
+            xmppIDArea.setText(StringUtils.abbreviate(xmppID, 30));
+            TooltipManager.addTooltip(xmppIDArea,
+                    Tr.tr("XMPP chat ID:") + " " + xmppID);
+            WebLabel xmppIDLabel = new WebLabel(Tr.tr("Chat ID:"));
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    xmppIDLabel, xmppIDArea));
+        }
 
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
         this.add(groupPanel, BorderLayout.CENTER);

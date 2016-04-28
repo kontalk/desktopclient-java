@@ -46,8 +46,6 @@ public final class FeatureDiscovery {
     public enum Feature {
         USER_AVATAR,
         MULTI_ADDRESSING,
-        /** Old Kontalk upload service. */
-        KON_FILE_UPLOAD,
         /** New XEP-0363 upload service. */
         HTTP_FILE_UPLOAD
     }
@@ -55,7 +53,6 @@ public final class FeatureDiscovery {
     static {
         FEATURE_MAP = new HashMap<>();
         FEATURE_MAP.put(PubSub.NAMESPACE, Feature.USER_AVATAR);
-        FEATURE_MAP.put(HTTPFileClient.KON_UPLOAD_FEATURE, Feature.KON_FILE_UPLOAD);
         FEATURE_MAP.put(MultipleAddresses.NAMESPACE, Feature.MULTI_ADDRESSING);
         FEATURE_MAP.put(HTTPFileUpload.NAMESPACE, Feature.HTTP_FILE_UPLOAD);
     }

@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,8 +27,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
@@ -36,7 +34,6 @@ import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.client.Client;
-import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
@@ -66,20 +63,7 @@ public class AttachmentManager implements Runnable {
 
     public static final Dimension THUMBNAIL_DIM = new Dimension(300, 200);
     public static final String THUMBNAIL_MIME = "image/jpeg";
-    public static final int MAX_ATT_SIZE = 10 * 1024 * 1024;
-
-    // server (?) and Android client do not want other types
-    public static final List<String> SUPPORTED_MIME_TYPES = Arrays.asList(
-            "text/plain",
-            "text/x-vcard",
-            "text/vcard",
-            "image/gif",
-            "image/png",
-            "image/jpeg",
-            "image/jpg",
-            "audio/3gpp",
-            "audio/mpeg3",
-            "audio/wav");
+    public static final int MAX_ATT_SIZE = 20 * 1024 * 1024;
 
     public static class Slot {
         final URI uploadURL;
@@ -95,7 +79,6 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    private static final URI LEGACY_UPLOAD_URI = URI.create("https://beta.kontalk.net:5980/upload");
     private static final String ENCRYPT_MIME = "application/octet-stream";
 
     private final Control mControl;
@@ -169,10 +152,16 @@ public class AttachmentManager implements Runnable {
             return;
         }
 
+        if (!mClient.isConnected()) {
+            LOGGER.info("can't upload, not connected");
+            return;
+        }
+
         File original;
         File file = original = attachment.getFilePath().toFile();
         String mime = attachment.getMimeType();
 
+        // maybe resize image for smaller payload
         if(isImage(mime)) {
             int maxImgSize = Config.getInstance().getInt(Config.NET_MAX_IMG_SIZE);
             if (maxImgSize > 0) {
@@ -200,10 +189,6 @@ public class AttachmentManager implements Runnable {
             }
         }
 
-        // use old file server or new upload service with XEP-0363?
-        boolean legacyUpload = !mClient.getServerFeature()
-                .contains(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
-
         // if text will be encrypted, always encrypt attachment too
         boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
         if (encrypt) {
@@ -216,52 +201,38 @@ public class AttachmentManager implements Runnable {
             if (encryptFile == null)
                 return;
             file = encryptFile;
-            // NOTE: legacy upload service doesn't accept encrypted mime
-            if (!legacyUpload) {
-                mime = ENCRYPT_MIME;
-            }
+            // Note: continue using original MIME type, Android client needs it
+            //mime = ENCRYPT_MIME;
         }
-
-        long length = file.length();
 
         HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
-        URI downloadURL;
-        if (legacyUpload) {
-            try {
-                downloadURL = client.uploadLegacy(file, LEGACY_UPLOAD_URI, mime, encrypt);
-            } catch (KonException ex) {
-                LOGGER.warning("legacy upload failed, attachment: "+attachment);
-                message.setStatus(KonMessage.Status.ERROR);
-                mControl.onException(ex);
-                return;
-            }
-        } else {
-            Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
-            try {
-                client.upload(file, uploadSlot.uploadURL, mime, encrypt);
-            } catch (KonException ex) {
-                LOGGER.warning("upload failed, attachment: "+attachment);
-                message.setStatus(KonMessage.Status.ERROR);
-                mControl.onException(ex);
-                return;
-            }
-            downloadURL = uploadSlot.downloadURL;
+        long length = file.length();
+        Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
+
+        if (uploadSlot.uploadURL.toString().isEmpty() ||
+                uploadSlot.downloadURL.toString().isEmpty()) {
+            LOGGER.warning("empty slot: "+attachment);
+            return;
+        }
+
+        try {
+            client.upload(file, uploadSlot.uploadURL, mime, encrypt);
+        } catch (KonException ex) {
+            LOGGER.warning("upload failed, attachment: "+attachment);
+            message.setStatus(KonMessage.Status.ERROR);
+            mControl.onException(ex);
+            return;
         }
 
         if (!file.equals(original))
             file.delete();
 
-        if (downloadURL.toString().isEmpty()) {
-            LOGGER.warning("url empty: "+attachment);
-            return;
-        }
+        message.setUpload(uploadSlot.downloadURL, mime, length);
 
-        message.setUpload(downloadURL, mime, length);
-
-        LOGGER.info("upload successful, URL="+downloadURL);
+        LOGGER.info("upload successful, URL="+uploadSlot.downloadURL);
 
         // make sure not to loop
         if (attachment.hasURL())

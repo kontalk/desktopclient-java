@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -221,9 +221,7 @@ final class ChatView extends WebPanel implements Observer {
                 Tr.tr("Supported files")) {
             @Override
             public boolean accept(File file) {
-                return file.length() <= AttachmentManager.MAX_ATT_SIZE &&
-                        AttachmentManager.SUPPORTED_MIME_TYPES.contains(
-                                TIKA_INSTANCE.detect(file.getName()));
+                return file.length() <= AttachmentManager.MAX_ATT_SIZE;
             }
         });
 //        mAttField.setPreferredWidth(150);
@@ -376,7 +374,8 @@ final class ChatView extends WebPanel implements Observer {
         switch(status) {
             case CONNECTED:
                 this.setColor(Color.WHITE);
-                supported = serverFeature.contains(FeatureDiscovery.Feature.KON_FILE_UPLOAD);
+                supported = serverFeature.contains(
+                        FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
                 break;
             case DISCONNECTED:
             case ERROR:
