@@ -36,6 +36,7 @@ import javax.swing.Box;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ContactListView.ContactItem;
@@ -92,8 +93,9 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         newItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.getControl().getOrCreateSingleChat(
+                Chat chat = mView.getControl().getOrCreateSingleChat(
                         ContactListView.this.getSelectedItem().mValue);
+                mView.showChat(chat);
             }
         });
         menu.add(newItem);
