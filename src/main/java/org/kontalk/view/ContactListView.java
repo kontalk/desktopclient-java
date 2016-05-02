@@ -50,7 +50,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     private final Model mModel;
 
     ContactListView(final View view, Model model) {
-        super(view, true);
+        super(view, false);
 
         mModel = model;
 
@@ -239,27 +239,35 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
         @Override
         protected void updateOnEDT(Object arg) {
-            // avatar
-            mAvatar.setImage(AvatarLoader.load(mValue));
+            if (arg == null || arg instanceof String) {
+                // avatar
+                // TODO update not always working, 'A'-> yes, 'z'-> no; wtf?
+                mAvatar.setImage(AvatarLoader.load(mValue));
 
-            // name
-            String name = Utils.displayName(mValue);
-            if (!name.equals(mNameLabel.getText())) {
-                mNameLabel.setText(name);
-                ContactListView.this.updateSorting();
+                // name
+                String name = Utils.displayName(mValue);
+                if (!name.equals(mNameLabel.getText())) {
+                    mNameLabel.setText(name);
+                    ContactListView.this.updateSorting();
+                }
             }
 
             // status
-            mStatusLabel.setText(Utils.mainStatus(mValue, false));
+            if (arg == null || arg instanceof Contact.Subscription ||
+                    arg instanceof Contact.Online) {
+                mStatusLabel.setText(Utils.mainStatus(mValue, false));
+            }
 
             // online status
-            Contact.Subscription subStatus = mValue.getSubScription();
-            mBackground = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
-                    subStatus == Contact.Subscription.UNSUBSCRIBED ||
-                    subStatus == Contact.Subscription.PENDING ||
-                    mValue.isBlocked() ? View.LIGHT_GREY :
-                    Color.WHITE;
-            this.setBackground(mBackground);
+            if (arg == null || arg instanceof Contact.Subscription) {
+                Contact.Subscription subStatus = mValue.getSubScription();
+                mBackground = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
+                        subStatus == Contact.Subscription.UNSUBSCRIBED ||
+                        subStatus == Contact.Subscription.PENDING ||
+                        mValue.isBlocked() ? View.LIGHT_GREY :
+                        Color.WHITE;
+                this.setBackground(mBackground);
+            }
 
             ContactListView.this.repaint();
         }
