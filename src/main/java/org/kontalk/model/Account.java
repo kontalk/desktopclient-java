@@ -38,7 +38,6 @@ import org.kontalk.misc.KonException;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.crypto.X509Bridge;
-import org.kontalk.misc.JID;
 import org.kontalk.persistence.Config;
 import org.kontalk.util.EncodingUtils;
 
@@ -126,10 +125,6 @@ public final class Account {
         this.writePrivateKey(privateKeyData, oldPassword, newPassword);
     }
 
-    public void setJID(JID jid) {
-        Config.getInstance().setProperty(Config.ACC_JID, jid.string());
-    }
-
     private void writePrivateKey(byte[] privateKeyData,
             char[] oldPassword,
             char[] newPassword)
@@ -194,10 +189,5 @@ public final class Account {
 
     private boolean fileExists(String filename) {
         return new File(mKeyDir.toString(), filename).isFile();
-    }
-
-    // TODO
-    public static JID getUserJID() {
-        return JID.bare(Config.getInstance().getString(Config.ACC_JID));
     }
 }

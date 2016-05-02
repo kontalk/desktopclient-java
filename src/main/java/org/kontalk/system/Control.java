@@ -208,7 +208,7 @@ public final class Control {
     }
 
     public void onAuthenticated(JID jid) {
-        mModel.account().setJID(jid);
+        mModel.setUserJID(jid);
     }
 
     public void onException(KonException ex) {
