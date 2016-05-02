@@ -314,7 +314,7 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
     private void timerUpdate() {
         for (int i = 0; i < mModel.getRowCount(); i++) {
             I item = (I) mModel.getValueAt(i, 0);
-            item.update(null, mTimer);
+            item.updateOnEDT(mTimer);
         }
     }
 
