@@ -222,7 +222,7 @@ public final class Control {
                 errors.contains(Coder.Error.INVALID_SIGNATURE) ||
                 errors.contains(Coder.Error.INVALID_SENDER)) {
             // maybe there is something wrong with the senders key
-            this.maySendKeyRequest(contact);
+            this.sendKeyRequest(contact);
         }
         this.onSecurityErrors(message);
     }
@@ -361,7 +361,7 @@ public final class Control {
             // ask before overwriting
             mViewControl.changed(new ViewEvent.NewKey(contact, key));
         } else {
-            this.setKey(contact, key);
+            setKey(contact, key);
         }
     }
 
@@ -456,19 +456,25 @@ public final class Control {
         return sent;
     }
 
-    void maySendKeyRequest(Contact contact) {
-        if (!contact.isKontalkUser()) {
-            LOGGER.config("not sending, not a kontalk user, contact: "+contact);
-            return;
-        }
-
-        if (contact.getSubScription() != Contact.Subscription.SUBSCRIBED) {
-            LOGGER.config("not sending, no subscription, contact: "+contact);
-            return;
-        }
-        mClient.sendPublicKeyRequest(contact.getJID());
+    private static boolean canSendKeyRequest(Contact contact) {
+        return contact.isMe() ||
+                (contact.isKontalkUser() &&
+                contact.getSubScription() == Contact.Subscription.SUBSCRIBED);
     }
 
+    void maySendKeyRequest(Contact contact) {
+        if (canSendKeyRequest(contact))
+            this.sendKeyRequest(contact);
+    }
+
+    void sendKeyRequest(Contact contact) {
+        if (!canSendKeyRequest(contact)) {
+            LOGGER.warning("better do not, contact: "+contact);
+            return;
+        }
+
+        mClient.sendPublicKeyRequest(contact.getJID());
+    }
     Optional<Contact> getOrCreateContact(JID jid) {
         Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact != null)
@@ -531,7 +537,7 @@ public final class Control {
         this.processContent(message);
     }
 
-    private void setKey(Contact contact, PGPCoderKey key) {
+    private static void setKey(Contact contact, PGPCoderKey key) {
         contact.setKey(key.rawKey, key.fingerprint);
 
         // enable encryption without asking
@@ -705,11 +711,11 @@ public final class Control {
         }
 
         public void requestKey(Contact contact) {
-            Control.this.maySendKeyRequest(contact);
+            Control.this.sendKeyRequest(contact);
         }
 
         public void acceptKey(Contact contact, PGPCoderKey key) {
-            Control.this.setKey(contact, key);
+            setKey(contact, key);
         }
 
         public void declineKey(Contact contact) {

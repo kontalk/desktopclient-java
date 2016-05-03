@@ -262,7 +262,7 @@ public final class Contact extends Observable {
         return mSubStatus;
     }
 
-    public void setSubScriptionStatus(Subscription status) {
+    public void setSubscriptionStatus(Subscription status) {
         if (status == mSubStatus)
             return;
 
