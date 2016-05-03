@@ -222,7 +222,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
             // avatar may change when subject or contact name changes
             if (arg == null || arg instanceof Contact || arg instanceof String) {
-                mAvatar.setImage(AvatarLoader.load(mValue));
+                Utils.fixedSetWebImageImage(mAvatar, AvatarLoader.load(mValue));
             }
 
             if (arg == null || arg instanceof KonMessage) {
@@ -253,7 +253,6 @@ final class ChatListView extends ListView<ChatItem, Chat> {
                 mChatStateLabel.setText(stateText);
                 mStatusLabel.setVisible(false);
             }
-
         }
 
         private void updateBG() {
