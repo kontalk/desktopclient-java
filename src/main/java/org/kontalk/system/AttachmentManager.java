@@ -308,10 +308,9 @@ public class AttachmentManager implements Runnable {
         }
         Path path = absoluteFilePath(att);
 
-        String mime = att.getMimeType();
-        if (mime.isEmpty())
-            // guess from file
-            mime = mimeForFile(path);
+        String mime = StringUtils.defaultIfEmpty(att.getMimeType(),
+                // guess from file
+                MediaUtils.mimeForFile(path));
 
         if (!isImage(mime))
             return false;
@@ -413,23 +412,13 @@ public class AttachmentManager implements Runnable {
             return null;
         }
 
-        String mimeType = mimeForFile(path);
+        String mimeType = MediaUtils.mimeForFile(path);
         if (mimeType.isEmpty()) {
             LOGGER.warning("no mime type for file: "+path);
             return null;
         }
 
-        return new Attachment(path, mimeType);
-    }
-
-    private static String mimeForFile(Path path) {
-        String mime = null;
-        try {
-            mime = Files.probeContentType(path);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't probe type", ex);
-        }
-        return StringUtils.defaultString(mime);
+        return Attachment.outgoing(path, mimeType);
     }
 
     private static boolean isImage(String mimeType) {

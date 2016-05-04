@@ -26,6 +26,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -44,7 +45,7 @@ import org.kontalk.misc.Callback;
 public class MediaUtils {
     private static final Logger LOGGER = Logger.getLogger(MediaUtils.class.getName());
 
-    private static OggClip mAudioClip = null;
+    private MediaUtils() {}
 
     public static String extensionForMIME(String mimeType) {
         MimeType mime = null;
@@ -61,9 +62,19 @@ public class MediaUtils {
         return StringUtils.defaultIfEmpty(m, "dat");
     }
 
+    public static String mimeForFile(Path path) {
+        String mime = null;
+        try {
+            mime = Files.probeContentType(path);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't probe type", ex);
+        }
+        return StringUtils.defaultString(mime);
+    }
+
     public enum Sound{NOTIFICATION}
 
-    private MediaUtils() {}
+    private static OggClip mAudioClip = null;
 
     public static void playSound(Sound sound) {
         switch (sound) {
