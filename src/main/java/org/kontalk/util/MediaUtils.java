@@ -22,10 +22,14 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -48,6 +52,9 @@ public class MediaUtils {
     private MediaUtils() {}
 
     public static String extensionForMIME(String mimeType) {
+        if (mimeType.isEmpty())
+            return "unk";
+
         MimeType mime = null;
         try {
             mime = MimeTypes.getDefaultMimeTypes().forName(mimeType);
@@ -69,6 +76,20 @@ public class MediaUtils {
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't probe type", ex);
         }
+
+        if (mime == null) {
+            // method above is buggy on windows, try something else
+            try(FileInputStream fis = new FileInputStream(path.toFile())) {
+                InputStream is = new BufferedInputStream(fis);
+                mime = URLConnection.guessContentTypeFromStream(is);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't guess content type", ex);
+            }
+        }
+
+        if (mime == null)
+            LOGGER.warning("can't determine content type: "+path);
+
         return StringUtils.defaultString(mime);
     }
 
