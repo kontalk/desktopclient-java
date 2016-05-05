@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -39,13 +39,15 @@ import java.awt.event.ItemListener;
 import java.io.File;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Observable;
+import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import org.kontalk.misc.KonException;
-import org.kontalk.system.AccountLoader;
+import org.kontalk.system.AccountImporter;
 import org.kontalk.util.Tr;
 
 /**
@@ -66,6 +68,8 @@ final class ImportDialog extends WebDialog {
 
     private final View mView;
     private final boolean mConnect;
+
+    private final ResultPanel mResultPanel;
 
     private ImportPage mCurrentPage;
 
@@ -90,6 +94,7 @@ final class ImportDialog extends WebDialog {
         mBackButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                mResultPanel.mayAbort();
                 ImportDialog.this.switchPage(Direction.BACK);
             }
         });
@@ -104,6 +109,7 @@ final class ImportDialog extends WebDialog {
         mCancelButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                mResultPanel.mayAbort();
                 ImportDialog.this.dispose();
             }
         });
@@ -125,7 +131,8 @@ final class ImportDialog extends WebDialog {
         mPanels = new EnumMap<>(ImportPage.class);
         mPanels.put(ImportPage.INTRO, new IntroPanel());
         mPanels.put(ImportPage.SETTINGS, new SettingsPanel());
-        mPanels.put(ImportPage.RESULT, new ResultPanel());
+        mResultPanel = new ResultPanel();
+        mPanels.put(ImportPage.RESULT, mResultPanel);
 
         this.setPage(ImportPage.INTRO);
     }
@@ -257,13 +264,20 @@ final class ImportDialog extends WebDialog {
         }
     }
 
-    private class ResultPanel extends ImportPanel {
+    private class ResultPanel extends ImportPanel implements Observer {
+
+        private final AccountImporter mImporter;
 
         private final WebLabel mResultLabel;
         private final WebLabel mErrorLabel;
         private final ComponentUtils.PassPanel mPassPanel;
 
+        private boolean mWaiting = false;
+
         ResultPanel() {
+            mImporter = mView.getControl().createAccountImporter();
+            mImporter.addObserver(this);
+
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
             groupPanel.setMargin(View.MARGIN_BIG);
 
@@ -290,45 +304,82 @@ final class ImportDialog extends WebDialog {
             this.add(groupPanel);
         }
 
-        private boolean importAccount() {
+        @Override
+        protected void onShow() {
+            mNextButton.setVisible(false);
+            mCancelButton.setVisible(true);
+            this.importAccount();
+        }
+
+        private void importAccount() {
             if (mZipPath.isEmpty()) {
                 LOGGER.warning("no zip file path");
-                return false;
+                return;
             }
+
+            mResultLabel.setText(Tr.tr("Waiting..."));
+            mWaiting = true;
+            mImporter.fromZipFile(mZipPath, mPasswd);
+        }
+
+        @Override
+        public void update(Observable o, final Object arg) {
+            if (SwingUtilities.isEventDispatchThread()) {
+                this.updateOnEDT(arg);
+                return;
+            }
+            SwingUtilities.invokeLater(new Runnable() {
+                @Override
+                public void run() {
+                    ResultPanel.this.updateOnEDT(arg);
+                }
+            });
+        }
+
+        private void updateOnEDT(Object arg) {
+            if (arg == null) {
+                this.onResult(null);
+            } else if (arg instanceof KonException) {
+                this.onResult((KonException) arg);
+            } else {
+                LOGGER.warning("unexpected argument: "+arg);
+            }
+        }
+
+        private void onResult(KonException ex) {
+            mWaiting = false;
 
             String errorText = null;
-            try {
-                AccountLoader.getInstance().importAccount(mZipPath, mPasswd);
-            } catch (KonException ex) {
+            if (ex != null) {
                 errorText = Utils.getErrorText(ex);
+            } else {
+                mCancelButton.setVisible(false);
+                mFinishButton.setVisible(true);
             }
 
-            mPassPanel.setVisible(errorText == null);
+            mPassPanel.setVisible(ex == null);
 
-            String result = errorText == null ? Tr.tr("Success!") : Tr.tr("Error");
+            String result = ex == null ? Tr.tr("Success!") : Tr.tr("Error");
             mResultLabel.setText(Tr.tr("Import process finished with:")+" "+result);
             mErrorLabel.setText(errorText == null ?
                     "" :
                     "<html>"+Tr.tr("Error description:")+" \n\n"+errorText+"</html>");
-            return errorText == null;
         }
 
-        @Override
-        protected void onShow() {
-            mNextButton.setVisible(false);
-            boolean success = this.importAccount();
-            if (success) {
-                mCancelButton.setVisible(false);
-                mFinishButton.setVisible(true);
-            }
+        private void mayAbort() {
+            if (!mWaiting)
+                return;
+
+            mImporter.abort();
+            mWaiting = false;
         }
 
         @Override
         protected void onNext() {
-            Optional<char[]> optNewPass = mPassPanel.getNewPassword();
-            if (optNewPass.isPresent() && optNewPass.get().length > 0) {
+            char[] newPass = mPassPanel.getNewPassword().orElse(null);
+            if (newPass != null && newPass.length > 0) {
                 try {
-                    AccountLoader.getInstance().setPassword(new char[0], optNewPass.get());
+                    mView.getControl().setAccountPassword(new char[0], newPass);
                 } catch (KonException ex) {
                     LOGGER.log(Level.WARNING, "can't set password", ex);
                     return;

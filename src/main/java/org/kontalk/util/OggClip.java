@@ -8,7 +8,6 @@ import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.FloatControl;
-import javax.sound.sampled.LineUnavailableException;
 import javax.sound.sampled.SourceDataLine;
 
 import com.jcraft.jogg.Packet;
@@ -19,6 +18,8 @@ import com.jcraft.jorbis.Block;
 import com.jcraft.jorbis.Comment;
 import com.jcraft.jorbis.DspState;
 import com.jcraft.jorbis.Info;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Simple Clip like player for OGG's. Code is mostly taken from the example
@@ -29,6 +30,7 @@ import com.jcraft.jorbis.Info;
  * @author kevin
  */
 class OggClip {
+    private static final Logger LOGGER = Logger.getLogger(OggClip.class.getName());
 
     private final int BUFSIZE = 4096 * 2;
     private int convsize = BUFSIZE * 2;
@@ -238,7 +240,8 @@ class OggClip {
             // ignore if no mark
         }
 
-        player = new Thread() {
+        player = new Thread("OGG Play") {
+            @Override
             public void run() {
                 try {
                     playStream(Thread.currentThread());
@@ -251,10 +254,9 @@ class OggClip {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-            }
-        ;
+            };
         };
-		player.setDaemon(true);
+        player.setDaemon(true);
         player.start();
     }
 
@@ -270,7 +272,7 @@ class OggClip {
             // ignore if no mark
         }
 
-        player = new Thread() {
+        player = new Thread("OGG Loop") {
             @Override
             public void run() {
                 while (player == Thread.currentThread()) {
@@ -286,10 +288,9 @@ class OggClip {
                     } catch (IOException e) {
                     }
                 }
-            }
-        ;
+            };
         };
-		player.setDaemon(true);
+        player.setDaemon(true);
         player.start();
     }
 
@@ -332,23 +333,17 @@ class OggClip {
                 throw new Exception("Line " + info + " not supported.");
             }
 
-            try {
-                outputLine = (SourceDataLine) AudioSystem.getLine(info);
-                // outputLine.addLineListener(this);
-                outputLine.open(audioFormat);
-            } catch (LineUnavailableException ex) {
-                throw new Exception("Unable to open the sourceDataLine: " + ex);
-            } catch (IllegalArgumentException ex) {
-                throw new Exception("Illegal Argument: " + ex);
-            }
+            outputLine = (SourceDataLine) AudioSystem.getLine(info);
+            // outputLine.addLineListener(this);
+            outputLine.open(audioFormat);
 
             this.rate = rate;
             this.channels = channels;
 
             setBalance(balance);
             setGain(gain);
-        } catch (Exception ee) {
-            System.out.println(ee);
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "can not init sound system", ex);
         }
     }
 

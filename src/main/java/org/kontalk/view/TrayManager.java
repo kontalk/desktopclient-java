@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -35,8 +35,8 @@ import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
-import org.kontalk.model.ChatList;
-import org.kontalk.system.Config;
+import org.kontalk.model.Model;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.Tr;
 
 /**
@@ -50,11 +50,13 @@ final class TrayManager implements Observer {
     static final Image NOTIFICATION_TRAY = Utils.getImage("kontalk_notification.png");
 
     private final View mView;
+    private final Model mModel;
     private final MainFrame mMainFrame;
     private TrayIcon mTrayIcon = null;
 
-    TrayManager(View view, MainFrame mainFrame) {
+    TrayManager(View view, Model model, MainFrame mainFrame) {
         mView = view;
+        mModel = model;
         mMainFrame = mainFrame;
         this.setTray();
     }
@@ -71,7 +73,7 @@ final class TrayManager implements Observer {
         }
 
         if (mTrayIcon == null)
-            mTrayIcon = createTrayIcon(mView, mMainFrame);
+            mTrayIcon = this.createTrayIcon();
 
         SystemTray tray = SystemTray.getSystemTray();
         if (tray.getTrayIcons().length > 0)
@@ -111,20 +113,20 @@ final class TrayManager implements Observer {
         mTrayIcon.setImage(getTrayImage());
     }
 
-    private static Image getTrayImage() {
-        return ChatList.getInstance().isUnread() ?
+    private Image getTrayImage() {
+        return mModel.chats().isUnread() ?
                 NOTIFICATION_TRAY :
                 NORMAL_TRAY ;
     }
 
-    private static TrayIcon createTrayIcon(final View view, final MainFrame mainFrame) {
+    private TrayIcon createTrayIcon() {
         // popup menu outside of frame, officially not supported
         final WebPopupMenu popup = new WebPopupMenu();
         WebMenuItem quitItem = new WebMenuItem(Tr.tr("Quit"));
         quitItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                view.callShutDown();
+                mView.callShutDown();
             }
         });
         popup.add(quitItem);
@@ -143,7 +145,7 @@ final class TrayManager implements Observer {
             @Override
             public void mouseReleased(MouseEvent e) {
                 if (e.getButton() == MouseEvent.BUTTON1)
-                    mainFrame.toggleState();
+                    mMainFrame.toggleState();
                 else
                     check(e);
             }
@@ -161,7 +163,7 @@ final class TrayManager implements Observer {
             }
         };
 
-        TrayIcon trayIcon = new TrayIcon(getTrayImage(), "Kontalk" /*, popup*/);
+        TrayIcon trayIcon = new TrayIcon(this.getTrayImage(), "Kontalk" /*, popup*/);
         trayIcon.setImageAutoSize(true);
         trayIcon.addMouseListener(listener);
         return trayIcon;

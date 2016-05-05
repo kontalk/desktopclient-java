@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,16 +18,17 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.WebImage;
 import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.layout.FormLayout;
 import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.checkbox.WebCheckBox;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
 import com.alee.laf.panel.WebPanel;
-import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
@@ -57,16 +58,16 @@ import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.Set;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
+import javax.swing.Box;
 import javax.swing.DefaultListModel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
@@ -87,8 +88,10 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
-import org.kontalk.system.Config;
+import org.kontalk.model.Model;
+import org.kontalk.model.chat.GroupChat;
+import org.kontalk.model.chat.Member;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
 
@@ -116,94 +119,6 @@ final class ComponentUtils {
             this.setHorizontalScrollBarPolicy(
                     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             this.getVerticalScrollBar().setUnitIncrement(25);
-        }
-    }
-
-    static class StatusDialog extends WebDialog {
-
-        private final View mView;
-        private final WebTextField mStatusField;
-        private final WebList mStatusList;
-
-        StatusDialog(View view) {
-            mView = view;
-
-            this.setTitle(Tr.tr("Status"));
-            this.setResizable(false);
-            this.setModal(true);
-
-            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
-            groupPanel.setMargin(View.MARGIN_BIG);
-
-            String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
-            String currentStatus = "";
-            if (!stats.isEmpty())
-                currentStatus = stats.remove(0);
-
-            stats.remove("");
-
-            groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
-            mStatusField = new WebTextField(currentStatus, 30);
-            groupPanel.add(mStatusField);
-            groupPanel.add(new WebSeparator(true, true));
-
-            groupPanel.add(new WebLabel(Tr.tr("Previously used:")));
-            mStatusList = new WebList(stats);
-            mStatusList.setMultiplySelectionAllowed(false);
-            mStatusList.addListSelectionListener(new ListSelectionListener() {
-                @Override
-                public void valueChanged(ListSelectionEvent e) {
-                    if (e.getValueIsAdjusting())
-                        return;
-                    mStatusField.setText(mStatusList.getSelectedValue().toString());
-                }
-            });
-            WebScrollPane listScrollPane = new ScrollPane(mStatusList);
-            groupPanel.add(listScrollPane);
-            this.add(groupPanel, BorderLayout.CENTER);
-
-            // buttons
-            WebButton cancelButton = new WebButton(Tr.tr("Cancel"));
-            cancelButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    StatusDialog.this.dispose();
-                }
-            });
-            final WebButton saveButton = new WebButton(Tr.tr("Save"));
-            saveButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    StatusDialog.this.saveStatus();
-                    StatusDialog.this.dispose();
-                }
-            });
-            this.getRootPane().setDefaultButton(saveButton);
-
-            GroupPanel buttonPanel = new GroupPanel(2, cancelButton, saveButton);
-            buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
-            this.add(buttonPanel, BorderLayout.SOUTH);
-
-            this.pack();
-        }
-
-        private void saveStatus() {
-            String newStatus = mStatusField.getText();
-
-            Config conf = Config.getInstance();
-            String[] strings = conf.getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.asList(strings));
-
-            stats.remove(newStatus);
-
-            stats.add(0, newStatus);
-
-            if (stats.size() > 20)
-                stats = stats.subList(0, 20);
-
-            conf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
-            mView.getControl().sendStatusText();
         }
     }
 
@@ -395,13 +310,15 @@ final class ComponentUtils {
     static class AddGroupChatPanel extends PopupPanel {
 
         private final View mView;
+        private final Model mModel;
         private final WebTextField mSubjectField;
         private final ParticipantsList mList;
 
         private final WebButton mCreateButton;
 
-        AddGroupChatPanel(View view, final Component focusGainer) {
+        AddGroupChatPanel(View view, Model model, final Component focusGainer) {
             mView = view;
+            mModel = model;
 
             GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
             groupPanel.setMargin(View.MARGIN_BIG);
@@ -456,17 +373,20 @@ final class ComponentUtils {
         }
 
         private void createGroup() {
-            mView.getControl().createGroupChat(mList.getSelectedContacts(),
-                    mSubjectField.getText());
+            GroupChat newChat = mView.getControl().createGroupChat(
+                    mList.getSelectedContacts(),
+                    mSubjectField.getText()).orElse(null);
+
+            if (newChat != null)
+                mView.showChat(newChat);
 
             mSubjectField.setText("");
         }
 
         @Override
         void onShow() {
-            Set<Contact> allContacts = ContactList.getInstance().getAll();
             List<Contact> contacts = new LinkedList<>();
-            for (Contact c : allContacts) {
+            for (Contact c : Utils.allContacts(mModel.contacts())) {
                 if (c.isKontalkUser() && !c.isMe())
                     contacts.add(c);
             }
@@ -487,30 +407,23 @@ final class ComponentUtils {
 
         private final DefaultListModel<Contact> mModel;
 
-        public ParticipantsList() {
-            this(true);
-        }
-
         @SuppressWarnings("unchecked")
-        ParticipantsList(boolean selectable) {
+        ParticipantsList() {
             mModel = new DefaultListModel<>();
             this.setModel(mModel);
             this.setFixedCellHeight(25);
 
-            this.setEnabled(selectable);
-            if (selectable) {
-                this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-                this.setSelectionModel(new DefaultListSelectionModel() {
-                    @Override
-                    public void setSelectionInterval(int index0, int index1) {
-                        if(super.isSelectedIndex(index0)) {
-                            super.removeSelectionInterval(index0, index1);
-                        } else {
-                            super.addSelectionInterval(index0, index1);
-                        }
+            this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+            this.setSelectionModel(new DefaultListSelectionModel() {
+                @Override
+                public void setSelectionInterval(int index0, int index1) {
+                    if(super.isSelectedIndex(index0)) {
+                        super.removeSelectionInterval(index0, index1);
+                    } else {
+                        super.addSelectionInterval(index0, index1);
                     }
-                });
-            }
+                }
+            });
 
             this.setCellRenderer(new CellRenderer());
         }
@@ -537,6 +450,77 @@ final class ComponentUtils {
                 this.setText(" " + Utils.displayName(contact));
 
                 this.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0,Color.LIGHT_GRAY));
+
+                return this;
+            }
+        }
+    }
+
+    // NOTE: https://github.com/mgarin/weblaf/issues/153
+    static class MemberList extends WebList {
+
+        private final DefaultListModel<Member> mModel;
+
+        public MemberList() {
+            this(true);
+        }
+
+        @SuppressWarnings("unchecked")
+        MemberList(boolean selectable) {
+            mModel = new DefaultListModel<>();
+            this.setModel(mModel);
+            this.setFixedCellHeight(25);
+
+            this.setEnabled(selectable);
+            if (selectable) {
+                this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+                this.setSelectionModel(new DefaultListSelectionModel() {
+                    @Override
+                    public void setSelectionInterval(int index0, int index1) {
+                        if(super.isSelectedIndex(index0)) {
+                            super.removeSelectionInterval(index0, index1);
+                        } else {
+                            super.addSelectionInterval(index0, index1);
+                        }
+                    }
+                });
+            }
+
+            this.setCellRenderer(new CellRenderer());
+        }
+
+        void setMembers(List<Member> members) {
+            mModel.clear();
+
+            for (Member member : members)
+                    mModel.addElement(member);
+        }
+
+        private class CellRenderer extends WebPanel implements ListCellRenderer<Member> {
+            private final WebLabel mNameLabel;
+            private final WebLabel mRoleLabel;
+
+            public CellRenderer() {
+                mNameLabel = new WebLabel();
+                mRoleLabel = new WebLabel();
+                mRoleLabel.setForeground(View.DARK_GREEN);
+
+                this.setMargin(View.MARGIN_DEFAULT);
+                this.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 0, Color.LIGHT_GRAY));
+
+                this.add(new GroupPanel(GroupingType.fillMiddle, View.GAP_DEFAULT,
+                        mNameLabel, Box.createGlue(), mRoleLabel),
+                        BorderLayout.CENTER);
+            }
+
+            @Override
+            public Component getListCellRendererComponent(JList list,
+                    Member member,
+                    int index,
+                    boolean isSelected,
+                    boolean cellHasFocus) {
+                mNameLabel.setText(Utils.displayName(member.getContact(), 25));
+                mRoleLabel.setText(Utils.role(member.getRole()));
 
                 return this;
             }
@@ -670,6 +654,8 @@ final class ComponentUtils {
                 int columns, final Component focusGainer) {
             super(new ComponentUtils.TextLimitDocument(maxTextLength), text, columns);
 
+            this.setTrailingComponent(new WebImage(Utils.getIcon("ic_ui_edit.png")));
+
             this.setEditable(editable);
             this.setFocusable(editable);
 
@@ -703,11 +689,13 @@ final class ComponentUtils {
             this.setInputPrompt(text);
             this.setText(text);
             this.setDrawBorder(true);
+            this.getTrailingComponent().setVisible(false);
         }
 
         private void switchToLabelMode() {
             this.setText(this.labelText());
             this.setDrawBorder(false);
+            this.getTrailingComponent().setVisible(true);
         }
 
         protected String labelText() {
@@ -727,7 +715,6 @@ final class ComponentUtils {
         private final WebPanel layerPanel;
 
         ModalPopup(AbstractButton invokerButton) {
-            super();
             mInvoker = invokerButton;
 
             layerPanel = new WebPanel();
@@ -792,7 +779,7 @@ final class ComponentUtils {
 
         private final WebLabel mStatus;
         private final WebLinkLabel mAttLabel;
-        private String mImagePath = "";
+        private Path mImagePath = Paths.get("");
 
         AttachmentPanel() {
            super(View.GAP_SMALL, false);
@@ -804,7 +791,7 @@ final class ComponentUtils {
            this.add(mAttLabel);
         }
 
-        void setImage(String path) {
+        void setImage(Path path) {
             if (path.equals(mImagePath))
                 return;
 
@@ -828,7 +815,6 @@ final class ComponentUtils {
         private final int mLimit;
 
         TextLimitDocument(int limit) {
-            super();
             this.mLimit = limit;
         }
 

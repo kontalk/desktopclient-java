@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,10 +18,13 @@
 
 package org.kontalk.misc;
 
+import java.util.EnumSet;
+import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
-import org.kontalk.model.InMessage;
-import org.kontalk.model.KonMessage;
+import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.Contact;
+import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
 
 /**
@@ -33,7 +36,14 @@ public class ViewEvent {
     private ViewEvent() {}
 
     /** Application status changed. */
-    public static class StatusChanged extends ViewEvent {
+    public static class StatusChange extends ViewEvent {
+        public final Control.Status status;
+        public final EnumSet<FeatureDiscovery.Feature> features;
+
+        public StatusChange(Control.Status status, EnumSet<FeatureDiscovery.Feature> features) {
+            this.status = status;
+            this.features = features;
+        }
     }
 
     /** Key is password protected (ask for password). */
@@ -104,6 +114,15 @@ public class ViewEvent {
         public PresenceError(Contact contact, RosterHandler.Error error) {
             this.contact = contact;
             this.error = error;
+        }
+    }
+
+    /** A contact wants presence subscription (ask whattodo). */
+    public static class SubscriptionRequest extends ViewEvent {
+        public final Contact contact;
+
+        public SubscriptionRequest(Contact contact) {
+            this.contact = contact;
         }
     }
 }

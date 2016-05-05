@@ -1,6 +1,6 @@
 /*
  * Kontalk Java client
- * Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ * Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,21 @@
 
 package org.kontalk.util;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Base64;
 import java.util.EnumSet;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONObject;
 
 public final class EncodingUtils {
+    private static final Logger LOGGER = Logger.getLogger(EncodingUtils.class.getName());
+
+    public static final String EOL = System.getProperty("line.separator");
 
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
 
@@ -77,5 +85,18 @@ public final class EncodingUtils {
 
     public static String bytesToBase64(byte[] bytes) {
         return Base64.getEncoder().encodeToString(bytes);
+    }
+
+    public static URI toURI(String str) {
+        try {
+            return new URI(str);
+        } catch (URISyntaxException ex) {
+            LOGGER.log(Level.WARNING, "invalid URI", ex);
+        }
+        return URI.create("");
+    }
+
+    public static String randomString(int length) {
+        return RandomStringUtils.randomAlphanumeric(length);
     }
 }

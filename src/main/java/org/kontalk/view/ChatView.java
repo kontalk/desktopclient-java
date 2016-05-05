@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
@@ -55,6 +56,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 import java.io.File;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -70,17 +72,19 @@ import javax.swing.event.DocumentEvent;
 import org.apache.commons.io.FileUtils;
 import org.apache.tika.Tika;
 import org.jivesoftware.smackx.chatstates.ChatState;
-import org.kontalk.model.Chat;
-import org.kontalk.model.ChatList;
+import org.kontalk.client.FeatureDiscovery;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.system.AttachmentManager;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
+import org.kontalk.system.Control;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import static org.kontalk.view.View.MARGIN_SMALL;
 
 /**
- * Pane that shows the currently selected chat.
+ * Panel showing the currently selected chat.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatView extends WebPanel implements Observer {
@@ -89,15 +93,17 @@ final class ChatView extends WebPanel implements Observer {
 
     private final View mView;
 
+    private final WebImage mAvatar;
     private final WebLabel mTitleLabel;
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
     private final WebTextArea mSendTextArea;
     private final WebLabel mEncryptionStatus;
     private final WebButton mSendButton;
-    private final WebFileChooser fileChooser;
+    private final WebFileChooser mFileChooser;
+    private final WebButton mFileButton;
 
-    private final Map<Integer, MessageList> mChatCache = new HashMap<>();
+    private final Map<Chat, MessageList> mMessageListCache = new HashMap<>();
 
     private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
@@ -108,13 +114,17 @@ final class ChatView extends WebPanel implements Observer {
         mView = view;
 
         WebPanel titlePanel = new WebPanel(false,
-                new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
+                new BorderLayout(View.GAP_DEFAULT, 0));
         titlePanel.setMargin(View.MARGIN_DEFAULT);
+
+        mAvatar = new WebImage();
+        titlePanel.add(mAvatar, BorderLayout.WEST);
+
         mTitleLabel = new WebLabel();
-        mTitleLabel.setFontSize(16);
+        mTitleLabel.setFontSize(View.FONT_SIZE_HUGE);
         mTitleLabel.setDrawShade(true);
         mSubTitleLabel = new WebLabel();
-        mSubTitleLabel.setFontSize(11);
+        mSubTitleLabel.setFontSize(View.FONT_SIZE_TINY);
         mSubTitleLabel.setForeground(Color.GRAY);
         titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubTitleLabel),
                 BorderLayout.CENTER);
@@ -152,11 +162,11 @@ final class ChatView extends WebPanel implements Observer {
             @Override
             public void paintComponent(Graphics g) {
                 super.paintComponent(g);
-                Optional<BufferedImage> optBG =
-                        ChatView.this.getCurrentBackground().updateNowOrLater();
+                BufferedImage bg =
+                        ChatView.this.getCurrentBackground().updateNowOrLater().orElse(null);
                 // if there is something to draw, draw it now even if its old
-                if (optBG.isPresent())
-                    g.drawImage(optBG.get(), 0, 0, this.getWidth(), this.getHeight(), null);
+                if (bg != null)
+                    g.drawImage(bg, 0, 0, this.getWidth(), this.getHeight(), null);
             }
         });
 
@@ -165,7 +175,7 @@ final class ChatView extends WebPanel implements Observer {
         mSendTextArea.setMargin(View.MARGIN_SMALL);
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
-        mSendTextArea.setFontSize(13);
+        mSendTextArea.setFontSize(View.FONT_SIZE_NORMAL);
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
             public void documentChanged(DocumentEvent e) {
@@ -204,27 +214,23 @@ final class ChatView extends WebPanel implements Observer {
             }
         });
         // file chooser button
-        fileChooser = new WebFileChooser();
-        fileChooser.setMultiSelectionEnabled(false);
-        fileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        fileChooser.setFileFilter(new CustomFileFilter(AllFilesFilter.ICON,
+        mFileChooser = new WebFileChooser();
+        mFileChooser.setMultiSelectionEnabled(false);
+        mFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        mFileChooser.setFileFilter(new CustomFileFilter(AllFilesFilter.ICON,
                 Tr.tr("Supported files")) {
             @Override
             public boolean accept(File file) {
-                return file.length() <= AttachmentManager.MAX_ATT_SIZE &&
-                        AttachmentManager.SUPPORTED_MIME_TYPES.contains(
-                                TIKA_INSTANCE.detect(file.getName()));
+                return file.length() <= AttachmentManager.MAX_ATT_SIZE;
             }
         });
 //        mAttField.setPreferredWidth(150);
-        WebButton fileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
+        mFileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
                 .setRound(0)
                 .setBottomBgColor(titlePanel.getBackground())
                 .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL);
-        TooltipManager.addTooltip(fileButton,
-                Tr.tr("Send File - max. size:") + " " +
-                        FileUtils.byteCountToDisplaySize(AttachmentManager.MAX_ATT_SIZE));
-        fileButton.addActionListener(new ActionListener() {
+
+        mFileButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ChatView.this.showFileDialog();
@@ -234,7 +240,7 @@ final class ChatView extends WebPanel implements Observer {
         mEncryptionStatus = new WebLabel();
 
         WebPanel textBarPanel = new GroupPanel(GroupingType.fillMiddle, 0,
-                fileButton, Box.createGlue(), new GroupPanel(View.GAP_DEFAULT,
+                mFileButton, Box.createGlue(), new GroupPanel(View.GAP_DEFAULT,
                         mEncryptionStatus, mSendButton))
                 .setUndecorated(false)
                 .setWebColoredBackground(false)
@@ -278,19 +284,19 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void showChat(Chat chat) {
-        Optional<Chat> optOldChat = this.getCurrentChat();
-        if (optOldChat.isPresent())
-            optOldChat.get().deleteObserver(this);
+        Chat oldChat = this.getCurrentChat().orElse(null);
+        if (oldChat != null)
+            oldChat.deleteObserver(this);
 
         chat.addObserver(this);
 
-        if (!mChatCache.containsKey(chat.getID())) {
+        if (!mMessageListCache.containsKey(chat)) {
             MessageList newMessageList = new MessageList(mView, this, chat);
             chat.addObserver(newMessageList);
-            mChatCache.put(chat.getID(), newMessageList);
+            mMessageListCache.put(chat, newMessageList);
         }
         // set to current chat
-        mScrollPane.getViewport().setView(mChatCache.get(chat.getID()));
+        mScrollPane.getViewport().setView(mMessageListCache.get(chat));
         this.onChatChange();
 
         chat.setRead();
@@ -312,13 +318,11 @@ final class ChatView extends WebPanel implements Observer {
         MessageList view = this.currentMessageListOrNull();
         if (view == null)
             return mDefaultBG;
-        Optional<Background> optBG = view.getBG();
-        if (!optBG.isPresent())
-            return mDefaultBG;
-        return optBG.get();
+        Background bg = view.getBG().orElse(null);
+        return bg == null ? mDefaultBG : bg;
     }
 
-    Optional<Background> createBG(Chat.ViewSettings s){
+    Optional<Background> createBG(Chat.ViewSettings s) {
         JViewport p = this.mScrollPane.getViewport();
         if (s.getBGColor().isPresent()) {
             Color c = s.getBGColor().get();
@@ -344,7 +348,7 @@ final class ChatView extends WebPanel implements Observer {
                 if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
                         e.getModifiersEx() == KeyEvent.CTRL_DOWN_MASK) {
                     e.consume();
-                    mSendTextArea.append(System.getProperty("line.separator"));
+                    mSendTextArea.append(EncodingUtils.EOL);
                 }
                 if (enterSends && e.getKeyCode() == KeyEvent.VK_ENTER &&
                         e.getModifiers() == 0) {
@@ -365,6 +369,30 @@ final class ChatView extends WebPanel implements Observer {
         mSendButton.addHotkey(sendHotkey, TooltipWay.up);
     }
 
+    void onStatusChange(Control.Status status, EnumSet<FeatureDiscovery.Feature> serverFeature) {
+        Boolean supported = null;
+        switch(status) {
+            case CONNECTED:
+                this.setColor(Color.WHITE);
+                supported = serverFeature.contains(
+                        FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
+                break;
+            case DISCONNECTED:
+            case ERROR:
+                this.setColor(Color.LIGHT_GRAY);
+                // don't know, but assume it
+                supported = true;
+                break;
+        }
+        if (supported != null) {
+            TooltipManager.setTooltip(mFileButton, Tr.tr("Send File") + " - " + (supported ?
+                            Tr.tr("max. size:") + " " +
+                            FileUtils.byteCountToDisplaySize(AttachmentManager.MAX_ATT_SIZE) :
+                            mView.tr_not_supported));
+            mFileButton.setForeground(supported ? Color.BLACK : Color.RED);
+        }
+    }
+
     @Override
     public void update(Observable o, final Object arg) {
         if (SwingUtilities.isEventDispatchThread()) {
@@ -382,14 +410,12 @@ final class ChatView extends WebPanel implements Observer {
     private void updateOnEDT(Object arg) {
         if (arg instanceof Chat) {
             Chat chat = (Chat) arg;
-            if (!ChatList.getInstance().contains(chat.getID())) {
-                // chat was deleted
-                MessageList viewList = mChatCache.get(chat.getID());
+            if (chat.isDeleted()) {
+                MessageList viewList = mMessageListCache.remove(chat);
                 if (viewList != null) {
                     viewList.clearItems();
                     chat.deleteObserver(viewList);
                 }
-                mChatCache.remove(chat.getID());
                 if(this.getCurrentChat().orElse(null) == chat) {
                     mScrollPane.setViewportView(null);
                     mView.showNothing();
@@ -403,11 +429,13 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void onChatChange() {
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
-        Chat chat = optChat.get();
+
         // update if chat changes...
+        // avatar
+        mAvatar.setImage(AvatarLoader.load(chat));
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
@@ -440,34 +468,33 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void showPopup(final WebToggleButton invoker) {
-        Optional<Chat> optChat = ChatView.this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = ChatView.this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
         if (mPopup == null)
             mPopup = new ComponentUtils.ModalPopup(invoker);
 
         mPopup.removeAll();
-        mPopup.add(new ChatDetails(mView, mPopup, optChat.get()));
+        mPopup.add(new ChatDetails(mView, mPopup, chat));
         mPopup.showPopup();
     }
 
     private void onKeyTypeEvent(boolean empty) {
         this.updateSendButton();
 
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
 
         // workaround: clearing the text area is not a key event
         if (!empty)
-            mView.getControl().handleOwnChatStateEvent(optChat.get(), ChatState.composing);
+            mView.getControl().handleOwnChatStateEvent(chat, ChatState.composing);
     }
 
     private void updateSendButton() {
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
-        Chat chat = optChat.get();
 
         // enable if chat is valid...
         mSendButton.setEnabled(chat.isValid() &&
@@ -478,8 +505,8 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void sendMsg() {
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             // now current chat
             return;
 
@@ -487,23 +514,23 @@ final class ChatView extends WebPanel implements Observer {
 //       if (!attachments.isEmpty())
 //           mView.getControl().sendAttachment(optChat.get(), attachments.get(0).toPath());
 //       else
-        mView.getControl().sendText(optChat.get(), mSendTextArea.getText());
+        mView.getControl().sendText(chat, mSendTextArea.getText());
 
         mSendTextArea.setText("");
     }
 
     private void showFileDialog() {
-        if (fileChooser.showOpenDialog(ChatView.this) != WebFileChooser.APPROVE_OPTION)
+        if (mFileChooser.showOpenDialog(ChatView.this) != WebFileChooser.APPROVE_OPTION)
             return;
 
-        File file = fileChooser.getSelectedFile();
-        fileChooser.setCurrentDirectory(file.toPath().getParent().toString());
+        File file = mFileChooser.getSelectedFile();
+        mFileChooser.setCurrentDirectory(file.toPath().getParent().toString());
 
-        Optional<Chat> optChat = this.getCurrentChat();
-        if (!optChat.isPresent())
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
             return;
 
-        mView.getControl().sendAttachment(optChat.get(), file.toPath());
+        mView.getControl().sendAttachment(chat, file.toPath());
     }
 
     /** A background image of chat view with efficient async reloading. */
@@ -571,7 +598,7 @@ final class ChatView extends WebPanel implements Observer {
                 this.updateCachedBG(null);
                 return true;
             }
-            Image scaledImage = MediaUtils.scale(mOrigin,
+            Image scaledImage = MediaUtils.scaleAsync(mOrigin,
                     mParent.getWidth(),
                     mParent.getHeight(),
                     true);

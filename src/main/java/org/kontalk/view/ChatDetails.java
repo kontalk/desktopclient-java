@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,6 +27,8 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.radiobutton.WebRadioButton;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.slider.WebSlider;
+import com.alee.laf.text.WebTextArea;
+import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.swing.UnselectableButtonGroup;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -36,14 +38,14 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.util.List;
-import java.util.Optional;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.kontalk.model.Chat;
-import org.kontalk.model.Contact;
-import org.kontalk.model.GroupChat;
+import org.apache.commons.lang.StringUtils;
+import org.kontalk.model.chat.Chat;
+import org.kontalk.model.chat.GroupChat;
+import org.kontalk.model.chat.Member;
 import org.kontalk.util.Tr;
-import org.kontalk.view.ComponentUtils.ParticipantsList;
+import org.kontalk.view.ComponentUtils.MemberList;
 
 /**
  * Show and edit thread/chat settings.
@@ -83,10 +85,10 @@ final class ChatDetails extends WebPanel {
                     new WebLabel(Tr.tr("Subject:")), mSubjectField));
 
             groupPanel.add(new WebLabel(Tr.tr("Participants:")));
-            ParticipantsList mParticipantsList = new ParticipantsList(false);
-            List<Contact> chatContacts = Utils.contactList(mChat);
-            mParticipantsList.setContacts(chatContacts);
-            mParticipantsList.setVisibleRowCount(Math.min(chatContacts.size(), 5));
+            MemberList mParticipantsList = new MemberList(false);
+            List<Member> chatMember = Utils.memberList(mChat);
+            mParticipantsList.setMembers(chatMember);
+            mParticipantsList.setVisibleRowCount(Math.min(chatMember.size(), 5));
             groupPanel.add(new ComponentUtils.ScrollPane(mParticipantsList, false).setPreferredWidth(160));
 
             groupPanel.add(new WebSeparator(true, true));
@@ -95,8 +97,8 @@ final class ChatDetails extends WebPanel {
 
         groupPanel.add(new WebLabel(Tr.tr("Custom Background")));
         mColorOpt = new WebRadioButton(Tr.tr("Color:") + " ");
-        Optional<Color> optBGColor = mChat.getViewSettings().getBGColor();
-        mColorOpt.setSelected(optBGColor.isPresent());
+        Color bgColor = mChat.getViewSettings().getBGColor().orElse(null);
+        mColorOpt.setSelected(bgColor != null);
         mColorOpt.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
@@ -105,7 +107,7 @@ final class ChatDetails extends WebPanel {
         });
         mColor = new WebButton();
         mColor.setMinimumHeight(25);
-        Color oldColor = optBGColor.orElse(DEFAULT_BG);
+        Color oldColor = bgColor != null ? bgColor : DEFAULT_BG;
         mColor.setBottomBgColor(oldColor);
         groupPanel.add(new GroupPanel(GroupingType.fillLast,
                 mColorOpt,
@@ -115,7 +117,7 @@ final class ChatDetails extends WebPanel {
         colorSlider.setMaximum(100);
         colorSlider.setPaintTicks(false);
         colorSlider.setPaintLabels(false);
-        colorSlider.setEnabled(optBGColor.isPresent());
+        colorSlider.setEnabled(bgColor != null);
         final GradientData gradientData = GradientData.getDefaultValue();
         // TODO set location for color
         gradientData.getColor(0);
@@ -147,6 +149,19 @@ final class ChatDetails extends WebPanel {
                 mImgChooser));
         UnselectableButtonGroup.group(mColorOpt, mImgOpt);
         groupPanel.add(new WebSeparator());
+
+        String xmppID = mChat.getXMPPID();
+        if (!xmppID.isEmpty()) {
+            WebTextArea xmppIDArea = new WebTextArea().setBoldFont();
+            xmppIDArea.setEditable(false);
+            xmppIDArea.setOpaque(false);
+            xmppIDArea.setText(StringUtils.abbreviate(xmppID, 30));
+            TooltipManager.addTooltip(xmppIDArea,
+                    Tr.tr("XMPP chat ID:") + " " + xmppID);
+            WebLabel xmppIDLabel = new WebLabel(Tr.tr("Chat ID:"));
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    xmppIDLabel, xmppIDArea));
+        }
 
         final WebButton saveButton = new WebButton(Tr.tr("Save"));
         this.add(groupPanel, BorderLayout.CENTER);

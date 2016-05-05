@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,16 +18,17 @@
 
 package org.kontalk.system;
 
-import java.util.HashMap;
+import org.kontalk.persistence.Config;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
-import org.kontalk.model.Chat;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
-import org.kontalk.model.SingleChat;
+import org.kontalk.model.chat.SingleChat;
 
 /**
  * Manager handling own chat status for all chats.
@@ -38,8 +39,8 @@ final class ChatStateManager {
     private static final int COMPOSING_TO_PAUSED = 15; // seconds
 
     private final Client mClient;
-    private final Map<Chat, MyChatState> mChatStateCache = new HashMap<>();
-    private final Timer mTimer = new Timer();
+    private final Map<Chat, MyChatState> mChatStateCache = new WeakHashMap<>();
+    private final Timer mTimer = new Timer("Chat State Timer", true);
 
     public ChatStateManager(Client client) {
         mClient = client;
@@ -57,8 +58,8 @@ final class ChatStateManager {
     }
 
     void imGone() {
-        for (MyChatState chatState : mChatStateCache.values())
-            chatState.handleState(ChatState.gone);
+        mChatStateCache.values().stream()
+                .forEach(chatState -> chatState.handleState(ChatState.gone));
     }
 
     private class MyChatState {
@@ -82,8 +83,8 @@ final class ChatStateManager {
                 mScheduledStateSet = new TimerTask() {
                     @Override
                     public void run() {
-                        // TODO use 'inactive' instead of 'paused' for now as
-                        // 'inactive' currently wont be send at all
+                        // NOTE: using 'inactive' instead of 'paused' here as
+                        // 'inactive' isn't send at all
                         MyChatState.this.handleState(ChatState.inactive);
                     }
                 };

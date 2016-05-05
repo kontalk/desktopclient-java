@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,31 +20,48 @@ package org.kontalk.misc;
 
 import java.util.Objects;
 import org.apache.commons.lang.StringUtils;
+import org.jxmpp.jid.util.JidUtil;
+import org.jxmpp.stringprep.simple.SimpleXmppStringprep;
 import org.jxmpp.util.XmppStringUtils;
-import org.kontalk.system.Config;
 
 /**
- * A Jabber ID (the address of an XMPP client or user). Immutable.
+ * A Jabber ID (the address of an XMPP entity). Immutable.
+ *
+ * NOTE: manual JID escaping (XEP-0106) is not supported here. Better mark JIDs
+ * e.g. with spaces in local part as invalid.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class JID {
 
+    static {
+        // good to know. For working JID validation
+        SimpleXmppStringprep.setup();
+    }
+
     private final String mLocal;
     private final String mDomain;
     private final String mResource;
+    private final boolean mValid;
 
     private JID(String local, String domain, String resource) {
         mLocal = local;
         mDomain = domain;
         mResource = resource;
+
+        mValid = !mLocal.isEmpty() && !mDomain.isEmpty()
+                // NOTE: domain check could be stronger - compliant with RFC 6122, but
+                // server does not accept most special characters
+                // NOTE: resource not checked
+                && JidUtil.isValidBareJid(
+                        XmppStringUtils.completeJidFrom(mLocal, mDomain));
     }
 
-    public String local(){
+    public String local() {
         return mLocal;
     }
 
-    public String domain(){
+    public String domain() {
         return mDomain;
     }
 
@@ -53,9 +70,7 @@ public final class JID {
     }
 
     public boolean isValid() {
-        // TODO stronger check here.
-        //org.jxmpp.jid.util.JidUtil.validateBareJid(mBareJID);
-        return !mLocal.isEmpty() && !mDomain.isEmpty();
+        return mValid;
     }
 
     public boolean isHash() {
@@ -66,14 +81,13 @@ public final class JID {
         return !mResource.isEmpty();
     }
 
-    public boolean isMe() {
-        return this.isValid() &&
-                this.equals(JID.me());
+    public JID toBare() {
+        return new JID(mLocal, mDomain, "");
     }
 
     /**
      * Comparing only bare JIDs.
-     * Case-insensitive (local and domain part, resource is case-sensitive).
+     * Case-insensitive.
      */
     @Override
     public boolean equals(Object o) {
@@ -122,9 +136,4 @@ public final class JID {
     public static JID deleted(int id) {
         return new JID("", Integer.toString(id), "");
     }
-
-    public static JID me() {
-        return JID.bare(Config.getInstance().getString(Config.ACC_JID));
-    }
-
 }

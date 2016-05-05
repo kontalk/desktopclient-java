@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@
 
 package org.kontalk.system;
 
+import org.kontalk.persistence.Config;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -26,25 +27,24 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang.StringUtils;
+import org.kontalk.client.Client;
 import org.kontalk.client.HTTPFileClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.Coder.Encryption;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.InMessage;
-import org.kontalk.model.KonMessage;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.model.MessageContent.Preview;
-import org.kontalk.model.OutMessage;
+import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.message.MessageContent;
+import org.kontalk.model.message.MessageContent.Attachment;
+import org.kontalk.model.message.MessageContent.Preview;
+import org.kontalk.model.message.OutMessage;
 import org.kontalk.util.MediaUtils;
 
 /**
@@ -59,30 +59,32 @@ public class AttachmentManager implements Runnable {
 
     private static final String ATT_DIRNAME = "attachments";
     private static final String PREVIEW_DIRNAME = "preview";
+    private static final String RESIZED_IMG_MIME = "image/jpeg";
 
     public static final Dimension THUMBNAIL_DIM = new Dimension(300, 200);
     public static final String THUMBNAIL_MIME = "image/jpeg";
-    public static final int MAX_ATT_SIZE = 10 * 1024 * 1024;
+    public static final int MAX_ATT_SIZE = 20 * 1024 * 1024;
 
-    // server and Android client do not want other types
-    public static final List<String> SUPPORTED_MIME_TYPES = Arrays.asList(
-            "text/plain",
-            "text/x-vcard",
-            "text/vcard",
-            "image/gif",
-            "image/png",
-            "image/jpeg",
-            "image/jpg",
-            "audio/3gpp",
-            "audio/mpeg3",
-            "audio/wav");
+    public static class Slot {
+        final URI uploadURL;
+        final URI downloadURL;
 
-    // TODO get this from server
-    private static final String UPLOAD_URL = "https://beta.kontalk.net:5980/upload";
+        public Slot() {
+            this(URI.create(""), URI.create(""));
+        }
 
-    private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
+        public Slot(URI uploadURI, URI downloadURL) {
+            this.uploadURL = uploadURI;
+            this.downloadURL = downloadURL;
+        }
+    }
+
+    private static final String ENCRYPT_MIME = "application/octet-stream";
 
     private final Control mControl;
+    private final Client mClient;
+
+    private final LinkedBlockingQueue<Task> mQueue = new LinkedBlockingQueue<>();
     private final Path mAttachmentDir;
     private final Path mPreviewDir;
 
@@ -107,8 +109,9 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    private AttachmentManager(Path baseDir, Control control) {
+    private AttachmentManager(Control control, Client client, Path baseDir) {
         mControl = control;
+        mClient = client;
         mAttachmentDir = baseDir.resolve(ATT_DIRNAME);
         if (mAttachmentDir.toFile().mkdir())
             LOGGER.info("created attachment directory");
@@ -116,6 +119,16 @@ public class AttachmentManager implements Runnable {
         mPreviewDir = baseDir.resolve(PREVIEW_DIRNAME);
         if (mPreviewDir.toFile().mkdir())
             LOGGER.info("created preview directory");
+    }
+
+    static AttachmentManager create(Control control, Client client, Path appDir) {
+        AttachmentManager manager = new AttachmentManager(control, client, appDir);
+
+        Thread thread = new Thread(manager, "Attachment Transfer");
+        thread.setDaemon(true);
+        thread.start();
+
+        return manager;
     }
 
     void queueUpload(OutMessage message) {
@@ -133,53 +146,93 @@ public class AttachmentManager implements Runnable {
     }
 
     private void uploadAsync(OutMessage message) {
-        Optional<Attachment> optAttachment = message.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
+        Attachment attachment = message.getContent().getAttachment().orElse(null);
+        if (attachment == null) {
             LOGGER.warning("no attachment in message to upload");
             return;
         }
-        Attachment attachment = optAttachment.get();
+
+        if (!mClient.isConnected()) {
+            LOGGER.info("can't upload, not connected");
+            return;
+        }
+
+        File original;
+        File file = original = attachment.getFilePath().toFile();
+        String mime = attachment.getMimeType();
+
+        // maybe resize image for smaller payload
+        if(isImage(mime)) {
+            int maxImgSize = Config.getInstance().getInt(Config.NET_MAX_IMG_SIZE);
+            if (maxImgSize > 0) {
+                BufferedImage img = MediaUtils.readImage(file).orElse(null);
+                if (img == null) {
+                    LOGGER.warning("can't load image");
+                    return;
+                }
+                if (img.getWidth() * img.getHeight() > maxImgSize) {
+                    // image needs to be resized
+                    BufferedImage resized = MediaUtils.scale(img, maxImgSize);
+                    try {
+                        file = File.createTempFile("kontalk_resized_img_att", ".dat");
+                    } catch (IOException ex) {
+                        LOGGER.log(Level.WARNING, "can't create temporary file", ex);
+                        return;
+                    }
+                    mime = RESIZED_IMG_MIME;
+                    boolean succ = MediaUtils.writeImage(resized,
+                            MediaUtils.extensionForMIME(mime),
+                            file);
+                    if (!succ)
+                        return;
+                }
+            }
+        }
 
         // if text will be encrypted, always encrypt attachment too
         boolean encrypt = message.getCoderStatus().getEncryption() == Encryption.DECRYPTED;
-        File file;
-        if (encrypt){
-            Optional<File> optFile = Coder.encryptAttachment(message);
-            if (!optFile.isPresent())
+        if (encrypt) {
+            PersonalKey myKey = mControl.myKey().orElse(null);
+            File encryptFile = myKey == null ?
+                    null :
+                    Coder.encryptAttachment(myKey, message, file).orElse(null);
+            if (!file.equals(original))
+                file.delete();
+            if (encryptFile == null)
                 return;
-            file = optFile.get();
-        } else
-            file = attachment.getFile().toFile();
+            file = encryptFile;
+            // Note: continue using original MIME type, Android client needs it
+            //mime = ENCRYPT_MIME;
+        }
 
-        HTTPFileClient client = createClientOrNull();
+        HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
-        URI url;
+        long length = file.length();
+        Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
+
+        if (uploadSlot.uploadURL.toString().isEmpty() ||
+                uploadSlot.downloadURL.toString().isEmpty()) {
+            LOGGER.warning("empty slot: "+attachment);
+            return;
+        }
+
         try {
-            url = client.upload(file, URI.create(UPLOAD_URL),
-                    // this isn't correct, but the server can't handle the truth
-                    /*encrypt ? "application/octet-stream" :*/ attachment.getMimeType(),
-                    encrypt);
+            client.upload(file, uploadSlot.uploadURL, mime, encrypt);
         } catch (KonException ex) {
             LOGGER.warning("upload failed, attachment: "+attachment);
             message.setStatus(KonMessage.Status.ERROR);
-            mControl.handleException(ex);
+            mControl.onException(ex);
             return;
         }
 
-        // delete temp file
-        if (encrypt)
+        if (!file.equals(original))
             file.delete();
 
-        if (url.toString().isEmpty()) {
-            LOGGER.warning("url empty: "+attachment);
-            return;
-        }
+        message.setUpload(uploadSlot.downloadURL, mime, length);
 
-        message.setAttachmentURL(url);
-
-        LOGGER.info("upload successful, URL="+url);
+        LOGGER.info("upload successful, URL="+uploadSlot.downloadURL);
 
         // make sure not to loop
         if (attachment.hasURL())
@@ -187,14 +240,13 @@ public class AttachmentManager implements Runnable {
     }
 
     private void downloadAsync(final InMessage message) {
-        Optional<Attachment> optAttachment = message.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
+        Attachment attachment = message.getContent().getAttachment().orElse(null);
+        if (attachment == null) {
             LOGGER.warning("no attachment in message to download");
             return;
         }
-        Attachment attachment = optAttachment.get();
 
-        HTTPFileClient client = createClientOrNull();
+        HTTPFileClient client = this.clientOrNull();
         if (client == null)
             return;
 
@@ -210,7 +262,7 @@ public class AttachmentManager implements Runnable {
             path = client.download(attachment.getURL(), mAttachmentDir, listener);
         } catch (KonException ex) {
             LOGGER.warning("download failed, URL="+attachment.getURL());
-            mControl.handleException(ex);
+            mControl.onException(ex);
             return;
         }
 
@@ -225,52 +277,55 @@ public class AttachmentManager implements Runnable {
 
         // decrypt file
         if (attachment.getCoderStatus().isEncrypted()) {
-            Coder.decryptAttachment(message, mAttachmentDir);
+            mControl.myKey().ifPresent(mk ->
+                    Coder.decryptAttachment(mk, message, mAttachmentDir));
         }
 
         // create preview if not in message
         if (!message.getContent().getPreview().isPresent())
-            this.createImagePreview(message);
+            this.mayCreateImagePreview(message);
     }
 
-    public void savePreview(InMessage message) {
-        Optional<Preview> optPreview = message.getContent().getPreview();
-        if (!optPreview.isPresent()) {
+    void savePreview(InMessage message) {
+        Preview preview = message.getContent().getPreview().orElse(null);
+        if (preview == null) {
             LOGGER.warning("no preview in message: "+message);
             return;
         }
-        Preview preview = optPreview.get();
         String id = Integer.toString(message.getID());
-        String dotExt = MediaUtils.extensionForMIME(preview.getMimeType());
-        String filename = id + "_bob" + dotExt;
+        String ext = MediaUtils.extensionForMIME(preview.getMimeType());
+        String filename = id + "_bob." + ext;
         this.writePreview(preview, filename);
 
         message.setPreviewFilename(filename);
     }
 
-    boolean createImagePreview(KonMessage message) {
-        Optional<Attachment> optAtt = message.getContent().getAttachment();
-        if (!optAtt.isPresent()) {
+    boolean mayCreateImagePreview(KonMessage message) {
+        Attachment att = message.getContent().getAttachment().orElse(null);
+        if (att == null) {
             LOGGER.warning("no attachment in message: "+message);
             return false;
         }
-        Attachment att = optAtt.get();
-        Path path = filePath(att);
+        Path path = absoluteFilePath(att);
 
-        if (!isImage(att.getMimeType()))
+        String mime = StringUtils.defaultIfEmpty(att.getMimeType(),
+                // guess from file
+                MediaUtils.mimeForFile(path));
+
+        if (!isImage(mime))
             return false;
 
-        BufferedImage image = MediaUtils.readImage(path.toString());
+        BufferedImage image = MediaUtils.readImage(path);
         if (image.getWidth() <= THUMBNAIL_DIM.width
                 && image.getHeight() <= THUMBNAIL_DIM.height)
             return false;
 
-        Image thumb = MediaUtils.scale(image,
+        Image thumb = MediaUtils.scaleAsync(image,
                 THUMBNAIL_DIM.width ,
                 THUMBNAIL_DIM.height,
                 false);
 
-        String format = MediaUtils.extensionForMIME(THUMBNAIL_MIME).substring(1);
+        String format = MediaUtils.extensionForMIME(THUMBNAIL_MIME);
 
         byte[] bytes = MediaUtils.imageToByteArray(thumb, format);
         if (bytes.length <= 0)
@@ -288,19 +343,18 @@ public class AttachmentManager implements Runnable {
         return true;
     }
 
-    Path filePath(Attachment attachment) {
-        Path path = attachment.getFile();
-        if (path.toString().isEmpty())
-            return Paths.get("");
-        return path.isAbsolute() ? path : mAttachmentDir.resolve(path);
+    Path absoluteFilePath(Attachment attachment) {
+        Path path = attachment.getFilePath();
+        return path.toString().isEmpty() || path.isAbsolute() ?
+                path :
+                mAttachmentDir.resolve(path);
     }
 
     Optional<Path> imagePreviewPath(KonMessage message) {
-        Optional<MessageContent.Preview> optPreview = message.getContent().getPreview();
-        if (!optPreview.isPresent())
+        MessageContent.Preview preview = message.getContent().getPreview().orElse(null);
+        if (preview == null)
             return Optional.empty();
 
-        MessageContent.Preview preview = optPreview.get();
         String fn = preview.getFilename();
         if (fn.isEmpty() || !isImage(preview.getMimeType()))
             return Optional.empty();
@@ -317,7 +371,17 @@ public class AttachmentManager implements Runnable {
             return;
         }
 
-        LOGGER.info("to file: "+newFile);
+        LOGGER.config("to file: "+newFile);
+    }
+
+    private HTTPFileClient clientOrNull(){
+        PersonalKey key = mControl.myKey().orElse(null);
+        if (key == null)
+            return null;
+
+        return new HTTPFileClient(key.getServerLoginKey(),
+                key.getBridgeCertificate(),
+                Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
     }
 
     @Override
@@ -339,52 +403,25 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    public static boolean isImage(String mimeType) {
-        return mimeType.startsWith("image");
-    }
-
-    static AttachmentManager create(Path baseDir, Control control) {
-        AttachmentManager downloader = new AttachmentManager(baseDir, control);
-
-        new Thread(downloader).start();
-
-        return downloader;
-    }
-
     /**
      * Create a new attachment for a given file denoted by its path.
      */
-    static Attachment attachmentOrNull(Path path) {
-        File file = path.toFile();
-        if (!file.isFile() || !file.canRead()) {
-            LOGGER.warning("invalid attachment file: "+path);
+    static Attachment createAttachmentOrNull(Path path) {
+        if (!Files.isReadable(path)) {
+            LOGGER.warning("file not readable: "+path);
             return null;
         }
-        String mimeType;
-        try {
-            mimeType = Files.probeContentType(path);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't get attachment mime type", ex);
+
+        String mimeType = MediaUtils.mimeForFile(path);
+        if (mimeType.isEmpty()) {
+            LOGGER.warning("no mime type for file: "+path);
             return null;
         }
-        long length = file.length();
-        if (length <= 0) {
-            LOGGER.warning("invalid attachment file size: "+length);
-            return null;
-        }
-        return new Attachment(path, mimeType, length);
+
+        return Attachment.outgoing(path, mimeType);
     }
 
-    private static HTTPFileClient createClientOrNull(){
-        Optional<PersonalKey> optKey = AccountLoader.getInstance().getPersonalKey();
-        if (!optKey.isPresent()) {
-            LOGGER.log(Level.WARNING, "personal key not loaded");
-            return null;
-        }
-        PersonalKey key = optKey.get();
-
-        return new HTTPFileClient(key.getServerLoginKey(),
-                key.getBridgeCertificate(),
-                Config.getInstance().getBoolean(Config.SERV_CERT_VALIDATION));
+    private static boolean isImage(String mimeType) {
+        return mimeType.startsWith("image");
     }
 }

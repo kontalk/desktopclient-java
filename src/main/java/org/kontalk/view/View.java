@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -33,22 +33,25 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.FutureTask;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
-import org.kontalk.system.Config;
+import java.awt.Dimension;
+import java.util.EnumSet;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import org.kontalk.client.FeatureDiscovery;
+import org.kontalk.persistence.Config;
 import org.kontalk.misc.ViewEvent;
-import org.kontalk.model.Chat;
-import org.kontalk.model.ChatList;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
-import org.kontalk.model.ContactList;
+import org.kontalk.model.Model;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 
 /**
@@ -59,12 +62,20 @@ import org.kontalk.util.Tr;
 public final class View implements Observer {
     private static final Logger LOGGER = Logger.getLogger(View.class.getName());
 
+    static final int LISTS_WIDTH = 270;
+
     static final int GAP_DEFAULT = 10;
     static final int GAP_BIG = 15;
     static final int GAP_SMALL = 5;
     static final int MARGIN_DEFAULT = 10;
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
+
+    static final int FONT_SIZE_TINY = 11;
+    static final int FONT_SIZE_SMALL = 12;
+    static final int FONT_SIZE_NORMAL = 13;
+    static final int FONT_SIZE_BIG = 14;
+    static final int FONT_SIZE_HUGE = 16;
 
     static final int MAX_SUBJ_LENGTH = 30;
     static final int MAX_NAME_LENGTH = 60;
@@ -77,11 +88,12 @@ public final class View implements Observer {
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
 
-    static final String REMOVE_CONTACT_NOTE = Tr.tr("Chats and messages will not be deleted.");
+    static final Dimension AVATAR_LIST_DIM = new Dimension(30, 30);
 
     private final ViewControl mControl;
-    private final TrayManager mTrayManager;
+    private final Model mModel;
 
+    private final TrayManager mTrayManager;
     private final Notifier mNotifier;
 
     private final SearchPanel mSearchPanel;
@@ -92,51 +104,71 @@ public final class View implements Observer {
     private final WebStatusLabel mStatusBarLabel;
     private final MainFrame mMainFrame;
 
-    private View(ViewControl control) {
+    final String tr_remove_contact = Tr.tr("Chats and messages will not be deleted.");
+    final String tr_not_supported = Tr.tr("Not supported by server");
+
+    private Control.Status mCurrentStatus;
+    private EnumSet<FeatureDiscovery.Feature> mServerFeatures;
+
+    private View(ViewControl control, Model model) {
         mControl = control;
+        mModel = model;
 
         WebLookAndFeel.install();
-
         ToolTipManager.sharedInstance().setInitialDelay(200);
-
-        mContactListView = new ContactListView(this, ContactList.getInstance());
-        ContactList.getInstance().addObserver(mContactListView);
-        mChatListView = new ChatListView(this, ChatList.getInstance());
-        ChatList.getInstance().addObserver(mChatListView);
 
         // chat view
         mChatView = new ChatView(this);
-        ChatList.getInstance().addObserver(mChatView);
-
         // content area
         mContent = new Content(this, mChatView);
 
+        mContactListView = new ContactListView(this, mModel);
+        mChatListView = new ChatListView(this, mModel.chats());
+
         // search panel
         mSearchPanel = new SearchPanel(
-                new Table[]{mContactListView, mChatListView},
+                new ListView[]{mContactListView, mChatListView},
                 mChatView);
-
         // status bar
         WebStatusBar statusBar = new WebStatusBar();
         mStatusBarLabel = new WebStatusLabel(" ");
         statusBar.add(mStatusBarLabel);
-
         // main frame
-        mMainFrame = new MainFrame(this, mContactListView, mChatListView,
+        mMainFrame = new MainFrame(this, mModel, mContactListView, mChatListView,
                 mContent, mSearchPanel, statusBar);
-        mMainFrame.setVisible(true);
-
         // tray
-        mTrayManager = new TrayManager(this, mMainFrame);
-        ChatList.getInstance().addObserver(mTrayManager);
-
-        // hotkeys
-        this.setHotkeys();
-
+        mTrayManager = new TrayManager(this, mModel, mMainFrame);
         // notifier
         mNotifier = new Notifier(this);
 
-        this.statusChanged();
+        // register observer
+        mModel.contacts().addObserver(mContactListView);
+        mModel.chats().addObserver(mChatListView);
+        mModel.chats().addObserver(mChatView);
+        mModel.chats().addObserver(mTrayManager);
+
+        this.setHotkeys();
+
+        this.statusChanged(Control.Status.DISCONNECTED, EnumSet.noneOf(FeatureDiscovery.Feature.class));
+
+        mMainFrame.setVisible(true);
+    }
+
+    public static Optional<View> create(ViewControl control, Model model) {
+        View view;
+        try {
+            view = invokeAndWait(new Callable<View>() {
+                @Override
+                public View call() throws Exception {
+                    return new View(control, model);
+                }
+            });
+        } catch (ExecutionException | InterruptedException ex) {
+            LOGGER.log(Level.WARNING, "can't start view", ex);
+            return Optional.empty();
+        }
+        control.addObserver(view);
+        return Optional.of(view);
     }
 
     void setHotkeys() {
@@ -153,18 +185,22 @@ public final class View implements Observer {
             public void run() {
                 View.this.mChatListView.selectLastChat();
 
-                if (ChatList.getInstance().isEmpty())
+                if (mModel.chats().isEmpty())
                     mMainFrame.selectTab(MainFrame.Tab.CONTACT);
             }
         });
     }
 
-    Control.Status getCurrentStatus() {
-        return mControl.getCurrentStatus();
+    Control.Status currentStatus() {
+        return mCurrentStatus;
+    }
+
+    EnumSet<FeatureDiscovery.Feature> serverFeatures() {
+        return mServerFeatures;
     }
 
     void showConfig() {
-        JDialog configFrame = new ConfigurationDialog(mMainFrame, this);
+        JDialog configFrame = new ConfigurationDialog(mMainFrame, this, mModel);
         configFrame.setVisible(true);
     }
 
@@ -185,47 +221,52 @@ public final class View implements Observer {
     }
 
     private void updateOnEDT(Object arg) {
-       if (arg instanceof ViewEvent.StatusChanged) {
-           this.statusChanged();
-       } else if (arg instanceof ViewEvent.PasswordSet) {
-           this.showPasswordDialog(false);
-       } else if (arg instanceof ViewEvent.MissingAccount) {
-           ViewEvent.MissingAccount missAccount = (ViewEvent.MissingAccount) arg;
-           this.showImportWizard(missAccount.connect);
-       } else if (arg instanceof ViewEvent.Exception) {
-           ViewEvent.Exception exception = (ViewEvent.Exception) arg;
-           mNotifier.showException(exception.exception);
-       } else if (arg instanceof ViewEvent.SecurityError) {
-           ViewEvent.SecurityError error = (ViewEvent.SecurityError) arg;
-           mNotifier.showSecurityErrors(error.message);
-       } else if (arg instanceof ViewEvent.NewMessage) {
-           ViewEvent.NewMessage newMessage = (ViewEvent.NewMessage) arg;
-           mNotifier.onNewMessage(newMessage.message);
-       } else if (arg instanceof ViewEvent.NewKey) {
-           ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
-           if (!newKey.contact.hasKey())
-               // TODO webkey, disabling for now
-               return;
-           mNotifier.confirmNewKey(newKey.contact, newKey.key);
-       } else if (arg instanceof ViewEvent.ContactDeleted) {
-           ViewEvent.ContactDeleted contactDeleted = (ViewEvent.ContactDeleted) arg;
-           mNotifier.confirmContactDeletion(contactDeleted.contact);
-       } else if (arg instanceof ViewEvent.PresenceError) {
-           ViewEvent.PresenceError presenceError = (ViewEvent.PresenceError) arg;
-           mNotifier.showPresenceError(presenceError.contact, presenceError.error);
-       } else {
-           LOGGER.warning("unexpected argument");
-       }
+        if (arg instanceof ViewEvent.StatusChange) {
+            ViewEvent.StatusChange statChange = (ViewEvent.StatusChange) arg;
+            this.statusChanged(statChange.status, statChange.features);
+        } else if (arg instanceof ViewEvent.PasswordSet) {
+            this.showPasswordDialog(false);
+        } else if (arg instanceof ViewEvent.MissingAccount) {
+            ViewEvent.MissingAccount missAccount = (ViewEvent.MissingAccount) arg;
+            this.showImportWizard(missAccount.connect);
+        } else if (arg instanceof ViewEvent.Exception) {
+            ViewEvent.Exception exception = (ViewEvent.Exception) arg;
+            mNotifier.showException(exception.exception);
+        } else if (arg instanceof ViewEvent.SecurityError) {
+            ViewEvent.SecurityError error = (ViewEvent.SecurityError) arg;
+            mNotifier.showSecurityErrors(error.message);
+        } else if (arg instanceof ViewEvent.NewMessage) {
+            ViewEvent.NewMessage newMessage = (ViewEvent.NewMessage) arg;
+            mNotifier.onNewMessage(newMessage.message);
+        } else if (arg instanceof ViewEvent.NewKey) {
+            ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
+            if (!newKey.contact.hasKey())
+                // TODO webkey, disabling for now
+                return;
+            mNotifier.confirmNewKey(newKey.contact, newKey.key);
+        } else if (arg instanceof ViewEvent.ContactDeleted) {
+            ViewEvent.ContactDeleted contactDeleted = (ViewEvent.ContactDeleted) arg;
+            mNotifier.confirmContactDeletion(contactDeleted.contact);
+        } else if (arg instanceof ViewEvent.PresenceError) {
+            ViewEvent.PresenceError presenceError = (ViewEvent.PresenceError) arg;
+            mNotifier.showPresenceError(presenceError.contact, presenceError.error);
+        } else if (arg instanceof ViewEvent.SubscriptionRequest) {
+            mNotifier.confirmSubscription((ViewEvent.SubscriptionRequest) arg);
+        } else {
+            LOGGER.warning("unexpected argument: "+arg);
+        }
     }
 
-    private void statusChanged() {
-        Control.Status status = mControl.getCurrentStatus();
+    private void statusChanged(Control.Status status, EnumSet<FeatureDiscovery.Feature> features) {
+        mCurrentStatus = status;
+        mServerFeatures = features;
+
+        mChatView.onStatusChange(status, features);
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Connecting…"));
                 break;
             case CONNECTED:
-                mChatView.setColor(Color.WHITE);
                 mStatusBarLabel.setText(Tr.tr("Connected"));
                 NotificationManager.hideAllNotifications();
                 break;
@@ -233,7 +274,6 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Disconnecting…"));
                 break;
             case DISCONNECTED:
-                mChatView.setColor(Color.LIGHT_GRAY);
                 mStatusBarLabel.setText(Tr.tr("Not connected"));
                 //if (mTrayIcon != null)
                 //    trayIcon.setImage(updatedImage);
@@ -249,7 +289,6 @@ public final class View implements Observer {
                 mStatusBarLabel.setText(Tr.tr("Connecting failed"));
                 break;
             case ERROR:
-                mChatView.setColor(Color.lightGray);
                 mStatusBarLabel.setText(Tr.tr("Connection error"));
                 break;
             }
@@ -308,19 +347,16 @@ public final class View implements Observer {
     /* view internal */
 
     void showChat(Contact contact) {
-        this.selectChat(mControl.getOrCreateSingleChat(contact));
+        this.showChat(mControl.getOrCreateSingleChat(contact));
     }
 
-    private void selectChat(Chat chat) {
+    void showChat(Chat chat) {
+        // show by selecting it
         mMainFrame.selectTab(MainFrame.Tab.CHATS);
         mChatListView.setSelectedItem(chat);
     }
 
-    void showContactDetails(Contact contact) {
-        mContent.showContact(contact);
-    }
-
-    void showChat(Chat chat) {
+    void selectedChatChanged(Chat chat) {
         if (mMainFrame.getCurrentTab() != MainFrame.Tab.CHATS)
             return;
         mContent.showChat(chat);
@@ -330,21 +366,38 @@ public final class View implements Observer {
         mContent.showNothing();
     }
 
+    void showContactDetails(Contact contact) {
+        if (contact.isDeleted())
+            return;
+
+        mMainFrame.selectTab(MainFrame.Tab.CONTACT);
+        mContactListView.setSelectedItem(contact);
+        mContent.showContact(contact);
+    }
+
+    void requestRenameFocus(Contact contact) {
+        if (contact.isDeleted())
+            return;
+
+        this.showContactDetails(contact);
+        mContent.requestRenameFocus();
+    }
+
     void clearSearch() {
         mSearchPanel.clear();
     }
 
     void tabPaneChanged(MainFrame.Tab tab) {
         if (tab == MainFrame.Tab.CHATS) {
-            Optional<Chat> optChat = mChatListView.getSelectedValue();
-            if (optChat.isPresent()) {
-                mContent.showChat(optChat.get());
+            Chat chat = mChatListView.getSelectedValue().orElse(null);
+            if (chat != null) {
+                mContent.showChat(chat);
                 return;
             }
         } else {
-            Optional<Contact> optContact = mContactListView.getSelectedValue();
-            if (optContact.isPresent()) {
-                mContent.showContact(optContact.get());
+            Contact contact = mContactListView.getSelectedValue().orElse(null);
+            if (contact != null) {
+                mContent.showContact(contact);
                 return;
             }
         }
@@ -363,37 +416,22 @@ public final class View implements Observer {
         mChatView.loadDefaultBG();
     }
 
+    void updateContactList() {
+        mContactListView.updateOnEDT(null);
+    }
+
     void updateTray() {
         mTrayManager.setTray();
     }
 
     /* static */
 
-    public static Optional<View> create(final ViewControl control) {
-        Optional<View> optView = invokeAndWait(new Callable<View>() {
-            @Override
-            public View call() throws Exception {
-                return new View(control);
-            }
-        });
-        if(!optView.isPresent()) {
-            LOGGER.log(Level.SEVERE, "can't start view");
-            return optView;
-        }
-        control.addObserver(optView.get());
-        return optView;
-    }
-
-    private static <T> Optional<T> invokeAndWait(Callable<T> callable) {
-        try {
-            FutureTask<T> task = new FutureTask<>(callable);
-            SwingUtilities.invokeLater(task);
-            // blocking
-            return Optional.of(task.get());
-        } catch (ExecutionException | InterruptedException ex) {
-            LOGGER.log(Level.WARNING, "can't execute task", ex);
-        }
-        return Optional.empty();
+    private static <T> T invokeAndWait(Callable<T> callable)
+            throws InterruptedException, ExecutionException {
+        FutureTask<T> task = new FutureTask<>(callable);
+        SwingUtilities.invokeLater(task);
+        // blocking
+        return task.get();
     }
 
     public static void showWrongJavaVersionDialog() {
@@ -401,7 +439,7 @@ public final class View implements Observer {
         if (jVersion.length() >= 3)
             jVersion = jVersion.substring(2, 3);
         String errorText = Tr.tr("The installed Java version is too old")+": " + jVersion;
-        errorText += System.getProperty("line.separator");
+        errorText += EncodingUtils.EOL;
         errorText += Tr.tr("Please install Java 8.");
         WebOptionPane.showMessageDialog(null,
                 errorText,

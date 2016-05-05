@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,11 +18,8 @@
 
 package org.kontalk.client;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Date;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.lang.StringUtils;
@@ -35,18 +32,18 @@ import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.delay.packet.DelayInformation;
+import org.jivesoftware.smackx.pubsub.EventElement;
+import org.jivesoftware.smackx.pubsub.EventElementType;
+import org.jivesoftware.smackx.pubsub.ItemsExtension;
+import org.jivesoftware.smackx.pubsub.NodeExtension;
+import org.jivesoftware.smackx.pubsub.packet.PubSubNamespace;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.kontalk.misc.JID;
-import org.kontalk.model.GroupChat.GID;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.model.MessageContent.GroupCommand;
-import org.kontalk.model.MessageContent.Preview;
+import org.kontalk.model.message.MessageContent;
 import org.kontalk.system.Control;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.ClientUtils.MessageIDs;
-import org.kontalk.util.EncodingUtils;
 
 /**
  * Listen and handle all incoming XMPP message packets.
@@ -57,24 +54,28 @@ final public class KonMessageListener implements StanzaListener {
 
     private final Client mClient;
     private final Control mControl;
+    private final AvatarSendReceiver mAvatarHandler;
 
-    KonMessageListener(Client client, Control control) {
-        mClient = client;
-        mControl = control;
-
+    static {
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
         ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
         ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
         ProviderManager.addExtensionProvider(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE, new GroupExtension.Provider());
     }
 
+    KonMessageListener(Client client, Control control, AvatarSendReceiver avatarHandler) {
+        mClient = client;
+        mControl = control;
+        mAvatarHandler = avatarHandler;
+    }
+
     @Override
     public void processPacket(Stanza packet) {
         Message m = (Message) packet;
 
+        Message.Type type = m.getType();
         // check for delivery receipt (XEP-0184)
-        if (m.getType() == Message.Type.normal ||
-                m.getType() == Message.Type.chat) {
+        if (type == Message.Type.normal || type == Message.Type.chat) {
             DeliveryReceipt receipt = DeliveryReceipt.from(m);
             if (receipt != null) {
                 // HOORAY! our message was received
@@ -83,13 +84,13 @@ final public class KonMessageListener implements StanzaListener {
             }
         }
 
-        if (m.getType() == Message.Type.chat) {
+        if (type == Message.Type.chat) {
             // somebody has news for us
             this.processChatMessage(m);
             return;
         }
 
-        if (m.getType() == Message.Type.error) {
+        if (type == Message.Type.error) {
             LOGGER.warning("got error message: "+m);
 
             XMPPError error = m.getError();
@@ -98,7 +99,12 @@ final public class KonMessageListener implements StanzaListener {
                 return;
             }
             String text = StringUtils.defaultString(error.getDescriptiveText());
-            mControl.setMessageError(MessageIDs.from(m), error.getCondition(), text);
+            mControl.onMessageError(MessageIDs.from(m), error.getCondition(), text);
+            return;
+        }
+
+        if (type == Message.Type.headline) {
+            this.processHeadlineMessage(m);
             return;
         }
 
@@ -111,7 +117,7 @@ final public class KonMessageListener implements StanzaListener {
         if (receiptID == null || receiptID.isEmpty()) {
             LOGGER.warning("message has invalid receipt ID: "+receiptID);
         } else {
-            mControl.setReceived(MessageIDs.from(m, receiptID));
+            mControl.onMessageReceived(MessageIDs.from(m, receiptID));
         }
         // we ignore anything else that might be in this message
     }
@@ -120,8 +126,6 @@ final public class KonMessageListener implements StanzaListener {
         LOGGER.config("message: "+m);
         // note: thread and subject are null if message comes from the Kontalk
         // Android client
-
-        String threadID = m.getThread() != null ? m.getThread() : "";
 
         // TODO a message can contain all sorts of extensions, we should loop
         // over all of them
@@ -143,13 +147,14 @@ final public class KonMessageListener implements StanzaListener {
                 optServerDate = Optional.of(date);
         }
 
+        MessageIDs ids = MessageIDs.from(m);
+
         // process possible chat state notification (XEP-0085)
         ExtensionElement csExt = m.getExtension(ChatStateExtension.NAMESPACE);
         ChatState chatState = null;
         if (csExt != null) {
             chatState = ((ChatStateExtension) csExt).getChatState();
-            mControl.processChatState(JID.bare(m.getFrom()),
-                    threadID,
+            mControl.onChatStateNotification(ids,
                     optServerDate,
                     chatState);
         }
@@ -157,7 +162,7 @@ final public class KonMessageListener implements StanzaListener {
         // must be an incoming message
 
         // get content/text from body and/or encryption/url extension
-        MessageContent content = parseMessageContent(m);
+        MessageContent content = ClientUtils.parseMessageContent(m);
 
         // make sure not to save a message without content
         if (content.isEmpty()) {
@@ -169,83 +174,39 @@ final public class KonMessageListener implements StanzaListener {
             return;
         }
 
-        MessageIDs ids = MessageIDs.from(m);
-
         // add message
-        boolean success = mControl.newInMessage(ids, optServerDate, content);
+        mControl.onNewInMessage(ids, optServerDate, content);
 
-        // on success, send a 'received' for a request (XEP-0184)
+        // send a 'received' for a receipt request (XEP-0184)
         DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);
-        if (request != null && success && !ids.xmppID.isEmpty()) {
+        if (request != null && !ids.xmppID.isEmpty()) {
             Message received = new Message(m.getFrom(), Message.Type.chat);
             received.addExtension(new DeliveryReceipt(ids.xmppID));
             mClient.sendPacket(received);
         }
     }
 
-    public static MessageContent parseMessageContent(Message m) {
-        // default body
-        String plainText = StringUtils.defaultString(m.getBody());
+    private void processHeadlineMessage(Message m) {
+        LOGGER.config("message: "+m);
 
-        // encryption extension (RFC 3923), decrypted later
-        String encrypted = "";
-        ExtensionElement encryptionExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
-        if (encryptionExt instanceof E2EEncryption) {
-            if (m.getBody() != null)
-                LOGGER.config("message contains encryption and body (ignoring body): "+m.getBody());
-            E2EEncryption encryption = (E2EEncryption) encryptionExt;
-            encrypted = EncodingUtils.bytesToBase64(encryption.getData());
-        }
+        // this should be a pubsub event
+        PubSubNamespace ns = PubSubNamespace.EVENT;
+        ExtensionElement eventExt = m.getExtension(ns.getFragment(), ns.getXmlns());
+        if (eventExt instanceof EventElement){
+            EventElement event = (EventElement) eventExt;
 
-        // Bits of Binary: preview for file attachment
-        Preview preview = null;
-        ExtensionElement bobExt = m.getExtension(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE);
-        if (bobExt instanceof BitsOfBinary) {
-            BitsOfBinary bob = (BitsOfBinary) bobExt;
-            String mime = StringUtils.defaultString(bob.getType());
-            byte[] bits = bob.getContents();
-            if (bits == null)
-                bits = new byte[0];
-            if (mime.isEmpty() || bits.length <= 0)
-                LOGGER.warning("invalid BOB data: "+bob.toXML());
-            else
-                preview = new Preview(bits, mime);
-        }
-
-        // Out of Band Data: a URI to a file
-        Attachment attachment = null;
-        ExtensionElement oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
-        if (oobExt instanceof OutOfBandData) {
-            OutOfBandData oobData = (OutOfBandData) oobExt;
-            URI url;
-            try {
-                url = new URI(oobData.getUrl());
-            } catch (URISyntaxException ex) {
-                LOGGER.log(Level.WARNING, "can't parse URL", ex);
-                url = URI.create("");
+            if (event.getEventType() == EventElementType.items) {
+                NodeExtension extension = event.getEvent();
+                if (extension instanceof ItemsExtension) {
+                    ItemsExtension items = (ItemsExtension) extension;
+                    if (items.getNode().equals(AvatarSendReceiver.METADATA_NODE)) {
+                        mAvatarHandler.processMetadataEvent(JID.full(m.getFrom()), items);
+                        return;
+                    }
+                }
             }
-            attachment = new MessageContent.Attachment(url,
-                    oobData.getMime() != null ? oobData.getMime() : "",
-                    oobData.getLength(),
-                    oobData.isEncrypted());
         }
 
-        // group command
-        GID gid = null;
-        GroupCommand groupCommand = null;
-        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME,
-                GroupExtension.NAMESPACE);
-        if (groupExt instanceof GroupExtension) {
-            GroupExtension group = (GroupExtension) groupExt;
-            gid = new GID(JID.bare(group.getOwner()), group.getID());
-            groupCommand = ClientUtils.groupExtensionToGroupCommand(
-                    group.getCommand(), group.getMember(), group.getSubject()).orElse(null);
-        }
-
-        return new MessageContent.Builder(plainText, encrypted)
-                .attachment(attachment)
-                .preview(preview)
-                .gid(gid)
-                .groupCommand(groupCommand).build();
+        LOGGER.warning("unhandled");
     }
 }

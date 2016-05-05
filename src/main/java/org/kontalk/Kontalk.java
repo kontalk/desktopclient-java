@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,29 +18,31 @@
 
 package org.kontalk;
 
-import org.kontalk.misc.KonException;
-import org.kontalk.system.Database;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
 import org.apache.commons.lang.SystemUtils;
 import org.kontalk.crypto.PGPUtils;
-import org.kontalk.model.ChatList;
-import org.kontalk.model.ContactList;
-import org.kontalk.system.AccountLoader;
-import org.kontalk.system.Config;
+import org.kontalk.misc.KonException;
 import org.kontalk.system.Control;
-import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.CryptoUtils;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.kontalk.view.View;
 
@@ -50,10 +52,10 @@ import org.kontalk.view.View;
 public final class Kontalk {
     private static final Logger LOGGER = Logger.getLogger(Kontalk.class.getName());
 
-    public static final String VERSION = "3.0.4";
-    private final Path mAppDir;
+    public static final String VERSION = "3.1";
 
-    private static ServerSocket RUN_LOCK = null;
+    private final Path mAppDir;
+    private ServerSocket mRunLock = null;
 
     Kontalk() {
         // platform dependent configuration directory
@@ -62,17 +64,18 @@ public final class Kontalk {
     }
 
     Kontalk(Path appDir) {
-        mAppDir = appDir;
+        mAppDir = appDir.toAbsolutePath();
     }
 
-    private void start() {
+    int start(boolean ui) {
         // check if already running
+        int port = (1 << 14) + (1 << 15) + mAppDir.hashCode() % (1 << 14);
         try {
             InetAddress addr = InetAddress.getByAddress(new byte[] {127, 0, 0, 1});
-            RUN_LOCK = new ServerSocket(9871, 10, addr);
+            mRunLock = new ServerSocket(port, 10, addr);
         } catch(java.net.BindException ex) {
             LOGGER.severe("already running");
-            System.exit(2);
+            return 2;
         } catch(IOException ex) {
             LOGGER.log(Level.WARNING, "can't create socket", ex);
         }
@@ -83,15 +86,22 @@ public final class Kontalk {
         // check java version
         String jVersion = System.getProperty("java.version");
         if (jVersion.startsWith("1.7")) {
+            // NOTE: we wont be here if 7 is used; still here for the bright
+            // future
             View.showWrongJavaVersionDialog();
             LOGGER.severe("java too old: "+jVersion);
-            System.exit(-3);
+            return 3;
         }
 
         // create app directory
         boolean created = mAppDir.toFile().mkdirs();
         if (created)
-            LOGGER.info("created application directory");
+            LOGGER.info("created application directory: "+mAppDir);
+
+        if (!Files.isWritable(mAppDir)) {
+            LOGGER.severe("invalid app directory: "+mAppDir);
+            return 4;
+        }
 
         // logging
         Logger logger = Logger.getLogger("");
@@ -118,53 +128,45 @@ public final class Kontalk {
         // fix crypto restriction
         CryptoUtils.removeCryptographyRestrictions();
 
-        // register provider
+        // register security provider
         PGPUtils.registerProvider();
 
-
-        Config.initialize(mAppDir.resolve(Config.FILENAME));
-        AccountLoader.initialize(mAppDir);
-
-        ViewControl control = Control.create(mAppDir);
-
-        Optional<View> optView = View.create(control);
-        if (!optView.isPresent()) {
-            control.shutDown();
-            return; // never reached
-        }
-        View view = optView.get();
-
+        Control control;
         try {
-            Database.initialize(mAppDir.resolve(Database.FILENAME));
+            control = new Control(mAppDir);
         } catch (KonException ex) {
-            LOGGER.log(Level.SEVERE, "can't initialize database", ex);
-            control.shutDown();
-            return; // never reached
+            LOGGER.log(Level.SEVERE, "can't create application", ex);
+            return 5;
         }
 
-        // order matters!
-        ContactList.getInstance().load();
-        ChatList.getInstance().load();
-
-        view.init();
-
-        control.launch();
-    }
-
-    public Path getAppDir() {
-        return mAppDir;
-    }
-
-    public static void exit() {
-        if (RUN_LOCK != null) {
-            try {
-                RUN_LOCK.close();
-            } catch (IOException ex) {
-                LOGGER.log(Level.WARNING, "can't close run socket", ex);
+        // handle shutdown signals/System.exit() calls
+        Runtime.getRuntime().addShutdownHook(new Thread("Shutdown Hook") {
+            @Override
+            public void run() {
+                // NOTE: logging does not work here anymore
+                control.shutDown(false);
+                Kontalk.this.removeLock();
+                System.out.println("Kontalk: shutdown finished");
             }
+        });
+
+        control.launch(ui);
+
+        return 0;
+    }
+
+    private boolean removeLock() {
+        if (mRunLock == null) {
+            LOGGER.warning("no lock");
+            return false;
         }
-        LOGGER.info("exit");
-        System.exit(0);
+        try {
+            mRunLock.close();
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't close run socket", ex);
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -173,7 +175,65 @@ public final class Kontalk {
     public static void main(String[] args) {
         LOGGER.setLevel(Level.ALL);
 
-        Kontalk app = new Kontalk();
-        app.start();
+        // parse args, i18n?
+        Options options = new Options();
+        options.addOption("h", "help", false, "show this help message");
+        options.addOption(Option.builder("d")
+                .argName("app_dir")
+                .hasArg()
+                .longOpt("app-dir")
+                .desc("set custom configuration directory")
+                .build()
+        );
+        options.addOption("c", "no-gui", false, "run without user interface");
+
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd;
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            showHelp(options);
+            return;
+        }
+        if (cmd.hasOption("h")) {
+            showHelp(options);
+            return;
+        }
+
+        String appDir = cmd.getOptionValue("d", "");
+
+        Kontalk app = !appDir.isEmpty() ?
+                new Kontalk(Paths.get(appDir)) :
+                new Kontalk();
+
+        int returnCode = app.start(!cmd.hasOption("c"));
+        if (returnCode != 0)
+            // didn't work
+            System.exit(returnCode);
+
+        new Thread("Kontalk Main") {
+            @Override
+            public void run() {
+                try {
+                    // wait until exit call
+                    Object lock = new Object();
+                    synchronized (lock) {
+                        lock.wait();
+                    }
+                } catch (InterruptedException ex) {
+                    LOGGER.log(Level.WARNING, "interrupted while waiting", ex);
+                }
+            }
+        }.start();
+    }
+
+    private static void showHelp(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        String eol = EncodingUtils.EOL;
+        formatter.printHelp("java -jar [kontalk_jar]",
+                eol + "Kontalk Java Desktop Client" + eol,
+                options,
+                "",
+                true);
     }
 }

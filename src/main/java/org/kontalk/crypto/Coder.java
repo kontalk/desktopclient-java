@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -22,14 +22,12 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Optional;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.Contact;
-import org.kontalk.model.OutMessage;
-import org.kontalk.model.DecryptMessage;
-import org.kontalk.model.InMessage;
-import org.kontalk.system.AccountLoader;
+import org.kontalk.model.message.OutMessage;
+import org.kontalk.model.message.DecryptMessage;
+import org.kontalk.model.message.InMessage;
 
 /**
  * Static methods for decryption and encryption of a message.
@@ -61,7 +59,7 @@ public final class Coder {
     public static enum Error {
         /** Some unknown error. */
         UNKNOWN_ERROR,
-        /** Own personal key not found. */
+        /** Own personal key not found. Unused. */
         MY_KEY_UNAVAILABLE,
         /** Public key of sender not found. */
         KEY_UNAVAILABLE,
@@ -88,15 +86,6 @@ public final class Coder {
 
     private static final HashMap<Contact, PGPCoderKey> KEY_MAP = new HashMap<>();
 
-    static PersonalKey myKeyOrNull() {
-        Optional<PersonalKey> optMyKey = AccountLoader.getInstance().getPersonalKey();
-        if (!optMyKey.isPresent()) {
-            LOGGER.log(Level.WARNING, "can't get personal key");
-            return null;
-        }
-        return optMyKey.get();
-    }
-
     public static Optional<PGPCoderKey> contactkey(Contact contact) {
         if (KEY_MAP.containsKey(contact)) {
             PGPCoderKey key = KEY_MAP.get(contact);
@@ -106,10 +95,10 @@ public final class Coder {
 
         byte[] rawKey = contact.getKey();
         if (rawKey.length != 0) {
-            Optional<PGPCoderKey> optKey = PGPUtils.readPublicKey(rawKey);
-            if (optKey.isPresent()) {
-                KEY_MAP.put(contact, optKey.get());
-                return optKey;
+            PGPCoderKey key = PGPUtils.readPublicKey(rawKey).orElse(null);
+            if (key != null) {
+                KEY_MAP.put(contact, key);
+                return Optional.of(key);
             }
         }
 
@@ -121,8 +110,8 @@ public final class Coder {
      * Decrypt and verify the body of a message. Sets the encryption and signing
      * status of the message and errors that may occur are saved to the message.
      */
-    public static boolean decryptMessage(DecryptMessage message) {
-        return new Decryptor(message).decryptMessage();
+    public static boolean decryptMessage(PersonalKey myKey, DecryptMessage message) {
+        return new Decryptor(myKey, message).decryptMessage();
     }
 
     /**
@@ -130,8 +119,8 @@ public final class Coder {
      * signing status of the message attachment and errors that may occur are
      * saved to the message.
      */
-    public static void decryptAttachment(InMessage message, Path baseDir) {
-        new Decryptor(message).decryptAttachment(baseDir);
+    public static void decryptAttachment(PersonalKey myKey, InMessage message, Path baseDir) {
+        new Decryptor(myKey, message).decryptAttachment(baseDir);
     }
 
     /**
@@ -139,15 +128,15 @@ public final class Coder {
      * Errors that may occur are saved to the message.
      * @return the encrypted and signed text.
      */
-    public static Optional<byte[]> encryptMessage(OutMessage message) {
-        return new Encryptor(message).encryptMessage();
+    public static Optional<byte[]> encryptMessage(PersonalKey myKey, OutMessage message) {
+        return new Encryptor(myKey, message).encryptMessage();
     }
 
-    public static Optional<byte[]> encryptStanza(OutMessage message, String xml) {
-        return new Encryptor(message).encryptStanza(xml);
+    public static Optional<byte[]> encryptStanza(PersonalKey myKey, OutMessage message, String xml) {
+        return new Encryptor(myKey, message).encryptStanza(xml);
     }
 
-    public static Optional<File> encryptAttachment(OutMessage message) {
-        return new Encryptor(message).encryptAttachment();
+    public static Optional<File> encryptAttachment(PersonalKey myKey, OutMessage message, File file) {
+        return new Encryptor(myKey, message).encryptAttachment(file);
     }
 }

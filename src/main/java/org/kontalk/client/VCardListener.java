@@ -24,10 +24,15 @@ final class VCardListener implements StanzaListener {
 
     private final Control mControl;
 
+    static {
+        ProviderManager.addIQProvider(
+                VCard4.ELEMENT_NAME,
+                VCard4.NAMESPACE,
+                new VCard4.Provider());
+    }
+
     VCardListener(Control control) {
         mControl = control;
-
-        ProviderManager.addIQProvider(VCard4.ELEMENT_NAME, VCard4.NAMESPACE, new VCard4.Provider());
     }
 
     @Override
@@ -48,7 +53,7 @@ final class VCardListener implements StanzaListener {
                 LOGGER.warning("got vcard without pgp key included");
                 return;
             }
-            mControl.handlePGPKey(JID.bare(p.getFrom()), publicKey);
+            mControl.onPGPKey(JID.bare(p.getFrom()), publicKey);
         }
     }
 }

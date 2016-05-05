@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -43,8 +43,8 @@ public final class AcknowledgedListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza p) {
-        // note: the packet is not the acknowledgement itself but the packet that
-        // is acknowledged
+        // NOTE: the packet is not the acknowledgement itself but the packet
+        // that is acknowledged
         if (!(p instanceof Message)) {
             // we are only interested in acks for messages
             return;
@@ -54,8 +54,8 @@ public final class AcknowledgedListener implements StanzaListener {
         LOGGER.config("for message: "+m);
 
         if (DeliveryReceipt.from(m) != null) {
-            // this is an ack for a 'received' message send by
-            // KonMessageListener (XEP-0184), nothing must be done
+            // this is an ack for a 'received' message (XEP-0184) send by
+            // KonMessageListener, ignore
             return;
         }
 
@@ -65,7 +65,6 @@ public final class AcknowledgedListener implements StanzaListener {
             return;
         }
 
-        mControl.setSent(MessageIDs.from(m));
+        mControl.onMessageSent(MessageIDs.to(m));
     }
-
 }

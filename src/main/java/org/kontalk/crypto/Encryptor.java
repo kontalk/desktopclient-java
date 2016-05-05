@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -28,13 +28,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.security.SecureRandom;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
@@ -50,9 +51,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPContentSignerBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.kontalk.model.Contact;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.OutMessage;
-import org.kontalk.model.Transmission;
+import org.kontalk.model.message.OutMessage;
 import org.kontalk.util.CPIMMessage;
 
 /**
@@ -65,11 +64,11 @@ final class Encryptor {
     // should always be a power of 2
     private static final int BUFFER_SIZE = 1 << 8;
 
+    private final PersonalKey myKey;
     private final OutMessage message;
-    private PersonalKey myKey = null;
-    private PGPUtils.PGPCoderKey[] receiverKeys = null;
 
-    Encryptor(OutMessage message) {
+    Encryptor(PersonalKey myKey, OutMessage message) {
+        this.myKey = myKey;
         this.message = message;
     }
 
@@ -88,17 +87,17 @@ final class Encryptor {
             return Optional.empty();
         }
 
-        boolean loaded = this.loadKeys();
-        if (!loaded)
+        List<PGPUtils.PGPCoderKey> receiverKeys = this.loadKeysOrNull();
+        if (receiverKeys == null)
             return Optional.empty();
 
         // secure the message against replay attacks using Message/CPIM
         String from = myKey.getUserId();
-        StringBuilder to = new StringBuilder();
-        for (PGPUtils.PGPCoderKey k : receiverKeys)
-            to.append(k.userID).append("; ");
+        String[] tos = receiverKeys.stream()
+                .map(key -> key.userID)
+                .toArray(String[]::new);
 
-        CPIMMessage cpim = new CPIMMessage(from, to.toString(), new Date(), mime, data);
+        CPIMMessage cpim = new CPIMMessage(from, tos, new Date(), mime, data);
         byte[] plainText;
         try {
             plainText = cpim.toByteArray();
@@ -121,16 +120,9 @@ final class Encryptor {
         return Optional.of(out.toByteArray());
     }
 
-    Optional<File> encryptAttachment() {
-        Optional<MessageContent.Attachment> optAttachment = message.getContent().getAttachment();
-        if (!optAttachment.isPresent()) {
-            LOGGER.warning("no attachment in out-message");
-            return Optional.empty();
-        }
-        MessageContent.Attachment attachment = optAttachment.get();
-
-        boolean loaded = this.loadKeys();
-        if (!loaded)
+    Optional<File> encryptAttachment(File file) {
+        List<PGPUtils.PGPCoderKey> receiverKeys = this.loadKeysOrNull();
+        if (receiverKeys == null)
             return Optional.empty();
 
         File tempFile;
@@ -141,7 +133,7 @@ final class Encryptor {
             return Optional.empty();
         }
 
-        try (FileInputStream in = new FileInputStream(attachment.getFile().toFile());
+        try (FileInputStream in = new FileInputStream(file);
                 FileOutputStream out = new FileOutputStream(tempFile)) {
             encryptAndSign(in, out, myKey, receiverKeys);
         } catch (IOException | PGPException ex) {
@@ -153,32 +145,18 @@ final class Encryptor {
         return Optional.of(tempFile);
     }
 
-    private boolean loadKeys() {
-        myKey = Coder.myKeyOrNull();
-        if (myKey == null) {
-            message.setSecurityErrors(EnumSet.of(Coder.Error.MY_KEY_UNAVAILABLE));
-            return false;
-        }
-        List<Contact> contacts = new ArrayList<>(message.getTransmissions().length);
-        for (Transmission t : message.getTransmissions())
-            contacts.add(t.getContact());
-        receiverKeys = receiverKeysOrNull(contacts.toArray(new Contact[0]));
-        if (receiverKeys == null) {
+    private List<PGPUtils.PGPCoderKey> loadKeysOrNull() {
+        List<Contact> contacts = message.getTransmissions().stream()
+                .map(t -> t.getContact())
+                .collect(Collectors.toList());
+        List<PGPUtils.PGPCoderKey> receiverKeys = contacts.stream()
+                .map(c -> Coder.contactkey(c).orElse(null))
+                .collect(Collectors.toList());
+        if (receiverKeys.stream().anyMatch(Objects::isNull)) {
             message.setSecurityErrors(EnumSet.of(Coder.Error.KEY_UNAVAILABLE));
-            return false;
+            return null;
         }
-        return true;
-    }
-
-    private static PGPUtils.PGPCoderKey[] receiverKeysOrNull(Contact[] contacts) {
-        List<PGPUtils.PGPCoderKey> keys = new ArrayList<>(contacts.length);
-        for (Contact c : contacts) {
-            Optional<PGPUtils.PGPCoderKey> optKey = Coder.contactkey(c);
-            if (!optKey.isPresent())
-                return null;
-            keys.add(optKey.get());
-        }
-        return keys.toArray(new PGPUtils.PGPCoderKey[0]);
+        return receiverKeys;
     }
 
     /**
@@ -188,7 +166,7 @@ final class Encryptor {
      */
     private static void encryptAndSign(
             InputStream plainInput, OutputStream encryptedOutput,
-            PersonalKey myKey, PGPUtils.PGPCoderKey[] receiverKeys)
+            PersonalKey myKey, List<PGPUtils.PGPCoderKey> receiverKeys)
             throws IOException, PGPException {
 
         // setup data encryptor & generator
@@ -198,8 +176,8 @@ final class Encryptor {
 
         // add public key recipients
         PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
-        for (PGPUtils.PGPCoderKey key : receiverKeys)
-            encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(key.encryptKey));
+        receiverKeys.stream().forEach(key ->
+            encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(key.encryptKey)));
 
         OutputStream encryptedOut = encGen.open(encryptedOutput, new byte[BUFFER_SIZE]);
 

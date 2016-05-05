@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.GridBagLayout;
 import java.util.Optional;
-import org.kontalk.model.Chat;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 
 /**
@@ -56,7 +56,7 @@ public class Content extends WebPanel {
     }
 
     void showContact(Contact contact) {
-        this.show(new ContactDetails(mView, contact));
+        this.show(ContactDetails.instance(mView, contact));
     }
 
     void showNothing() {
@@ -69,9 +69,6 @@ public class Content extends WebPanel {
     }
 
     private void show(Component comp) {
-        if (mCurrent instanceof ContactDetails) {
-            ((ContactDetails) mCurrent).onClose();
-        }
         // Swing...
         this.removeAll();
         this.add(comp, BorderLayout.CENTER);
@@ -79,5 +76,11 @@ public class Content extends WebPanel {
         this.repaint();
 
         mCurrent = comp;
+    }
+
+    void requestRenameFocus() {
+        if (mCurrent instanceof ContactDetails) {
+            ((ContactDetails) mCurrent).setRenameFocus();
+        }
     }
 }

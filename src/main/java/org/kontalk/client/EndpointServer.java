@@ -1,6 +1,6 @@
 /*
  * Kontalk Java client
- * Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ * Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,6 +28,13 @@ public final class EndpointServer {
     private final String mHost;
     private final int mPort;
     private final String mNetwork;
+
+    public EndpointServer(String host, int port) {
+        // tigase: use hostname as network
+        mNetwork = host;
+        mHost = host;
+        mPort = port;
+    }
 
     public EndpointServer(String network, String host, int port) {
         mNetwork = network;

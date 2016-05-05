@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@ import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.jivesoftware.smackx.muc.packet.MUCUser;
 import org.kontalk.misc.JID;
 import org.kontalk.system.RosterHandler;
 
@@ -62,46 +63,69 @@ public class PresenceListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza packet) {
+        if (MUCUser.from(packet) != null) {
+            // handled by MUC manager
+            LOGGER.config("ignoring MUC presence, from: "+packet.getFrom());
+            return;
+        }
+
         LOGGER.config("packet: "+packet);
 
         Presence presence = (Presence) packet;
 
-        JID jid = JID.bare(presence.getFrom());
-
-        if (presence.getType() == Presence.Type.error) {
-            XMPPError error = presence.getError();
-            if (error == null) {
-                LOGGER.warning("error presence does not contain error");
-                return;
-            }
-            mHandler.onPresenceError(jid, error.getType(),
-                    error.getCondition());
-            return;
-        }
-
-        Presence bestPresence = mRoster.getPresence(jid.string());
-
-        // NOTE: a delay extension is sometimes included, don't know why;
-        // ignoring mode, always null anyway
-
-        mHandler.onPresenceUpdate(JID.bare(bestPresence.getFrom()),
-                bestPresence.getType(),
-                bestPresence.getStatus());
+        JID jid = JID.full(presence.getFrom());
 
         ExtensionElement publicKeyExt = presence.getExtension(
                 PublicKeyPresence.ELEMENT_NAME,
                 PublicKeyPresence.NAMESPACE);
-        if (publicKeyExt instanceof PublicKeyPresence) {
-            PublicKeyPresence pubKey = (PublicKeyPresence) publicKeyExt;
-            String fingerprint = StringUtils.defaultString(pubKey.getFingerprint());
-            if (!fingerprint.isEmpty()) {
-                mHandler.onFingerprintPresence(jid, fingerprint);
-            } else {
+        PublicKeyPresence pubKey = publicKeyExt instanceof PublicKeyPresence ?
+                (PublicKeyPresence) publicKeyExt :
+                null;
+
+        switch(presence.getType()) {
+            case error:
+                XMPPError error = presence.getError();
+                if (error == null) {
+                    LOGGER.warning("error presence does not contain error");
+                    return;
+                }
+                mHandler.onPresenceError(jid, error.getType(),
+                        error.getCondition());
+                return;
+            // NOTE: only handled here if Roster.SubscriptionMode is set to 'manual'
+            case subscribe:
+                byte[] key = pubKey != null ? pubKey.getKey() : null;
+                if (key == null)
+                    key = new byte[0];
+                mHandler.onSubscriptionRequest(jid, key);
+                return;
+            case unsubscribe:
+                // nothing to do(?)
+                LOGGER.info(("ignoring unsubscribe, JID: "+jid));
+                return;
+        }
+
+        // NOTE: a delay extension is sometimes included, don't know why;
+        // ignoring mode, always null anyway
+
+        // NOTE: using only the "best" presence to ignore unimportant updates
+        // from multiple clients
+        Presence bestPresence = mRoster.getPresence(jid.string());
+
+        mHandler.onPresenceUpdate(jid,
+                bestPresence.getType(),
+                bestPresence.getStatus());
+
+        if (pubKey != null) {
+            String fp = StringUtils.defaultString(pubKey.getFingerprint()).toLowerCase();
+            if (fp.isEmpty()) {
                 LOGGER.warning("no fingerprint in public key presence extension");
+            } else {
+                mHandler.onFingerprintPresence(jid, fp);
             }
         }
 
-        ExtensionElement signatureExt = presence.getExtension(
+        ExtensionElement signatureExt = bestPresence.getExtension(
                 PresenceSignature.ELEMENT_NAME,
                 PresenceSignature.NAMESPACE);
         if (signatureExt instanceof PresenceSignature) {

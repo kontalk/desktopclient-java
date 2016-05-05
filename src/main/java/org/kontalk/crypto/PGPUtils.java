@@ -1,6 +1,6 @@
 /*
  * Kontalk Java client
- * Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ * Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
-import org.bouncycastle.bcpg.ArmoredInputStream;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPCompressedData;
@@ -81,8 +80,7 @@ public final class PGPUtils {
     /** Singleton for converting a PGP key to a JCA key. */
     private static JcaPGPKeyConverter sKeyConverter;
 
-    private PGPUtils() {
-    }
+    private PGPUtils() {}
 
     /**
      * A contacts public keys for encryption and signing together with UID and
@@ -110,8 +108,8 @@ public final class PGPUtils {
         Security.insertProviderAt(new BouncyCastleProvider(), 1);
     }
 
-    public static byte[] disarm(byte[] key) throws IOException {
-        return IOUtils.toByteArray(new ArmoredInputStream(new ByteArrayInputStream(key)));
+    public static byte[] mayDisarm(InputStream input) throws IOException {
+        return IOUtils.toByteArray(PGPUtil.getDecoderStream(input));
     }
 
     /**
@@ -218,6 +216,7 @@ public final class PGPUtils {
         try {
             return new PGPKeyPair(secretKey.getPublicKey(), secretKey.extractPrivateKey(dec));
         } catch (PGPException ex) {
+            LOGGER.log(Level.WARNING, "failed", ex);
             throw new KonException(KonException.Error.LOAD_KEY_DECRYPT, ex);
         }
     }

@@ -1,6 +1,6 @@
 /*
  * Kontalk Java client
- * Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ * Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,11 +33,15 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import org.bouncycastle.asn1.ASN1Encodable;
 import org.bouncycastle.asn1.ASN1Object;
 import org.bouncycastle.asn1.ASN1ObjectIdentifier;
 import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERBitString;
+import org.bouncycastle.asn1.DERUTF8String;
+import org.bouncycastle.asn1.DLSequence;
 
 import org.bouncycastle.asn1.misc.MiscObjectIdentifiers;
 import org.bouncycastle.asn1.misc.NetscapeCertType;
@@ -108,9 +112,14 @@ public class X509Bridge {
 
         PGPPublicKey publicKey = keyPair.getPublicKey();
 
+        List<String> xmppAddrs = new LinkedList<>();
         for (@SuppressWarnings("unchecked") Iterator<Object> it = publicKey.getUserIDs(); it.hasNext();) {
-            Object attrib = it.next();
-            x500NameBuilder.addRDN(BCStyle.CN, attrib.toString());
+            String attrib = it.next().toString();
+            x500NameBuilder.addRDN(BCStyle.CN, attrib);
+            // extract email for the subjectAltName
+            String email = PGPUtils.parseUID(attrib)[2];
+            if (!email.isEmpty())
+                xmppAddrs.add(email);
         }
 
         X500Name x509name = x500NameBuilder.build();
@@ -135,7 +144,7 @@ public class X509Bridge {
                 PGPUtils.convertPrivateKey(keyPair.getPrivateKey()),
                 x509name,
                 creationTime, validTo,
-                null,
+                xmppAddrs,
                 publicKeyRingData);
     }
 
@@ -165,7 +174,7 @@ public class X509Bridge {
      */
     private static X509Certificate createCertificate(PublicKey pubKey,
             PrivateKey privKey, X500Name subject,
-            Date startDate, Date endDate, String subjectAltName, byte[] publicKeyData)
+            Date startDate, Date endDate, List<String> subjectAltNames, byte[] publicKeyData)
         throws InvalidKeyException, IllegalStateException,
         NoSuchAlgorithmException, SignatureException, CertificateException,
         NoSuchProviderException, IOException, OperatorCreationException {
@@ -269,11 +278,14 @@ public class X509Bridge {
         /*
          * Adds the subject alternative-name extension.
          */
-        if (subjectAltName != null) {
-            GeneralNames subjectAltNames = new GeneralNames(new GeneralName(
-                    GeneralName.otherName, subjectAltName));
+        if (subjectAltNames != null && subjectAltNames.size() > 0) {
+            GeneralName[] names = new GeneralName[subjectAltNames.size()];
+            for (int i = 0; i < names.length; i++)
+                names[i] = new GeneralName(GeneralName.otherName,
+                    new XmppAddrIdentifier(subjectAltNames.get(i)));
+
             certBuilder.addExtension(Extension.subjectAlternativeName,
-                    false, subjectAltNames);
+                    false, new GeneralNames(names));
         }
 
         /*
@@ -327,7 +339,16 @@ public class X509Bridge {
        public ASN1Primitive toASN1Primitive() {
            return keyData;
        }
+    }
 
-   }
+    private static class XmppAddrIdentifier extends DLSequence {
+        static final ASN1ObjectIdentifier OID = new ASN1ObjectIdentifier("1.3.6.1.5.5.7.8.5");
 
+        XmppAddrIdentifier(String jid) {
+            super(new ASN1Encodable[] {
+                OID,
+                new DERUTF8String(jid)
+            });
+        }
+    }
 }

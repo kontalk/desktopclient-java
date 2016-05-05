@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -20,10 +20,10 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Arrays;
 import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Observable;
@@ -31,12 +31,18 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
-import org.kontalk.system.Database;
+import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
 
 /**
  * A contact in the Kontalk/XMPP-Jabber network.
+ *
+ * TODO group chats need some weaker entity here: not deletable,
+ * not shown in ui contact list(?), but with public key
+ *
+ * idea: "deletable" or / "weak" field: contact gets deleted
+ * when no group chat exists anymore
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -64,6 +70,7 @@ public final class Contact extends Observable {
     public static final String COL_ENCR = "encrypted";
     public static final String COL_PUB_KEY = "public_key";
     public static final String COL_KEY_FP = "key_fingerprint";
+    public static final String COL_AVATAR_ID = "avatar_id";
     public static final String SCHEMA = "(" +
             Database.SQL_ID +
             COL_JID + " TEXT NOT NULL UNIQUE, " +
@@ -73,14 +80,15 @@ public final class Contact extends Observable {
             // boolean, send messages encrypted?
             COL_ENCR + " INTEGER NOT NULL, " +
             COL_PUB_KEY + " TEXT UNIQUE, " +
-            COL_KEY_FP + " TEXT UNIQUE" +
+            COL_KEY_FP + " TEXT UNIQUE," +
+            COL_AVATAR_ID + " TEXT" +
             ")";
 
     private final int mID;
     private JID mJID;
     private String mName;
     private String mStatus = "";
-    private Optional<Date> mLastSeen = Optional.empty();
+    private Date mLastSeen = null;
     private Online mAvailable = Online.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
@@ -88,42 +96,48 @@ public final class Contact extends Observable {
     private boolean mBlocked = false;
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
+    private Avatar mAvatar = null;
 
-    // used for creating new contacts (eg from roster)
+    // new contact (eg from roster)
     Contact(JID jid, String name) {
         mJID = jid;
         mName = name;
-        Database db = Database.getInstance();
-        List<Object> values = new LinkedList<>();
-        values.add(mJID);
-        values.add(mName);
-        values.add(mStatus);
-        values.add(mLastSeen);
-        values.add(mEncrypted);
-        values.add(null); // key
-        values.add(null); // fingerprint
-        mID = db.execInsert(TABLE, values);
+
+        // insert
+        List<Object> values = Arrays.asList(
+                mJID,
+                mName,
+                mStatus,
+                mLastSeen,
+                mEncrypted,
+                null, // key
+                null, // fingerprint
+                null); // avatar id
+        mID = Model.database().execInsert(TABLE, values);
         if (mID < 1)
             LOGGER.log(Level.WARNING, "could not insert contact");
     }
 
-    // used for loading contacts from database
-    Contact(int id,
+    // loading from database
+    public Contact(
+            int id,
             JID jid,
             String name,
             String status,
             Optional<Date> lastSeen,
             boolean encrypted,
             String publicKey,
-            String fingerprint) {
+            String fingerprint,
+            String avatarID) {
         mID = id;
         mJID = jid;
         mName = name;
         mStatus = status;
-        mLastSeen = lastSeen;
+        mLastSeen = lastSeen.orElse(null);
         mEncrypted = encrypted;
         mKey = publicKey;
-        mFingerprint = fingerprint;
+        mFingerprint = fingerprint.toLowerCase();
+        mAvatar = avatarID.isEmpty() ? null : new Avatar(avatarID);
     }
 
     public JID getJID() {
@@ -144,7 +158,7 @@ public final class Contact extends Observable {
         this.changed(mJID);
     }
 
-    int getID() {
+    public int getID() {
         return mID;
     }
 
@@ -167,7 +181,7 @@ public final class Contact extends Observable {
     }
 
     public Optional<Date> getLastSeen() {
-        return mLastSeen;
+        return Optional.ofNullable(mLastSeen);
     }
 
     public boolean getEncrypted() {
@@ -189,7 +203,7 @@ public final class Contact extends Observable {
     public void setOnline(Presence.Type type, String status) {
         if (type == Presence.Type.available) {
             mAvailable = Online.YES;
-            mLastSeen = Optional.of(new Date());
+            mLastSeen = new Date();
         } else if (type == Presence.Type.unavailable) {
             mAvailable = Online.NO;
         }
@@ -230,7 +244,7 @@ public final class Contact extends Observable {
             LOGGER.info("overwriting public key of contact: "+this);
 
         mKey = EncodingUtils.bytesToBase64(rawKey);
-        mFingerprint = fingerprint;
+        mFingerprint = fingerprint.toLowerCase();
         this.save();
         this.changed(new byte[0]);
     }
@@ -248,7 +262,7 @@ public final class Contact extends Observable {
         return mSubStatus;
     }
 
-    public void setSubScriptionStatus(Subscription status) {
+    public void setSubscriptionStatus(Subscription status) {
         if (status == mSubStatus)
             return;
 
@@ -256,8 +270,35 @@ public final class Contact extends Observable {
         this.changed(mSubStatus);
     }
 
+    public Optional<Avatar> getAvatar() {
+        return Optional.ofNullable(mAvatar);
+    }
+
+    public void setAvatar(Avatar avatar) {
+        // delete old
+        if (mAvatar != null)
+            mAvatar.delete();
+
+        // set new
+        mAvatar = avatar;
+        this.save();
+
+        this.changed(avatar);
+    }
+
+    public void deleteAvatar() {
+        // delete old
+        if (mAvatar != null)
+            mAvatar.delete();
+
+        mAvatar = null;
+        this.save();
+
+        this.changed(Avatar.deleted());
+    }
+
     public boolean isMe() {
-        return mJID.isMe();
+        return mJID.isValid() && mJID.equals(Model.getUserJID());
     }
 
     public boolean isKontalkUser(){
@@ -272,10 +313,13 @@ public final class Contact extends Observable {
         mJID = JID.deleted(mID);
         mName = "";
         mStatus = "";
-        mLastSeen = Optional.empty();
+        mLastSeen = null;
         mEncrypted = false;
         mKey = "";
         mFingerprint = "";
+        if (mAvatar != null)
+            mAvatar.delete();
+        mAvatar = null;
 
         this.save();
         this.changed(null);
@@ -286,7 +330,6 @@ public final class Contact extends Observable {
     }
 
     private void save() {
-        Database db = Database.getInstance();
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
         set.put(COL_NAME, mName);
@@ -295,7 +338,8 @@ public final class Contact extends Observable {
         set.put(COL_ENCR, mEncrypted);
         set.put(COL_PUB_KEY, Database.setString(mKey));
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
-        db.execUpdate(TABLE, set, mID);
+        set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.getID() : ""));
+        Model.database().execUpdate(TABLE, set, mID);
     }
 
     private void changed(Object arg) {
@@ -304,24 +348,43 @@ public final class Contact extends Observable {
     }
 
     @Override
+    public boolean equals(Object o) {
+        if (o == this)
+            return true;
+
+        if (!(o instanceof Contact))
+            return false;
+
+        return mID == ((Contact) o).mID;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 3;
+        hash = 29 * hash + this.mID;
+        return hash;
+    }
+
+    @Override
     public String toString() {
         return "C:id="+mID+",jid="+mJID+",name="+mName+",fp="+mFingerprint
                 +",subsc="+mSubStatus;
     }
 
-    static Contact load(ResultSet rs) throws SQLException {
+    static Contact load(Database db, ResultSet rs) throws SQLException {
         int id = rs.getInt("_id");
         JID jid = JID.bare(rs.getString(Contact.COL_JID));
 
         String name = rs.getString(Contact.COL_NAME);
         String status = rs.getString(Contact.COL_STAT);
         long l = rs.getLong(Contact.COL_LAST_SEEN);
-        Optional<Date> lastSeen = l == 0 ?
-                Optional.<Date>empty() :
-                Optional.<Date>of(new Date(l));
+        Date lastSeen = l == 0 ? null : new Date(l);
         boolean encr = rs.getBoolean(Contact.COL_ENCR);
         String key = Database.getString(rs, Contact.COL_PUB_KEY);
         String fp = Database.getString(rs, Contact.COL_KEY_FP);
-        return new Contact(id, jid, name, status, lastSeen, encr, key, fp);
+        String avatarID = Database.getString(rs, Contact.COL_AVATAR_ID);
+
+        return new Contact(id, jid, name, status,
+                Optional.ofNullable(lastSeen), encr, key, fp, avatarID);
     }
 }

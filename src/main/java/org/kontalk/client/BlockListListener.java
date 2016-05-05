@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,12 +36,14 @@ final class BlockListListener implements StanzaListener {
 
     private final Control mControl;
 
-    public BlockListListener(Control control) {
-        mControl = control;
-
+    static {
         ProviderManager.addIQProvider(BlockingCommand.BLOCKLIST,
                 BlockingCommand.NAMESPACE,
                 new BlockingCommand.Provider());
+    }
+
+    BlockListListener(Control control) {
+        mControl = control;
     }
 
     @Override
@@ -54,7 +56,7 @@ final class BlockListListener implements StanzaListener {
             List<JID> jids = new ArrayList<>(items.size());
             for (String s : items)
                 jids.add(JID.full(s));
-            mControl.setBlockedContacts(jids.toArray(new JID[0]));
+            mControl.onBlockList(jids.toArray(new JID[0]));
         }
     }
 }

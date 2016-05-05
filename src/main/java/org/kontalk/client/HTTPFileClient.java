@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyManagementException;
@@ -39,6 +39,7 @@ import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.net.ssl.SSLContext;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
@@ -47,14 +48,16 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.client.utils.HttpClientUtils;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.kontalk.misc.KonException;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.TrustUtils;
 
@@ -64,6 +67,8 @@ import org.kontalk.util.TrustUtils;
  */
 public class HTTPFileClient {
     private static final Logger LOGGER = Logger.getLogger(HTTPFileClient.class.getName());
+
+    static final String KON_UPLOAD_FEATURE = "http://kontalk.org/extensions/message#upload";
 
     /** Regex used to parse content-disposition headers for download. */
     private static final Pattern CONTENT_DISPOSITION_PATTERN = Pattern
@@ -101,34 +106,33 @@ public class HTTPFileClient {
     }
 
     /**
-     * Downloads to a directory represented by a {@link File} object,
-     * determining the file name from the Content-Disposition header.
+     * Download file to directory.
      * @param url URL of file
      * @param base base directory in which the download is saved
-     * @return the absolute path of the downloaded file, empty if the file could
-     * not be downloaded
+     * @return absolute path of downloaded file, empty if download failed
      */
-    public Path download(URI url, Path base, ProgressListener listener) throws KonException {
+    public synchronized Path download(URI url, Path base, ProgressListener listener)
+            throws KonException {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
                 throw new KonException(KonException.Error.DOWNLOAD_CREATE);
         }
 
-        LOGGER.info("from URL=" + url+ "...");
+        LOGGER.config("from URL=" + url+ " ...");
         mCurrentRequest = new HttpGet(url);
         mCurrentListener = listener;
 
         // execute request
-        CloseableHttpResponse response;
+        CloseableHttpResponse response = null;
         try {
-            response = mHTTPClient.execute(mCurrentRequest);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't execute request", ex);
-            throw new KonException(KonException.Error.DOWNLOAD_EXECUTE);
-        }
+            try {
+                response = mHTTPClient.execute(mCurrentRequest);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't execute request", ex);
+                throw new KonException(KonException.Error.DOWNLOAD_EXECUTE);
+            }
 
-        try {
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
                 LOGGER.warning("unexpected response code: " + code);
@@ -141,12 +145,10 @@ public class HTTPFileClient {
                 throw new KonException(KonException.Error.DOWNLOAD_RESPONSE);
             }
 
-            // get filename
+            // try getting filename from header
             String filename = "";
             Header dispHeader = response.getFirstHeader("Content-Disposition");
-            if (dispHeader == null) {
-                LOGGER.warning("no content header");
-            } else {
+            if (dispHeader != null) {
                 filename = parseContentDisposition(dispHeader.getValue());
                 // never trust incoming data
                 filename = Paths.get(filename).getFileName().toString();
@@ -154,13 +156,12 @@ public class HTTPFileClient {
                     LOGGER.warning("can't parse filename in content: "+dispHeader.getValue());
                 }
             }
+            // NOTE: could try getting the extension (and filename) from URL, security?
             if (filename.isEmpty()) {
                 // fallback
                 String type = StringUtils.defaultString(entity.getContentType().getValue());
                 String ext = MediaUtils.extensionForMIME(type);
-                filename = "att_" +
-                        org.jivesoftware.smack.util.StringUtils.randomString(4) +
-                        ext;
+                filename = "att_" + EncodingUtils.randomString(4) + "." + ext;
             }
 
             // get file size
@@ -178,12 +179,18 @@ public class HTTPFileClient {
             final long fileSize = s;
             mCurrentListener.updateProgress(s < 0 ? -2 : 0);
 
-            File destination = new File(base.toString(), filename);
-            if (destination.exists()) {
-                LOGGER.warning("file already exists: "+destination.getAbsolutePath());
-                return Paths.get("");
+            Path destination = Paths.get(base.toString(), filename);
+            if (Files.exists(destination)) {
+                destination = Paths.get(base.toString(),
+                        FilenameUtils.getBaseName(filename) +
+                                "_" + EncodingUtils.randomString(4) +
+                                "." + FilenameUtils.getExtension(filename));
+                if (Files.exists(destination)) {
+                    LOGGER.warning("not possible");
+                    return Paths.get("");
+                }
             }
-            try (FileOutputStream out = new FileOutputStream(destination)){
+            try (FileOutputStream out = new FileOutputStream(destination.toFile())){
                 CountingOutputStream cOut = new CountingOutputStream(out) {
                     @Override
                     protected synchronized void afterWrite(int n) {
@@ -204,91 +211,58 @@ public class HTTPFileClient {
             // release http connection resource
             EntityUtils.consumeQuietly(entity);
 
-            // TODO
+            return destination.toAbsolutePath();
+        } finally {
+            HttpClientUtils.closeQuietly(response);
             mCurrentRequest = null;
             mCurrentListener = null;
-
-            return Paths.get(destination.getAbsolutePath());
-        } finally {
-            try {
-                response.close();
-            } catch (IOException ex) {
-                LOGGER.log(Level.WARNING, "can't close response", ex);
-                // TODO can't use this client anymore(?)
-            }
         }
     }
 
     /**
-     * Upload a file.
-     * @param file file to download
-     * @param url the upload URL pointing to the upload service
-     * @param mime mime-type of file
-     * @param encrypted is the file encrypted?
+     * Upload file using a PUT request.
      * @return the URL the file can be downloaded with.
      */
-    public URI upload(File file, URI url, String mime, boolean encrypted) throws KonException {
+    public synchronized void upload(File file, URI uploadURL, String mime, boolean encrypted)
+            throws KonException {
+
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
             if (mHTTPClient == null)
                 throw new KonException(KonException.Error.UPLOAD_CREATE);
         }
 
-        // request type
-        HttpPost req = new HttpPost(url);
+        // request
+        HttpPut req = new HttpPut(uploadURL);
         req.setHeader("Content-Type", mime);
         if (encrypted)
             req.addHeader(HEADER_MESSAGE_FLAGS, "encrypted");
 
+        LOGGER.config("to URL=" + uploadURL+ " ...");
+
         // execute request
-        CloseableHttpResponse response;
-        try(FileInputStream in = new FileInputStream(file)) {
-            req.setEntity(new InputStreamEntity(in, file.length()));
-
-            mCurrentRequest = req;
-
-            //response = execute(currentRequest);
-            response = mHTTPClient.execute(mCurrentRequest);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't upload file", ex);
-            throw new KonException(KonException.Error.UPLOAD_EXECUTE);
-        }
-
-        // get URL from response entity
-        String downloadURL;
+        CloseableHttpResponse response = null;
         try {
+            try(FileInputStream in = new FileInputStream(file)) {
+                req.setEntity(new InputStreamEntity(in, file.length()));
+
+                mCurrentRequest = req;
+
+                //response = execute(currentRequest);
+                response = mHTTPClient.execute(mCurrentRequest);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't upload file", ex);
+                throw new KonException(KonException.Error.UPLOAD_EXECUTE);
+            }
+
             int code = response.getStatusLine().getStatusCode();
             if (code != HttpStatus.SC_OK) {
                 LOGGER.warning("unexpected response code: " + code);
                 throw new KonException(KonException.Error.UPLOAD_RESPONSE);
             }
-
-            HttpEntity entity = response.getEntity();
-            if (entity == null) {
-                LOGGER.warning("no upload response entity");
-                throw new KonException(KonException.Error.UPLOAD_RESPONSE);
-            }
-
-            downloadURL = EntityUtils.toString(entity);
-
-            // release http connection resource
-            EntityUtils.consume(entity);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't get url from response", ex);
-            throw new KonException(KonException.Error.UPLOAD_RESPONSE);
         } finally {
-           try {
-                response.close();
-            } catch (IOException ex) {
-                LOGGER.log(Level.WARNING, "can't close response", ex);
-            }
-        }
-
-        try {
-            return new URI(downloadURL);
-        } catch (URISyntaxException ex) {
-            LOGGER.log(Level.WARNING, "can't parse URI", ex);
-            throw new KonException(KonException.Error.UPLOAD_RESPONSE);
+            HttpClientUtils.closeQuietly(response);
+            mCurrentRequest = null;
         }
     }
 

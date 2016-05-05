@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@ import org.jivesoftware.smack.ConnectionListener;
 import org.jivesoftware.smack.XMPPConnection;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
-import org.kontalk.system.Config;
 import org.kontalk.system.Control;
 
 /**
@@ -34,10 +33,13 @@ import org.kontalk.system.Control;
 final class KonConnectionListener implements ConnectionListener {
     private static final Logger LOGGER = Logger.getLogger(KonConnectionListener.class.getName());
 
+    private final Client mClient;
     private final Control mControl;
+
     private boolean mConnected = false;
 
-    KonConnectionListener(Control control) {
+    KonConnectionListener(Client client, Control control) {
+        mClient = client;
         mControl = control;
     }
 
@@ -51,13 +53,14 @@ final class KonConnectionListener implements ConnectionListener {
     public void authenticated(XMPPConnection connection, boolean resumed) {
         JID jid = JID.bare(connection.getUser());
         LOGGER.info("as "+jid);
-        Config.getInstance().setProperty(Config.ACC_JID, jid.string());
+        mControl.onAuthenticated(jid);
     }
 
     @Override
     public void connectionClosed() {
         mConnected = false;
         LOGGER.info("connection closed");
+        mClient.newStatus(Control.Status.DISCONNECTED);
     }
 
     @Override
@@ -70,8 +73,8 @@ final class KonConnectionListener implements ConnectionListener {
             return;
 
         LOGGER.log(Level.WARNING, "connection closed on error", ex);
-        mControl.setStatus(Control.Status.ERROR);
-        mControl.handleException(new KonException(KonException.Error.CLIENT_ERROR, ex));
+        mClient.newStatus(Control.Status.ERROR);
+        mClient.newException(new KonException(KonException.Error.CLIENT_ERROR, ex));
     }
 
     @Override

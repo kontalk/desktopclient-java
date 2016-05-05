@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -54,8 +54,9 @@ import javax.swing.Icon;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
-import org.kontalk.system.Config;
+import org.kontalk.persistence.Config;
 import org.kontalk.Kontalk;
+import org.kontalk.model.Model;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 
@@ -74,9 +75,10 @@ final class MainFrame extends WebFrame {
     private final WebToggleButton mAddGroupButton;
     private final WebToggleButton mAddContactButton;
 
-    MainFrame(final View view,
-            Table<?, ?> contactList,
-            Table<?, ?> chatList,
+    MainFrame(View view,
+            Model model,
+            ListView<?, ?> contactList,
+            ListView<?, ?> chatList,
             Component content,
             WebPanel searchPanel,
             Component statusBar) {
@@ -134,13 +136,13 @@ final class MainFrame extends WebFrame {
         konNetMenu.add(mDisconnectMenuItem);
         konNetMenu.addSeparator();
 
-        WebMenuItem statusMenuItem = new WebMenuItem(Tr.tr("Set status"));
+        WebMenuItem statusMenuItem = new WebMenuItem(Tr.tr("Profile"));
         statusMenuItem.setAccelerator(Hotkey.ALT_S);
-        statusMenuItem.setToolTipText(Tr.tr("Set status text send to other user"));
+        statusMenuItem.setToolTipText(Tr.tr("Set your user profile"));
         statusMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                WebDialog statusDialog = new ComponentUtils.StatusDialog(mView);
+                WebDialog statusDialog = new ProfileDialog(mView, model);
                 statusDialog.setVisible(true);
             }
         });
@@ -212,7 +214,7 @@ final class MainFrame extends WebFrame {
                 // TODO different button
                 Utils.getIcon("ic_ui_add.png"),
                 Tr.tr("Create a new group chat"),
-                new ComponentUtils.AddGroupChatPanel(mView, this));
+                new ComponentUtils.AddGroupChatPanel(mView, model, this));
         WebPanel chatPanel = new GroupPanel(GroupingType.fillFirst, false,
                 // temporarily disabling group creation
                 chatPane/*, mAddGroupButton*/);
@@ -234,7 +236,7 @@ final class MainFrame extends WebFrame {
         mTabbedPane.setTabComponentAt(Tab.CONTACT.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
         // setSize() does not work, whatever
-        mTabbedPane.setPreferredSize(new Dimension(240, -1));
+        mTabbedPane.setPreferredSize(new Dimension(View.LISTS_WIDTH, -1));
         mTabbedPane.addChangeListener(new ChangeListener() {
             @Override
             public void stateChanged(ChangeEvent e) {
@@ -318,10 +320,10 @@ final class MainFrame extends WebFrame {
                 icon);
     }
 
-    private static WebScrollPane createTablePane(final Table<?, ?> table,
+    private static WebScrollPane createTablePane(final ListView<?, ?> list,
             String overlayText) {
 
-        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(table);
+        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(list);
         scrollPane.setDrawBorder(false);
         // overlay for empty list
         WebOverlay listOverlayPanel = new WebOverlay(scrollPane);

@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
 package org.kontalk.view;
 
 import com.alee.extended.filechooser.WebFileChooserField;
+import com.alee.extended.image.WebImage;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
@@ -46,6 +47,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
@@ -57,8 +59,12 @@ import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.Chat;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.ContactList;
+import org.kontalk.model.chat.Member;
+import org.kontalk.persistence.Config;
+import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
 
@@ -136,7 +142,7 @@ final class Utils {
         WebTextArea area = new WebTextArea();
         area.setEditable(false);
         area.setOpaque(false);
-        area.setFontName(Font.MONOSPACED);
+        area.setFontName(Font.DIALOG);
         area.setFontSizeAndStyle(13, true, false);
         return area;
     }
@@ -170,6 +176,16 @@ final class Utils {
         return Toolkit.getDefaultToolkit().createImage(imageUrl);
     }
 
+    static void fixedSetWebImageImage(WebImage webImage, Image img) {
+        // works cause caching
+        if (!img.equals(webImage.getImage())) {
+            //
+            webImage.setEnabled(false);
+            webImage.setImage(img);
+            webImage.setEnabled(true);
+        }
+    }
+
     /* strings */
 
     static String name(Contact contact, int maxLength) {
@@ -182,7 +198,7 @@ final class Utils {
         return displayName(contact, Integer.MAX_VALUE);
     }
 
-    private static String displayName(Contact contact, int maxLength) {
+    static String displayName(Contact contact, int maxLength) {
         return displayName(contact, contact.getJID(), maxLength);
     }
 
@@ -225,17 +241,25 @@ final class Utils {
             String subj = chat.getSubject();
             return !subj.isEmpty() ? subj : Tr.tr("Group Chat");
         } else {
-            return Utils.displayNames(new ArrayList<>(chat.getAllContacts()));
+            return Utils.displayNames(chat.getAllContacts());
         }
     }
 
     static String fingerprint(String fp) {
+        fp = fp.toUpperCase();
         int m = fp.length() / 2;
         return group(fp.substring(0, m)) + "\n" + group(fp.substring(m));
     }
 
     private static String group(String s) {
         return StringUtils.join(s.split("(?<=\\G.{" + 4 + "})"), " ");
+    }
+
+    static String role(Member.Role role) {
+        switch (role) {
+            case OWNER : return "[" + Tr.tr("Group Owner") + "]";
+            default: return "";
+        }
     }
 
     static String mainStatus(Contact c, boolean pre) {
@@ -257,7 +281,7 @@ final class Utils {
     }
 
     static String getErrorText(KonException ex) {
-        String eol = " " + System.getProperty("line.separator");
+        String eol = " " + EncodingUtils.EOL;
         String errorText;
         switch (ex.getError()) {
             case IMPORT_ARCHIVE:
@@ -357,6 +381,11 @@ final class Utils {
         return selectedOption == WebOptionPane.OK_OPTION;
     }
 
+    static Set<Contact> allContacts(ContactList contactList) {
+        boolean showMe = Config.getInstance().getBoolean(Config.VIEW_USER_CONTACT);
+        return contactList.getAll(showMe);
+    }
+
     static List<Contact> contactList(Chat chat) {
         List<Contact> contacts = new ArrayList<>(chat.getAllContacts());
         contacts.sort(new Comparator<Contact>() {
@@ -366,6 +395,17 @@ final class Utils {
             }
         });
         return contacts;
+    }
+
+    static List<Member> memberList(Chat chat) {
+        List<Member> members = new ArrayList<>(chat.getAllMembers());
+        members.sort(new Comparator<Member>() {
+            @Override
+            public int compare(Member m1, Member m2) {
+                return Utils.compareContacts(m1.getContact(), m2.getContact());
+            }
+        });
+        return members;
     }
 
     static int compareContacts(Contact c1, Contact c2) {

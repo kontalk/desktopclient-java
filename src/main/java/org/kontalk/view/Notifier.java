@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -41,9 +41,10 @@ import javax.swing.Icon;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.KonException;
+import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Contact;
-import org.kontalk.model.InMessage;
-import org.kontalk.model.KonMessage;
+import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.KonMessage;
 import org.kontalk.system.RosterHandler;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
@@ -111,14 +112,7 @@ final class Notifier {
     }
 
     void showPresenceError(Contact contact, RosterHandler.Error error) {
-        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
-        panel.setOpaque(false);
-
-        panel.add(new WebLabel(Tr.tr("Contact error")).setBoldFont());
-        panel.add(new WebSeparator(true, true));
-
-        panel.add(new WebLabel(Tr.tr("Contact:")).setBoldFont());
-        panel.add(new WebLabel(contactText(contact)));
+        WebPanel panel = panel(Tr.tr("Contact error"), contact);
 
         panel.add(new WebLabel(Tr.tr("Error:")).setBoldFont());
         String errorText = Tr.tr(error.toString());
@@ -134,14 +128,7 @@ final class Notifier {
     }
 
     void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {
-        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
-        panel.setOpaque(false);
-
-        panel.add(new WebLabel(Tr.tr("Received new key for contact")).setBoldFont());
-        panel.add(new WebSeparator(true, true));
-
-        panel.add(new WebLabel(Tr.tr("Contact:")).setBoldFont());
-        panel.add(new WebLabel(contactText(contact)));
+        WebPanel panel = panel(Tr.tr("Received new key for contact"), contact);
 
         panel.add(new WebLabel(Tr.tr("Key fingerprint:")));
         WebTextArea fpArea = Utils.createFingerprintArea();
@@ -174,16 +161,10 @@ final class Notifier {
     }
 
     void confirmContactDeletion(final Contact contact) {
-        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
-        panel.setOpaque(false);
-
-        panel.add(new WebLabel(Tr.tr("Contact was deleted on server")).setBoldFont());
-        panel.add(new WebSeparator(true, true));
-
-        panel.add(new WebLabel(contactText(contact)).setBoldFont());
+        WebPanel panel = panel(Tr.tr("Contact was deleted on server"), contact);
 
         String expl = Tr.tr("Remove this contact from your contact list?") + "\n" +
-                View.REMOVE_CONTACT_NOTE;
+                mView.tr_remove_contact;
         panel.add(textArea(expl));
 
         WebNotificationPopup popup = NotificationManager.showNotification(panel,
@@ -196,6 +177,36 @@ final class Notifier {
                 switch (option) {
                     case yes :
                         mView.getControl().deleteContact(contact);
+                }
+            }
+            @Override
+            public void accepted() {}
+            @Override
+            public void closed() {}
+        });
+    }
+
+    void confirmSubscription(ViewEvent.SubscriptionRequest event){
+        final Contact contact = event.contact;
+
+        WebPanel panel = panel(Tr.tr("Authorization request"), contact);
+
+        String expl = Tr.tr("When accepting, this contact will be able to see your online status.");
+        panel.add(textArea(expl));
+
+        WebNotificationPopup popup = NotificationManager.showNotification(panel,
+                NotificationOption.accept, NotificationOption.decline,
+                NotificationOption.cancel);
+        popup.setClickToClose(false);
+        popup.addNotificationListener(new NotificationListener() {
+            @Override
+            public void optionSelected(NotificationOption option) {
+                switch (option) {
+                    case accept :
+                        mView.getControl().sendSubscriptionResponse(contact, true);
+                        break;
+                    case decline :
+                        mView.getControl().sendSubscriptionResponse(contact, false);
                 }
             }
             @Override
@@ -234,7 +245,7 @@ final class Notifier {
         panel.setMargin(View.MARGIN_DEFAULT);
         panel.setOpaque(false);
         WebLabel title = new WebLabel("A new Message!");
-        title.setFontSize(14);
+        title.setFontSize(View.FONT_SIZE_BIG);
         title.setForeground(Color.WHITE);
         panel.add(title, BorderLayout.NORTH);
         String text = "this is some message, and some longer text was added";
@@ -260,6 +271,19 @@ final class Notifier {
 
         dialog.setVisible(true);
         NotificationManager.showNotification(dialog, popup);
+    }
+
+    private static WebPanel panel(String title, Contact contact) {
+        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
+        panel.setOpaque(false);
+
+        panel.add(new WebLabel(title).setBoldFont());
+        panel.add(new WebSeparator(true, true));
+
+        panel.add(new WebLabel(Tr.tr("Contact:")).setBoldFont());
+        panel.add(new WebLabel(contactText(contact)));
+
+        return panel;
     }
 
     private static String contactText(Contact contact){

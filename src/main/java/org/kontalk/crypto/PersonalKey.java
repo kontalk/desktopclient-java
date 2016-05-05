@@ -1,6 +1,6 @@
 /*
  * Kontalk Java client
- * Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ * Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
 
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,10 +34,11 @@ import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
+import org.bouncycastle.openpgp.PGPPublicKeyRing;
 import org.bouncycastle.openpgp.PGPSecretKey;
 import org.bouncycastle.openpgp.PGPSecretKeyRing;
+import org.bouncycastle.openpgp.bc.BcPGPPublicKeyRing;
 import org.bouncycastle.openpgp.operator.PBESecretKeyDecryptor;
-import org.bouncycastle.openpgp.operator.jcajce.JcaPGPDigestCalculatorProviderBuilder;
 import org.bouncycastle.openpgp.operator.jcajce.JcePBESecretKeyDecryptorBuilder;
 import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.util.encoders.Hex;
@@ -59,16 +60,20 @@ public final class PersonalKey {
     private final PGPKeyPair mEncryptKey;
     /** X.509 bridge certificate. */
     private final X509Certificate mBridgeCert;
+    /** Primary user ID. */
+    private final String mUID;
 
     private PersonalKey(PGPKeyPair authKP,
             PGPKeyPair signKP,
             PGPKeyPair encryptKP,
-            X509Certificate bridgeCert) throws PGPException {
+            X509Certificate bridgeCert,
+            String uid) throws PGPException {
         mAuthKey = authKP.getPublicKey();
         mLoginKey = PGPUtils.convertPrivateKey(authKP.getPrivateKey());
         mSignKey = signKP;
         mEncryptKey = encryptKP;
         mBridgeCert = bridgeCert;
+        mUID = uid;
     }
 
     PGPPrivateKey getPrivateEncryptionKey() {
@@ -97,14 +102,11 @@ public final class PersonalKey {
 
     /** Returns the first user ID in the key. */
     public String getUserId() {
-        Iterator<?> uidIt = mAuthKey.getUserIDs();
-        if (!uidIt.hasNext())
-            throw new IllegalStateException("no UID in personal key");
-        return (String) uidIt.next();
+        return mUID;
     }
 
     public String getFingerprint() {
-        return Hex.toHexString(mAuthKey.getFingerprint()).toUpperCase();
+        return Hex.toHexString(mAuthKey.getFingerprint());
     }
 
     /** Creates a {@link PersonalKey} from private keyring data.
@@ -148,42 +150,53 @@ public final class PersonalKey {
             signKey = authKey;
         }
 
-        if (authKey == null || signKey == null || encrKey == null)
+        if (authKey == null || signKey == null || encrKey == null) {
+            LOGGER.warning("something could not be found, "
+                    +"sign="+signKey+ ", auth="+authKey+", encr="+encrKey);
             throw new KonException(KonException.Error.LOAD_KEY,
                     new PGPException("could not find all keys in key data"));
+        }
 
         // decrypt private keys
-        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder(
-                // TODO need this?
-                new JcaPGPDigestCalculatorProviderBuilder().build()
-        )
+        PBESecretKeyDecryptor decryptor = new JcePBESecretKeyDecryptorBuilder()
                 .setProvider(PGPUtils.PROVIDER)
                 .build(passphrase);
         PGPKeyPair authKeyPair = PGPUtils.decrypt(authKey, decryptor);
         PGPKeyPair signKeyPair = PGPUtils.decrypt(signKey, decryptor);
         PGPKeyPair encryptKeyPair = PGPUtils.decrypt(encrKey, decryptor);
 
-        // X.509 bridge certificate
-        X509Certificate bridgeCert = bridgeCertData == null ?
-                createX509Certificate(authKeyPair, signKeyPair, encryptKeyPair) :
-                PGPUtils.loadX509Cert(bridgeCertData);
+        // user ID
+        Iterator<?> uidIt = authKey.getUserIDs();
+        if (!uidIt.hasNext())
+            throw new KonException(KonException.Error.LOAD_KEY,
+                    new PGPException("no UID in key"));
+        String uid = (String) uidIt.next();
 
-        return new PersonalKey(authKeyPair, signKeyPair, encryptKeyPair, bridgeCert);
+        // X.509 bridge certificate
+        X509Certificate bridgeCert;
+        if (bridgeCertData != null) {
+            bridgeCert = PGPUtils.loadX509Cert(bridgeCertData);
+        } else {
+            // public key ring
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            authKeyPair.getPublicKey().encode(out);
+            signKeyPair.getPublicKey().encode(out);
+            encryptKeyPair.getPublicKey().encode(out);
+            byte[] publicKeyRingData = out.toByteArray();
+            PGPPublicKeyRing pubKeyRing = new BcPGPPublicKeyRing(publicKeyRingData);
+
+            // re-create cert
+            bridgeCert = createX509Certificate(authKeyPair, pubKeyRing);
+        }
+
+        return new PersonalKey(authKeyPair, signKeyPair, encryptKeyPair, bridgeCert, uid);
     }
 
-    private static X509Certificate createX509Certificate(
-            PGPKeyPair authKP,
-            PGPKeyPair signKP,
-            PGPKeyPair encryptKP) throws IOException, KonException {
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        authKP.getPublicKey().encode(out);
-        signKP.getPublicKey().encode(out);
-        encryptKP.getPublicKey().encode(out);
-        byte[] publicKeyRingData = out.toByteArray();
-
+    private static X509Certificate createX509Certificate(PGPKeyPair keyPair,
+            PGPPublicKeyRing keyRing)
+            throws KonException {
         try {
-            return X509Bridge.createCertificate(authKP, publicKeyRingData);
+            return X509Bridge.createCertificate(keyPair, keyRing.getEncoded());
         } catch (InvalidKeyException | IllegalStateException | NoSuchAlgorithmException |
                 SignatureException | CertificateException | NoSuchProviderException |
                 PGPException | IOException | OperatorCreationException ex) {

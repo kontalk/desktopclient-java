@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@ import org.kontalk.util.Tr;
 final class SearchPanel extends WebPanel {
     private final WebTextField mSearchField;
 
-    SearchPanel(final Table[] tables, final ChatView chatView) {
+    SearchPanel(final ListView[] lists, final ChatView chatView) {
         mSearchField = new WebTextField();
         mSearchField.setInputPrompt(Tr.tr("Search…"));
         mSearchField.getDocument().addDocumentListener(new DocumentListener() {
@@ -54,8 +54,8 @@ final class SearchPanel extends WebPanel {
             }
             private void filterList() {
                 String searchText = mSearchField.getText().toLowerCase();
-                for (Table table : tables)
-                    table.filterItems(searchText);
+                for (ListView list : lists)
+                    list.filterItems(searchText);
                 chatView.filterCurrentChat(searchText);
             }
         });

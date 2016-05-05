@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -48,15 +48,14 @@ public class Tr {
     private static final String WIKI_HOME = "Home";
     private static final List<String> WIKI_LANGS = Arrays.asList("de");
 
-
     /** Map default (English) strings to translated strings. **/
     private static Map<String, String> TR_MAP = null;
 
     /**
      * Translate string used in user interface.
      * Spaces at beginning or end of string not supported!
-     * @param s string thats wants to be translated (in English)
-     * @return translation of input string (depending of platform language)
+     * @param s string that wants to be translated (in English)
+     * @return translation of input string (depending on platform language)
      */
     public static String tr(String s) {
         if (TR_MAP == null || !TR_MAP.containsKey(s))
@@ -67,6 +66,8 @@ public class Tr {
     public static void init() {
         // get language
         String lang = Locale.getDefault().getLanguage();
+        // for testing
+        //String lang = new Locale("zh").getLanguage();
         if (lang.equals(DEFAULT_LANG)) {
             return;
         }

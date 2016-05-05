@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -18,8 +18,12 @@
 
 package org.kontalk.client;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -31,103 +35,125 @@ import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.XMPPException;
-import org.jivesoftware.smack.filter.NotFilter;
-import org.jivesoftware.smack.filter.OrFilter;
+import org.jivesoftware.smack.filter.IQTypeFilter;
 import org.jivesoftware.smack.filter.StanzaFilter;
-import org.jivesoftware.smack.filter.StanzaIdFilter;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.roster.RosterEntry;
-import org.jivesoftware.smack.roster.packet.RosterPacket;
+import org.jivesoftware.smackx.caps.EntityCapsManager;
+import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
-import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.kontalk.system.Config;
+import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
+import org.kontalk.persistence.Config;
 import org.kontalk.misc.KonException;
-import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PersonalKey;
-import org.kontalk.model.Chat;
 import org.kontalk.misc.JID;
-import org.kontalk.model.GroupChat;
-import org.kontalk.model.GroupChat.GID;
-import org.kontalk.model.KonMessage.Status;
-import org.kontalk.model.OutMessage;
-import org.kontalk.model.MessageContent;
-import org.kontalk.model.MessageContent.Attachment;
-import org.kontalk.model.MessageContent.Preview;
-import org.kontalk.model.Transmission;
+import org.kontalk.model.message.OutMessage;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
-import org.kontalk.util.ClientUtils;
-import org.kontalk.util.EncodingUtils;
 
 /**
  * Network client for an XMPP Kontalk Server.
- *
- * Note: By default incoming presence subscription requests are automatically
- * granted by Smack (but Kontalk uses a custom subscription request!?)
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class Client implements StanzaListener, Runnable {
     private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
+    private static final String CAPS_CACHE_DIR = "caps_cache";
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
-    private static enum Command {CONNECT, DISCONNECT};
+    public enum PresenceCommand {REQUEST, GRANT, DENY};
+
+    private enum Command {CONNECT, DISCONNECT};
 
     private final Control mControl;
-    private KonConnection mConn = null;
 
-    public Client(Control control) {
+    private final KonMessageSender mMessageSender;
+    private final EnumMap<FeatureDiscovery.Feature, String> mFeatures;
+
+    private KonConnection mConn = null;
+    private AvatarSendReceiver mAvatarSendReceiver = null;
+    private HTTPFileSlotRequester mSlotRequester = null;
+
+    private Client(Control control, Path appDir) {
         mControl = control;
         //mLimited = limited;
 
+        mMessageSender = new KonMessageSender(this);
+
         // enable Smack debugging (print raw XML packet)
         //SmackConfiguration.DEBUG = true;
+
+        mFeatures = new EnumMap<>(FeatureDiscovery.Feature.class);
+
+        // setting caps cache
+        File cacheDir = appDir.resolve(CAPS_CACHE_DIR).toFile();
+        if (cacheDir.mkdir())
+            LOGGER.info("created caps cache directory");
+
+        if (!cacheDir.isDirectory()) {
+            LOGGER.warning("invalid cache directory: "+cacheDir);
+            return;
+        }
+
+        EntityCapsManager.setPersistentCache(
+                new SimpleDirectoryPersistentCache(cacheDir));
     }
 
-    /** Connect to server without logging in. */
-    public void connect() {
-        this.connect(null);
+    public static Client create(Control control, Path appDir) {
+        Client client = new Client(control, appDir);
+
+        Thread clientThread = new Thread(client, "Client Connector");
+        clientThread.setDaemon(true);
+        clientThread.start();
+
+        return client;
     }
 
     public void connect(PersonalKey key) {
         this.disconnect();
 
         LOGGER.config("connecting...");
-        mControl.setStatus(Control.Status.CONNECTING);
+        this.newStatus(Control.Status.CONNECTING);
 
         Config config = Config.getInstance();
-        // tigase: use hostname as network
         //String network = config.getString(KonConf.SERV_NET);
-        String network = config.getString(Config.SERV_HOST);
         String host = config.getString(Config.SERV_HOST);
         int port = config.getInt(Config.SERV_PORT);
-        EndpointServer server = new EndpointServer(network, host, port);
+        EndpointServer server = new EndpointServer(host, port);
+
         boolean validateCertificate = config.getBoolean(Config.SERV_CERT_VALIDATION);
 
         // create connection
-        mConn = key == null ?
-                new KonConnection(server, validateCertificate) :
-                new KonConnection(server,
+        mConn = new KonConnection(server,
                         key.getServerLoginKey(),
                         key.getBridgeCertificate(),
                         validateCertificate);
 
         // connection listener
-        mConn.addConnectionListener(new KonConnectionListener(mControl));
+        mConn.addConnectionListener(new KonConnectionListener(this, mControl));
+
+        Roster roster = Roster.getInstanceFor(mConn);
+        // subscriptions handled by roster handler
+        roster.setSubscriptionMode(Roster.SubscriptionMode.manual);
+
+        mAvatarSendReceiver = new AvatarSendReceiver(mConn, mControl.getAvatarHandler());
 
         // packet listeners
-        RosterHandler rosterSyncer = mControl.getRosterHandler();
-        RosterListener rl = new KonRosterListener(Roster.getInstanceFor(mConn), rosterSyncer);
-        Roster.getInstanceFor(mConn).addRosterListener(rl);
+        RosterHandler rosterHandler = mControl.getRosterHandler();
+        RosterListener rl = new KonRosterListener(roster, rosterHandler);
+        roster.addRosterListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
-        mConn.addAsyncStanzaListener(new KonMessageListener(this, mControl), messageFilter);
+        mConn.addAsyncStanzaListener(
+                new KonMessageListener(this, mControl, mAvatarSendReceiver),
+                messageFilter);
 
         StanzaFilter vCardFilter = new StanzaTypeFilter(VCard4.class);
         mConn.addAsyncStanzaListener(new VCardListener(mControl), vCardFilter);
@@ -139,23 +165,19 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(new PublicKeyListener(mControl), publicKeyFilter);
 
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
-        mConn.addAsyncStanzaListener(new PresenceListener(Roster.getInstanceFor(mConn), rosterSyncer), presenceFilter);
+        mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterHandler), presenceFilter);
 
-         // fallback listener
-        mConn.addAsyncStanzaListener(this,
-                new NotFilter(
-                        new OrFilter(
-                                messageFilter,
-                                vCardFilter,
-                                blockingCommandFilter,
-                                publicKeyFilter,
-                                vCardFilter,
-                                presenceFilter,
-                                // handled by roster listener
-                                new StanzaTypeFilter(RosterPacket.class)
-                        )
-                )
-        );
+        if (config.getBoolean(Config.NET_REQUEST_AVATARS)) {
+            // our service discovery: want avatar from other users
+            ServiceDiscoveryManager.getInstanceFor(mConn).
+                    addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
+        }
+
+        // listen to all acks
+        mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
+
+        // listen to all IQ errors
+        mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
 
         // continue async
         List<?> args = new ArrayList<>(0);
@@ -170,42 +192,90 @@ public final class Client implements StanzaListener, Runnable {
                 mConn.connect();
             } catch (XMPPException | SmackException | IOException ex) {
                 LOGGER.log(Level.WARNING, "can't connect to "+mConn.getServer(), ex);
-                mControl.setStatus(Control.Status.FAILED);
-                mControl.handleException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
+                this.newStatus(Control.Status.FAILED);
+                mControl.onException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
                 return;
             }
 
-            if  (mConn.hasLoginCredentials()) {
-                // login
-                try {
-                    mConn.login();
-                } catch (XMPPException | SmackException | IOException ex) {
-                    LOGGER.log(Level.WARNING, "can't login on "+mConn.getServer(), ex);
-                    mConn.disconnect();
-                    mControl.setStatus(Control.Status.FAILED);
-                    mControl.handleException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
-                    return;
-                }
+            // login
+            try {
+                mConn.login();
+            } catch (XMPPException | SmackException | IOException ex) {
+                LOGGER.log(Level.WARNING, "can't login on "+mConn.getServer(), ex);
+                mConn.disconnect();
+                this.newStatus(Control.Status.FAILED);
+                mControl.onException(new KonException(KonException.Error.CLIENT_LOGIN, ex));
+                return;
             }
         }
 
-        mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
+        mFeatures.clear();
+        mFeatures.putAll(FeatureDiscovery.discover(mConn));
 
-        if (mConn.isAuthenticated()) {
-            this.sendInitialPresence();
-            this.sendBlocklistRequest();
-        }
+        mSlotRequester = mFeatures.containsKey(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD) ?
+                new HTTPFileSlotRequester(mConn,
+                        JID.bare(mFeatures.get(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD))) :
+                null;
 
-        mControl.setStatus(Control.Status.CONNECTED);
+        // Caps, XEP-0115
+        // NOTE: caps manager is automatically used by Smack
+        //EntityCapsManager capsManager = EntityCapsManager.getInstanceFor(mConn);
+
+        // PEP, XEP-0163
+        // NOTE: Smack's implementation is not usable, use PubSub instead
+//        PEPManager m = new PEPManager(mConn);
+//        m.addPEPListener(new PEPListener() {
+//            @Override
+//            public void eventReceived(String from, PEPEvent event) {
+//                LOGGER.info("from: "+from+" event: "+event);
+//            }
+//        });
+
+        // PubSub, XEP-0060
+        // NOTE: pubsub is currently unsupported by beta.kontalk.net
+//        PubSubManager pubSubManager = new PubSubManager(mConn, mConn.getServiceName());
+//        try {
+//            DiscoverInfo i = pubSubManager.getSupportedFeatures();
+//            // same as server service discovery features!?
+//            for (DiscoverInfo.Feature f: i.getFeatures()) {
+//                System.out.println("feature: "+f.getVar());
+//            }
+//        } catch (SmackException.NoResponseException |
+//                XMPPException.XMPPErrorException |
+//                SmackException.NotConnectedException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+        // here be exceptions
+//        try {
+//            for (Affiliation a: pubSubManager.getAffiliations()) {
+//                System.out.println("aff: "+a.toXML());
+//            }
+//            for (Subscription s: pubSubManager.getSubscriptions()) {
+//                System.out.println("subs: "+s.toXML());
+//            }
+//        } catch (SmackException.NoResponseException |
+//                XMPPException.XMPPErrorException |
+//                SmackException.NotConnectedException ex) {
+//            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
+//        }
+
+        this.sendBlocklistRequest();
+
+        this.newStatus(Control.Status.CONNECTED);
     }
+
 
     public void disconnect() {
         synchronized (this) {
             if (mConn != null && mConn.isConnected()) {
+                this.newStatus(Control.Status.DISCONNECTING);
                 mConn.disconnect();
             }
         }
-        mControl.setStatus(Control.Status.DISCONNECTED);
+    }
+
+    public boolean isConnected() {
+        return mConn != null && mConn.isAuthenticated();
     }
 
     /**
@@ -218,118 +288,14 @@ public final class Client implements StanzaListener, Runnable {
         return Optional.of(JID.full(user));
     }
 
-    public boolean sendMessage(OutMessage message, boolean sendChatState) {
-        // check for correct receipt status and reset it
-        Status status = message.getStatus();
-        assert status == Status.PENDING || status == Status.ERROR;
-        message.setStatus(Status.PENDING);
-
-        if (!this.isConnected()) {
-            LOGGER.info("not sending message(s), not connected");
-            return false;
-        }
-
-        MessageContent content = message.getContent();
-        Optional<Attachment> optAtt = content.getAttachment();
-        if (optAtt.isPresent() && !optAtt.get().hasURL()) {
-            LOGGER.warning("attachment not uploaded");
-            message.setStatus(Status.ERROR);
-            return false;
-        }
-
-        boolean encrypted =
-                message.getCoderStatus().getEncryption() != Coder.Encryption.NOT ||
-                message.getCoderStatus().getSigning() != Coder.Signing.NOT;
-
-        Chat chat = message.getChat();
-
-        Message protoMessage = encrypted ? new Message() : rawMessage(content, chat, false);
-
-        protoMessage.setType(Message.Type.chat);
-        protoMessage.setStanzaId(message.getXMPPID());
-        String threadID = chat.getXMPPID();
-        if (!threadID.isEmpty())
-            protoMessage.setThread(threadID);
-
-        // extensions
-
-        // TODO with group chat? (for muc "NOT RECOMMENDED")
-        if (!chat.isGroupChat())
-            protoMessage.addExtension(new DeliveryReceiptRequest());
-
-        if (sendChatState)
-            protoMessage.addExtension(new ChatStateExtension(ChatState.active));
-
-        if (encrypted) {
-            Optional<byte[]> encryptedData = content.isComplex() || chat.isGroupChat() ?
-                        Coder.encryptStanza(message,
-                                rawMessage(content, chat, true).toXML().toString()) :
-                        Coder.encryptMessage(message);
-            // check also for security errors just to be sure
-            if (!encryptedData.isPresent() ||
-                    !message.getCoderStatus().getErrors().isEmpty()) {
-                LOGGER.warning("encryption failed");
-                message.setStatus(Status.ERROR);
-                mControl.handleSecurityErrors(message);
-                return false;
-            }
-            protoMessage.addExtension(new E2EEncryption(encryptedData.get()));
-        }
-
-        // transmission specific
-        Transmission[] transmissions = message.getTransmissions();
-        ArrayList<Message> sendMessages = new ArrayList<>(transmissions.length);
-        for (Transmission transmission: message.getTransmissions()) {
-            Message sendMessage = protoMessage.clone();
-            JID to = transmission.getJID();
-            if (!to.isValid()) {
-                LOGGER.warning("invalid JID: "+to);
-                return false;
-            }
-            sendMessage.setTo(to.string());
-            sendMessages.add(sendMessage);
-        }
-
-        return this.sendPackets(sendMessages.toArray(new Message[0]));
+    public EnumSet<FeatureDiscovery.Feature> getServerFeature() {
+        EnumSet<FeatureDiscovery.Feature> e = EnumSet.noneOf(FeatureDiscovery.Feature.class);
+        e.addAll(mFeatures.keySet());
+        return e;
     }
 
-    private static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
-        Message smackMessage = new Message();
-
-        // text
-        String text = content.getPlainText();
-        if (!text.isEmpty())
-            smackMessage.setBody(content.getPlainText());
-
-        // attachment
-        Optional<Attachment> optAtt = content.getAttachment();
-        if (optAtt.isPresent()) {
-            Attachment att = optAtt.get();
-
-            OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
-                    att.getMimeType(), att.getLength(), encrypted);
-            smackMessage.addExtension(oobData);
-
-            Optional<Preview> optPreview = content.getPreview();
-            if (optPreview.isPresent()) {
-                Preview preview = optPreview.get();
-                String data = EncodingUtils.bytesToBase64(preview.getData());
-                BitsOfBinary bob = new BitsOfBinary(preview.getMimeType(), data);
-                smackMessage.addExtension(bob);
-            }
-        }
-
-        // group command
-        if (chat instanceof GroupChat) {
-            GroupChat groupChat = (GroupChat) chat;
-            GID gid = groupChat.getGID();
-            Optional<MessageContent.GroupCommand> optGroupCommand = content.getGroupCommand();
-            smackMessage.addExtension(optGroupCommand.isPresent() ?
-                    ClientUtils.groupCommandToGroupExtension(groupChat, optGroupCommand.get()) :
-                    new GroupExtension(gid.id, gid.ownerJID.string()));
-        }
-
-        return smackMessage;
+    public boolean sendMessage(OutMessage message, boolean sendChatState) {
+        return mMessageSender.sendMessage(message, sendChatState);
     }
 
     // TODO unused
@@ -352,26 +318,19 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendBlockingCommand(JID jid, boolean blocking) {
-        LOGGER.info("jid: "+jid+" blocking="+blocking);
+        if (mConn == null || !this.isConnected()) {
+            LOGGER.warning("not connected");
+            return;
+        }
 
-        String command = blocking ? BlockingCommand.BLOCK : BlockingCommand.UNBLOCK;
-        BlockingCommand blockingCommand = new BlockingCommand(command, jid.string());
-
-        // add response listener
-        StanzaListener blockResponseListener = new BlockResponseListener(mControl, mConn, blocking, jid);
-        mConn.addAsyncStanzaListener(blockResponseListener, new StanzaIdFilter(blockingCommand));
-
-        this.sendPacket(blockingCommand);
+        new BlockSendReceiver(mControl, mConn, blocking, jid).sendAndListen();
     }
 
-    public void sendInitialPresence() {
+    public void sendUserPresence(String statusText) {
         Presence presence = new Presence(Presence.Type.available);
-        List<?> stats = Config.getInstance().getList(Config.NET_STATUS_LIST);
-        if (!stats.isEmpty()) {
-            String stat = (String) stats.get(0);
-            if (!stat.isEmpty())
-                presence.setStatus(stat);
-        }
+        if (!statusText.isEmpty())
+            presence.setStatus(statusText);
+
         // note: not setting priority, according to anti-dicrimination rules;)
 
         // for testing
@@ -380,11 +339,17 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(presence);
     }
 
-    public void sendPresenceSubscriptionRequest(JID jid) {
-        LOGGER.info("to "+jid);
-        Presence subscribeRequest = new Presence(Presence.Type.subscribe);
-        subscribeRequest.setTo(jid.string());
-        this.sendPacket(subscribeRequest);
+    public void sendPresenceSubscription(JID jid, PresenceCommand command) {
+        LOGGER.info("to: "+jid+ ", command: "+command);
+        Presence.Type type = null;
+        switch(command) {
+            case REQUEST: type = Presence.Type.subscribe; break;
+            case GRANT: type = Presence.Type.subscribed; break;
+            case DENY: type = Presence.Type.unsubscribed; break;
+        }
+        Presence presence = new Presence(type);
+        presence.setTo(jid.string());
+        this.sendPacket(presence);
     }
 
     public void sendChatState(JID jid, String threadID, ChatState state) {
@@ -396,7 +361,7 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(message);
     }
 
-    private synchronized boolean sendPackets(Stanza[] stanzas) {
+    synchronized boolean sendPackets(Stanza[] stanzas) {
         boolean sent = true;
         for (Stanza s: stanzas)
             sent &= this.sendPacket(s);
@@ -404,19 +369,17 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     synchronized boolean sendPacket(Stanza p) {
-        try {
-            mConn.sendStanza(p);
-        } catch (SmackException.NotConnectedException ex) {
-            LOGGER.info("can't send packet, not connected.");
+        if (mConn == null) {
+            LOGGER.warning("not connected");
             return false;
         }
-        LOGGER.config("packet: "+p);
-        return true;
+
+        return mConn.send(p);
     }
 
     @Override
     public void processPacket(Stanza packet) {
-        LOGGER.config("unhandled: "+packet);
+        LOGGER.warning("IQ error: "+packet);
     }
 
     public boolean addToRoster(JID jid, String name) {
@@ -484,6 +447,68 @@ public final class Client implements StanzaListener, Runnable {
         return true;
     }
 
+    public void requestAvatar(JID jid, String id) {
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
+            return;
+        }
+        mAvatarSendReceiver.requestAndListen(jid, id);
+    }
+
+    public void publishAvatar(String id, byte[] data) {
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
+            return;
+        }
+        if (mFeatures.containsKey(FeatureDiscovery.Feature.USER_AVATAR)) {
+            mAvatarSendReceiver.publish(id, data);
+        } else {
+            LOGGER.warning("not supported by server");
+        }
+    }
+
+    public boolean deleteAvatar() {
+        if (mAvatarSendReceiver == null) {
+            LOGGER.warning("no avatar sender");
+            return false;
+        }
+
+        if (mFeatures.containsKey(FeatureDiscovery.Feature.USER_AVATAR)) {
+            return mAvatarSendReceiver.delete();
+        } else {
+            LOGGER.warning("not supported by server");
+            return false;
+        }
+    }
+
+    /** Request upload slot (XEP-0636). Blocking */
+    public AttachmentManager.Slot getUploadSlot(String name, long length, String mime) {
+        if (mSlotRequester == null) {
+            LOGGER.warning("no slot requester");
+            return new AttachmentManager.Slot();
+        }
+
+        return mSlotRequester.getSlot(name, length, mime);
+    }
+
+    /* package internal*/
+
+    void newStatus(Control.Status status) {
+        if (status != Control.Status.CONNECTED)
+            mFeatures.clear();
+
+        mControl.onStatusChange(status, this.getServerFeature());
+    }
+
+    void newException(KonException konException) {
+        mControl.onException(konException);
+    }
+
+    String multiAddressHost() {
+        return mFeatures.containsKey(FeatureDiscovery.Feature.MULTI_ADDRESSING)
+                && mConn != null ? mConn.getHost() : "";
+    }
+
     @Override
     public void run() {
         while (true) {
@@ -504,10 +529,6 @@ public final class Client implements StanzaListener, Runnable {
                     break;
             }
         }
-    }
-
-    public boolean isConnected() {
-        return mConn != null && mConn.isAuthenticated();
     }
 
     private static class Task {

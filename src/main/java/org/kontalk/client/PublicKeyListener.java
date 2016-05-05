@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -36,12 +36,14 @@ public class PublicKeyListener implements StanzaListener {
 
     private final Control mControl;
 
+    static {
+        ProviderManager.addIQProvider(PublicKeyPublish.ELEMENT_NAME,
+            PublicKeyPublish.NAMESPACE,
+            new PublicKeyPublish.Provider());
+    }
+
     public PublicKeyListener(Control control) {
         mControl = control;
-
-        ProviderManager.addIQProvider(PublicKeyPublish.ELEMENT_NAME,
-                PublicKeyPublish.NAMESPACE,
-                new PublicKeyPublish.Provider());
     }
 
     @Override
@@ -61,7 +63,7 @@ public class PublicKeyListener implements StanzaListener {
                 LOGGER.warning("got public key packet without public key");
                 return;
             }
-            mControl.handlePGPKey(JID.bare(publicKeyPacket.getFrom()), keyData);
+            mControl.onPGPKey(JID.bare(publicKeyPacket.getFrom()), keyData);
         }
     }
 

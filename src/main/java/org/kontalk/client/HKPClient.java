@@ -1,6 +1,6 @@
 /*
  *  Kontalk Java client
- *  Copyright (C) 2014 Kontalk Devteam <devteam@kontalk.org>
+ *  Copyright (C) 2016 Kontalk Devteam <devteam@kontalk.org>
  *
  *  This program is free software: you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -40,8 +40,8 @@ import org.apache.http.impl.client.HttpClients;
 public final class HKPClient {
     private static final Logger LOGGER = Logger.getLogger(HKPClient.class.getName());
 
-    //private static final short DEFAULT_PORT = 11371;
-    private static final short DEFAULT_SSL_PORT = 443;
+    //private static final int DEFAULT_PORT = 11371;
+    //private static final int DEFAULT_SSL_PORT = 443;
 
     private static final int MAX_CONTENT_LENGTH = 9001;
 
