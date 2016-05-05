@@ -22,10 +22,15 @@ import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
+import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URLConnection;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -44,9 +49,12 @@ import org.kontalk.misc.Callback;
 public class MediaUtils {
     private static final Logger LOGGER = Logger.getLogger(MediaUtils.class.getName());
 
-    private static OggClip mAudioClip = null;
+    private MediaUtils() {}
 
     public static String extensionForMIME(String mimeType) {
+        if (mimeType.isEmpty())
+            return "unk";
+
         MimeType mime = null;
         try {
             mime = MimeTypes.getDefaultMimeTypes().forName(mimeType);
@@ -61,9 +69,33 @@ public class MediaUtils {
         return StringUtils.defaultIfEmpty(m, "dat");
     }
 
+    public static String mimeForFile(Path path) {
+        String mime = null;
+        try {
+            mime = Files.probeContentType(path);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't probe type", ex);
+        }
+
+        if (mime == null) {
+            // method above is buggy on windows, try something else
+            try(FileInputStream fis = new FileInputStream(path.toFile())) {
+                InputStream is = new BufferedInputStream(fis);
+                mime = URLConnection.guessContentTypeFromStream(is);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't guess content type", ex);
+            }
+        }
+
+        if (mime == null)
+            LOGGER.warning("can't determine content type: "+path);
+
+        return StringUtils.defaultString(mime);
+    }
+
     public enum Sound{NOTIFICATION}
 
-    private MediaUtils() {}
+    private static OggClip mAudioClip = null;
 
     public static void playSound(Sound sound) {
         switch (sound) {

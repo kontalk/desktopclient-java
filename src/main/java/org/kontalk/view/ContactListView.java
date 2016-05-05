@@ -36,6 +36,7 @@ import javax.swing.Box;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ContactListView.ContactItem;
@@ -49,7 +50,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     private final Model mModel;
 
     ContactListView(final View view, Model model) {
-        super(view, true);
+        super(view, false);
 
         mModel = model;
 
@@ -92,8 +93,9 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         newItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.getControl().getOrCreateSingleChat(
+                Chat chat = mView.getControl().getOrCreateSingleChat(
                         ContactListView.this.getSelectedItem().mValue);
+                mView.showChat(chat);
             }
         });
         menu.add(newItem);
@@ -237,27 +239,34 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
         @Override
         protected void updateOnEDT(Object arg) {
-            // avatar
-            mAvatar.setImage(AvatarLoader.load(mValue));
+            if (arg == null || arg instanceof String) {
+                // avatar
+                Utils.fixedSetWebImageImage(mAvatar, AvatarLoader.load(mValue));
 
-            // name
-            String name = Utils.displayName(mValue);
-            if (!name.equals(mNameLabel.getText())) {
-                mNameLabel.setText(name);
-                ContactListView.this.updateSorting();
+                // name
+                String name = Utils.displayName(mValue);
+                if (!name.equals(mNameLabel.getText())) {
+                    mNameLabel.setText(name);
+                    ContactListView.this.updateSorting();
+                }
             }
 
             // status
-            mStatusLabel.setText(Utils.mainStatus(mValue, false));
+            if (arg == null || arg instanceof Contact.Subscription ||
+                    arg instanceof Contact.Online) {
+                mStatusLabel.setText(Utils.mainStatus(mValue, false));
+            }
 
             // online status
-            Contact.Subscription subStatus = mValue.getSubScription();
-            mBackground = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
-                    subStatus == Contact.Subscription.UNSUBSCRIBED ||
-                    subStatus == Contact.Subscription.PENDING ||
-                    mValue.isBlocked() ? View.LIGHT_GREY :
-                    Color.WHITE;
-            this.setBackground(mBackground);
+            if (arg == null || arg instanceof Contact.Subscription) {
+                Contact.Subscription subStatus = mValue.getSubScription();
+                mBackground = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
+                        subStatus == Contact.Subscription.UNSUBSCRIBED ||
+                        subStatus == Contact.Subscription.PENDING ||
+                        mValue.isBlocked() ? View.LIGHT_GREY :
+                        Color.WHITE;
+                this.setBackground(mBackground);
+            }
 
             ContactListView.this.repaint();
         }

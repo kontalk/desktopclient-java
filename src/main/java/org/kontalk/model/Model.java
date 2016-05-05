@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
+import org.kontalk.misc.JID;
 import org.kontalk.model.Avatar.UserAvatar;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.ChatList;
@@ -101,6 +102,20 @@ public final class Model {
         return UserAvatar.create(image);
     }
 
+    public void deleteUserAvatar() {
+        mUserAvatar.delete();
+        mUserAvatar = new UserAvatar(APP_DIR);
+    }
+
+    public void setUserJID(JID jid) {
+        Config.getInstance().setProperty(Config.ACC_JID, jid.string());
+
+        if (!mContactList.contains(jid)) {
+            LOGGER.info("creating user contact, jid: "+jid);
+            mContactList.create(jid, "");
+        }
+    }
+
     public Optional<InMessage> createInMessage(ProtoMessage protoMessage,
             Chat chat, ClientUtils.MessageIDs ids, Optional<Date> serverDate) {
         InMessage newMessage = new InMessage(protoMessage, chat, ids.jid,
@@ -134,11 +149,6 @@ public final class Model {
         return Optional.of(newMessage);
     }
 
-    public void deleteUserAvatar() {
-        mUserAvatar.delete();
-        mUserAvatar = new UserAvatar(APP_DIR);
-    }
-
     static Path appDir() {
         if (APP_DIR == null)
             throw new IllegalStateException("model not set up");
@@ -151,5 +161,9 @@ public final class Model {
             throw new IllegalStateException("model not set up");
 
         return DATABASE;
+    }
+
+    public static JID getUserJID() {
+        return JID.bare(Config.getInstance().getString(Config.ACC_JID));
     }
 }

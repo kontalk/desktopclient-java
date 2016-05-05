@@ -26,6 +26,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.util.Arrays;
@@ -52,12 +53,12 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
-import org.kontalk.client.KonMessageListener;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.DecryptMessage;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.ClientUtils;
+import org.kontalk.util.MediaUtils;
 import org.kontalk.util.XMPPUtils;
 import org.xmlpull.v1.XmlPullParserException;
 
@@ -161,10 +162,9 @@ final class Decryptor {
         File inFile = baseDir.resolve(attachment.getFilePath()).toFile();
         // out file
         String base = FilenameUtils.getBaseName(inFile.getName());
-        String ext = FilenameUtils.getExtension(inFile.getName());
-        File outFile = baseDir.resolve(base + "_dec." + ext).toFile();
+        File outFile = baseDir.resolve(base + "_dec").toFile();
         if (outFile.exists()) {
-            LOGGER.warning("encrypted file already exists: "+outFile.getAbsolutePath());
+            LOGGER.warning("decrypted file already exists: "+outFile.getAbsolutePath());
             return;
         }
 
@@ -186,8 +186,17 @@ final class Decryptor {
         inMessage.setAttachmentSigning(decResult.signing);
 
         // set new filename
-        inMessage.setDecryptedAttachment(outFile.getName());
-        LOGGER.info("attachment decryption successful");
+        Path outPath = outFile.toPath();
+        Path newPath = outPath.resolveSibling(outFile.getName() + "." +
+                MediaUtils.extensionForMIME(MediaUtils.mimeForFile(outPath)));
+        try {
+            outPath = Files.move(outFile.toPath(), newPath);
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't rename file", ex);
+        }
+
+        inMessage.setDecryptedAttachment(outPath.toFile().getName());
+        LOGGER.info("success, decrypted file: "+outPath);
     }
 
     /** Decrypt, verify and write input stream data to output stream. */

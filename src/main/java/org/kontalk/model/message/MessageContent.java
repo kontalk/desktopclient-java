@@ -33,7 +33,7 @@ import java.util.stream.Collectors;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
-import org.kontalk.model.Account;
+import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.util.EncodingUtils;
 
@@ -268,7 +268,7 @@ public class MessageContent {
         private URI mURL;
         // file name of downloaded file or path to upload file, empty by default
         private Path mFile;
-        // MIME of file, empty string by default
+        // MIME of file, only used for outgoing, empty string by default
         private String mMimeType;
         // size of (decrypted) upload file in bytes, -1 by default
         private long mLength;
@@ -276,22 +276,6 @@ public class MessageContent {
         private final CoderStatus mCoderStatus;
         // progress downloaded of (encrypted) file in percent
         private int mDownloadProgress = -1;
-
-        // used for outgoing attachments
-        public Attachment(Path path, String mimeType) {
-            this(URI.create(""), path, mimeType, -1,
-                    CoderStatus.createInsecure());
-        }
-
-        // used for incoming attachments
-        public Attachment(URI url, String mimeType, long length,
-                boolean encrypted) {
-            this(url, Paths.get(""), mimeType, length,
-                    encrypted ?
-                            CoderStatus.createEncrypted() :
-                            CoderStatus.createInsecure()
-            );
-        }
 
         // used when loading from database.
         private Attachment(URI url, Path file,
@@ -302,6 +286,22 @@ public class MessageContent {
             mMimeType = mimeType;
             mLength = length;
             mCoderStatus = coderStatus;
+        }
+
+        // used for incoming attachments
+        public static Attachment incoming(URI url, long length,
+                boolean encrypted) {
+            return new Attachment(url, Paths.get(""), "", length,
+                    encrypted ?
+                            CoderStatus.createEncrypted() :
+                            CoderStatus.createInsecure()
+            );
+        }
+
+        // used for outgoing attachments
+        public static Attachment outgoing(Path path, String mimeType) {
+            return new Attachment(URI.create(""), path, mimeType, -1,
+                    CoderStatus.createInsecure());
         }
 
         public boolean hasURL() {
@@ -543,7 +543,7 @@ public class MessageContent {
         }
 
         public boolean isAddingMe() {
-            JID myJID = Account.getUserJID();
+            JID myJID = Model.getUserJID();
             return mAdded.stream().anyMatch(jid -> jid.equals(myJID));
         }
 

@@ -103,19 +103,14 @@ public final class ContactList extends Observable implements Iterable<Contact> {
     }
 
     /**
-     * Get the contact that represents the user itself. It is created and added
-     * if not yet in the list.
+     * Get the contact that represents the user itself.
      */
     public Optional<Contact> getMe() {
-        JID myJID = Account.getUserJID();
+        JID myJID = Model.getUserJID();
         if (!myJID.isValid())
             return Optional.empty();
 
-        Contact me = this.get(myJID).orElse(null);
-        if (me != null)
-            return Optional.of(me);
-
-        return this.create(myJID, "");
+        return this.get(myJID);
     }
 
     public Set<Contact> getAll(boolean withMe) {

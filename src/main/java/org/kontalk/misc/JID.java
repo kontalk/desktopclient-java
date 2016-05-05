@@ -87,7 +87,7 @@ public final class JID {
 
     /**
      * Comparing only bare JIDs.
-     * Case-insensitive (local and domain part, resource is case-sensitive).
+     * Case-insensitive.
      */
     @Override
     public boolean equals(Object o) {

@@ -32,6 +32,7 @@ import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Contact.Subscription;
 import org.kontalk.model.Model;
 
 /**
@@ -83,7 +84,9 @@ public final class RosterHandler {
             return;
 
         Contact.Subscription status = rosterToModelSubscription(itemStatus, type);
-        newContact.setSubScriptionStatus(status);
+        newContact.setSubscriptionStatus(status);
+
+        mControl.maySendKeyRequest(newContact);
 
         if (status == Contact.Subscription.UNSUBSCRIBED)
             mControl.sendPresenceSubscription(jid, Client.PresenceCommand.REQUEST);
@@ -110,7 +113,10 @@ public final class RosterHandler {
             return;
         }
         // subcription may have changed
-        contact.setSubScriptionStatus(rosterToModelSubscription(itemStatus, type));
+        contact.setSubscriptionStatus(rosterToModelSubscription(itemStatus, type));
+
+        // maybe subscribed now
+        mControl.maySendKeyRequest(contact);
 
         // name may have changed
         if (contact.getName().isEmpty() && !name.equals(jid.local()))
@@ -239,16 +245,16 @@ public final class RosterHandler {
         return myJID != null ? myJID.equals(jid) : false;
     }
 
-    private static Contact.Subscription rosterToModelSubscription(
+    private static Subscription rosterToModelSubscription(
             RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
         if (type == RosterPacket.ItemType.both ||
                 type == RosterPacket.ItemType.to ||
                 type == RosterPacket.ItemType.remove)
-            return Contact.Subscription.SUBSCRIBED;
+            return Subscription.SUBSCRIBED;
 
         if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
-            return Contact.Subscription.PENDING;
+            return Subscription.PENDING;
 
-        return Contact.Subscription.UNSUBSCRIBED;
+        return Subscription.UNSUBSCRIBED;
     }
 }

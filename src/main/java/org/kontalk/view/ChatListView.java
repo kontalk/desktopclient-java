@@ -106,15 +106,17 @@ final class ChatListView extends ListView<ChatItem, Chat> {
         Chat chat = item.mValue;
         if (chat instanceof SingleChat) {
             final Contact contact = ((SingleChat) chat).getContact();
-            WebMenuItem editItem = new WebMenuItem(Tr.tr("Edit Contact"));
-            editItem.setToolTipText(Tr.tr("Edit contact settings"));
-            editItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent event) {
-                    mView.showContactDetails(contact);
-                }
-            });
-            menu.add(editItem);
+            if (!contact.isDeleted()) {
+                WebMenuItem editItem = new WebMenuItem(Tr.tr("Edit Contact"));
+                editItem.setToolTipText(Tr.tr("Edit contact settings"));
+                editItem.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent event) {
+                        mView.showContactDetails(contact);
+                    }
+                });
+                menu.add(editItem);
+            }
         }
 
         WebMenuItem deleteItem = new WebMenuItem(Tr.tr("Delete Chat"));
@@ -220,7 +222,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
             // avatar may change when subject or contact name changes
             if (arg == null || arg instanceof Contact || arg instanceof String) {
-                mAvatar.setImage(AvatarLoader.load(mValue));
+                Utils.fixedSetWebImageImage(mAvatar, AvatarLoader.load(mValue));
             }
 
             if (arg == null || arg instanceof KonMessage) {
@@ -251,7 +253,6 @@ final class ChatListView extends ListView<ChatItem, Chat> {
                 mChatStateLabel.setText(stateText);
                 mStatusLabel.setVisible(false);
             }
-
         }
 
         private void updateBG() {

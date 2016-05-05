@@ -137,8 +137,7 @@ public final class ClientUtils {
                 LOGGER.log(Level.WARNING, "can't parse URL", ex);
                 url = URI.create("");
             }
-            attachment = new MessageContent.Attachment(url,
-                    oobData.getMime() != null ? oobData.getMime() : "",
+            attachment = MessageContent.Attachment.incoming(url,
                     oobData.getLength(),
                     oobData.isEncrypted());
 
