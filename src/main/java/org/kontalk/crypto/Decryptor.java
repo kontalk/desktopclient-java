@@ -190,13 +190,18 @@ final class Decryptor {
         Path newPath = outPath.resolveSibling(outFile.getName() + "." +
                 MediaUtils.extensionForMIME(MediaUtils.mimeForFile(outPath)));
         try {
-            outPath = Files.move(outFile.toPath(), newPath);
+            outPath = Files.move(outPath, newPath);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't rename file", ex);
         }
 
         inMessage.setDecryptedAttachment(outPath.toFile().getName());
         LOGGER.info("success, decrypted file: "+outPath);
+
+        boolean succ = inFile.delete();
+        if (!succ) {
+            LOGGER.warning("can't delete obsolete decrypted attachment file");
+        }
     }
 
     /** Decrypt, verify and write input stream data to output stream. */
