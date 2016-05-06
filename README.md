@@ -41,7 +41,9 @@ applications on your computer!**
 - XEP-0085: Chat state notifications
 - XEP-0191: User blocking
 - XEP-0066: File transfer over server
+- XEP-0231: Image thumbnails for attachments
 - XEP-0084: Avatar images
+- XEP-0363: HTTP File Upload
 
 ## Support us
 
