@@ -32,6 +32,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Observer;
+import java.util.Optional;
 import javax.swing.Box;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
@@ -80,8 +81,8 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     }
 
     @Override
-    protected void selectionChanged(Contact value) {
-        mView.showContactDetails(value);
+    protected void selectionChanged(Optional<Contact> optContact) {
+        mView.onContactSelectionChanged(optContact);
     }
 
     @Override
@@ -133,7 +134,6 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
                     return;
                 mView.getControl().deleteContact(
                         ContactListView.this.getSelectedItem().mValue);
-                mView.showNothing();
             }
         });
         menu.add(deleteItem);

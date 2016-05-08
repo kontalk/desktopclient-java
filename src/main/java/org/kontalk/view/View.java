@@ -356,22 +356,23 @@ public final class View implements Observer {
         mChatListView.setSelectedItem(chat);
     }
 
-    void selectedChatChanged(Chat chat) {
+    void onChatSelectionChanged(Optional<Chat> optChat) {
         if (mMainFrame.getCurrentTab() != MainFrame.Tab.CHATS)
             return;
-        mContent.showChat(chat);
+
+        if (optChat.isPresent())
+            mContent.showChat(optChat.get());
+        else
+            mContent.showNothing();
     }
 
-    void showNothing() {
-        mContent.showNothing();
-    }
-
-    void showContactDetails(Contact contact) {
-        if (contact.isDeleted())
+    void onContactSelectionChanged(Optional<Contact> optContact) {
+        Contact contact = optContact.orElse(null);
+        if (contact == null || contact.isDeleted()) {
+            mContent.showNothing();
             return;
+        }
 
-        mMainFrame.selectTab(MainFrame.Tab.CONTACT);
-        mContactListView.setSelectedItem(contact);
         mContent.showContact(contact);
     }
 
@@ -381,6 +382,12 @@ public final class View implements Observer {
 
         this.showContactDetails(contact);
         mContent.requestRenameFocus();
+    }
+
+    void showContactDetails(Contact contact) {
+        // show by selecting in contact list
+        mMainFrame.selectTab(MainFrame.Tab.CONTACT);
+        mContactListView.setSelectedItem(contact);
     }
 
     void clearSearch() {

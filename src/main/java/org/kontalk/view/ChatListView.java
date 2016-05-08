@@ -29,6 +29,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Optional;
 import java.util.Timer;
 import javax.swing.Box;
 import javax.swing.ListSelectionModel;
@@ -95,8 +96,8 @@ final class ChatListView extends ListView<ChatItem, Chat> {
     }
 
     @Override
-    protected void selectionChanged(Chat value) {
-        mView.selectedChatChanged(value);
+    protected void selectionChanged(Optional<Chat> value) {
+        mView.onChatSelectionChanged(value);
     }
 
     @Override

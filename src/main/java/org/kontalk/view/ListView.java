@@ -129,26 +129,12 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
-            private V lastValue = null;
-
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
 
-                V value = ListView.this.getSelectedValue().orElse(null);
-                if (value == null) {
-                    // note: this happens also on right-click for some reason
-                    return;
-                }
-                // if event is caused by filtering, dont do anything
-                if (lastValue == value)
-                    return;
-
-                lastValue = value;
-                mView.clearSearch();
-
-                ListView.this.selectionChanged(value);
+                ListView.this.selectionChanged(ListView.this.getSelectedValue());
             }
         });
 
@@ -221,7 +207,7 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         menu.show(this, e.getX(), e.getY());
     }
 
-    protected void selectionChanged(V value){};
+    protected void selectionChanged(Optional<V> value){};
 
     protected abstract WebPopupMenu rightClickMenu(I item);
 
@@ -302,7 +288,10 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         if (i == this.getSelectedRow())
             return;
 
-        this.setSelectedRow(i);
+        // weblaf does this by "clear+add", triggering two selection events
+        // better do this on our own
+        //this.setSelectedRow(i);
+        this.getSelectionModel().setSelectionInterval(i, i);
     }
 
     void filterItems(String search) {

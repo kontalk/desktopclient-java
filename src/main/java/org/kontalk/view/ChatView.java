@@ -416,10 +416,6 @@ final class ChatView extends WebPanel implements Observer {
                     viewList.clearItems();
                     chat.deleteObserver(viewList);
                 }
-                if(this.getCurrentChat().orElse(null) == chat) {
-                    mScrollPane.setViewportView(null);
-                    mView.showNothing();
-                }
             }
         }
 
