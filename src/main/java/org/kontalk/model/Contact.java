@@ -119,7 +119,7 @@ public final class Contact extends Observable {
     }
 
     // loading from database
-    public Contact(
+    private Contact(
             int id,
             JID jid,
             String name,

@@ -172,18 +172,15 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         if (mUnread == unread)
             return;
 
-        if (unread) {
-            mUnread = true;
-            this.changed(mUnread);
-            return;
+        if (!unread) {
+            // one chat was read, are there still any unread chats?
+            synchronized(mChats) {
+                if (mChats.stream().anyMatch(chat -> !chat.isRead()))
+                    return;
+            }
         }
 
-        synchronized(mChats) {
-            if (mChats.stream().anyMatch(chat -> !chat.isRead()))
-                return;
-        }
-
-        mUnread = false;
+        mUnread = !mUnread;
         this.changed(mUnread);
     }
 

@@ -237,7 +237,7 @@ public abstract class Chat extends Observable implements Observer {
         Database db = Model.database();
         db.execDelete(TABLE, mID);
 
-        // all done, commmit deletions
+        // all done, commit deletions
         succ = db.commit();
         if (!succ)
             return;
