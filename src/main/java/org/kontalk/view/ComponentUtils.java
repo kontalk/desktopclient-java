@@ -386,7 +386,7 @@ final class ComponentUtils {
         @Override
         void onShow() {
             List<Contact> contacts = new LinkedList<>();
-            for (Contact c : Utils.allContacts(mModel.contacts())) {
+            for (Contact c : Utils.allContacts(mModel.contacts(), false)) {
                 if (c.isKontalkUser() && !c.isMe())
                     contacts.add(c);
             }

@@ -35,7 +35,7 @@ import org.kontalk.persistence.Database;
 /**
  * Global list of all contacts.
  *
- * Does not contain deleted user.
+ * Does not contain deleted contacts.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -43,7 +43,6 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
-    /** JID to contact. Without deleted contacts. */
     private final Map<JID, Contact> mJIDMap =
             Collections.synchronizedMap(new HashMap<JID, Contact>());
 
@@ -113,11 +112,13 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         return this.get(myJID);
     }
 
-    public Set<Contact> getAll(boolean withMe) {
+    public Set<Contact> getAll(boolean withMe, boolean blocked) {
         synchronized(mJIDMap) {
             return Collections.unmodifiableSet(
                     mJIDMap.values().stream()
-                            .filter(c -> (withMe || !c.isMe()))
+                            .filter(c ->
+                                    (blocked || !c.isBlocked()) &&
+                                    (withMe || !c.isMe()))
                             .collect(Collectors.toSet()));
         }
     }

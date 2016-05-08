@@ -381,9 +381,10 @@ final class Utils {
         return selectedOption == WebOptionPane.OK_OPTION;
     }
 
-    static Set<Contact> allContacts(ContactList contactList) {
+    static Set<Contact> allContacts(ContactList contactList, boolean blocked) {
         boolean showMe = Config.getInstance().getBoolean(Config.VIEW_USER_CONTACT);
-        return contactList.getAll(showMe);
+
+        return contactList.getAll(showMe, blocked);
     }
 
     static List<Contact> contactList(Chat chat) {

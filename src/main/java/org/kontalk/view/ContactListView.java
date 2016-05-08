@@ -38,6 +38,7 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.Chat;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ContactListView.ContactItem;
@@ -72,7 +73,9 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
     @Override
     protected void updateOnEDT(Object arg) {
-        this.sync(Utils.allContacts(mModel.contacts()));
+        boolean hideBlocked = Config.getInstance()
+                .getBoolean(Config.VIEW_HIDE_BLOCKED);
+        this.sync(Utils.allContacts(mModel.contacts(), !hideBlocked));
     }
 
     @Override
@@ -269,6 +272,12 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             }
 
             ContactListView.this.repaint();
+
+            if (arg instanceof Boolean &&
+                    Config.getInstance().getBoolean(Config.VIEW_HIDE_BLOCKED)) {
+                // "blocked" status changed, hide/show this item
+                ContactListView.this.updateOnEDT(null);
+            }
         }
 
         @Override

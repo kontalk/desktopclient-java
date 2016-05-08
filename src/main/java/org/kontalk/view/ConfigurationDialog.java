@@ -125,7 +125,8 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mTrayBox;
         private final WebCheckBox mCloseTrayBox;
         private final WebCheckBox mEnterSendsBox;
-        private final WebCheckBox mUserContact;
+        private final WebCheckBox mShowUserBox;
+        private final WebCheckBox mHideBlockedBox;
         private final WebCheckBox mBGBox;
         private final WebFileChooserField mBGChooser;
 
@@ -156,10 +157,15 @@ final class ConfigurationDialog extends WebDialog {
                     mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
-            mUserContact = createCheckBox(Tr.tr("Show yourself in contacts"),
+            mShowUserBox = createCheckBox(Tr.tr("Show yourself in contacts"),
                     Tr.tr("Show yourself in the contact list"),
                     mConf.getBoolean(Config.VIEW_USER_CONTACT));
-            groupPanel.add(new GroupPanel(mUserContact, new WebSeparator()));
+            groupPanel.add(new GroupPanel(mShowUserBox, new WebSeparator()));
+
+            mHideBlockedBox = createCheckBox(Tr.tr("Hide blocked contacts"),
+                    Tr.tr("Hide blocked contacts in the contact list"),
+                    mConf.getBoolean(Config.VIEW_HIDE_BLOCKED));
+            groupPanel.add(new GroupPanel(mHideBlockedBox, new WebSeparator()));
 
             String bgPath = mConf.getString(Config.VIEW_CHAT_BG);
             mBGBox = createCheckBox(Tr.tr("Custom background:")+" ",
@@ -184,10 +190,14 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(Config.MAIN_TRAY, mTrayBox.isSelected());
             mConf.setProperty(Config.MAIN_TRAY_CLOSE, mCloseTrayBox.isSelected());
             mView.updateTray();
+
             mConf.setProperty(Config.MAIN_ENTER_SENDS, mEnterSendsBox.isSelected());
             mView.setHotkeys();
-            mConf.setProperty(Config.VIEW_USER_CONTACT, mUserContact.isSelected());
+
+            mConf.setProperty(Config.VIEW_USER_CONTACT, mShowUserBox.isSelected());
+            mConf.setProperty(Config.VIEW_HIDE_BLOCKED, mHideBlockedBox.isSelected());
             mView.updateContactList();
+
             String bgPath;
             if (mBGBox.isSelected() && !mBGChooser.getSelectedFiles().isEmpty()) {
                 bgPath = mBGChooser.getSelectedFiles().get(0).getAbsolutePath();
