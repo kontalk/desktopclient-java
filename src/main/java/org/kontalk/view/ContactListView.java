@@ -256,14 +256,17 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
             // status
             if (arg == null || arg instanceof Contact.Subscription ||
-                    arg instanceof Contact.Online) {
+                    arg instanceof Contact.Online ||
+                    arg instanceof Boolean) {
                 mStatusLabel.setText(Utils.mainStatus(mValue, false));
             }
 
             // online status
-            if (arg == null || arg instanceof Contact.Subscription) {
+            if (arg == null || arg instanceof Contact.Subscription ||
+                    arg instanceof Boolean) {
                 Contact.Subscription subStatus = mValue.getSubScription();
-                mBackground = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
+                mBackground = mValue.getOnline() ==
+                        Contact.Online.YES ? View.LIGHT_BLUE:
                         subStatus == Contact.Subscription.UNSUBSCRIBED ||
                         subStatus == Contact.Subscription.PENDING ||
                         mValue.isBlocked() ? View.LIGHT_GREY :
