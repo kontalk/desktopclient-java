@@ -128,6 +128,9 @@ final class ProfileDialog extends WebDialog {
                             mView.tr_not_supported);
 
         groupPanel.add(mAvatarImage);
+        groupPanel.add(new GroupPanel(
+                new WebLabel(Tr.tr("Note:")+" ").setBoldFont(),
+                new WebLabel(Tr.tr("the profile picture is publicly visible"))));
         groupPanel.add(new WebSeparator(true, true));
 
         // status text
@@ -137,9 +140,9 @@ final class ProfileDialog extends WebDialog {
 
         groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
         mStatusField = new WebTextField(currentStatus, 30);
-        mStatusField.setToolTipText(Tr.tr("Set status text send to other user"));
+        TooltipManager.addTooltip(mStatusField,
+                Tr.tr("Set status text send to other user"));
         groupPanel.add(mStatusField);
-        groupPanel.add(new WebSeparator(true, true));
 
         groupPanel.add(new WebLabel(Tr.tr("Previously used:")));
         mStatusList = new WebList(stats);
