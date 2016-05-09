@@ -447,7 +447,7 @@ final class ChatView extends WebPanel implements Observer {
         mSendTextArea.setBackground(chatDisabled ? Color.LIGHT_GRAY : Color.WHITE);
 
         // send button
-        this.updateSendButton();
+        this.updateEnabledButtons();
 
         // encryption status
         boolean isEncrypted = chat.isSendEncrypted();
@@ -476,7 +476,7 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void onKeyTypeEvent(boolean empty) {
-        this.updateSendButton();
+        this.updateEnabledButtons();
 
         Chat chat = this.getCurrentChat().orElse(null);
         if (chat == null)
@@ -487,17 +487,20 @@ final class ChatView extends WebPanel implements Observer {
             mView.getControl().handleOwnChatStateEvent(chat, ChatState.composing);
     }
 
-    private void updateSendButton() {
+    private void updateEnabledButtons() {
         Chat chat = this.getCurrentChat().orElse(null);
         if (chat == null)
             return;
 
         // enable if chat is valid...
-        mSendButton.setEnabled(chat.isValid() &&
-                // ...and there is text to send...
-                !mSendTextArea.getText().trim().isEmpty() &&
+        boolean canSendMessage = chat.isValid() &&
                 // ...and encrypted messages can be send
-                (!chat.isSendEncrypted() || chat.canSendEncrypted()));
+                (!chat.isSendEncrypted() || chat.canSendEncrypted());
+
+        mFileButton.setEnabled(canSendMessage);
+        mSendButton.setEnabled(canSendMessage &&
+                // + there is text to send...
+                !mSendTextArea.getText().trim().isEmpty());
     }
 
     private void sendMsg() {
