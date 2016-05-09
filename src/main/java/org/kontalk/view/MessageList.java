@@ -87,6 +87,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
     private static final Icon WARNING_ICON = Utils.getIcon("ic_msg_warning.png");
     private static final Icon CRYPT_ICON = Utils.getIcon("ic_msg_crypt.png");
     private static final Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
+    private static final Icon CRYPT_WARNING_ICON = Utils.getIcon("ic_msg_crypt_warning.png");
 
     private final ChatView mChatView;
     private final Chat mChat;
@@ -238,6 +239,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         private WebTextPane mTextPane;
         private WebPanel mStatusPanel;
         private WebLabel mStatusIconLabel;
+        private WebLabel mEncryptIconLabel;
         private AttachmentPanel mAttPanel = null;
         private int mPreferredTextWidth;
         private boolean mCreated = false;
@@ -292,10 +294,10 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
 
             mStatusPanel = new WebPanel();
             mStatusPanel.setOpaque(false);
-            TooltipManager.addTooltip(mStatusPanel, "???");
             mStatusPanel.setLayout(new FlowLayout());
             // icons
             mStatusIconLabel = new WebLabel();
+            mEncryptIconLabel = new WebLabel();
 
             this.updateOnEDT(null);
 
@@ -304,13 +306,8 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             mPreferredTextWidth = mTextPane.getPreferredSize().width;
 
             mStatusPanel.add(mStatusIconLabel);
-            WebLabel encryptIconLabel = new WebLabel();
-            if (mValue.getCoderStatus().isSecure()) {
-                encryptIconLabel.setIcon(CRYPT_ICON);
-            } else {
-                encryptIconLabel.setIcon(UNENCRYPT_ICON);
-            }
-            mStatusPanel.add(encryptIconLabel);
+            mStatusPanel.add(mEncryptIconLabel);
+
             // date label
             Date statusDate = mValue.isInMessage() ?
                     mValue.getServerDate().orElse(mValue.getDate()) :
@@ -459,6 +456,19 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 }
             }
 
+            //encryption icon
+            Coder.Encryption enc = mValue.getCoderStatus().getEncryption();
+            Coder.Signing sign = mValue.getCoderStatus().getSigning();
+            boolean noSecurity = enc == Coder.Encryption.NOT && sign == Coder.Signing.NOT;
+            boolean fullSecurity = enc == Coder.Encryption.DECRYPTED &&
+                    ((isOut && sign == Coder.Signing.SIGNED) ||
+                    (!isOut && sign == Coder.Signing.VERIFIED));
+
+            mEncryptIconLabel.setIcon(
+                    noSecurity ? UNENCRYPT_ICON :
+                    fullSecurity ? CRYPT_ICON :
+                    CRYPT_WARNING_ICON);
+
             // tooltip
             String html = "<html><body>" + /*"<h3>Header</h3>"+*/ "<br>";
 
@@ -510,17 +520,10 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 html += Tr.tr("Received:")+ " " + rec + "<br>";
             }
 
-            Coder.Encryption enc = mValue.getCoderStatus().getEncryption();
-            Coder.Signing sign = mValue.getCoderStatus().getSigning();
-            String sec = null;
             // usual states
-            if (enc == Coder.Encryption.NOT && sign == Coder.Signing.NOT)
-                sec = Tr.tr("Not encrypted");
-            else if (enc == Coder.Encryption.DECRYPTED &&
-                    ((isOut && sign == Coder.Signing.SIGNED) ||
-                    (!isOut && sign == Coder.Signing.VERIFIED))) {
-                        sec = Tr.tr("Secure");
-            }
+            String sec = noSecurity ? Tr.tr("Not encrypted") :
+                    fullSecurity ? Tr.tr("Secure") :
+                    null;
             if (sec == null) {
                 // unusual states
                 String encryption = Tr.tr("Unknown");
