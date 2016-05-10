@@ -52,7 +52,7 @@ public final class AvatarHandler {
     }
 
     public void onNotify(JID jid, String id) {
-        if (Config.getInstance().getBoolean(Config.NET_REQUEST_AVATARS))
+        if (!Config.getInstance().getBoolean(Config.NET_REQUEST_AVATARS))
             // disabled by user
             return;
 
