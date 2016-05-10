@@ -68,7 +68,7 @@ public class Avatar {
 
         if (mImage != null) {
             // save new image
-            boolean succ = MediaUtils.writeImage(image, FORMAT, file);
+            boolean succ = MediaUtils.writeImage(image, FORMAT, mFile);
             if (!succ)
                 LOGGER.warning("can't save avatar image: "+id);
         }
