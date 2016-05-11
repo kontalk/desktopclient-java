@@ -34,7 +34,6 @@ import org.kontalk.model.Avatar;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.model.chat.SingleChat;
-import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 
 /**
@@ -43,19 +42,19 @@ import org.kontalk.util.Tr;
  */
 final class AvatarLoader {
 
-    private static final int IMG_SIZE = 40;
+    private static final int FALLBACK_SIZE = 100;
 
     private static final Color LETTER_COLOR = new Color(255, 255, 255);
     private static final Color FALLBACK_COLOR = new Color(220, 220, 220);
     private static final Color GROUP_COLOR = new Color(160, 160, 160);
 
-    private static final Map<Item, Image> CACHE = new HashMap<>();
+    private static final Map<Item, BufferedImage> CACHE = new HashMap<>();
 
     static Image load(Chat chat) {
         return load(new Item(chat));
     }
 
-    static Image load(Contact contact) {
+    static BufferedImage load(Contact contact) {
         return load(new Item(contact));
     }
 
@@ -65,7 +64,7 @@ final class AvatarLoader {
 
     private AvatarLoader() {};
 
-    private static Image load(Item item) {
+    private static BufferedImage load(Item item) {
         if (!CACHE.containsKey(item)) {
             CACHE.put(item, item.createImage());
         }
@@ -117,14 +116,14 @@ final class AvatarLoader {
                     fallbackLetter();
         }
 
-        private Image createImage() {
+        private BufferedImage createImage() {
             if (avatar != null) {
                 BufferedImage img = avatar.loadImage().orElse(null);
                 if (img != null)
-                    return MediaUtils.scaleAsync(img, IMG_SIZE, IMG_SIZE, true);
+                    return img;
             }
 
-            return fallback(letter, color, IMG_SIZE);
+            return fallback(letter, color, FALLBACK_SIZE);
         }
 
         @Override
