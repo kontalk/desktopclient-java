@@ -83,10 +83,15 @@ final class AvatarLoader {
             if (avatar == null) {
                 String name = contact.getName();
                 letter = labelToLetter(name);
-                int colorcode = name.isEmpty()? 0 : hash(contact.getID());
-                int hue = Math.abs(colorcode) % 360;
-                color = Color.getHSBColor(hue / 360.0f, 0.8f, 1);
+                if (contact.isDeleted()) {
+                    color = FALLBACK_COLOR;
+                } else {
+                    int colorcode = hash(contact.getID());
+                    int hue = Math.abs(colorcode) % 360;
+                    color = Color.getHSBColor(hue / 360.0f, 0.8f, 1);
+                }
             } else {
+                // not used
                 letter = "";
                 color = new Color(0);
             }
