@@ -33,6 +33,7 @@ import org.apache.commons.lang.ObjectUtils;
 import org.kontalk.model.Avatar;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.SingleChat;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 
@@ -93,7 +94,7 @@ final class AvatarLoader {
         }
 
         Item(Chat chat) {
-            String l = "";
+            String l;
             if (chat.isGroupChat()) {
                 // nice to have: group picture
                 avatar = null;
@@ -101,16 +102,11 @@ final class AvatarLoader {
                 l = chat.getSubject();
                 color = GROUP_COLOR;
             } else {
-                Contact c = chat.getValidContacts().stream().findFirst().orElse(null);
-                if (c != null) {
-                    Item i = new Item(c);
-                    avatar = i.avatar;
-                    l = i.letter;
-                    color = i.color;
-                } else {
-                    avatar = null;
-                    color = FALLBACK_COLOR;
-                }
+                Contact c = ((SingleChat) chat).getContact();
+                Item i = new Item(c);
+                avatar = i.avatar;
+                l = i.letter;
+                color = i.color;
             }
             letter = labelToLetter(l);
         }
