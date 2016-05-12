@@ -223,7 +223,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
             // avatar may change when subject or contact name changes
             if (arg == null || arg instanceof Contact || arg instanceof String) {
-                Utils.fixedSetWebImageImage(mAvatar, AvatarLoader.load(mValue));
+                mAvatar.setImage(AvatarLoader.load(mValue, View.AVATAR_LIST_SIZE));
             }
 
             if (arg == null || arg instanceof KonMessage) {

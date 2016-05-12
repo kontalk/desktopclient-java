@@ -244,7 +244,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         protected void updateOnEDT(Object arg) {
             if (arg == null || arg instanceof String) {
                 // avatar
-                Utils.fixedSetWebImageImage(mAvatar, AvatarLoader.load(mValue));
+                mAvatar.setImage(AvatarLoader.load(mValue, View.AVATAR_LIST_SIZE));
 
                 // name
                 String name = Utils.displayName(mValue);

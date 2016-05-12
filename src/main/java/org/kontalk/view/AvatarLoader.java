@@ -34,6 +34,7 @@ import org.kontalk.model.Avatar;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.model.chat.SingleChat;
+import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 
 /**
@@ -42,20 +43,18 @@ import org.kontalk.util.Tr;
  */
 final class AvatarLoader {
 
-    private static final int FALLBACK_SIZE = 100;
-
     private static final Color LETTER_COLOR = new Color(255, 255, 255);
     private static final Color FALLBACK_COLOR = new Color(220, 220, 220);
     private static final Color GROUP_COLOR = new Color(160, 160, 160);
 
     private static final Map<Item, BufferedImage> CACHE = new HashMap<>();
 
-    static Image load(Chat chat) {
-        return load(new Item(chat));
+    static Image load(Chat chat, int size) {
+        return load(new Item(chat, size));
     }
 
-    static BufferedImage load(Contact contact) {
-        return load(new Item(contact));
+    static BufferedImage load(Contact contact, int size) {
+        return load(new Item(contact, size));
     }
 
     static BufferedImage createFallback(int size) {
@@ -72,47 +71,52 @@ final class AvatarLoader {
     }
 
     private static class Item {
-        private final Avatar avatar;
+        private final int mSize;
 
-        private final String letter;
-        private final Color color;
+        private final Avatar mAvatar;
 
-        Item(Contact contact) {
-            avatar = contact.getAvatar().orElse(null);
+        private final String mLetter;
+        private final Color mColor;
 
-            if (avatar == null) {
+        Item(Contact contact, int size) {
+            mSize = size;
+            mAvatar = contact.getAvatar().orElse(null);
+
+            if (mAvatar == null) {
                 String name = contact.getName();
-                letter = labelToLetter(name);
+                mLetter = labelToLetter(name);
                 if (contact.isDeleted()) {
-                    color = FALLBACK_COLOR;
+                    mColor = FALLBACK_COLOR;
                 } else {
                     int colorcode = hash(contact.getID());
                     int hue = Math.abs(colorcode) % 360;
-                    color = Color.getHSBColor(hue / 360.0f, 0.8f, 1);
+                    mColor = Color.getHSBColor(hue / 360.0f, 0.8f, 1);
                 }
             } else {
                 // not used
-                letter = "";
-                color = new Color(0);
+                mLetter = "";
+                mColor = new Color(0);
             }
         }
 
-        Item(Chat chat) {
+        Item(Chat chat, int size) {
+            mSize = size;
+
             String l;
             if (chat.isGroupChat()) {
                 // nice to have: group picture
-                avatar = null;
+                mAvatar = null;
                 // or use number of contacts here?
                 l = chat.getSubject();
-                color = GROUP_COLOR;
+                mColor = GROUP_COLOR;
             } else {
                 Contact c = ((SingleChat) chat).getContact();
-                Item i = new Item(c);
-                avatar = i.avatar;
-                l = i.letter;
-                color = i.color;
+                Item i = new Item(c, size);
+                mAvatar = i.mAvatar;
+                l = i.mLetter;
+                mColor = i.mColor;
             }
-            letter = labelToLetter(l);
+            mLetter = labelToLetter(l);
         }
 
         private String labelToLetter(String label) {
@@ -122,13 +126,14 @@ final class AvatarLoader {
         }
 
         private BufferedImage createImage() {
-            if (avatar != null) {
-                BufferedImage img = avatar.loadImage().orElse(null);
-                if (img != null)
-                    return img;
+            if (mAvatar != null) {
+                BufferedImage img = mAvatar.loadImage().orElse(null);
+                if (img != null) {
+                    return MediaUtils.scale(img, mSize, mSize);
+                }
             }
 
-            return fallback(letter, color, FALLBACK_SIZE);
+            return fallback(mLetter, mColor, mSize);
         }
 
         @Override
@@ -140,17 +145,19 @@ final class AvatarLoader {
                 return false;
 
             Item oItem = (Item) o;
-            return ObjectUtils.equals(avatar, oItem.avatar) &&
-                    letter.equals(oItem.letter) &&
-                    color.equals(oItem.color);
+            return mSize == oItem.mSize &&
+                    ObjectUtils.equals(mAvatar, oItem.mAvatar) &&
+                    mLetter.equals(oItem.mLetter) &&
+                    mColor.equals(oItem.mColor);
         }
 
         @Override
         public int hashCode() {
             int hash = 7;
-            hash = 71 * hash + Objects.hashCode(this.avatar);
-            hash = 71 * hash + Objects.hashCode(this.letter);
-            hash = 71 * hash + Objects.hashCode(this.color);
+            hash = 71 * hash + this.mSize;
+            hash = 71 * hash + Objects.hashCode(this.mAvatar);
+            hash = 71 * hash + Objects.hashCode(this.mLetter);
+            hash = 71 * hash + Objects.hashCode(this.mColor);
             return hash;
         }
     }

@@ -431,7 +431,7 @@ final class ChatView extends WebPanel implements Observer {
 
         // update if chat changes...
         // avatar
-        mAvatar.setImage(AvatarLoader.load(chat));
+        mAvatar.setImage(AvatarLoader.load(chat, View.AVATAR_CHAT_SIZE));
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
