@@ -136,8 +136,9 @@ public class Avatar {
         }
 
         static UserAvatar create(BufferedImage image) {
-            image = MediaUtils.scale(image, MAX_SIZE, MAX_SIZE);
-            return new UserAvatar(image, Model.appDir());
+            return new UserAvatar(
+                    MediaUtils.scale(image, MAX_SIZE, MAX_SIZE),
+                    Model.appDir());
         }
 
         @Override

@@ -194,15 +194,15 @@ public class MediaUtils {
 
         double scale = Math.sqrt(maxPixels / (iw * ih * 1.0));
 
-        return toBufferedImage(scaleAsync(image, (int) (iw * scale), (int) (ih * scale)));
+        return toBufferedImage(scaleImage(image, (int) (iw * scale), (int) (ih * scale)));
     }
 
     /**
-     * Scale image down to max width/height preserving ratio.
+     * Scale image down to minimum width/height, preserving ratio.
      * Blocking.
      */
     public static BufferedImage scale(Image image, int width, int height) {
-        return toBufferedImage(scaleAsync(image, width, height, true));
+        return toBufferedImage(scaleAsync(image, width, height));
     }
 
     private static BufferedImage toBufferedImage(Image image) {
@@ -245,28 +245,35 @@ public class MediaUtils {
         return bimage;
     }
 
+    public static Image scaleAsync(Image image, int width, int height) {
+        return scaleAsync(image, width, height, false);
+    }
+
+    public static Image scaleMaxAsync(Image image, int width, int height) {
+        return scaleAsync(image, width, height, true);
+    }
+
     /**
      * Scale image down to maximum or minimum of width or height, preserving ratio.
-     * Async: returned image may not fully loaded.
-     *
-     * @param max specifies if image is scaled to maximum or minimum of width/height
+     * Async: returned image may not be fully loaded.
      */
-    public static Image scaleAsync(Image image, int width, int height, boolean max) {
+    private static Image scaleAsync(Image image, int width, int height, boolean max) {
         int iw = image.getWidth(null);
         int ih = image.getHeight(null);
-        if (iw == -1) {
+        if (iw == -1 || ih == -1) {
             LOGGER.warning("image not loaded yet");
         }
-        if (max && (iw <= width || ih <= height) || !max && (iw <= width && ih <= height)) {
+        if (max && (iw <= width || ih <= height) ||
+                !max && (iw <= width && ih <= height)) {
             return image;
         }
         double sw = width / (iw * 1.0);
         double sh = height / (ih * 1.0);
         double scale = max ? Math.max(sw, sh) : Math.min(sw, sh);
-        return scaleAsync(image, (int) (iw * scale), (int) (ih * scale));
+        return scaleImage(image, (int) (iw * scale), (int) (ih * scale));
     }
 
-    private static Image scaleAsync(Image image, int width, int height) {
+    private static Image scaleImage(Image image, int width, int height) {
         return image.getScaledInstance(width, height, Image.SCALE_FAST);
     }
 }

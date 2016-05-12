@@ -597,10 +597,9 @@ final class ChatView extends WebPanel implements Observer {
                 this.updateCachedBG(null);
                 return true;
             }
-            Image scaledImage = MediaUtils.scaleAsync(mOrigin,
+            Image scaledImage = MediaUtils.scaleMaxAsync(mOrigin,
                     mParent.getWidth(),
-                    mParent.getHeight(),
-                    true);
+                    mParent.getHeight());
             if (scaledImage.getWidth(this) != -1) {
                 // goto 3
                 this.updateCachedBG(scaledImage);

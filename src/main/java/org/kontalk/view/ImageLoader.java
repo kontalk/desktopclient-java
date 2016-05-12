@@ -58,8 +58,7 @@ class ImageLoader {
             BufferedImage image = MediaUtils.readImage(path);
             Image scaledImage = MediaUtils.scaleAsync(image,
                     AttachmentManager.THUMBNAIL_DIM.width,
-                    AttachmentManager.THUMBNAIL_DIM.height,
-                    false);
+                    AttachmentManager.THUMBNAIL_DIM.height);
 
             if (scaledImage.getWidth(view) == -1)
                 return;
