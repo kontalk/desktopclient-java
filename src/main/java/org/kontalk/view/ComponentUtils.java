@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.image.WebDecoratedImage;
 import com.alee.extended.image.WebImage;
 import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.layout.FormLayout;
@@ -89,6 +90,7 @@ import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.persistence.Config;
@@ -826,6 +828,27 @@ final class ComponentUtils {
             if ((this.getLength() + str.length()) <= mLimit) {
                 super.insertString(offset, str, attr);
             }
+        }
+    }
+
+    // NOTE: no option to adjust image to component size like for WebImage,
+    // -> component size depends on image size
+    static class AvatarImage extends WebDecoratedImage {
+
+        private final int mSize;
+
+        AvatarImage(int size) {
+            mSize = size;
+
+            this.setRound(0);
+        }
+
+        void setAvatarImage(Contact c) {
+            this.setImage(AvatarLoader.load(c, mSize));
+        }
+
+        void setAvatarImage(Chat c) {
+            this.setImage(AvatarLoader.load(c, mSize));
         }
     }
 }

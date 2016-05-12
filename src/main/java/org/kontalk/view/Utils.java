@@ -176,13 +176,16 @@ final class Utils {
         return Toolkit.getDefaultToolkit().createImage(imageUrl);
     }
 
-    static void fixedSetWebImageImage(WebImage webImage, Image img) {
+    // TODO unused
+    private static void fixedSetWebImageImage(WebImage webImage, Image image) {
         // works cause caching
-        if (!img.equals(webImage.getImage())) {
-            //
-            webImage.setEnabled(false);
-            webImage.setImage(img);
-            webImage.setEnabled(true);
+        if (!image.equals(webImage.getImage())) {
+            boolean wasEnabled = webImage.isEnabled();
+            if (wasEnabled)
+                webImage.setEnabled(false);
+            webImage.setImage(image);
+            if (wasEnabled)
+                webImage.setEnabled(true);
         }
     }
 

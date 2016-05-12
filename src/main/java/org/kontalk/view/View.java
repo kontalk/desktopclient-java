@@ -39,7 +39,6 @@ import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.util.EnumSet;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
@@ -88,7 +87,6 @@ public final class View implements Observer {
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
 
-    static final Dimension AVATAR_LIST_DIM = new Dimension(30, 30);
     static final int AVATAR_LIST_SIZE = 30;
     static final int AVATAR_CHAT_SIZE = 40;
     static final int AVATAR_DETAIL_SIZE = 60;

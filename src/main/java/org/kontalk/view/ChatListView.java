@@ -18,8 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.image.DisplayType;
-import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
@@ -148,7 +146,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
     protected final class ChatItem extends ListView<ChatItem, Chat>.TableItem {
 
-        private final WebImage mAvatar;
+        private final ComponentUtils.AvatarImage mAvatar;
         private final WebLabel mTitleLabel;
         private final WebLabel mStatusLabel;
         private final WebLabel mChatStateLabel;
@@ -160,8 +158,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, 0));
             this.setMargin(View.MARGIN_DEFAULT);
 
-            mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);
-            mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
+            mAvatar = new ComponentUtils.AvatarImage(View.AVATAR_LIST_SIZE);
             this.add(mAvatar, BorderLayout.WEST);
 
             mTitleLabel = new WebLabel();
@@ -223,7 +220,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
             // avatar may change when subject or contact name changes
             if (arg == null || arg instanceof Contact || arg instanceof String) {
-                mAvatar.setImage(AvatarLoader.load(mValue, View.AVATAR_LIST_SIZE));
+                mAvatar.setAvatarImage(mValue);
             }
 
             if (arg == null || arg instanceof KonMessage) {
