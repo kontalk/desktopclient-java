@@ -54,7 +54,7 @@ public abstract class KonMessage extends Observable {
      * Sending status of one message.
      * Do not modify, only add! Ordinal used in database
      */
-    public static enum Status {
+    public enum Status {
         /** For all incoming messages. */
         IN,
         /** Outgoing message, message is about to be send. */

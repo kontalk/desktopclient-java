@@ -53,7 +53,7 @@ public final class Contact extends Observable {
      * Online status of one contact.
      * Not saved to database.
      */
-    public static enum Online {UNKNOWN, YES, NO, ERROR};
+    public enum Online {UNKNOWN, YES, NO, ERROR};
 
     /**
      * XMPP subscription status in roster.

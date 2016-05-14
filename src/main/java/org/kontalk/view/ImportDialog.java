@@ -57,8 +57,8 @@ import org.kontalk.util.Tr;
 final class ImportDialog extends WebDialog {
     private static final Logger LOGGER = Logger.getLogger(ImportDialog.class.getName());
 
-    private static enum ImportPage {INTRO, SETTINGS, RESULT};
-    private static enum Direction {BACK, FORTH};
+    private enum ImportPage {INTRO, SETTINGS, RESULT};
+    private enum Direction {BACK, FORTH};
 
     private final EnumMap<ImportPage, ImportPanel> mPanels;
     private final WebButton mBackButton;
