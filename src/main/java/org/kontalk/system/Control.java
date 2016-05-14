@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
@@ -644,19 +645,24 @@ public final class Control {
             mClient.disconnect();
         }
 
-        public void setStatusText(String newStatus) {
+        public void setStatusText(String status) {
             Config conf = Config.getInstance();
-            String[] strings = conf.getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.asList(strings));
+            // must be editable
+            List<String> stats = new LinkedList<>(Arrays.asList(
+                    conf.getStringArray(Config.NET_STATUS_LIST)));
 
-            stats.remove(newStatus);
-            stats.add(0, newStatus);
+            if (!stats.isEmpty() && stats.get(0).equals(status))
+                // did not change
+                return;
+
+            stats.remove(status);
+            stats.add(0, status);
 
             if (stats.size() > 20)
                 stats = stats.subList(0, 20);
 
             conf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
-            mClient.sendUserPresence(newStatus);
+            mClient.sendUserPresence(status);
         }
 
         public void setAccountPassword(char[] oldPass, char[] newPass) throws KonException {
