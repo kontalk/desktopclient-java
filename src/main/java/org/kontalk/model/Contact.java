@@ -62,8 +62,8 @@ public final class Contact extends Observable {
         UNKNOWN, PENDING, SUBSCRIBED, UNSUBSCRIBED
     }
 
-    public enum Changes {
-        JID, NAME, AVAILABLE, KEY, BLOCKED, SUBSCRIPTION, AVATAR, DELETED
+    public enum ViewChange {
+        JID, NAME, ONLINE, KEY, BLOCKED, SUBSCRIPTION, AVATAR, DELETED
     }
 
     public static final String TABLE = "user";
@@ -93,7 +93,7 @@ public final class Contact extends Observable {
     private String mName;
     private String mStatus = "";
     private Date mLastSeen = null;
-    private Online mAvailable = Online.UNKNOWN;
+    private Online mOnline = Online.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
     private String mFingerprint = "";
@@ -161,7 +161,7 @@ public final class Contact extends Observable {
 
         mJID = jid;
         this.save();
-        this.changed(mJID);
+        this.changed(ViewChange.JID);
     }
 
     public int getID() {
@@ -179,7 +179,7 @@ public final class Contact extends Observable {
         mName = name;
         this.save();
 
-        this.changed(mName);
+        this.changed(ViewChange.NAME);
     }
 
     public String getStatus() {
@@ -203,17 +203,17 @@ public final class Contact extends Observable {
     }
 
     public Online getOnline() {
-        return this.mAvailable;
+        return this.mOnline;
     }
 
     public void setOnline(Presence.Type type, String status) {
         if (type == Presence.Type.available) {
-            mAvailable = Online.YES;
+            mOnline = Online.YES;
             mLastSeen = new Date();
         } else if (type == Presence.Type.unavailable) {
-            mAvailable = Online.NO;
+            mOnline = Online.NO;
         }
-        this.changed(mAvailable);
+        this.changed(ViewChange.ONLINE);
 
         if (status != null && !status.isEmpty()) {
             mStatus = status;
@@ -221,16 +221,16 @@ public final class Contact extends Observable {
     }
 
     public void setOnlineError() {
-        mAvailable = Online.ERROR;
-        this.changed(mAvailable);
+        mOnline = Online.ERROR;
+        this.changed(ViewChange.ONLINE);
     }
 
     /**
      * Reset online status when client is disconnected.
      */
     public void setOffline() {
-        mAvailable = Online.UNKNOWN;
-        this.changed(mAvailable);
+        mOnline = Online.UNKNOWN;
+        this.changed(ViewChange.ONLINE);
     }
 
     public byte[] getKey() {
@@ -252,7 +252,7 @@ public final class Contact extends Observable {
         mKey = EncodingUtils.bytesToBase64(rawKey);
         mFingerprint = fingerprint.toLowerCase();
         this.save();
-        this.changed(new byte[0]);
+        this.changed(ViewChange.KEY);
     }
 
     public boolean isBlocked() {
@@ -261,7 +261,7 @@ public final class Contact extends Observable {
 
     public void setBlocked(boolean blocked) {
         mBlocked = blocked;
-        this.changed(mBlocked);
+        this.changed(ViewChange.BLOCKED);
     }
 
     public Subscription getSubScription() {
@@ -273,7 +273,7 @@ public final class Contact extends Observable {
             return;
 
         mSubStatus = status;
-        this.changed(mSubStatus);
+        this.changed(ViewChange.SUBSCRIPTION);
     }
 
     public Optional<Avatar> getAvatar() {
@@ -297,7 +297,7 @@ public final class Contact extends Observable {
         this.save();
 
         if (mCustomAvatar == null)
-            this.changed(Changes.AVATAR);
+            this.changed(ViewChange.AVATAR);
     }
 
     public void deleteAvatar() {
@@ -308,14 +308,14 @@ public final class Contact extends Observable {
         mAvatar = null;
         this.save();
 
-        this.changed(Changes.AVATAR);
+        this.changed(ViewChange.AVATAR);
     }
 
     public void setCustomAvatar(Avatar.CustomAvatar avatar) {
         // overwrite file!
         mCustomAvatar = avatar;
 
-        this.changed(Changes.AVATAR);
+        this.changed(ViewChange.AVATAR);
     }
 
     public boolean hasCustomAvatarSet() {
@@ -329,7 +329,7 @@ public final class Contact extends Observable {
         mCustomAvatar.delete();
         mCustomAvatar = null;
 
-        this.changed(Changes.AVATAR);
+        this.changed(ViewChange.AVATAR);
     }
 
     public boolean isMe() {
@@ -357,7 +357,7 @@ public final class Contact extends Observable {
         mAvatar = null;
 
         this.save();
-        this.changed(null);
+        this.changed(ViewChange.DELETED);
     }
 
     public boolean isDeleted() {
@@ -377,9 +377,9 @@ public final class Contact extends Observable {
         Model.database().execUpdate(TABLE, set, mID);
     }
 
-    private void changed(Object arg) {
+    private void changed(ViewChange change) {
         this.setChanged();
-        this.notifyObservers(arg);
+        this.notifyObservers(change);
     }
 
     @Override

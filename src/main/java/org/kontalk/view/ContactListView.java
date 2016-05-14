@@ -239,10 +239,14 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
         @Override
         protected void updateOnEDT(Object arg) {
-            if (arg == null || arg instanceof String) {
-                // avatar
-                mAvatar.setAvatarImage(mValue);
+            Contact.ViewChange c = arg != null ? (Contact.ViewChange) arg : null;
 
+            // avatar
+            if (c == null || c == Contact.ViewChange.NAME || c == Contact.ViewChange.AVATAR) {
+                mAvatar.setAvatarImage(mValue);
+            }
+
+            if (c == null || c == Contact.ViewChange.NAME) {
                 // name
                 String name = Utils.displayName(mValue);
                 if (!name.equals(mNameLabel.getText())) {
@@ -252,15 +256,16 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             }
 
             // status
-            if (arg == null || arg instanceof Contact.Subscription ||
-                    arg instanceof Contact.Online ||
-                    arg instanceof Boolean) {
+            if (c == null || c == Contact.ViewChange.SUBSCRIPTION ||
+                    c == Contact.ViewChange.ONLINE ||
+                    c == Contact.ViewChange.BLOCKED) {
                 mStatusLabel.setText(Utils.mainStatus(mValue, false));
             }
 
             // online status
-            if (arg == null || arg instanceof Contact.Subscription ||
-                    arg instanceof Boolean) {
+            if (c == null || c == Contact.ViewChange.ONLINE ||
+                    c == Contact.ViewChange.SUBSCRIPTION ||
+                    c == Contact.ViewChange.BLOCKED) {
                 Contact.Subscription subStatus = mValue.getSubScription();
                 mBackground = mValue.getOnline() ==
                         Contact.Online.YES ? View.LIGHT_BLUE:
@@ -273,7 +278,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
             ContactListView.this.repaint();
 
-            if (arg instanceof Boolean &&
+            if (c == Contact.ViewChange.BLOCKED &&
                     Config.getInstance().getBoolean(Config.VIEW_HIDE_BLOCKED)) {
                 // "blocked" status changed, hide/show this item
                 ContactListView.this.updateOnEDT(null);
