@@ -58,8 +58,12 @@ public final class Contact extends Observable {
     /**
      * XMPP subscription status in roster.
      */
-    public static enum Subscription {
+    public enum Subscription {
         UNKNOWN, PENDING, SUBSCRIBED, UNSUBSCRIBED
+    }
+
+    public enum Changes {
+        JID, NAME, AVAILABLE, KEY, BLOCKED, SUBSCRIPTION, AVATAR, DELETED
     }
 
     public static final String TABLE = "user";
@@ -97,6 +101,7 @@ public final class Contact extends Observable {
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
     private Avatar mAvatar = null;
+    private Avatar.CustomAvatar mCustomAvatar = null;
 
     // new contact (eg from roster)
     Contact(JID jid, String name) {
@@ -138,6 +143,7 @@ public final class Contact extends Observable {
         mKey = publicKey;
         mFingerprint = fingerprint.toLowerCase();
         mAvatar = avatarID.isEmpty() ? null : new Avatar(avatarID);
+        mCustomAvatar = Avatar.CustomAvatar.load(mID).orElse(null);
     }
 
     public JID getJID() {
@@ -274,6 +280,13 @@ public final class Contact extends Observable {
         return Optional.ofNullable(mAvatar);
     }
 
+    /** Get custom or downloaded avatar. */
+    public Optional<Avatar> getDisplayAvatar() {
+        return mCustomAvatar != null ?
+                Optional.of(mCustomAvatar) :
+                Optional.ofNullable(mAvatar);
+    }
+
     public void setAvatar(Avatar avatar) {
         // delete old
         if (mAvatar != null)
@@ -283,18 +296,40 @@ public final class Contact extends Observable {
         mAvatar = avatar;
         this.save();
 
-        this.changed(avatar);
+        if (mCustomAvatar == null)
+            this.changed(Changes.AVATAR);
     }
 
     public void deleteAvatar() {
-        // delete old
-        if (mAvatar != null)
-            mAvatar.delete();
+        if (mAvatar == null)
+            return;
 
+        mAvatar.delete();
         mAvatar = null;
         this.save();
 
-        this.changed(Avatar.deleted());
+        this.changed(Changes.AVATAR);
+    }
+
+    public void setCustomAvatar(Avatar.CustomAvatar avatar) {
+        // overwrite file!
+        mCustomAvatar = avatar;
+
+        this.changed(Changes.AVATAR);
+    }
+
+    public boolean hasCustomAvatarSet() {
+        return mCustomAvatar != null;
+    }
+
+    public void deleteCustomAvatar() {
+        if (mCustomAvatar == null)
+            return;
+
+        mCustomAvatar.delete();
+        mCustomAvatar = null;
+
+        this.changed(Changes.AVATAR);
     }
 
     public boolean isMe() {

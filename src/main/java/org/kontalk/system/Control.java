@@ -805,19 +805,37 @@ public final class Control {
         public void setUserAvatar(BufferedImage image) {
             Avatar.UserAvatar newAvatar = mModel.setUserAvatar(image);
             byte[] avatarData = newAvatar.imageData().orElse(null);
-            if (avatarData == null || newAvatar.getID().isEmpty())
+            if (avatarData == null || !newAvatar.isPresent())
                 return;
 
             mClient.publishAvatar(newAvatar.getID(), avatarData);
         }
 
         public void unsetUserAvatar(){
-            if (mModel.userAvatar().getID().isEmpty())
+            if (!mModel.userAvatar().isPresent()) {
+                LOGGER.warning("no user avatar set");
                 return;
+            }
 
             boolean succ = mClient.deleteAvatar();
-            if (succ)
-                mModel.deleteUserAvatar();
+            if (!succ)
+                // TODO
+                return;
+
+            mModel.deleteUserAvatar();
+        }
+
+        public void setCustomContactAvatar(Contact contact, BufferedImage image) {
+            contact.setCustomAvatar(new Avatar.CustomAvatar(contact.getID(), image));
+        }
+
+        public void unsetCustomContactAvatar(Contact contact) {
+            if (!contact.hasCustomAvatarSet()) {
+                LOGGER.warning("no custom avatar set, "+contact);
+                return;
+            }
+
+            contact.deleteCustomAvatar();
         }
 
         /* private */

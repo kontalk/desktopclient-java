@@ -43,6 +43,12 @@ public class Avatar {
     private static final String DIR = "avatars";
     protected static final String FORMAT = "png";
 
+    static void createStorageDir(Path appDir) {
+        boolean created = appDir.resolve(DIR).toFile().mkdir();
+        if (created)
+            LOGGER.info("created avatar directory");
+    }
+
     /** SHA1 hash of image data. */
     private final String mID;
     protected final File mFile;
@@ -61,16 +67,14 @@ public class Avatar {
 
     private Avatar(String id, File file, BufferedImage image) {
         mID = id;
-        mFile = file != null ?
-                file :
-                Model.appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
+        mFile = file != null ? file : avatarFile(mID);
         mImage = image;
 
         if (mImage != null) {
             // save new image
-            boolean succ = MediaUtils.writeImage(image, FORMAT, mFile);
+            boolean succ = MediaUtils.writeImage(mImage, FORMAT, mFile);
             if (!succ)
-                LOGGER.warning("can't save avatar image: "+id);
+                LOGGER.warning("can't save avatar image: "+mID);
         }
     }
 
@@ -90,15 +94,15 @@ public class Avatar {
 
     public Optional<BufferedImage> loadImage() {
         if (mImage == null)
-            mImage = image(this.mFile);
+            mImage = image(mFile);
 
         return Optional.ofNullable(mImage);
     }
 
     void delete() {
-        boolean succ = this.mFile.delete();
-        if (succ)
-            LOGGER.warning("could not delete avatar file: "+this.mID);
+        boolean succ = mFile.delete();
+        if (!succ)
+            LOGGER.warning("could not delete avatar file: "+mID);
     }
 
     @Override
@@ -155,19 +159,38 @@ public class Avatar {
             return Optional.ofNullable(mImageData);
         }
 
+        public boolean isPresent() {
+            return !getID().isEmpty();
+        }
+
         private static File userFile(Path appDir) {
             return appDir.resolve(USER_FILENAME + "." + FORMAT).toFile();
         }
     }
 
-    static void createStorageDir(Path appDir) {
-        boolean created = appDir.resolve(DIR).toFile().mkdir();
-        if (created)
-            LOGGER.info("created avatar directory");
+    public static class CustomAvatar extends Avatar {
+
+        static Optional<CustomAvatar> load(int contactID) {
+            String id = Integer.toString(contactID);
+            File file = avatarFile(id);
+            if (!file.isFile())
+                return Optional.empty();
+
+            return Optional.of(new CustomAvatar(id, null));
+        }
+
+        private CustomAvatar(String id, File file) {
+            super(id, file, null);
+        }
+
+        /** New custom contact avatar. */
+        public CustomAvatar(int contactID, BufferedImage image) {
+            super(Integer.toString(contactID), image);
+        }
     }
 
-    static Avatar deleted() {
-        return new Avatar("");
+    private static File avatarFile(String id){
+        return Model.appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
     }
 
     private static String id(BufferedImage image) {
