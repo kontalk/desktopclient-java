@@ -170,6 +170,10 @@ public class Avatar {
 
     public static class CustomAvatar extends Avatar {
 
+        // custom set avatars have always same ID for one contact,
+        // using this to distinguish them
+        private final long mLastModified;
+
         static Optional<CustomAvatar> load(int contactID) {
             String id = Integer.toString(contactID);
             File file = avatarFile(id);
@@ -181,12 +185,38 @@ public class Avatar {
 
         private CustomAvatar(String id, File file) {
             super(id, file, null);
+
+           mLastModified = mFile.lastModified();
         }
 
         /** New custom contact avatar. */
         public CustomAvatar(int contactID, BufferedImage image) {
             super(Integer.toString(contactID), image);
+
+            mLastModified = mFile.lastModified();
         }
+
+        // TODO unaesthetic, breaks symmetry (in theory)
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (!(o instanceof CustomAvatar))
+                return false;
+            CustomAvatar oAvatar = (CustomAvatar) o;
+
+            return super.equals(oAvatar) &&
+                    mLastModified == oAvatar.mLastModified;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 3 * super.hashCode();
+            hash = 37 * hash + (int) (this.mLastModified ^ (this.mLastModified >>> 32));
+            return hash;
+        }
+
     }
 
     private static File avatarFile(String id){
