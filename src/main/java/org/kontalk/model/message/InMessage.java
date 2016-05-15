@@ -152,13 +152,14 @@ public final class InMessage extends KonMessage implements DecryptMessage {
         if (!(o instanceof InMessage))
             return false;
 
-        return super.equals(o) &&
-                mTransmission.equals(((InMessage) o).mTransmission);
+        InMessage oMessage = (InMessage) o;
+        return this.abstractEquals(oMessage) &&
+                mTransmission.equals(oMessage.mTransmission);
     }
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
+        int hash = this.abstractHashCode();
         hash = 67 * hash + Objects.hashCode(this.mTransmission);
         return hash;
     }

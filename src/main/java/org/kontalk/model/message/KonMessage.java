@@ -278,22 +278,12 @@ public abstract class KonMessage extends Observable {
         this.notifyObservers(arg);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == this)
-            return true;
-
-        if (!(o instanceof KonMessage))
-            return false;
-
-        KonMessage oMessage = (KonMessage) o;
-
+    protected boolean abstractEquals(KonMessage oMessage) {
         return mChat.equals(oMessage.mChat)
                 && !mXMPPID.isEmpty() && mXMPPID.equals(oMessage.mXMPPID);
     }
 
-    @Override
-    public int hashCode() {
+    protected int abstractHashCode() {
         int hash = 7;
         hash = 17 * hash + Objects.hashCode(this.mChat);
         hash = 17 * hash + Objects.hashCode(this.mXMPPID);
