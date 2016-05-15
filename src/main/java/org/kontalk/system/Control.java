@@ -198,8 +198,7 @@ public final class Control {
 
             // send public key requests for Kontalk contacts with missing key
             for (Contact contact : mModel.contacts())
-                if (contact.getFingerprint().isEmpty())
-                    this.maySendKeyRequest(contact);
+                this.maySendKeyRequest(contact);
 
             // TODO check current user avatar on server and upload if necessary
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
@@ -464,7 +463,7 @@ public final class Control {
     }
 
     void maySendKeyRequest(Contact contact) {
-        if (canSendKeyRequest(contact))
+        if (canSendKeyRequest(contact) && !contact.hasKey())
             this.sendKeyRequest(contact);
     }
 
@@ -832,6 +831,7 @@ public final class Control {
         }
 
         public void setCustomContactAvatar(Contact contact, BufferedImage image) {
+            // overwriting file here!
             contact.setCustomAvatar(new Avatar.CustomAvatar(contact.getID(), image));
         }
 

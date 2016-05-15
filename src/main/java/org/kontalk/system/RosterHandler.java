@@ -162,7 +162,7 @@ public final class RosterHandler {
         if (!fingerprint.isEmpty() &&
                 !fingerprint.equalsIgnoreCase(contact.getFingerprint())) {
             LOGGER.info("detected public key change, requesting new key...");
-            mControl.maySendKeyRequest(contact);
+            mControl.sendKeyRequest(contact);
         }
     }
 
