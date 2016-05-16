@@ -477,7 +477,8 @@ public final class Client implements StanzaListener, Runnable {
             return mAvatarSendReceiver.delete();
         } else {
             LOGGER.warning("not supported by server");
-            return false;
+            // if not supported there should be no avatar set
+            return true;
         }
     }
 
