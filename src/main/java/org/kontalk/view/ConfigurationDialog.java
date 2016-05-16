@@ -112,6 +112,9 @@ final class ConfigurationDialog extends WebDialog {
                 privacyPanel.saveConfiguration();
                 networkPanel.saveConfiguration();
 
+                // better save twice than never
+                mConf.saveToFile();
+
                 ConfigurationDialog.this.dispose();
             }
         });
