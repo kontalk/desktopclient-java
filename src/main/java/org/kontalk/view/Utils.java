@@ -19,7 +19,6 @@
 package org.kontalk.view;
 
 import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.extended.image.WebImage;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
@@ -174,19 +173,6 @@ final class Utils {
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
         }
         return Toolkit.getDefaultToolkit().createImage(imageUrl);
-    }
-
-    // TODO unused
-    private static void fixedSetWebImageImage(WebImage webImage, Image image) {
-        // works cause caching
-        if (!image.equals(webImage.getImage())) {
-            boolean wasEnabled = webImage.isEnabled();
-            if (wasEnabled)
-                webImage.setEnabled(false);
-            webImage.setImage(image);
-            if (wasEnabled)
-                webImage.setEnabled(true);
-        }
     }
 
     /* strings */

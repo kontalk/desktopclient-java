@@ -69,7 +69,6 @@ import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import org.apache.commons.io.FileUtils;
-import org.apache.tika.Tika;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.model.chat.Chat;
@@ -87,8 +86,6 @@ import static org.kontalk.view.View.MARGIN_SMALL;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatView extends WebPanel implements Observer {
-
-    private static final Tika TIKA_INSTANCE = new Tika();
 
     private final View mView;
 
@@ -187,7 +184,6 @@ final class ChatView extends WebPanel implements Observer {
                 mSendTextArea.requestFocusInWindow();
             }
         });
-
 
         // bottom panel...
 
