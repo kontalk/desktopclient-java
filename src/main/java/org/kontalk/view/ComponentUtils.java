@@ -27,8 +27,11 @@ import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.checkbox.WebCheckBox;
+import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
@@ -38,7 +41,9 @@ import com.alee.laf.text.WebTextField;
 import com.alee.managers.popup.PopupAdapter;
 import com.alee.managers.popup.WebPopup;
 import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.ImageUtils;
 import com.alee.utils.SwingUtils;
+import com.alee.utils.filefilter.ImageFilesFilter;
 import com.alee.utils.swing.DocumentChangeListener;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import java.awt.BorderLayout;
@@ -58,6 +63,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -94,6 +101,7 @@ import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.persistence.Config;
+import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
 
@@ -849,6 +857,118 @@ final class ComponentUtils {
 
         void setAvatarImage(Chat c) {
             this.setImage(AvatarLoader.load(c, mSize));
+        }
+    }
+
+    static abstract class EditableAvatarImage extends WebDecoratedImage {
+
+        private final int mSize;
+        private final WebFileChooser mImgChooser;
+
+        private BufferedImage mImage = null;
+        private boolean mImageChanged = false;
+
+        EditableAvatarImage(int size, boolean enabled, Optional<BufferedImage> image) {
+            mSize = size;
+
+            mImgChooser = new WebFileChooser();
+            mImgChooser.setFileFilter(new ImageFilesFilter());
+
+            mImage = image.orElse(null);
+
+            this.setRound(0);
+            this.setGrayscale(!enabled);
+            this.setEnabled(enabled);
+
+            this.setImage(mImage != null ? mImage : this.defaultImage());
+
+            this.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    check(e);
+                }
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    check(e);
+                }
+                private void check(MouseEvent e) {
+                    if (e.isPopupTrigger() && enabled) {
+                        EditableAvatarImage.this.showPopupMenu(e);
+                    }
+                }
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    if (e.getButton() == MouseEvent.BUTTON1 && enabled) {
+                        EditableAvatarImage.this.chooseImage();
+                    }
+                }
+            });
+
+            TooltipManager.setTooltip(this, this.tooltipText());
+        }
+
+        private void changeImage(BufferedImage image) {
+            mImage = image;
+            mImageChanged = true;
+            this.setImage(image != null ? image : this.defaultImage());
+            this.onImageChange(Optional.ofNullable(image));
+            TooltipManager.setTooltip(this, this.tooltipText());
+        }
+
+        void onImageChange(Optional<BufferedImage> optImage) {}
+
+        boolean imageChanged() {
+            return mImageChanged;
+        }
+
+        Optional<BufferedImage> getAvatarImage() {
+            return Optional.ofNullable(mImage);
+        }
+
+        abstract BufferedImage defaultImage();
+
+        abstract boolean canRemove();
+
+        protected String tooltipText() {
+            return this.canRemove() ?
+                    Tr.tr("Right click to unset") :
+                    Tr.tr("Click to choose image");
+        }
+
+        protected void update() {
+            mImage = this.defaultImage();
+            mImageChanged = false;
+            this.setImage(mImage);
+        }
+
+        private void chooseImage() {
+            int state = mImgChooser.showOpenDialog(this);
+            if (state != WebFileChooser.APPROVE_OPTION)
+                return;
+
+            File imgFile = mImgChooser.getSelectedFile();
+            if (!imgFile.isFile())
+                return;
+
+            BufferedImage img = MediaUtils.readImage(imgFile).orElse(null);
+            if (img == null)
+                return;
+
+            this.changeImage(ImageUtils.createPreviewImage(img, mSize));
+        }
+
+        private void showPopupMenu(MouseEvent e) {
+            WebPopupMenu menu = new WebPopupMenu();
+            WebMenuItem removeItem = new WebMenuItem(Tr.tr("Remove"));
+            removeItem.addActionListener(new ActionListener() {
+                    @Override
+                    public void actionPerformed(ActionEvent event) {
+                        EditableAvatarImage.this.changeImage(null);
+                    }
+                });
+            removeItem.setEnabled(EditableAvatarImage.this.canRemove());
+            menu.add(removeItem);
+            menu.show(this, e.getX(), e.getY());
         }
     }
 }

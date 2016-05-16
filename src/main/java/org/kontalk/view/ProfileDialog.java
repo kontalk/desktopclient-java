@@ -18,42 +18,32 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
-import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
-import com.alee.utils.ImageUtils;
-import com.alee.utils.filefilter.ImageFilesFilter;
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import org.apache.commons.lang.ObjectUtils;
-import org.kontalk.client.FeatureDiscovery;
-import org.kontalk.model.Avatar;
 import org.kontalk.model.Model;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
-import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
+
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import org.kontalk.client.FeatureDiscovery;
+import org.kontalk.model.Avatar;
 
 /**
  * The User profile page. With avatar and status text.
@@ -64,13 +54,9 @@ final class ProfileDialog extends WebDialog {
     private static final int AVATAR_SIZE = 150;
 
     private final View mView;
-    private final WebFileChooser mImgChooser;
-    private final WebImage mAvatarImage;
-    private final BufferedImage mOldImage;
+    private final ComponentUtils.EditableAvatarImage mAvatarImage;
     private final WebTextField mStatusField;
     private final WebList mStatusList;
-
-    private BufferedImage mNewImage = null;
 
     ProfileDialog(View view, Model model) {
         mView = view;
@@ -86,50 +72,32 @@ final class ProfileDialog extends WebDialog {
         groupPanel.add(new WebSeparator(true, true));
 
         // avatar
-        mImgChooser = new WebFileChooser();
-        mImgChooser.setFileFilter(new ImageFilesFilter());
-
         groupPanel.add(new WebLabel(Tr.tr("Your profile picture:")));
-
-        mAvatarImage = new WebImage();
-        Avatar.UserAvatar userAvatar = Avatar.UserAvatar.get().orElse(null);
-        mOldImage = mNewImage = userAvatar != null ?
-                userAvatar.loadImage().orElse(null) :
-                null;
-        this.setImage(mOldImage);
-
-        //mAvatarImage.setDisplayType(DisplayType.fitComponent);
-        //setTransferHandler ( new ImageDragHandler ( image1, i1 ) );
 
         // permanent, user has to re-open the dialog on change
         final boolean supported = mView.serverFeatures().contains(FeatureDiscovery.Feature.USER_AVATAR);
-        mAvatarImage.addMouseListener(new MouseAdapter() {
+        Avatar.UserAvatar userAvatar = Avatar.UserAvatar.get().orElse(null);
+        mAvatarImage = new ComponentUtils.EditableAvatarImage(AVATAR_SIZE, supported,
+                userAvatar != null ? userAvatar.loadImage() : Optional.empty()) {
             @Override
-            public void mousePressed(MouseEvent e) {
-                check(e);
-            }
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                check(e);
-            }
-            private void check(MouseEvent e) {
-                if (supported && e.isPopupTrigger()) {
-                    ProfileDialog.this.showPopupMenu(e);
-                }
+            BufferedImage defaultImage() {
+                return AvatarLoader.loadFallback(AVATAR_SIZE);
             }
             @Override
-            public void mouseClicked(MouseEvent e) {
-                if (supported && e.getButton() == MouseEvent.BUTTON1) {
-                    ProfileDialog.this.chooseAvatar();
-                }
+            boolean canRemove() {
+                return Avatar.UserAvatar.get().isPresent();
             }
-        });
-        mAvatarImage.setEnabled(supported);
-        if (!supported)
-            TooltipManager.addTooltip(mAvatarImage,
-                    mView.currentStatus() != Control.Status.CONNECTED ?
-                            Tr.tr("Not connected") :
-                            mView.tr_not_supported);
+            @Override
+            protected String tooltipText() {
+                return supported ? super.tooltipText() :
+                        mView.currentStatus() != Control.Status.CONNECTED ?
+                        Tr.tr("Not connected") :
+                        mView.tr_not_supported;
+            }
+        };
+
+        //mAvatarImage.setDisplayType(DisplayType.fitComponent);
+        //setTransferHandler ( new ImageDragHandler ( image1, i1 ) );
 
         groupPanel.add(mAvatarImage);
         groupPanel.add(new GroupPanel(
@@ -138,6 +106,7 @@ final class ProfileDialog extends WebDialog {
         groupPanel.add(new WebSeparator(true, true));
 
         // status text
+
         String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
         List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
         String currentStatus = !stats.isEmpty() ? stats.remove(0) : "";
@@ -188,52 +157,16 @@ final class ProfileDialog extends WebDialog {
         this.pack();
     }
 
-    private void setImage(BufferedImage avatar) {
-        mAvatarImage.setImage(avatar != null ?
-                avatar :
-                AvatarLoader.createFallback(AVATAR_SIZE));
-        }
-
-    private void chooseAvatar() {
-        int state = mImgChooser.showOpenDialog(this);
-        if (state != WebFileChooser.APPROVE_OPTION)
-            return;
-
-        File imgFile = mImgChooser.getSelectedFile();
-        if (!imgFile.isFile())
-            return;
-
-        BufferedImage img = MediaUtils.readImage(imgFile).orElse(null);
-        if (img == null)
-            return;
-
-        mNewImage = ImageUtils.createPreviewImage(img, AVATAR_SIZE);
-        mAvatarImage.setImage(mNewImage);
-    }
-
     private void save() {
-        if (!ObjectUtils.equals(mOldImage, mNewImage)) {
-            if (mNewImage != null) {
-                mView.getControl().setUserAvatar(mNewImage);
+        if (mAvatarImage.imageChanged()) {
+            BufferedImage img = mAvatarImage.getAvatarImage().orElse(null);
+            if (img != null) {
+                mView.getControl().setUserAvatar(img);
             } else {
                 mView.getControl().unsetUserAvatar();
             }
         }
 
         mView.getControl().setStatusText(mStatusField.getText());
-    }
-
-    private void showPopupMenu(MouseEvent e) {
-        WebPopupMenu menu = new WebPopupMenu();
-        WebMenuItem removeItem = new WebMenuItem(Tr.tr("Remove"));
-        removeItem.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent event) {
-                    ProfileDialog.this.setImage(mNewImage = null);
-                }
-            });
-        removeItem.setEnabled(mNewImage != null);
-        menu.add(removeItem);
-        menu.show(mAvatarImage, e.getX(), e.getY());
     }
 }

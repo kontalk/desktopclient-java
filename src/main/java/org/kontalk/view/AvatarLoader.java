@@ -22,7 +22,6 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.FontMetrics;
 import java.awt.Graphics2D;
-import java.awt.Image;
 import java.awt.RenderingHints;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
@@ -49,7 +48,7 @@ final class AvatarLoader {
 
     private static final Map<Item, BufferedImage> CACHE = new HashMap<>();
 
-    static Image load(Chat chat, int size) {
+    static BufferedImage load(Chat chat, int size) {
         return load(new Item(chat, size));
     }
 
@@ -57,8 +56,8 @@ final class AvatarLoader {
         return load(new Item(contact, size));
     }
 
-    static BufferedImage createFallback(int size) {
-        return fallback(fallbackLetter(), FALLBACK_COLOR, size);
+    static BufferedImage loadFallback(int size) {
+        return load(new Item(size));
     }
 
     private AvatarLoader() {};
@@ -78,9 +77,16 @@ final class AvatarLoader {
         private final String mLetter;
         private final Color mColor;
 
-        Item(Contact contact, int size) {
+        private Item(int size) {
             mSize = size;
-            mAvatar = contact.getAvatar().orElse(null);
+            mAvatar = null;
+            mLetter = fallbackLetter();
+            mColor = FALLBACK_COLOR;
+        }
+
+        private Item(Contact contact, int size) {
+            mSize = size;
+            mAvatar = contact.getDisplayAvatar().orElse(null);
 
             if (mAvatar == null) {
                 String name = contact.getName();
@@ -90,7 +96,7 @@ final class AvatarLoader {
                 } else {
                     int colorcode = hash(contact.getID());
                     int hue = Math.abs(colorcode) % 360;
-                    mColor = Color.getHSBColor(hue / 360.0f, 0.8f, 1);
+                    mColor = Color.getHSBColor(hue / 360.0f, 0.9f, 1);
                 }
             } else {
                 // not used
@@ -99,7 +105,7 @@ final class AvatarLoader {
             }
         }
 
-        Item(Chat chat, int size) {
+        private Item(Chat chat, int size) {
             mSize = size;
 
             String l;
