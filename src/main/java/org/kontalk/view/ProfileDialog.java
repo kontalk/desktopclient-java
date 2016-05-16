@@ -48,6 +48,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import org.apache.commons.lang.ObjectUtils;
 import org.kontalk.client.FeatureDiscovery;
+import org.kontalk.model.Avatar;
 import org.kontalk.model.Model;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
@@ -91,7 +92,10 @@ final class ProfileDialog extends WebDialog {
         groupPanel.add(new WebLabel(Tr.tr("Your profile picture:")));
 
         mAvatarImage = new WebImage();
-        mOldImage = mNewImage = model.userAvatar().loadImage().orElse(null);
+        Avatar.UserAvatar userAvatar = Avatar.UserAvatar.get().orElse(null);
+        mOldImage = mNewImage = userAvatar != null ?
+                userAvatar.loadImage().orElse(null) :
+                null;
         this.setImage(mOldImage);
 
         //mAvatarImage.setDisplayType(DisplayType.fitComponent);

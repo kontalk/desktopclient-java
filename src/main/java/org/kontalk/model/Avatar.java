@@ -37,7 +37,7 @@ import org.kontalk.util.MediaUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class Avatar {
+public abstract class Avatar {
     private static final Logger LOGGER = Logger.getLogger(Avatar.class.getName());
 
     private static final String DIR = "avatars";
@@ -54,16 +54,6 @@ public class Avatar {
     protected final File mFile;
 
     protected BufferedImage mImage = null;
-
-    /** Saved contact avatar. Used when loading from database. */
-    Avatar(String id) {
-        this(id, null, null);
-    }
-
-    /** New contact avatar. */
-    public Avatar(String id, BufferedImage image) {
-        this(id, null, image);
-    }
 
     private Avatar(String id, File file, BufferedImage image) {
         mID = id;
@@ -84,10 +74,6 @@ public class Avatar {
         mID = mImage != null ? id(mImage) : "";
     }
 
-    private static BufferedImage image(File file) {
-        return MediaUtils.readImage(file).orElse(null);
-    }
-
     public String getID() {
         return mID;
     }
@@ -105,66 +91,53 @@ public class Avatar {
             LOGGER.warning("could not delete avatar file: "+mID);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-
-        if (!(o instanceof Avatar)) return false;
-
-        Avatar oAvatar = (Avatar) o;
+    protected boolean abstractEquals(Avatar oAvatar) {
         return mID.equals(oAvatar.mID);
     }
 
-    @Override
-    public int hashCode() {
+    protected int abstractHashCode() {
         int hash = 7;
         hash = 59 * hash + Objects.hashCode(this.mID);
         return hash;
     }
 
-    public static class UserAvatar extends Avatar {
+    public static class DefaultAvatar extends Avatar {
 
-        private static final int MAX_SIZE = 150;
-        private static final String USER_FILENAME = "avatar";
+        /** Saved published contact avatar. */
+        static Optional<DefaultAvatar> load(String id) {
+            File file = avatarFile(id);
+            if (!file.isFile()) {
+                LOGGER.warning("no file: "+file);
+                return Optional.empty();
+            }
 
-        private byte[] mImageData = null;
-
-        /** Saved user Avatar. */
-        UserAvatar(Path appDir) {
-            super(userFile(appDir));
+            return Optional.of(new DefaultAvatar(id, file));
         }
 
-        /** New user Avatar. ID generated from image. */
-        private UserAvatar(BufferedImage image, Path appDir) {
-            super(id(image), userFile(appDir), image);
+        private DefaultAvatar(String id, File file) {
+            super(id, file, null);
         }
 
-        static UserAvatar create(BufferedImage image) {
-            return new UserAvatar(
-                    MediaUtils.scale(image, MAX_SIZE, MAX_SIZE),
-                    Model.appDir());
+        /** New published contact avatar. */
+        public DefaultAvatar(String id, BufferedImage image) {
+            super(id, null, image);
         }
 
         @Override
-        public Optional<BufferedImage> loadImage() {
-            return mFile.isFile() ?
-                    Optional.ofNullable(image(mFile)) :
-                    Optional.<BufferedImage>empty();
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (!(o instanceof DefaultAvatar))
+                return false;
+
+            return this.abstractEquals((DefaultAvatar) o);
         }
 
-        public Optional<byte[]> imageData() {
-            if (mImageData == null)
-                mImageData = Avatar.imageData(mImage);
-
-            return Optional.ofNullable(mImageData);
-        }
-
-        public boolean isPresent() {
-            return !getID().isEmpty();
-        }
-
-        private static File userFile(Path appDir) {
-            return appDir.resolve(USER_FILENAME + "." + FORMAT).toFile();
+        @Override
+        public int hashCode() {
+            int hash = 3 * this.abstractHashCode();
+            return hash;
         }
     }
 
@@ -176,27 +149,22 @@ public class Avatar {
 
         static Optional<CustomAvatar> load(int contactID) {
             String id = Integer.toString(contactID);
-            File file = avatarFile(id);
-            if (!file.isFile())
-                return Optional.empty();
-
-            return Optional.of(new CustomAvatar(id, null));
+            return avatarFile(id).isFile() ?
+                    Optional.of(new CustomAvatar(id, null)) :
+                    Optional.empty();
         }
 
         private CustomAvatar(String id, File file) {
             super(id, file, null);
-
-           mLastModified = mFile.lastModified();
+            mLastModified = mFile.lastModified();
         }
 
         /** New custom contact avatar. */
         public CustomAvatar(int contactID, BufferedImage image) {
-            super(Integer.toString(contactID), image);
-
+            super(Integer.toString(contactID), null, image);
             mLastModified = mFile.lastModified();
         }
 
-        // TODO unaesthetic, breaks symmetry (in theory)
         @Override
         public boolean equals(Object o) {
             if (this == o)
@@ -206,17 +174,71 @@ public class Avatar {
                 return false;
             CustomAvatar oAvatar = (CustomAvatar) o;
 
-            return super.equals(oAvatar) &&
+            return this.abstractEquals(oAvatar) &&
                     mLastModified == oAvatar.mLastModified;
         }
 
         @Override
         public int hashCode() {
-            int hash = 3 * super.hashCode();
+            int hash = 3 * this.abstractHashCode();
             hash = 37 * hash + (int) (this.mLastModified ^ (this.mLastModified >>> 32));
             return hash;
         }
+    }
 
+    public static class UserAvatar extends Avatar {
+
+        private static final int MAX_SIZE = 150;
+        private static final String USER_FILENAME = "avatar";
+
+        private static UserAvatar INSTANCE = null;
+
+        private byte[] mImageData = null;
+
+        /** Saved user Avatar. */
+        public static Optional<UserAvatar> get() {
+            if (INSTANCE != null)
+                return Optional.of(INSTANCE);
+
+            File file = userFile();
+            return file.isFile() ?
+                    Optional.of(INSTANCE = new UserAvatar(file)) :
+                    Optional.empty();
+        }
+
+        private UserAvatar(File file) {
+            super(file);
+        }
+
+        public static UserAvatar set(BufferedImage image) {
+            return INSTANCE = new UserAvatar(MediaUtils.scale(image, MAX_SIZE, MAX_SIZE));
+        }
+
+        /** New user Avatar. ID generated from image. */
+        private UserAvatar(BufferedImage image) {
+            super(id(image), userFile(), image);
+        }
+
+        public static void remove() {
+            if (INSTANCE == null) {
+                LOGGER.warning("not set");
+                return;
+            }
+
+            INSTANCE.delete();
+            INSTANCE = null;
+        }
+
+        public Optional<byte[]> imageData() {
+            if (mImageData == null)
+                mImageData = Avatar.imageData(mImage);
+
+            return Optional.ofNullable(mImageData);
+        }
+
+        private static File userFile() {
+            return Model.appDir().resolve(USER_FILENAME + "." + FORMAT).toFile();
+        }
     }
 
     private static File avatarFile(String id){
@@ -237,6 +259,10 @@ public class Avatar {
             return null;
         }
         return out.toByteArray();
+    }
+
+    private static BufferedImage image(File file) {
+        return MediaUtils.readImage(file).orElse(null);
     }
 }
 

@@ -100,7 +100,7 @@ public final class Contact extends Observable {
     private boolean mBlocked = false;
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
-    private Avatar mAvatar = null;
+    private Avatar.DefaultAvatar mAvatar = null;
     private Avatar.CustomAvatar mCustomAvatar = null;
 
     // new contact (eg from roster)
@@ -142,7 +142,9 @@ public final class Contact extends Observable {
         mEncrypted = encrypted;
         mKey = publicKey;
         mFingerprint = fingerprint.toLowerCase();
-        mAvatar = avatarID.isEmpty() ? null : new Avatar(avatarID);
+        mAvatar = avatarID.isEmpty() ?
+                null :
+                Avatar.DefaultAvatar.load(avatarID).orElse(null);
         mCustomAvatar = Avatar.CustomAvatar.load(mID).orElse(null);
     }
 
@@ -287,7 +289,7 @@ public final class Contact extends Observable {
                 Optional.ofNullable(mAvatar);
     }
 
-    public void setAvatar(Avatar avatar) {
+    public void setAvatar(Avatar.DefaultAvatar avatar) {
         // delete old
         if (mAvatar != null)
             mAvatar.delete();

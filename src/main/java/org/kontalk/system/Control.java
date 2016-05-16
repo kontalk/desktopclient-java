@@ -808,16 +808,16 @@ public final class Control {
         /* avatar */
 
         public void setUserAvatar(BufferedImage image) {
-            Avatar.UserAvatar newAvatar = mModel.setUserAvatar(image);
+            Avatar.UserAvatar newAvatar = Avatar.UserAvatar.set(image);
             byte[] avatarData = newAvatar.imageData().orElse(null);
-            if (avatarData == null || !newAvatar.isPresent())
+            if (avatarData == null)
                 return;
 
             mClient.publishAvatar(newAvatar.getID(), avatarData);
         }
 
         public void unsetUserAvatar(){
-            if (!mModel.userAvatar().isPresent()) {
+            if (!Avatar.UserAvatar.get().isPresent()) {
                 LOGGER.warning("no user avatar set");
                 return;
             }
@@ -827,7 +827,7 @@ public final class Control {
                 // TODO
                 return;
 
-            mModel.deleteUserAvatar();
+            Avatar.UserAvatar.remove();
         }
 
         public void setCustomContactAvatar(Contact contact, BufferedImage image) {

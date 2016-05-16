@@ -97,6 +97,6 @@ public final class AvatarHandler {
         if (img == null)
             return;
 
-        contact.setAvatar(new Avatar(id, img));
+        contact.setAvatar(new Avatar.DefaultAvatar(id, img));
     }
 }

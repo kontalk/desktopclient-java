@@ -18,7 +18,6 @@
 
 package org.kontalk.model;
 
-import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.util.Date;
 import java.util.List;
@@ -26,7 +25,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 import org.kontalk.misc.JID;
-import org.kontalk.model.Avatar.UserAvatar;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.message.InMessage;
@@ -52,8 +50,6 @@ public final class Model {
     private final ChatList mChatList;
     private final Account mAccount;
 
-    private UserAvatar mUserAvatar;
-
     private Model(Database db, Path appDir) {
         DATABASE = db;
         APP_DIR = appDir;
@@ -61,8 +57,6 @@ public final class Model {
         mAccount = new Account(APP_DIR, Config.getInstance());
         mContactList = new ContactList();
         mChatList = new ChatList();
-
-        mUserAvatar = new UserAvatar(APP_DIR);
 
         Avatar.createStorageDir(appDir);
     }
@@ -88,23 +82,10 @@ public final class Model {
         return mChatList;
     }
 
-    public UserAvatar userAvatar() {
-        return mUserAvatar;
-    }
-
     public void load() {
         // order matters!
         Map<Integer, Contact> contactMap = mContactList.load();
         mChatList.load(contactMap);
-    }
-
-    public UserAvatar setUserAvatar(BufferedImage image) {
-        return UserAvatar.create(image);
-    }
-
-    public void deleteUserAvatar() {
-        mUserAvatar.delete();
-        mUserAvatar = new UserAvatar(APP_DIR);
     }
 
     public void setUserJID(JID jid) {
