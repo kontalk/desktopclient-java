@@ -61,7 +61,8 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        this.sync(mChatList.getAll());
+        if (arg == null || arg == ChatList.ViewChange.MODIFIED)
+            this.sync(mChatList.getAll());
     }
 
     @Override

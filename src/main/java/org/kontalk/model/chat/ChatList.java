@@ -42,6 +42,10 @@ import org.kontalk.persistence.Database;
 public final class ChatList extends Observable implements Observer, Iterable<Chat> {
     private static final Logger LOGGER = Logger.getLogger(ChatList.class.getName());
 
+    public enum ViewChange {
+        MODIFIED, UNREAD
+    }
+
     private final Set<Chat> mChats = Collections.synchronizedSet(new HashSet<Chat>());
 
     private boolean mUnread = false;
@@ -62,7 +66,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load chats from db", ex);
         }
-        this.changed(null);
+        this.changed(ViewChange.MODIFIED);
     }
 
     public Set<Chat> getAll() {
@@ -108,7 +112,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         SingleChat newChat = new SingleChat(new Member(contact), xmppThreadID);
         LOGGER.config("new single chat: "+newChat);
         this.putSilent(newChat);
-        this.changed(newChat);
+        this.changed(ViewChange.MODIFIED);
         return newChat;
     }
 
@@ -120,7 +124,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         GroupChat newChat = GroupChat.create(Model.database(), members, gData, subject);
         LOGGER.config("new group chat: "+newChat);
         this.putSilent(newChat);
-        this.changed(newChat);
+        this.changed(ViewChange.MODIFIED);
         return newChat;
     }
 
@@ -149,7 +153,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         }
         chat.delete();
         chat.deleteObservers();
-        this.changed(chat);
+        this.changed(ViewChange.MODIFIED);
     }
 
     /** Return if any chat is unread. */
@@ -157,9 +161,9 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         return mUnread;
     }
 
-    private void changed(Object arg) {
+    private void changed(ViewChange change) {
         this.setChanged();
-        this.notifyObservers(arg);
+        this.notifyObservers(change);
     }
 
     @Override
@@ -180,7 +184,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
         }
 
         mUnread = !mUnread;
-        this.changed(mUnread);
+        this.changed(ViewChange.UNREAD);
     }
 
     @Override
