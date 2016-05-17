@@ -63,7 +63,7 @@ public final class Contact extends Observable {
     }
 
     public enum ViewChange {
-        JID, NAME, ONLINE, KEY, BLOCKED, SUBSCRIPTION, AVATAR, DELETED
+        JID, NAME, ONLINE, KEY, BLOCKING, SUBSCRIPTION, AVATAR, DELETED
     }
 
     public static final String TABLE = "user";
@@ -263,7 +263,7 @@ public final class Contact extends Observable {
 
     public void setBlocked(boolean blocked) {
         mBlocked = blocked;
-        this.changed(ViewChange.BLOCKED);
+        this.changed(ViewChange.BLOCKING);
     }
 
     public Subscription getSubScription() {
