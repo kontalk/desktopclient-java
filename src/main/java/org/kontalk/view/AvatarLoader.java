@@ -116,7 +116,7 @@ final class AvatarLoader {
                 l = chat.getSubject();
                 mColor = GROUP_COLOR;
             } else {
-                Contact c = ((SingleChat) chat).getContact();
+                Contact c = ((SingleChat) chat).getMember().getContact();
                 Item i = new Item(c, size);
                 mAvatar = i.mAvatar;
                 l = i.mLetter;

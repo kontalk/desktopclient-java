@@ -83,6 +83,9 @@ import static org.kontalk.view.View.MARGIN_SMALL;
 
 /**
  * Panel showing the currently selected chat.
+ *
+ * One view object for all chats.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatView extends WebPanel implements Observer {
@@ -414,7 +417,7 @@ final class ChatView extends WebPanel implements Observer {
             }
         }
 
-        if (arg instanceof String || arg instanceof Contact) {
+        if (arg == Chat.ViewChange.SUBJECT || arg == Chat.ViewChange.CONTACT) {
             this.onChatChange();
         }
     }
@@ -424,7 +427,6 @@ final class ChatView extends WebPanel implements Observer {
         if (chat == null)
             return;
 
-        // update if chat changes...
         // avatar
         mAvatar.setAvatarImage(chat);
 
@@ -436,10 +438,9 @@ final class ChatView extends WebPanel implements Observer {
                 Utils.mainStatus(contacts.iterator().next(), true));
 
         // text area
-        boolean chatDisabled = !chat.isValid();
-
-        mSendTextArea.setEnabled(!chatDisabled);
-        mSendTextArea.setBackground(chatDisabled ? Color.LIGHT_GRAY : Color.WHITE);
+        boolean enabled = chat.isValid();
+        mSendTextArea.setEnabled(enabled);
+        mSendTextArea.setBackground(enabled ? Color.WHITE : Color.LIGHT_GRAY);
 
         // send button
         this.updateEnabledButtons();

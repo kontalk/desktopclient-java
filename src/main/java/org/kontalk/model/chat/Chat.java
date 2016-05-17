@@ -51,6 +51,10 @@ import org.kontalk.persistence.Database;
 public abstract class Chat extends Observable implements Observer {
     private static final Logger LOGGER = Logger.getLogger(Chat.class.getName());
 
+    public enum ViewChange {
+        READ, NEW_MESSAGE, VIEW_SETTINGS, CONTACT, MEMBER_STATE, SUBJECT, MEMBERS
+    }
+
     public static final String TABLE = "threads";
     public static final String COL_XMPPID = "xmpp_id";
     public static final String COL_GD = "gid";
@@ -124,9 +128,9 @@ public abstract class Chat extends Observable implements Observer {
             if (message.isInMessage() && mRead) {
                 mRead = false;
                 this.save();
-                this.changed(mRead);
+                this.changed(ViewChange.READ);
             }
-            this.changed(message);
+            this.changed(ViewChange.NEW_MESSAGE);
         }
         return added;
     }
@@ -145,7 +149,7 @@ public abstract class Chat extends Observable implements Observer {
 
         mRead = true;
         this.save();
-        this.changed(mRead);
+        this.changed(ViewChange.READ);
     }
 
     public ViewSettings getViewSettings() {
@@ -158,7 +162,7 @@ public abstract class Chat extends Observable implements Observer {
 
         mViewSettings = settings;
         this.save();
-        this.changed(mViewSettings);
+        this.changed(ViewChange.VIEW_SETTINGS);
     }
 
     public boolean isGroupChat() {
@@ -249,14 +253,14 @@ public abstract class Chat extends Observable implements Observer {
         return mDeleted;
     }
 
-    protected void changed(Object arg) {
+    protected void changed(ViewChange change) {
         this.setChanged();
-        this.notifyObservers(arg);
+        this.notifyObservers(change);
     }
 
     @Override
     public void update(Observable o, Object arg) {
-        this.changed(o);
+        this.changed(ViewChange.CONTACT);
     }
 
     static Optional<Chat> load(Database db, ResultSet rs, Map<Integer, Contact> contactMap)

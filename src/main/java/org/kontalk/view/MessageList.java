@@ -62,7 +62,6 @@ import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.CoderStatus;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.Contact;
-import org.kontalk.model.chat.Member;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
@@ -111,8 +110,6 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         // hide grid
         this.setShowGrid(false);
 
-        this.setBackground(mChat.getViewSettings());
-
         this.setVisible(false);
         this.updateOnEDT(null);
         this.setVisible(true);
@@ -128,30 +125,22 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        if (arg instanceof Set ||
-                arg instanceof String ||
-                arg instanceof Boolean ||
-                arg instanceof Member) {
-            // contacts, subject, read status or chat state changed, nothing
-            // to do here
-            return;
-        }
-
-        if (arg instanceof Chat.ViewSettings) {
-            this.setBackground((Chat.ViewSettings) arg);
+        if (arg == null || arg == Chat.ViewChange.VIEW_SETTINGS) {
+            this.setBackground(mChat.getViewSettings());
             if (mChatView.getCurrentChat().orElse(null) == mChat) {
                 //mChatView.mScrollPane.getViewport().repaint();
                 mChatView.repaint();
             }
-            return;
         }
 
         // check for new messages to add
-        if (this.getModel().getRowCount() < mChat.getMessages().size()) {
+        if ((arg == null || arg == Chat.ViewChange.NEW_MESSAGE) &&
+                this.getModel().getRowCount() < mChat.getMessages().size()) {
             this.insertMessages();
         }
 
-        if (!mChat.isRead() && mChatView.getCurrentChat().orElse(null) == mChat) {
+        if ((arg == null || arg == Chat.ViewChange.READ) &&
+                !mChat.isRead() && mChatView.getCurrentChat().orElse(null) == mChat) {
             mChat.setRead();
         }
     }

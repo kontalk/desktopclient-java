@@ -60,8 +60,8 @@ public final class SingleChat extends Chat {
         mMember.getContact().addObserver(this);
     }
 
-    public Contact getContact() {
-        return mMember.getContact();
+    public Member getMember() {
+        return mMember;
     }
 
     @Override
@@ -122,7 +122,7 @@ public final class SingleChat extends Chat {
             return;
         }
         mMember.setState(chatState);
-        this.changed(mMember.getState());
+        this.changed(ViewChange.MEMBER_STATE);
     }
 
     @Override

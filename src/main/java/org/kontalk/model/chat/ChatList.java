@@ -76,7 +76,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
                     .filter(chat -> chat instanceof SingleChat)
                     .map(chat -> (SingleChat) chat)
                     .filter(chat -> chat.getXMPPID().equals(xmmpThreadID)
-                            && chat.getContact().equals(contact))
+                            && chat.getMember().getContact().equals(contact))
                     .findFirst();
         }
     }
@@ -164,11 +164,10 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
 
     @Override
     public void update(Observable o, Object arg) {
-        // only observing chats 'read' status
-        if (!(arg instanceof Boolean))
+        if (arg != Chat.ViewChange.READ || !(o instanceof Chat))
             return;
 
-        boolean unread = !((boolean) arg);
+        boolean unread = !((Chat) o).isRead();
         if (mUnread == unread)
             return;
 
