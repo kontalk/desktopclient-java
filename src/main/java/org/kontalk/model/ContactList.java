@@ -40,8 +40,9 @@ import org.kontalk.persistence.Database;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class ContactList extends Observable implements Iterable<Contact> {
-
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
+
+    private enum ViewChange { MODIFIED }
 
     private final Map<JID, Contact> mJIDMap =
             Collections.synchronizedMap(new HashMap<JID, Contact>());
@@ -89,7 +90,7 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
         mJIDMap.put(newContact.getJID(), newContact);
 
-        this.changed(newContact);
+        this.changed(ViewChange.MODIFIED);
         return Optional.of(newContact);
     }
 
@@ -131,7 +132,7 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
         contact.setDeleted();
 
-        this.changed(contact);
+        this.changed(ViewChange.MODIFIED);
     }
 
     /**
@@ -150,7 +151,6 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
         contact.setJID(jid);
 
-        this.changed(contact);
         return true;
     }
 
@@ -168,9 +168,9 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         return true;
     }
 
-    private void changed(Object arg) {
+    private void changed(ViewChange change) {
         this.setChanged();
-        this.notifyObservers(arg);
+        this.notifyObservers(change);
     }
 
     @Override
