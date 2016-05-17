@@ -149,7 +149,15 @@ public final class RosterHandler {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
-        contact.setOnline(type, status);
+
+        if (type == Presence.Type.available) {
+            contact.setOnlineStatus(Contact.Online.YES);
+        }
+        if (type == Presence.Type.unavailable) {
+            contact.setOnlineStatus(Contact.Online.NO);
+        }
+
+        contact.setStatusText(status);
     }
 
     public void onFingerprintPresence(JID jid, String fingerprint) {
@@ -233,7 +241,7 @@ public final class RosterHandler {
             // we already know this
             return;
 
-        contact.setOnlineError();
+        contact.setOnlineStatus(Contact.Online.ERROR);
 
         mControl.getViewControl().changed(new ViewEvent.PresenceError(contact, error));
     }

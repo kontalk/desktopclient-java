@@ -114,7 +114,7 @@ public class PresenceListener implements StanzaListener {
 
         mHandler.onPresenceUpdate(jid,
                 bestPresence.getType(),
-                bestPresence.getStatus());
+                StringUtils.defaultString(bestPresence.getStatus()));
 
         if (pubKey != null) {
             String fp = StringUtils.defaultString(pubKey.getFingerprint()).toLowerCase();

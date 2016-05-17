@@ -203,7 +203,7 @@ public final class Control {
             // TODO check current user avatar on server and upload if necessary
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
             for (Contact contact : mModel.contacts())
-                contact.setOffline();
+                contact.setOnlineStatus(Contact.Online.UNKNOWN);
         }
     }
 

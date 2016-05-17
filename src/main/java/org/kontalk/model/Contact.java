@@ -30,7 +30,6 @@ import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.packet.Presence;
 import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -51,7 +50,6 @@ public final class Contact extends Observable {
 
     /**
      * Online status of one contact.
-     * Not saved to database.
      */
     public enum Online {UNKNOWN, YES, NO, ERROR};
 
@@ -63,7 +61,7 @@ public final class Contact extends Observable {
     }
 
     public enum ViewChange {
-        JID, NAME, ONLINE, KEY, BLOCKING, SUBSCRIPTION, AVATAR, DELETED
+        JID, NAME, ONLINE_STATUS, KEY, BLOCKING, SUBSCRIPTION, AVATAR, DELETED
     }
 
     public static final String TABLE = "user";
@@ -93,11 +91,13 @@ public final class Contact extends Observable {
     private String mName;
     private String mStatus = "";
     private Date mLastSeen = null;
+    // not in database
     private Online mOnline = Online.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
     private String mFingerprint = "";
     private boolean mBlocked = false;
+    // not in database
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
     private Avatar.DefaultAvatar mAvatar = null;
@@ -208,31 +208,26 @@ public final class Contact extends Observable {
         return this.mOnline;
     }
 
-    public void setOnline(Presence.Type type, String status) {
-        if (type == Presence.Type.available) {
-            mOnline = Online.YES;
+    public void setStatusText(String status) {
+        if (mStatus.equals(status))
+            return;
+
+        mStatus = status;
+        this.save();
+    }
+
+    public void setOnlineStatus(Online onlineStatus) {
+        if (onlineStatus == mOnline)
+            return;
+
+        mOnline = onlineStatus;
+
+        if (mOnline == Online.YES) {
             mLastSeen = new Date();
-        } else if (type == Presence.Type.unavailable) {
-            mOnline = Online.NO;
+            this.save();
         }
-        this.changed(ViewChange.ONLINE);
 
-        if (status != null && !status.isEmpty()) {
-            mStatus = status;
-        }
-    }
-
-    public void setOnlineError() {
-        mOnline = Online.ERROR;
-        this.changed(ViewChange.ONLINE);
-    }
-
-    /**
-     * Reset online status when client is disconnected.
-     */
-    public void setOffline() {
-        mOnline = Online.UNKNOWN;
-        this.changed(ViewChange.ONLINE);
+        this.changed(ViewChange.ONLINE_STATUS);
     }
 
     public byte[] getKey() {
