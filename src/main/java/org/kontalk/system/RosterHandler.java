@@ -21,6 +21,7 @@ package org.kontalk.system;
 import org.kontalk.persistence.Config;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
@@ -139,8 +140,9 @@ public final class RosterHandler {
             mControl.onPGPKey(contact, rawKey);
     }
 
-    public void onPresenceUpdate(JID jid, Presence.Type type, String status) {
-        if (this.isMe(jid) && !mModel.contacts().contains(jid))
+    public void onPresenceUpdate(JID jid, Presence.Type type, Optional<String> optStatus) {
+        JID myJID = mClient.getOwnJID().orElse(null);
+        if (myJID != null && myJID.equals(jid))
             // don't wanna see myself
             return;
 
@@ -157,7 +159,8 @@ public final class RosterHandler {
             contact.setOnlineStatus(Contact.Online.NO);
         }
 
-        contact.setStatusText(status);
+        if (optStatus.isPresent())
+            contact.setStatusText(optStatus.get());
     }
 
     public void onFingerprintPresence(JID jid, String fingerprint) {
@@ -247,11 +250,6 @@ public final class RosterHandler {
     }
 
     /* private */
-
-    private boolean isMe(JID jid) {
-        JID myJID = mClient.getOwnJID().orElse(null);
-        return myJID != null ? myJID.equals(jid) : false;
-    }
 
     private static Subscription rosterToModelSubscription(
             RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
