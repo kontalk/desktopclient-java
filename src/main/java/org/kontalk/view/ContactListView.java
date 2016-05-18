@@ -50,7 +50,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     private final Model mModel;
 
     ContactListView(final View view, Model model) {
-        super(view, false);
+        super(view, true);
 
         mModel = model;
 
@@ -257,7 +257,8 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             // status
             if (arg == null || arg == Contact.ViewChange.SUBSCRIPTION ||
                     arg == Contact.ViewChange.ONLINE_STATUS ||
-                    arg == Contact.ViewChange.BLOCKING) {
+                    arg == Contact.ViewChange.BLOCKING ||
+                    arg == Change.TIMER) {
                 mStatusLabel.setText(Utils.mainStatus(mValue, false));
             }
 

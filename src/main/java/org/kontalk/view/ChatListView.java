@@ -28,7 +28,6 @@ import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Optional;
-import java.util.Timer;
 import javax.swing.Box;
 import javax.swing.ListSelectionModel;
 import org.kontalk.persistence.Config;
@@ -209,7 +208,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
             }
 
             if (arg == null || arg == Chat.ViewChange.NEW_MESSAGE ||
-                    arg instanceof Timer) {
+                    arg == Change.TIMER) {
                 mStatusLabel.setText(lastActivity(mValue, true));
             }
 

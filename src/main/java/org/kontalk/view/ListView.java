@@ -71,6 +71,10 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
 
     protected final View mView;
 
+    protected enum Change{
+        TIMER
+    };
+
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
     /** Map synced with model for faster access. */
@@ -303,7 +307,7 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
     private void timerUpdate() {
         for (int i = 0; i < mModel.getRowCount(); i++) {
             I item = (I) mModel.getValueAt(i, 0);
-            item.updateOnEDT(mTimer);
+            item.updateOnEDT(Change.TIMER);
         }
     }
 
