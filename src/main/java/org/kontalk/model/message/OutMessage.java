@@ -83,7 +83,7 @@ public final class OutMessage extends KonMessage {
             return;
 
         transmission.setReceived(new Date());
-        this.changed(mStatus);
+        this.changed(ViewChange.STATUS);
     }
 
     public void setStatus(Status status) {
@@ -99,7 +99,7 @@ public final class OutMessage extends KonMessage {
         if (status != Status.PENDING)
             mServerDate = new Date();
         this.save();
-        this.changed(mStatus);
+        this.changed(ViewChange.STATUS);
     }
 
     // Note: only one error per message (not transmission) possible

@@ -59,9 +59,6 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.chat.Chat;
-import org.kontalk.model.message.CoderStatus;
-import org.kontalk.model.message.MessageContent;
-import org.kontalk.model.Contact;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
@@ -342,19 +339,17 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             if (!mCreated)
                 return;
 
-            if (arg == null || arg instanceof Contact ||
-                    arg instanceof MessageContent)
+            // TODO "From" title not updated if contact name changes
+            if (arg == null || arg == KonMessage.ViewChange.CONTENT)
                 this.updateTitle();
 
-            if (arg == null || arg instanceof MessageContent)
+            if (arg == null || arg == KonMessage.ViewChange.CONTENT)
                 this.updateText();
 
-            if (arg == null || arg instanceof KonMessage.Status ||
-                    arg instanceof CoderStatus)
+            if (arg == null || arg == KonMessage.ViewChange.STATUS)
                 this.updateStatus();
 
-            if (arg == null || arg instanceof MessageContent.Attachment ||
-                    arg instanceof MessageContent.Preview)
+            if (arg == null || arg == KonMessage.ViewChange.ATTACHMENT)
                 this.updateAttachment();
 
             // changes are not instantly painted

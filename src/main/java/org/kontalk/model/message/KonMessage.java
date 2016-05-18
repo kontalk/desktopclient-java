@@ -69,6 +69,10 @@ public abstract class KonMessage extends Observable {
         ERROR
     };
 
+    public enum ViewChange {
+        STATUS, CONTENT, ATTACHMENT
+    }
+
     public static final String TABLE = "messages";
     public static final String COL_CHAT_ID = "thread_id";
     //public static final String COL_DIR = "direction";
@@ -232,7 +236,7 @@ public abstract class KonMessage extends Observable {
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {
         mCoderStatus.setSecurityErrors(errors);
         this.save();
-        this.changed(mCoderStatus);
+        this.changed(ViewChange.STATUS);
     }
 
     public ServerError getServerError() {
@@ -242,7 +246,7 @@ public abstract class KonMessage extends Observable {
     public void setPreview(Preview preview) {
         mContent.setPreview(preview);
         this.save();
-        this.changed(preview);
+        this.changed(ViewChange.ATTACHMENT);
     }
 
     public boolean isEncrypted() {
@@ -273,9 +277,9 @@ public abstract class KonMessage extends Observable {
         return Model.database().execDelete(TABLE, mID);
     }
 
-    protected void changed(Object arg) {
+    protected void changed(ViewChange change) {
         this.setChanged();
-        this.notifyObservers(arg);
+        this.notifyObservers(change);
     }
 
     protected boolean abstractEquals(KonMessage oMessage) {
