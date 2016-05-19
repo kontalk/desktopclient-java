@@ -220,12 +220,13 @@ public final class Contact extends Observable {
         if (onlineStatus == mOnline)
             return;
 
-        mOnline = onlineStatus;
-
-        if (mOnline == Online.YES) {
+        if (onlineStatus == Online.YES ||
+                (onlineStatus == Online.NO && mOnline == Online.YES)) {
             mLastSeen = new Date();
             this.save();
         }
+
+        mOnline = onlineStatus;
 
         this.changed(ViewChange.ONLINE_STATUS);
     }
