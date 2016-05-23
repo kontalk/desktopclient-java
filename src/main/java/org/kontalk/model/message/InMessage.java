@@ -84,7 +84,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
         mContent.setDecryptedContent(decryptedContent);
         mCoderStatus.setDecrypted();
         this.save();
-        this.changed(decryptedContent);
+        this.changed(ViewChange.CONTENT);
     }
 
     public void setAttachmentFileName(String fileName) {
@@ -96,7 +96,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
         this.save();
         // only tell view if file not encrypted
         if (!attachment.getCoderStatus().isEncrypted())
-            this.changed(attachment);
+            this.changed(ViewChange.ATTACHMENT);
      }
 
     public void setAttachmentSigning(Coder.Signing signing) {
@@ -115,7 +115,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
 
         attachment.setDownloadProgress(p);
         if (p <= 0)
-            this.changed(attachment);
+            this.changed(ViewChange.ATTACHMENT);
     }
 
     public void setDecryptedAttachment(String filename) {
@@ -125,7 +125,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
 
         attachment.setDecryptedFile(filename);
         this.save();
-        this.changed(attachment);
+        this.changed(ViewChange.ATTACHMENT);
     }
 
     public void setPreviewFilename(String filename) {
@@ -136,7 +136,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
         }
         preview.setFilename(filename);
         this.save();
-        this.changed(preview);
+        this.changed(ViewChange.ATTACHMENT);
     }
 
     @Override
@@ -152,13 +152,14 @@ public final class InMessage extends KonMessage implements DecryptMessage {
         if (!(o instanceof InMessage))
             return false;
 
-        return super.equals(o) &&
-                mTransmission.equals(((InMessage) o).mTransmission);
+        InMessage oMessage = (InMessage) o;
+        return this.abstractEquals(oMessage) &&
+                mTransmission.equals(oMessage.mTransmission);
     }
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
+        int hash = this.abstractHashCode();
         hash = 67 * hash + Objects.hashCode(this.mTransmission);
         return hash;
     }

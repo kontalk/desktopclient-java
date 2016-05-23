@@ -66,9 +66,16 @@ repositories {
     mavenCentral()
 }
 
+task deleteDeps(type: Delete) {
+  delete fileTree(project.file('dist/lib')) {
+        include '*.jar'
+    }
+}
+
 task copyDeps(type: Copy) {
     from(configurations.runtime)
     into project.file('dist/lib')
+    dependsOn ':deleteDeps'
 }
 
 jar {

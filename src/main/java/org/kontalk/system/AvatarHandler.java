@@ -52,7 +52,7 @@ public final class AvatarHandler {
     }
 
     public void onNotify(JID jid, String id) {
-        if (Config.getInstance().getBoolean(Config.NET_REQUEST_AVATARS))
+        if (!Config.getInstance().getBoolean(Config.NET_REQUEST_AVATARS))
             // disabled by user
             return;
 
@@ -65,6 +65,7 @@ public final class AvatarHandler {
         if (id.isEmpty()) {
             // contact disabled avatar publishing
             contact.deleteAvatar();
+            return;
         }
 
         Avatar avatar = contact.getAvatar().orElse(null);
@@ -96,6 +97,6 @@ public final class AvatarHandler {
         if (img == null)
             return;
 
-        contact.setAvatar(new Avatar(id, img));
+        contact.setAvatar(new Avatar.DefaultAvatar(id, img));
     }
 }

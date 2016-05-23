@@ -102,7 +102,7 @@ final class ChatStateManager {
                 // 'active' is send inside a message
                 return;
 
-            Contact contact = ((SingleChat) mChat).getContact();
+            Contact contact = ((SingleChat) mChat).getMember().getContact();
             if (contact.isMe() || contact.isBlocked() || contact.isDeleted())
                 return;
 

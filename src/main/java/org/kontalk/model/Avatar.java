@@ -37,11 +37,17 @@ import org.kontalk.util.MediaUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class Avatar {
+public abstract class Avatar {
     private static final Logger LOGGER = Logger.getLogger(Avatar.class.getName());
 
     private static final String DIR = "avatars";
     protected static final String FORMAT = "png";
+
+    static void createStorageDir(Path appDir) {
+        boolean created = appDir.resolve(DIR).toFile().mkdir();
+        if (created)
+            LOGGER.info("created avatar directory");
+    }
 
     /** SHA1 hash of image data. */
     private final String mID;
@@ -49,28 +55,16 @@ public class Avatar {
 
     protected BufferedImage mImage = null;
 
-    /** Saved contact avatar. Used when loading from database. */
-    Avatar(String id) {
-        this(id, null, null);
-    }
-
-    /** New contact avatar. */
-    public Avatar(String id, BufferedImage image) {
-        this(id, null, image);
-    }
-
     private Avatar(String id, File file, BufferedImage image) {
         mID = id;
-        mFile = file != null ?
-                file :
-                Model.appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
+        mFile = file != null ? file : avatarFile(mID);
         mImage = image;
 
         if (mImage != null) {
             // save new image
-            boolean succ = MediaUtils.writeImage(image, FORMAT, file);
+            boolean succ = MediaUtils.writeImage(mImage, FORMAT, mFile);
             if (!succ)
-                LOGGER.warning("can't save avatar image: "+id);
+                LOGGER.warning("can't save avatar image: "+mID);
         }
     }
 
@@ -80,42 +74,116 @@ public class Avatar {
         mID = mImage != null ? id(mImage) : "";
     }
 
-    private static BufferedImage image(File file) {
-        return MediaUtils.readImage(file).orElse(null);
-    }
-
     public String getID() {
         return mID;
     }
 
     public Optional<BufferedImage> loadImage() {
         if (mImage == null)
-            mImage = image(this.mFile);
+            mImage = image(mFile);
 
         return Optional.ofNullable(mImage);
     }
 
     void delete() {
-        boolean succ = this.mFile.delete();
-        if (succ)
-            LOGGER.warning("could not delete avatar file: "+this.mID);
+        boolean succ = mFile.delete();
+        if (!succ)
+            LOGGER.warning("could not delete avatar file: "+mID);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-
-        if (!(o instanceof Avatar)) return false;
-
-        Avatar oAvatar = (Avatar) o;
+    protected boolean abstractEquals(Avatar oAvatar) {
         return mID.equals(oAvatar.mID);
     }
 
-    @Override
-    public int hashCode() {
+    protected int abstractHashCode() {
         int hash = 7;
         hash = 59 * hash + Objects.hashCode(this.mID);
         return hash;
+    }
+
+    public static class DefaultAvatar extends Avatar {
+
+        /** Saved published contact avatar. */
+        static Optional<DefaultAvatar> load(String id) {
+            File file = avatarFile(id);
+            if (!file.isFile()) {
+                LOGGER.warning("no file: "+file);
+                return Optional.empty();
+            }
+
+            return Optional.of(new DefaultAvatar(id, file));
+        }
+
+        private DefaultAvatar(String id, File file) {
+            super(id, file, null);
+        }
+
+        /** New published contact avatar. */
+        public DefaultAvatar(String id, BufferedImage image) {
+            super(id, null, image);
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (!(o instanceof DefaultAvatar))
+                return false;
+
+            return this.abstractEquals((DefaultAvatar) o);
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 3 * this.abstractHashCode();
+            return hash;
+        }
+    }
+
+    public static class CustomAvatar extends Avatar {
+
+        // custom set avatars have always same ID for one contact,
+        // using this to distinguish them
+        private final long mLastModified;
+
+        static Optional<CustomAvatar> load(int contactID) {
+            String id = Integer.toString(contactID);
+            return avatarFile(id).isFile() ?
+                    Optional.of(new CustomAvatar(id, null)) :
+                    Optional.empty();
+        }
+
+        private CustomAvatar(String id, File file) {
+            super(id, file, null);
+            mLastModified = mFile.lastModified();
+        }
+
+        /** New custom contact avatar. */
+        public CustomAvatar(int contactID, BufferedImage image) {
+            super(Integer.toString(contactID), null, image);
+            mLastModified = mFile.lastModified();
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o)
+                return true;
+
+            if (!(o instanceof CustomAvatar))
+                return false;
+            CustomAvatar oAvatar = (CustomAvatar) o;
+
+            return this.abstractEquals(oAvatar) &&
+                    mLastModified == oAvatar.mLastModified;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 3 * this.abstractHashCode();
+            hash = 37 * hash + (int) (this.mLastModified ^ (this.mLastModified >>> 32));
+            return hash;
+        }
     }
 
     public static class UserAvatar extends Avatar {
@@ -123,28 +191,42 @@ public class Avatar {
         private static final int MAX_SIZE = 150;
         private static final String USER_FILENAME = "avatar";
 
+        private static UserAvatar INSTANCE = null;
+
         private byte[] mImageData = null;
 
         /** Saved user Avatar. */
-        UserAvatar(Path appDir) {
-            super(userFile(appDir));
+        public static Optional<UserAvatar> get() {
+            if (INSTANCE != null)
+                return Optional.of(INSTANCE);
+
+            File file = userFile();
+            return file.isFile() ?
+                    Optional.of(INSTANCE = new UserAvatar(file)) :
+                    Optional.empty();
+        }
+
+        private UserAvatar(File file) {
+            super(file);
+        }
+
+        public static UserAvatar set(BufferedImage image) {
+            return INSTANCE = new UserAvatar(MediaUtils.scale(image, MAX_SIZE, MAX_SIZE));
         }
 
         /** New user Avatar. ID generated from image. */
-        private UserAvatar(BufferedImage image, Path appDir) {
-            super(id(image), userFile(appDir), image);
+        private UserAvatar(BufferedImage image) {
+            super(id(image), userFile(), image);
         }
 
-        static UserAvatar create(BufferedImage image) {
-            image = MediaUtils.scale(image, MAX_SIZE, MAX_SIZE);
-            return new UserAvatar(image, Model.appDir());
-        }
+        public static void remove() {
+            if (INSTANCE == null) {
+                LOGGER.warning("not set");
+                return;
+            }
 
-        @Override
-        public Optional<BufferedImage> loadImage() {
-            return mFile.isFile() ?
-                    Optional.ofNullable(image(mFile)) :
-                    Optional.<BufferedImage>empty();
+            INSTANCE.delete();
+            INSTANCE = null;
         }
 
         public Optional<byte[]> imageData() {
@@ -154,19 +236,13 @@ public class Avatar {
             return Optional.ofNullable(mImageData);
         }
 
-        private static File userFile(Path appDir) {
-            return appDir.resolve(USER_FILENAME + "." + FORMAT).toFile();
+        private static File userFile() {
+            return Model.appDir().resolve(USER_FILENAME + "." + FORMAT).toFile();
         }
     }
 
-    static void createStorageDir(Path appDir) {
-        boolean created = appDir.resolve(DIR).toFile().mkdir();
-        if (created)
-            LOGGER.info("created avatar directory");
-    }
-
-    static Avatar deleted() {
-        return new Avatar("");
+    private static File avatarFile(String id){
+        return Model.appDir().resolve(DIR).resolve(id + "." + FORMAT).toFile();
     }
 
     private static String id(BufferedImage image) {
@@ -183,6 +259,10 @@ public class Avatar {
             return null;
         }
         return out.toByteArray();
+    }
+
+    private static BufferedImage image(File file) {
+        return MediaUtils.readImage(file).orElse(null);
     }
 }
 

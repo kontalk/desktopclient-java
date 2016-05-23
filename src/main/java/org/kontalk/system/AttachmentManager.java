@@ -322,8 +322,7 @@ public class AttachmentManager implements Runnable {
 
         Image thumb = MediaUtils.scaleAsync(image,
                 THUMBNAIL_DIM.width ,
-                THUMBNAIL_DIM.height,
-                false);
+                THUMBNAIL_DIM.height);
 
         String format = MediaUtils.extensionForMIME(THUMBNAIL_MIME);
 

@@ -30,7 +30,6 @@ import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.packet.Presence;
 import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -51,15 +50,18 @@ public final class Contact extends Observable {
 
     /**
      * Online status of one contact.
-     * Not saved to database.
      */
-    public static enum Online {UNKNOWN, YES, NO, ERROR};
+    public enum Online {UNKNOWN, YES, NO, ERROR};
 
     /**
      * XMPP subscription status in roster.
      */
-    public static enum Subscription {
+    public enum Subscription {
         UNKNOWN, PENDING, SUBSCRIBED, UNSUBSCRIBED
+    }
+
+    public enum ViewChange {
+        JID, NAME, ONLINE_STATUS, KEY, BLOCKING, SUBSCRIPTION, AVATAR, DELETED
     }
 
     public static final String TABLE = "user";
@@ -89,14 +91,17 @@ public final class Contact extends Observable {
     private String mName;
     private String mStatus = "";
     private Date mLastSeen = null;
-    private Online mAvailable = Online.UNKNOWN;
+    // not in database
+    private Online mOnline = Online.UNKNOWN;
     private boolean mEncrypted = true;
     private String mKey = "";
     private String mFingerprint = "";
     private boolean mBlocked = false;
+    // not in database
     private Subscription mSubStatus = Subscription.UNKNOWN;
     //private ItemType mType;
-    private Avatar mAvatar = null;
+    private Avatar.DefaultAvatar mAvatar = null;
+    private Avatar.CustomAvatar mCustomAvatar = null;
 
     // new contact (eg from roster)
     Contact(JID jid, String name) {
@@ -119,7 +124,7 @@ public final class Contact extends Observable {
     }
 
     // loading from database
-    public Contact(
+    private Contact(
             int id,
             JID jid,
             String name,
@@ -137,7 +142,10 @@ public final class Contact extends Observable {
         mEncrypted = encrypted;
         mKey = publicKey;
         mFingerprint = fingerprint.toLowerCase();
-        mAvatar = avatarID.isEmpty() ? null : new Avatar(avatarID);
+        mAvatar = avatarID.isEmpty() ?
+                null :
+                Avatar.DefaultAvatar.load(avatarID).orElse(null);
+        mCustomAvatar = Avatar.CustomAvatar.load(mID).orElse(null);
     }
 
     public JID getJID() {
@@ -155,7 +163,7 @@ public final class Contact extends Observable {
 
         mJID = jid;
         this.save();
-        this.changed(mJID);
+        this.changed(ViewChange.JID);
     }
 
     public int getID() {
@@ -173,7 +181,7 @@ public final class Contact extends Observable {
         mName = name;
         this.save();
 
-        this.changed(mName);
+        this.changed(ViewChange.NAME);
     }
 
     public String getStatus() {
@@ -197,34 +205,30 @@ public final class Contact extends Observable {
     }
 
     public Online getOnline() {
-        return this.mAvailable;
+        return this.mOnline;
     }
 
-    public void setOnline(Presence.Type type, String status) {
-        if (type == Presence.Type.available) {
-            mAvailable = Online.YES;
+    public void setStatusText(String status) {
+        if (mStatus.equals(status))
+            return;
+
+        mStatus = status;
+        this.save();
+    }
+
+    public void setOnlineStatus(Online onlineStatus) {
+        if (onlineStatus == mOnline)
+            return;
+
+        if (onlineStatus == Online.YES ||
+                (onlineStatus == Online.NO && mOnline == Online.YES)) {
             mLastSeen = new Date();
-        } else if (type == Presence.Type.unavailable) {
-            mAvailable = Online.NO;
+            this.save();
         }
-        this.changed(mAvailable);
 
-        if (status != null && !status.isEmpty()) {
-            mStatus = status;
-        }
-    }
+        mOnline = onlineStatus;
 
-    public void setOnlineError() {
-        mAvailable = Online.ERROR;
-        this.changed(mAvailable);
-    }
-
-    /**
-     * Reset online status when client is disconnected.
-     */
-    public void setOffline() {
-        mAvailable = Online.UNKNOWN;
-        this.changed(mAvailable);
+        this.changed(ViewChange.ONLINE_STATUS);
     }
 
     public byte[] getKey() {
@@ -246,7 +250,7 @@ public final class Contact extends Observable {
         mKey = EncodingUtils.bytesToBase64(rawKey);
         mFingerprint = fingerprint.toLowerCase();
         this.save();
-        this.changed(new byte[0]);
+        this.changed(ViewChange.KEY);
     }
 
     public boolean isBlocked() {
@@ -255,7 +259,7 @@ public final class Contact extends Observable {
 
     public void setBlocked(boolean blocked) {
         mBlocked = blocked;
-        this.changed(mBlocked);
+        this.changed(ViewChange.BLOCKING);
     }
 
     public Subscription getSubScription() {
@@ -267,14 +271,21 @@ public final class Contact extends Observable {
             return;
 
         mSubStatus = status;
-        this.changed(mSubStatus);
+        this.changed(ViewChange.SUBSCRIPTION);
     }
 
     public Optional<Avatar> getAvatar() {
         return Optional.ofNullable(mAvatar);
     }
 
-    public void setAvatar(Avatar avatar) {
+    /** Get custom or downloaded avatar. */
+    public Optional<Avatar> getDisplayAvatar() {
+        return mCustomAvatar != null ?
+                Optional.of(mCustomAvatar) :
+                Optional.ofNullable(mAvatar);
+    }
+
+    public void setAvatar(Avatar.DefaultAvatar avatar) {
         // delete old
         if (mAvatar != null)
             mAvatar.delete();
@@ -283,18 +294,40 @@ public final class Contact extends Observable {
         mAvatar = avatar;
         this.save();
 
-        this.changed(avatar);
+        if (mCustomAvatar == null)
+            this.changed(ViewChange.AVATAR);
     }
 
     public void deleteAvatar() {
-        // delete old
-        if (mAvatar != null)
-            mAvatar.delete();
+        if (mAvatar == null)
+            return;
 
+        mAvatar.delete();
         mAvatar = null;
         this.save();
 
-        this.changed(Avatar.deleted());
+        this.changed(ViewChange.AVATAR);
+    }
+
+    public void setCustomAvatar(Avatar.CustomAvatar avatar) {
+        // overwrite file!
+        mCustomAvatar = avatar;
+
+        this.changed(ViewChange.AVATAR);
+    }
+
+    public boolean hasCustomAvatarSet() {
+        return mCustomAvatar != null;
+    }
+
+    public void deleteCustomAvatar() {
+        if (mCustomAvatar == null)
+            return;
+
+        mCustomAvatar.delete();
+        mCustomAvatar = null;
+
+        this.changed(ViewChange.AVATAR);
     }
 
     public boolean isMe() {
@@ -322,7 +355,7 @@ public final class Contact extends Observable {
         mAvatar = null;
 
         this.save();
-        this.changed(null);
+        this.changed(ViewChange.DELETED);
     }
 
     public boolean isDeleted() {
@@ -342,9 +375,9 @@ public final class Contact extends Observable {
         Model.database().execUpdate(TABLE, set, mID);
     }
 
-    private void changed(Object arg) {
+    private void changed(ViewChange change) {
         this.setChanged();
-        this.notifyObservers(arg);
+        this.notifyObservers(change);
     }
 
     @Override

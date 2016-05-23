@@ -43,6 +43,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
+import java.util.Optional;
 import javax.swing.Box;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
@@ -62,6 +63,7 @@ final class ContactDetails extends WebPanel implements Observer {
 
     private final View mView;
     private final Contact mContact;
+    private final ComponentUtils.EditableAvatarImage mAvatarImage;
     private final WebTextField mNameField;
     private final WebLabel mSubscrStatus;
     private final WebButton mSubscrButton;
@@ -83,7 +85,41 @@ final class ContactDetails extends WebPanel implements Observer {
 
         WebPanel mainPanel = new WebPanel(new FormLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
 
-        // editable fields
+        // editable components
+        mAvatarImage = new ComponentUtils.EditableAvatarImage(
+                View.AVATAR_DETAIL_SIZE, true,
+                Optional.of(AvatarLoader.load(contact, View.AVATAR_DETAIL_SIZE))) {
+            @Override
+            void onImageChange(Optional<BufferedImage> optImage) {
+                if (optImage.isPresent())
+                    mView.getControl().setCustomContactAvatar(mContact, optImage.get());
+                else
+                    mView.getControl().unsetCustomContactAvatar(mContact);
+
+
+            }
+            @Override
+            BufferedImage defaultImage() {
+                return AvatarLoader.load(mContact, View.AVATAR_DETAIL_SIZE);
+            }
+            @Override
+            boolean canRemove() {
+                return mContact.hasCustomAvatarSet();
+            }
+            @Override
+            protected void update() {
+                if (mContact.hasCustomAvatarSet())
+                    return;
+
+                super.update();
+            }
+        };
+
+        int size = View.AVATAR_DETAIL_SIZE + View.MARGIN_DEFAULT;
+        mainPanel.add(new WebPanel(false, mAvatarImage)
+                .setPreferredWidth(size).setPreferredHeight(size));
+        mainPanel.add(Box.createGlue());
+
         mainPanel.add(new WebLabel(Tr.tr("Display Name:")));
         mNameField = new ComponentUtils.EditableTextField(View.MAX_NAME_LENGTH, 15, this) {
             @Override
@@ -225,7 +261,9 @@ final class ContactDetails extends WebPanel implements Observer {
     }
 
     private void updateOnEDT() {
-        // may have changed: contact name, subscription and/or key
+        // may have changed: avatar...
+        mAvatarImage.update();
+        // ...contact name...
         mNameField.setText(mContact.getName());
         mNameField.setInputPrompt(mContact.getName());
         Contact.Subscription subscription = mContact.getSubScription();
@@ -235,9 +273,11 @@ final class ContactDetails extends WebPanel implements Observer {
             case SUBSCRIBED: auth = Tr.tr("Authorized"); break;
             case UNSUBSCRIBED: auth = Tr.tr("Not authorized"); break;
         }
+        // ...subscription...
         mSubscrButton.setVisible(subscription != Contact.Subscription.SUBSCRIBED);
         mSubscrButton.setEnabled(subscription == Contact.Subscription.UNSUBSCRIBED);
         mSubscrStatus.setText(auth);
+        // ...and/or key
         String hasKey = "<html>";
         if (mContact.hasKey()) {
             hasKey += Tr.tr("Available")+"</html>";

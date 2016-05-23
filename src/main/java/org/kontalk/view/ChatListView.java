@@ -18,8 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.image.DisplayType;
-import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
@@ -29,7 +27,7 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.Timer;
+import java.util.Optional;
 import javax.swing.Box;
 import javax.swing.ListSelectionModel;
 import org.kontalk.persistence.Config;
@@ -39,7 +37,6 @@ import org.kontalk.model.chat.ChatList;
 import org.kontalk.model.Contact;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
-import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.chat.SingleChat;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatListView.ChatItem;
@@ -63,7 +60,8 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        this.sync(mChatList.getAll());
+        if (arg == null || arg == ChatList.ViewChange.MODIFIED)
+            this.sync(mChatList.getAll());
     }
 
     @Override
@@ -95,8 +93,8 @@ final class ChatListView extends ListView<ChatItem, Chat> {
     }
 
     @Override
-    protected void selectionChanged(Chat value) {
-        mView.selectedChatChanged(value);
+    protected void selectionChanged(Optional<Chat> value) {
+        mView.onChatSelectionChanged(value);
     }
 
     @Override
@@ -105,7 +103,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
         Chat chat = item.mValue;
         if (chat instanceof SingleChat) {
-            final Contact contact = ((SingleChat) chat).getContact();
+            final Contact contact = ((SingleChat) chat).getMember().getContact();
             if (!contact.isDeleted()) {
                 WebMenuItem editItem = new WebMenuItem(Tr.tr("Edit Contact"));
                 editItem.setToolTipText(Tr.tr("Edit contact settings"));
@@ -136,7 +134,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
     protected void onRenameEvent() {
         Chat chat = this.getSelectedValue().orElse(null);
         if (chat instanceof SingleChat) {
-            mView.requestRenameFocus(((SingleChat) chat).getContact());
+            mView.requestRenameFocus(((SingleChat) chat).getMember().getContact());
             return;
         }
 
@@ -147,7 +145,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
     protected final class ChatItem extends ListView<ChatItem, Chat>.TableItem {
 
-        private final WebImage mAvatar;
+        private final ComponentUtils.AvatarImage mAvatar;
         private final WebLabel mTitleLabel;
         private final WebLabel mStatusLabel;
         private final WebLabel mChatStateLabel;
@@ -159,8 +157,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, 0));
             this.setMargin(View.MARGIN_DEFAULT);
 
-            mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);
-            mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
+            mAvatar = new ComponentUtils.AvatarImage(View.AVATAR_LIST_SIZE);
             this.add(mAvatar, BorderLayout.WEST);
 
             mTitleLabel = new WebLabel();
@@ -187,17 +184,12 @@ final class ChatListView extends ListView<ChatItem, Chat> {
                                     Box.createGlue(), mStatusLabel, mChatStateLabel)
                     ), BorderLayout.CENTER);
 
-            this.updateView(null);
-
-            this.setBackground(mBackground);
+            this.updateOnEDT(null);
         }
 
         @Override
         protected void render(int tableWidth, boolean isSelected) {
-            if (isSelected)
-                this.setBackground(View.BLUE);
-            else
-                this.setBackground(mBackground);
+            this.setBackground(isSelected ? View.BLUE : mBackground);
         }
 
         @Override
@@ -209,42 +201,37 @@ final class ChatListView extends ListView<ChatItem, Chat> {
 
         @Override
         protected void updateOnEDT(Object arg) {
-            this.updateView(arg);
-            // needed for background repaint
-            ChatListView.this.repaint();
-        }
-
-        private void updateView(Object arg) {
-            if (arg == null || arg instanceof Contact ||
-                    arg instanceof String || arg instanceof GroupCommand) {
+            if (arg == null || arg == Chat.ViewChange.CONTACT ||
+                    arg == Chat.ViewChange.SUBJECT) {
+                mAvatar.setAvatarImage(mValue);
                 mTitleLabel.setText(Utils.chatTitle(mValue));
             }
 
-            // avatar may change when subject or contact name changes
-            if (arg == null || arg instanceof Contact || arg instanceof String) {
-                Utils.fixedSetWebImageImage(mAvatar, AvatarLoader.load(mValue));
+            if (arg == null || arg == Chat.ViewChange.NEW_MESSAGE ||
+                    arg == Change.TIMER) {
+                mStatusLabel.setText(lastActivity(mValue, true));
             }
 
-            if (arg == null || arg instanceof KonMessage) {
-                this.updateBG();
-                mStatusLabel.setText(lastActivity(mValue, true));
+            if (arg == null || arg == Chat.ViewChange.NEW_MESSAGE) {
                 ChatListView.this.updateSorting();
-            } else if (arg instanceof Boolean) {
-                this.updateBG();
-            } else if (arg instanceof Timer) {
-                mStatusLabel.setText(lastActivity(mValue, true));
+            }
+
+            if (arg == null || arg == Chat.ViewChange.READ) {
+                mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
             }
 
             String stateText = "";
-            if (arg instanceof Member) {
-                Member member = (Member) arg;
+            if (arg == Chat.ViewChange.MEMBER_STATE &&
+                    mValue instanceof SingleChat) {
+                Member member = ((SingleChat) mValue).getMember();
                 switch(member.getState()) {
                     case composing: stateText = Tr.tr("is writing…"); break;
                     //case paused: activity = T/r.tr("stopped typing"); break;
                     //case inactive: stateText = T/r.tr("is inactive"); break;
                 }
-                if (!stateText.isEmpty() && mValue.isGroupChat())
-                    stateText = member.getContact().getName() + ": " + stateText;
+                // not used: chatstates for group chats
+//                if (!stateText.isEmpty() && mValue.isGroupChat())
+//                    stateText = member.getContact().getName() + ": " + stateText;
             }
             if (stateText.isEmpty()) {
                 mChatStateLabel.setText("");
@@ -253,10 +240,6 @@ final class ChatListView extends ListView<ChatItem, Chat> {
                 mChatStateLabel.setText(stateText);
                 mStatusLabel.setVisible(false);
             }
-        }
-
-        private void updateBG() {
-            mBackground = !mValue.isRead() ? View.LIGHT_BLUE : Color.WHITE;
         }
 
         @Override

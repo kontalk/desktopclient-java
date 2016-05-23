@@ -83,7 +83,7 @@ public final class OutMessage extends KonMessage {
             return;
 
         transmission.setReceived(new Date());
-        this.changed(mStatus);
+        this.changed(ViewChange.STATUS);
     }
 
     public void setStatus(Status status) {
@@ -99,7 +99,7 @@ public final class OutMessage extends KonMessage {
         if (status != Status.PENDING)
             mServerDate = new Date();
         this.save();
-        this.changed(mStatus);
+        this.changed(ViewChange.STATUS);
     }
 
     // Note: only one error per message (not transmission) possible
@@ -135,16 +135,15 @@ public final class OutMessage extends KonMessage {
         if (o == this)
             return true;
 
-        // outmessages are only equal to outmessages
         if (!(o instanceof OutMessage))
             return false;
 
-        return super.equals(o);
+        return this.abstractEquals((KonMessage) o);
     }
 
     @Override
     public int hashCode() {
-        int hash = 97 * super.hashCode();
+        int hash = 97 * this.abstractHashCode();
         return hash;
     }
 }

@@ -66,7 +66,7 @@ import org.kontalk.util.Tr;
  */
 final class MainFrame extends WebFrame {
 
-    static enum Tab {CHATS, CONTACT};
+    enum Tab {CHATS, CONTACT};
 
     private final View mView;
     private final WebMenuItem mConnectMenuItem;

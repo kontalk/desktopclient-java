@@ -19,7 +19,6 @@
 package org.kontalk.view;
 
 import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.extended.image.WebImage;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
@@ -174,16 +173,6 @@ final class Utils {
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
         }
         return Toolkit.getDefaultToolkit().createImage(imageUrl);
-    }
-
-    static void fixedSetWebImageImage(WebImage webImage, Image img) {
-        // works cause caching
-        if (!img.equals(webImage.getImage())) {
-            //
-            webImage.setEnabled(false);
-            webImage.setImage(img);
-            webImage.setEnabled(true);
-        }
     }
 
     /* strings */
@@ -381,9 +370,10 @@ final class Utils {
         return selectedOption == WebOptionPane.OK_OPTION;
     }
 
-    static Set<Contact> allContacts(ContactList contactList) {
+    static Set<Contact> allContacts(ContactList contactList, boolean blocked) {
         boolean showMe = Config.getInstance().getBoolean(Config.VIEW_USER_CONTACT);
-        return contactList.getAll(showMe);
+
+        return contactList.getAll(showMe, blocked);
     }
 
     static List<Contact> contactList(Chat chat) {

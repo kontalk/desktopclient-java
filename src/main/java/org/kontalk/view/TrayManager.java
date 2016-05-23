@@ -36,6 +36,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.SwingUtilities;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.ChatList;
 import org.kontalk.persistence.Config;
 import org.kontalk.util.Tr;
 
@@ -104,7 +105,7 @@ final class TrayManager implements Observer {
     }
 
     private void updateOnEDT(Object arg) {
-        if (arg != null && !(arg instanceof Boolean))
+        if (arg != ChatList.ViewChange.UNREAD)
             return;
 
         if (mTrayIcon == null)

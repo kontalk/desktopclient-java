@@ -19,7 +19,6 @@
 package org.kontalk.model.chat;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -126,7 +125,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
 
         mSubject = subject;
         this.save();
-        this.changed(subject);
+        this.changed(ViewChange.SUBJECT);
     }
 
     @Override
@@ -141,7 +140,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         }
 
         member.setState(chatState);
-        this.changed(member);
+        this.changed(ViewChange.MEMBER_STATE);
     }
 
     public void applyGroupChanges(List<Member> added, List<Member> removed, String subject) {
@@ -153,9 +152,9 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         this.save();
 
         if (!added.isEmpty() || !removed.isEmpty())
-            this.changed(Arrays.<Member>asList());
+            this.changed(ViewChange.MEMBERS);
         if (!subject.isEmpty())
-            this.changed(mSubject);
+            this.changed(ViewChange.SUBJECT);
     }
 
     @Override

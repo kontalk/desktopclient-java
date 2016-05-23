@@ -71,6 +71,10 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
 
     protected final View mView;
 
+    protected enum Change{
+        TIMER
+    };
+
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
     /** Map synced with model for faster access. */
@@ -129,26 +133,12 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
 
-            private V lastValue = null;
-
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
                     return;
 
-                V value = ListView.this.getSelectedValue().orElse(null);
-                if (value == null) {
-                    // note: this happens also on right-click for some reason
-                    return;
-                }
-                // if event is caused by filtering, dont do anything
-                if (lastValue == value)
-                    return;
-
-                lastValue = value;
-                mView.clearSearch();
-
-                ListView.this.selectionChanged(value);
+                ListView.this.selectionChanged(ListView.this.getSelectedValue());
             }
         });
 
@@ -221,7 +211,7 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         menu.show(this, e.getX(), e.getY());
     }
 
-    protected void selectionChanged(V value){};
+    protected void selectionChanged(Optional<V> value){};
 
     protected abstract WebPopupMenu rightClickMenu(I item);
 
@@ -302,7 +292,10 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         if (i == this.getSelectedRow())
             return;
 
-        this.setSelectedRow(i);
+        // weblaf does this by "clear+add", triggering two selection events
+        // better do this on our own
+        //this.setSelectedRow(i);
+        this.getSelectionModel().setSelectionInterval(i, i);
     }
 
     void filterItems(String search) {
@@ -314,7 +307,7 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
     private void timerUpdate() {
         for (int i = 0; i < mModel.getRowCount(); i++) {
             I item = (I) mModel.getValueAt(i, 0);
-            item.updateOnEDT(mTimer);
+            item.update(null, Change.TIMER);
         }
     }
 
@@ -404,15 +397,22 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         @Override
         public void update(Observable o, final Object arg) {
             if (SwingUtilities.isEventDispatchThread()) {
-                this.updateOnEDT(arg);
+                this.update(arg);
                 return;
             }
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    TableItem.this.updateOnEDT(arg);
+                    TableItem.this.update(arg);
                 }
             });
+        }
+
+        private void update(Object arg) {
+            this.updateOnEDT(arg);
+
+            //mModel.fireTableCellUpdated(?, 0);
+            ListView.this.repaint();
         }
 
         protected abstract void updateOnEDT(Object arg);

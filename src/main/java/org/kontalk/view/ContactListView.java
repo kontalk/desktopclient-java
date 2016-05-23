@@ -18,8 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.image.DisplayType;
-import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
@@ -32,11 +30,13 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Observer;
+import java.util.Optional;
 import javax.swing.Box;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.Chat;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ContactListView.ContactItem;
@@ -50,7 +50,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     private final Model mModel;
 
     ContactListView(final View view, Model model) {
-        super(view, false);
+        super(view, true);
 
         mModel = model;
 
@@ -71,7 +71,9 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
     @Override
     protected void updateOnEDT(Object arg) {
-        this.sync(Utils.allContacts(mModel.contacts()));
+        boolean hideBlocked = Config.getInstance()
+                .getBoolean(Config.VIEW_HIDE_BLOCKED);
+        this.sync(Utils.allContacts(mModel.contacts(), !hideBlocked));
     }
 
     @Override
@@ -80,8 +82,8 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     }
 
     @Override
-    protected void selectionChanged(Contact value) {
-        mView.showContactDetails(value);
+    protected void selectionChanged(Optional<Contact> optContact) {
+        mView.onContactSelectionChanged(optContact);
     }
 
     @Override
@@ -133,7 +135,6 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
                     return;
                 mView.getControl().deleteContact(
                         ContactListView.this.getSelectedItem().mValue);
-                mView.showNothing();
             }
         });
         menu.add(deleteItem);
@@ -170,7 +171,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     /** One item in the contact list representing a contact. */
     final class ContactItem extends ListView<ContactItem, Contact>.TableItem {
 
-        private final WebImage mAvatar;
+        private final ComponentUtils.AvatarImage mAvatar;
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;
         private Color mBackground;
@@ -182,8 +183,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, 0));
             this.setMargin(View.MARGIN_SMALL);
 
-            mAvatar = new WebImage().setDisplayType(DisplayType.fitComponent);
-            mAvatar.setPreferredSize(View.AVATAR_LIST_DIM);
+            mAvatar = new ComponentUtils.AvatarImage(View.AVATAR_LIST_SIZE);
             this.add(mAvatar, BorderLayout.WEST);
 
             mNameLabel = new WebLabel();
@@ -239,11 +239,14 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
         @Override
         protected void updateOnEDT(Object arg) {
-            if (arg == null || arg instanceof String) {
-                // avatar
-                Utils.fixedSetWebImageImage(mAvatar, AvatarLoader.load(mValue));
+            // avatar
+            if (arg == null || arg == Contact.ViewChange.NAME ||
+                    arg == Contact.ViewChange.AVATAR) {
+                mAvatar.setAvatarImage(mValue);
+            }
 
-                // name
+            // name
+            if (arg == null || arg == Contact.ViewChange.NAME) {
                 String name = Utils.displayName(mValue);
                 if (!name.equals(mNameLabel.getText())) {
                     mNameLabel.setText(name);
@@ -252,15 +255,20 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             }
 
             // status
-            if (arg == null || arg instanceof Contact.Subscription ||
-                    arg instanceof Contact.Online) {
+            if (arg == null || arg == Contact.ViewChange.SUBSCRIPTION ||
+                    arg == Contact.ViewChange.ONLINE_STATUS ||
+                    arg == Contact.ViewChange.BLOCKING ||
+                    arg == Change.TIMER) {
                 mStatusLabel.setText(Utils.mainStatus(mValue, false));
             }
 
             // online status
-            if (arg == null || arg instanceof Contact.Subscription) {
+            if (arg == null || arg == Contact.ViewChange.ONLINE_STATUS ||
+                    arg == Contact.ViewChange.SUBSCRIPTION ||
+                    arg == Contact.ViewChange.BLOCKING) {
                 Contact.Subscription subStatus = mValue.getSubScription();
-                mBackground = mValue.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
+                mBackground = mValue.getOnline() ==
+                        Contact.Online.YES ? View.LIGHT_BLUE:
                         subStatus == Contact.Subscription.UNSUBSCRIBED ||
                         subStatus == Contact.Subscription.PENDING ||
                         mValue.isBlocked() ? View.LIGHT_GREY :
@@ -268,7 +276,11 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
                 this.setBackground(mBackground);
             }
 
-            ContactListView.this.repaint();
+            if (arg == Contact.ViewChange.BLOCKING &&
+                    Config.getInstance().getBoolean(Config.VIEW_HIDE_BLOCKED)) {
+                // "blocked" status changed, hide/show this item
+                ContactListView.this.updateOnEDT(null);
+            }
         }
 
         @Override

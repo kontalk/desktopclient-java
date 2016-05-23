@@ -54,7 +54,7 @@ public abstract class KonMessage extends Observable {
      * Sending status of one message.
      * Do not modify, only add! Ordinal used in database
      */
-    public static enum Status {
+    public enum Status {
         /** For all incoming messages. */
         IN,
         /** Outgoing message, message is about to be send. */
@@ -68,6 +68,10 @@ public abstract class KonMessage extends Observable {
         /** Outgoing message, an error occurred somewhere in the transmission. */
         ERROR
     };
+
+    public enum ViewChange {
+        STATUS, CONTENT, ATTACHMENT
+    }
 
     public static final String TABLE = "messages";
     public static final String COL_CHAT_ID = "thread_id";
@@ -232,7 +236,7 @@ public abstract class KonMessage extends Observable {
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {
         mCoderStatus.setSecurityErrors(errors);
         this.save();
-        this.changed(mCoderStatus);
+        this.changed(ViewChange.STATUS);
     }
 
     public ServerError getServerError() {
@@ -242,7 +246,7 @@ public abstract class KonMessage extends Observable {
     public void setPreview(Preview preview) {
         mContent.setPreview(preview);
         this.save();
-        this.changed(preview);
+        this.changed(ViewChange.ATTACHMENT);
     }
 
     public boolean isEncrypted() {
@@ -273,27 +277,17 @@ public abstract class KonMessage extends Observable {
         return Model.database().execDelete(TABLE, mID);
     }
 
-    protected void changed(Object arg) {
+    protected void changed(ViewChange change) {
         this.setChanged();
-        this.notifyObservers(arg);
+        this.notifyObservers(change);
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == this)
-            return true;
-
-        if (!(o instanceof KonMessage))
-            return false;
-
-        KonMessage oMessage = (KonMessage) o;
-
+    protected boolean abstractEquals(KonMessage oMessage) {
         return mChat.equals(oMessage.mChat)
                 && !mXMPPID.isEmpty() && mXMPPID.equals(oMessage.mXMPPID);
     }
 
-    @Override
-    public int hashCode() {
+    protected int abstractHashCode() {
         int hash = 7;
         hash = 17 * hash + Objects.hashCode(this.mChat);
         hash = 17 * hash + Objects.hashCode(this.mXMPPID);

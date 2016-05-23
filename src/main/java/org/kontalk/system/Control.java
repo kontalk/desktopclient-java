@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
@@ -197,13 +198,12 @@ public final class Control {
 
             // send public key requests for Kontalk contacts with missing key
             for (Contact contact : mModel.contacts())
-                if (contact.getFingerprint().isEmpty())
-                    this.maySendKeyRequest(contact);
+                this.maySendKeyRequest(contact);
 
             // TODO check current user avatar on server and upload if necessary
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
             for (Contact contact : mModel.contacts())
-                contact.setOffline();
+                contact.setOnlineStatus(Contact.Online.UNKNOWN);
         }
     }
 
@@ -463,7 +463,7 @@ public final class Control {
     }
 
     void maySendKeyRequest(Contact contact) {
-        if (canSendKeyRequest(contact))
+        if (canSendKeyRequest(contact) && !contact.hasKey())
             this.sendKeyRequest(contact);
     }
 
@@ -644,19 +644,24 @@ public final class Control {
             mClient.disconnect();
         }
 
-        public void setStatusText(String newStatus) {
+        public void setStatusText(String status) {
             Config conf = Config.getInstance();
-            String[] strings = conf.getStringArray(Config.NET_STATUS_LIST);
-            List<String> stats = new ArrayList<>(Arrays.asList(strings));
+            // must be editable
+            List<String> stats = new LinkedList<>(Arrays.asList(
+                    conf.getStringArray(Config.NET_STATUS_LIST)));
 
-            stats.remove(newStatus);
-            stats.add(0, newStatus);
+            if (!stats.isEmpty() && stats.get(0).equals(status))
+                // did not change
+                return;
+
+            stats.remove(status);
+            stats.add(0, status);
 
             if (stats.size() > 20)
                 stats = stats.subList(0, 20);
 
             conf.setProperty(Config.NET_STATUS_LIST, stats.toArray());
-            mClient.sendUserPresence(newStatus);
+            mClient.sendUserPresence(status);
         }
 
         public void setAccountPassword(char[] oldPass, char[] newPass) throws KonException {
@@ -803,21 +808,40 @@ public final class Control {
         /* avatar */
 
         public void setUserAvatar(BufferedImage image) {
-            Avatar.UserAvatar newAvatar = mModel.setUserAvatar(image);
+            Avatar.UserAvatar newAvatar = Avatar.UserAvatar.set(image);
             byte[] avatarData = newAvatar.imageData().orElse(null);
-            if (avatarData == null || newAvatar.getID().isEmpty())
+            if (avatarData == null)
                 return;
 
             mClient.publishAvatar(newAvatar.getID(), avatarData);
         }
 
         public void unsetUserAvatar(){
-            if (mModel.userAvatar().getID().isEmpty())
+            if (!Avatar.UserAvatar.get().isPresent()) {
+                LOGGER.warning("no user avatar set");
                 return;
+            }
 
             boolean succ = mClient.deleteAvatar();
-            if (succ)
-                mModel.deleteUserAvatar();
+            if (!succ)
+                // TODO
+                return;
+
+            Avatar.UserAvatar.remove();
+        }
+
+        public void setCustomContactAvatar(Contact contact, BufferedImage image) {
+            // overwriting file here!
+            contact.setCustomAvatar(new Avatar.CustomAvatar(contact.getID(), image));
+        }
+
+        public void unsetCustomContactAvatar(Contact contact) {
+            if (!contact.hasCustomAvatarSet()) {
+                LOGGER.warning("no custom avatar set, "+contact);
+                return;
+            }
+
+            contact.deleteCustomAvatar();
         }
 
         /* private */

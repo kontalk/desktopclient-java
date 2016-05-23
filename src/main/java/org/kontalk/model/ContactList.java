@@ -35,15 +35,15 @@ import org.kontalk.persistence.Database;
 /**
  * Global list of all contacts.
  *
- * Does not contain deleted user.
+ * Does not contain deleted contacts.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class ContactList extends Observable implements Iterable<Contact> {
-
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
-    /** JID to contact. Without deleted contacts. */
+    private enum ViewChange { MODIFIED }
+
     private final Map<JID, Contact> mJIDMap =
             Collections.synchronizedMap(new HashMap<JID, Contact>());
 
@@ -90,7 +90,7 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
         mJIDMap.put(newContact.getJID(), newContact);
 
-        this.changed(newContact);
+        this.changed(ViewChange.MODIFIED);
         return Optional.of(newContact);
     }
 
@@ -113,11 +113,13 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         return this.get(myJID);
     }
 
-    public Set<Contact> getAll(boolean withMe) {
+    public Set<Contact> getAll(boolean withMe, boolean blocked) {
         synchronized(mJIDMap) {
             return Collections.unmodifiableSet(
                     mJIDMap.values().stream()
-                            .filter(c -> (withMe || !c.isMe()))
+                            .filter(c ->
+                                    (blocked || !c.isBlocked()) &&
+                                    (withMe || !c.isMe()))
                             .collect(Collectors.toSet()));
         }
     }
@@ -130,7 +132,7 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
         contact.setDeleted();
 
-        this.changed(contact);
+        this.changed(ViewChange.MODIFIED);
     }
 
     /**
@@ -149,7 +151,6 @@ public final class ContactList extends Observable implements Iterable<Contact> {
 
         contact.setJID(jid);
 
-        this.changed(contact);
         return true;
     }
 
@@ -167,9 +168,9 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         return true;
     }
 
-    private void changed(Object arg) {
+    private void changed(ViewChange change) {
         this.setChanged();
-        this.notifyObservers(arg);
+        this.notifyObservers(change);
     }
 
     @Override

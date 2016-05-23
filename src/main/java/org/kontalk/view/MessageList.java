@@ -59,10 +59,6 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.chat.Chat;
-import org.kontalk.model.message.CoderStatus;
-import org.kontalk.model.message.MessageContent;
-import org.kontalk.model.Contact;
-import org.kontalk.model.chat.Member;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
@@ -87,6 +83,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
     private static final Icon WARNING_ICON = Utils.getIcon("ic_msg_warning.png");
     private static final Icon CRYPT_ICON = Utils.getIcon("ic_msg_crypt.png");
     private static final Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
+    private static final Icon CRYPT_WARNING_ICON = Utils.getIcon("ic_msg_crypt_warning.png");
 
     private final ChatView mChatView;
     private final Chat mChat;
@@ -110,8 +107,6 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         // hide grid
         this.setShowGrid(false);
 
-        this.setBackground(mChat.getViewSettings());
-
         this.setVisible(false);
         this.updateOnEDT(null);
         this.setVisible(true);
@@ -127,30 +122,22 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
 
     @Override
     protected void updateOnEDT(Object arg) {
-        if (arg instanceof Set ||
-                arg instanceof String ||
-                arg instanceof Boolean ||
-                arg instanceof Member) {
-            // contacts, subject, read status or chat state changed, nothing
-            // to do here
-            return;
-        }
-
-        if (arg instanceof Chat.ViewSettings) {
-            this.setBackground((Chat.ViewSettings) arg);
+        if (arg == null || arg == Chat.ViewChange.VIEW_SETTINGS) {
+            this.setBackground(mChat.getViewSettings());
             if (mChatView.getCurrentChat().orElse(null) == mChat) {
                 //mChatView.mScrollPane.getViewport().repaint();
                 mChatView.repaint();
             }
-            return;
         }
 
         // check for new messages to add
-        if (this.getModel().getRowCount() < mChat.getMessages().size()) {
+        if ((arg == null || arg == Chat.ViewChange.NEW_MESSAGE) &&
+                this.getModel().getRowCount() < mChat.getMessages().size()) {
             this.insertMessages();
         }
 
-        if (!mChat.isRead() && mChatView.getCurrentChat().orElse(null) == mChat) {
+        if ((arg == null || arg == Chat.ViewChange.READ) &&
+                !mChat.isRead() && mChatView.getCurrentChat().orElse(null) == mChat) {
             mChat.setRead();
         }
     }
@@ -238,6 +225,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         private WebTextPane mTextPane;
         private WebPanel mStatusPanel;
         private WebLabel mStatusIconLabel;
+        private WebLabel mEncryptIconLabel;
         private AttachmentPanel mAttPanel = null;
         private int mPreferredTextWidth;
         private boolean mCreated = false;
@@ -292,10 +280,10 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
 
             mStatusPanel = new WebPanel();
             mStatusPanel.setOpaque(false);
-            TooltipManager.addTooltip(mStatusPanel, "???");
             mStatusPanel.setLayout(new FlowLayout());
             // icons
             mStatusIconLabel = new WebLabel();
+            mEncryptIconLabel = new WebLabel();
 
             this.updateOnEDT(null);
 
@@ -304,13 +292,8 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             mPreferredTextWidth = mTextPane.getPreferredSize().width;
 
             mStatusPanel.add(mStatusIconLabel);
-            WebLabel encryptIconLabel = new WebLabel();
-            if (mValue.getCoderStatus().isSecure()) {
-                encryptIconLabel.setIcon(CRYPT_ICON);
-            } else {
-                encryptIconLabel.setIcon(UNENCRYPT_ICON);
-            }
-            mStatusPanel.add(encryptIconLabel);
+            mStatusPanel.add(mEncryptIconLabel);
+
             // date label
             Date statusDate = mValue.isInMessage() ?
                     mValue.getServerDate().orElse(mValue.getDate()) :
@@ -356,24 +339,20 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             if (!mCreated)
                 return;
 
-            if (arg == null || arg instanceof Contact ||
-                    arg instanceof MessageContent)
+            // TODO "From" title not updated if contact name changes
+            if (arg == null || arg == KonMessage.ViewChange.CONTENT)
                 this.updateTitle();
 
-            if (arg == null || arg instanceof MessageContent)
+            if (arg == null || arg == KonMessage.ViewChange.CONTENT)
                 this.updateText();
 
-            if (arg == null || arg instanceof KonMessage.Status ||
-                    arg instanceof CoderStatus)
+            if (arg == null || arg == KonMessage.ViewChange.STATUS)
                 this.updateStatus();
 
-            if (arg == null || arg instanceof MessageContent.Attachment ||
-                    arg instanceof MessageContent.Preview)
+            if (arg == null || arg == KonMessage.ViewChange.ATTACHMENT)
                 this.updateAttachment();
 
-            // changes are not instantly painted
             // TODO height problem for new messages again
-            MessageList.this.repaint();
         }
 
         private void updateTitle() {
@@ -459,6 +438,19 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 }
             }
 
+            //encryption icon
+            Coder.Encryption enc = mValue.getCoderStatus().getEncryption();
+            Coder.Signing sign = mValue.getCoderStatus().getSigning();
+            boolean noSecurity = enc == Coder.Encryption.NOT && sign == Coder.Signing.NOT;
+            boolean fullSecurity = enc == Coder.Encryption.DECRYPTED &&
+                    ((isOut && sign == Coder.Signing.SIGNED) ||
+                    (!isOut && sign == Coder.Signing.VERIFIED));
+
+            mEncryptIconLabel.setIcon(
+                    noSecurity ? UNENCRYPT_ICON :
+                    fullSecurity ? CRYPT_ICON :
+                    CRYPT_WARNING_ICON);
+
             // tooltip
             String html = "<html><body>" + /*"<h3>Header</h3>"+*/ "<br>";
 
@@ -510,17 +502,10 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 html += Tr.tr("Received:")+ " " + rec + "<br>";
             }
 
-            Coder.Encryption enc = mValue.getCoderStatus().getEncryption();
-            Coder.Signing sign = mValue.getCoderStatus().getSigning();
-            String sec = null;
             // usual states
-            if (enc == Coder.Encryption.NOT && sign == Coder.Signing.NOT)
-                sec = Tr.tr("Not encrypted");
-            else if (enc == Coder.Encryption.DECRYPTED &&
-                    ((isOut && sign == Coder.Signing.SIGNED) ||
-                    (!isOut && sign == Coder.Signing.VERIFIED))) {
-                        sec = Tr.tr("Secure");
-            }
+            String sec = noSecurity ? Tr.tr("Not encrypted") :
+                    fullSecurity ? Tr.tr("Secure") :
+                    null;
             if (sec == null) {
                 // unusual states
                 String encryption = Tr.tr("Unknown");

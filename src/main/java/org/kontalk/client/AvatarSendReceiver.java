@@ -197,6 +197,7 @@ final class AvatarSendReceiver {
                 List<? extends ExtensionElement> itemsList = items.getItems();
                 if (itemsList.isEmpty()) {
                     LOGGER.warning("no items in itemlist");
+                    return;
                 }
 
                 // there should be only one item

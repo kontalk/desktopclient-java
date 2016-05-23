@@ -10,20 +10,20 @@
 !include "MUI.nsh"
 
 ;--------------------------------
-;Defines  
-  
+;Defines
+
 !define APPNAME "Kontalk Desktop Client"
-!define VERSION "3.1"
+!define VERSION "3.1.1"
 !define JARNAME "KontalkDesktopApp.jar"
 !define WEBSITE "kontalk.org"
 !define ICON "kontalk.ico"
-!define INP_DIR "..\dist" 
+!define INP_DIR "..\dist"
 
 ;Java
 !define JRE_VERSION "1.8"
 !define JRE_FILE "jre-8u40-windows-i586-iftw.exe"
 Var InstallJRE
-  
+
 ;--------------------------------
 ;General
 
@@ -158,7 +158,9 @@ SetOutPath $INSTDIR
 
 ; files
 File ${INP_DIR}\${JARNAME}
-File /r ${INP_DIR}\lib 
+; remove old jars
+Delete "$INSTDIR\lib\*.jar"
+File /r ${INP_DIR}\lib
 File ${ICON}
 
 ; shortcuts for all user
@@ -183,7 +185,7 @@ WriteRegDWORD HKLM "${ARP}" "EstimatedSize" "$0"
 WriteRegStr HKLM "${ARP}" "HelpLink" "http://${WEBSITE}"
 WriteRegStr HKLM "${ARP}" "InstallLocation" "$INSTDIR"
 WriteRegDWORD HKLM "${ARP}" "NoModify" 1
-WriteRegDWORD HKLM "${ARP}" "NoRepair" 1 
+WriteRegDWORD HKLM "${ARP}" "NoRepair" 1
 
 SectionEnd
 
@@ -210,7 +212,7 @@ RMDir $INSTDIR\lib
 Delete $INSTDIR\${ICON}
 RMDir $INSTDIR
 
-SectionEnd 
+SectionEnd
 
 ;--------------------------------
 ;Installer Functions

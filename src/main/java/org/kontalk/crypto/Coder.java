@@ -44,19 +44,19 @@ public final class Coder {
      * Encryption status of a message.
      * Do not modify, only add! Ordinal used in database.
      */
-    public static enum Encryption {NOT, ENCRYPTED, DECRYPTED}
+    public enum Encryption {NOT, ENCRYPTED, DECRYPTED}
 
     /**
      * Signing status of a message.
      * Do not modify, only add! Ordinal used in database.
      */
-    public static enum Signing {NOT, SIGNED, VERIFIED, UNKNOWN}
+    public enum Signing {NOT, SIGNED, VERIFIED, UNKNOWN}
 
     /**
      * Errors that can occur during de-/encryption and verification.
      * Do not modify, only add! Ordinal used in database.
      */
-    public static enum Error {
+    public enum Error {
         /** Some unknown error. */
         UNKNOWN_ERROR,
         /** Own personal key not found. Unused. */

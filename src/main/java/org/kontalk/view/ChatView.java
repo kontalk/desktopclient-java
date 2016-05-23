@@ -18,7 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.image.WebImage;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
@@ -70,7 +69,6 @@ import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import org.apache.commons.io.FileUtils;
-import org.apache.tika.Tika;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.model.chat.Chat;
@@ -85,15 +83,16 @@ import static org.kontalk.view.View.MARGIN_SMALL;
 
 /**
  * Panel showing the currently selected chat.
+ *
+ * One view object for all chats.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ChatView extends WebPanel implements Observer {
 
-    private static final Tika TIKA_INSTANCE = new Tika();
-
     private final View mView;
 
-    private final WebImage mAvatar;
+    private final ComponentUtils.AvatarImage mAvatar;
     private final WebLabel mTitleLabel;
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
@@ -117,7 +116,7 @@ final class ChatView extends WebPanel implements Observer {
                 new BorderLayout(View.GAP_DEFAULT, 0));
         titlePanel.setMargin(View.MARGIN_DEFAULT);
 
-        mAvatar = new WebImage();
+        mAvatar = new ComponentUtils.AvatarImage(View.AVATAR_CHAT_SIZE);
         titlePanel.add(mAvatar, BorderLayout.WEST);
 
         mTitleLabel = new WebLabel();
@@ -188,7 +187,6 @@ final class ChatView extends WebPanel implements Observer {
                 mSendTextArea.requestFocusInWindow();
             }
         });
-
 
         // bottom panel...
 
@@ -416,14 +414,10 @@ final class ChatView extends WebPanel implements Observer {
                     viewList.clearItems();
                     chat.deleteObserver(viewList);
                 }
-                if(this.getCurrentChat().orElse(null) == chat) {
-                    mScrollPane.setViewportView(null);
-                    mView.showNothing();
-                }
             }
         }
 
-        if (arg instanceof String || arg instanceof Contact) {
+        if (arg == Chat.ViewChange.SUBJECT || arg == Chat.ViewChange.CONTACT) {
             this.onChatChange();
         }
     }
@@ -433,9 +427,8 @@ final class ChatView extends WebPanel implements Observer {
         if (chat == null)
             return;
 
-        // update if chat changes...
         // avatar
-        mAvatar.setImage(AvatarLoader.load(chat));
+        mAvatar.setAvatarImage(chat);
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
@@ -445,13 +438,12 @@ final class ChatView extends WebPanel implements Observer {
                 Utils.mainStatus(contacts.iterator().next(), true));
 
         // text area
-        boolean chatDisabled = !chat.isValid();
-
-        mSendTextArea.setEnabled(!chatDisabled);
-        mSendTextArea.setBackground(chatDisabled ? Color.LIGHT_GRAY : Color.WHITE);
+        boolean enabled = chat.isValid();
+        mSendTextArea.setEnabled(enabled);
+        mSendTextArea.setBackground(enabled ? Color.WHITE : Color.LIGHT_GRAY);
 
         // send button
-        this.updateSendButton();
+        this.updateEnabledButtons();
 
         // encryption status
         boolean isEncrypted = chat.isSendEncrypted();
@@ -480,7 +472,7 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void onKeyTypeEvent(boolean empty) {
-        this.updateSendButton();
+        this.updateEnabledButtons();
 
         Chat chat = this.getCurrentChat().orElse(null);
         if (chat == null)
@@ -491,17 +483,20 @@ final class ChatView extends WebPanel implements Observer {
             mView.getControl().handleOwnChatStateEvent(chat, ChatState.composing);
     }
 
-    private void updateSendButton() {
+    private void updateEnabledButtons() {
         Chat chat = this.getCurrentChat().orElse(null);
         if (chat == null)
             return;
 
         // enable if chat is valid...
-        mSendButton.setEnabled(chat.isValid() &&
-                // ...and there is text to send...
-                !mSendTextArea.getText().trim().isEmpty() &&
+        boolean canSendMessage = chat.isValid() &&
                 // ...and encrypted messages can be send
-                (!chat.isSendEncrypted() || chat.canSendEncrypted()));
+                (!chat.isSendEncrypted() || chat.canSendEncrypted());
+
+        mFileButton.setEnabled(canSendMessage);
+        mSendButton.setEnabled(canSendMessage &&
+                // + there is text to send...
+                !mSendTextArea.getText().trim().isEmpty());
     }
 
     private void sendMsg() {
@@ -598,10 +593,9 @@ final class ChatView extends WebPanel implements Observer {
                 this.updateCachedBG(null);
                 return true;
             }
-            Image scaledImage = MediaUtils.scaleAsync(mOrigin,
+            Image scaledImage = MediaUtils.scaleMaxAsync(mOrigin,
                     mParent.getWidth(),
-                    mParent.getHeight(),
-                    true);
+                    mParent.getHeight());
             if (scaledImage.getWidth(this) != -1) {
                 // goto 3
                 this.updateCachedBG(scaledImage);

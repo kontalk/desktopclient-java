@@ -39,7 +39,6 @@ import javax.swing.JDialog;
 import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
-import java.awt.Dimension;
 import java.util.EnumSet;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
@@ -88,7 +87,9 @@ public final class View implements Observer {
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
 
-    static final Dimension AVATAR_LIST_DIM = new Dimension(30, 30);
+    static final int AVATAR_LIST_SIZE = 30;
+    static final int AVATAR_CHAT_SIZE = 40;
+    static final int AVATAR_DETAIL_SIZE = 60;
 
     private final ViewControl mControl;
     private final Model mModel;
@@ -356,22 +357,23 @@ public final class View implements Observer {
         mChatListView.setSelectedItem(chat);
     }
 
-    void selectedChatChanged(Chat chat) {
+    void onChatSelectionChanged(Optional<Chat> optChat) {
         if (mMainFrame.getCurrentTab() != MainFrame.Tab.CHATS)
             return;
-        mContent.showChat(chat);
+
+        if (optChat.isPresent())
+            mContent.showChat(optChat.get());
+        else
+            mContent.showNothing();
     }
 
-    void showNothing() {
-        mContent.showNothing();
-    }
-
-    void showContactDetails(Contact contact) {
-        if (contact.isDeleted())
+    void onContactSelectionChanged(Optional<Contact> optContact) {
+        Contact contact = optContact.orElse(null);
+        if (contact == null || contact.isDeleted()) {
+            mContent.showNothing();
             return;
+        }
 
-        mMainFrame.selectTab(MainFrame.Tab.CONTACT);
-        mContactListView.setSelectedItem(contact);
         mContent.showContact(contact);
     }
 
@@ -381,6 +383,12 @@ public final class View implements Observer {
 
         this.showContactDetails(contact);
         mContent.requestRenameFocus();
+    }
+
+    void showContactDetails(Contact contact) {
+        // show by selecting in contact list
+        mMainFrame.selectTab(MainFrame.Tab.CONTACT);
+        mContactListView.setSelectedItem(contact);
     }
 
     void clearSearch() {

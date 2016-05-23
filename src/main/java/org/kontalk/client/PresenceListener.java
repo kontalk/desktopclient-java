@@ -18,6 +18,7 @@
 
 package org.kontalk.client;
 
+import java.util.Optional;
 import java.util.logging.Logger;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.StanzaListener;
@@ -114,7 +115,7 @@ public class PresenceListener implements StanzaListener {
 
         mHandler.onPresenceUpdate(jid,
                 bestPresence.getType(),
-                bestPresence.getStatus());
+                Optional.ofNullable(bestPresence.getStatus()));
 
         if (pubKey != null) {
             String fp = StringUtils.defaultString(pubKey.getFingerprint()).toLowerCase();
