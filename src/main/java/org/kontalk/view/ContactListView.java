@@ -276,8 +276,6 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
                 this.setBackground(mBackground);
             }
 
-            ContactListView.this.repaint();
-
             if (arg == Contact.ViewChange.BLOCKING &&
                     Config.getInstance().getBoolean(Config.VIEW_HIDE_BLOCKED)) {
                 // "blocked" status changed, hide/show this item

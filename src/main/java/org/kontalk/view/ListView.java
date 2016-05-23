@@ -307,7 +307,7 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
     private void timerUpdate() {
         for (int i = 0; i < mModel.getRowCount(); i++) {
             I item = (I) mModel.getValueAt(i, 0);
-            item.updateOnEDT(Change.TIMER);
+            item.update(null, Change.TIMER);
         }
     }
 
@@ -397,15 +397,22 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         @Override
         public void update(Observable o, final Object arg) {
             if (SwingUtilities.isEventDispatchThread()) {
-                this.updateOnEDT(arg);
+                this.update(arg);
                 return;
             }
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    TableItem.this.updateOnEDT(arg);
+                    TableItem.this.update(arg);
                 }
             });
+        }
+
+        private void update(Object arg) {
+            this.updateOnEDT(arg);
+
+            //mModel.fireTableCellUpdated(?, 0);
+            ListView.this.repaint();
         }
 
         protected abstract void updateOnEDT(Object arg);

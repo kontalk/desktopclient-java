@@ -352,9 +352,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             if (arg == null || arg == KonMessage.ViewChange.ATTACHMENT)
                 this.updateAttachment();
 
-            // changes are not instantly painted
             // TODO height problem for new messages again
-            MessageList.this.repaint();
         }
 
         private void updateTitle() {
