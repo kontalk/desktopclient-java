@@ -217,7 +217,6 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
 
     @SuppressWarnings("unchecked")
     protected boolean sync(Set<V> values) {
-        // TODO performance
         // remove old
         for (int i=0; i < mModel.getRowCount(); i++) {
             I item = (I) mModel.getValueAt(i, 0);
@@ -271,7 +270,6 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
 
     /** Resets filtering and selects the item containing the value specified. */
     void setSelectedItem(V value) {
-        // TODO performance
         this.filterItems("");
         for (int i=0; i< mModel.getRowCount(); i++) {
             if (this.getDisplayedItemAt(i).mValue == value) {

@@ -71,6 +71,8 @@ import org.kontalk.view.ComponentUtils.AttachmentPanel;
 /**
  * View all messages of one chat in a left/right MIM style list.
  *
+ * TODO performance when loading
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
