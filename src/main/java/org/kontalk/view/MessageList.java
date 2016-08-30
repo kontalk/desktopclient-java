@@ -36,6 +36,7 @@ import java.awt.event.ActionListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
@@ -56,6 +57,7 @@ import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledEditorKit;
 import javax.swing.text.ViewFactory;
 import org.kontalk.crypto.Coder;
+import org.kontalk.misc.JID;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.chat.Chat;
@@ -370,21 +372,39 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         // text in text area, before/after encryption
         private void updateText() {
             boolean encrypted = mValue.isEncrypted();
-            String text;
-            if (mValue.getContent().getGroupCommand().isPresent()) {
-                GroupCommand com = mValue.getContent().getGroupCommand().get();
-                text = mValue instanceof InMessage ?
-                        getFromString((InMessage) mValue)+" " :
-                        Tr.tr("You")+" ";
+            GroupCommand com = mValue.getContent().getGroupCommand().orElse(null);
+            String text = "";
+            if (com != null) {
+                InMessage inMessage = mValue instanceof InMessage ?
+                        (InMessage) mValue : null;
+                String somebody = inMessage != null ?
+                        getFromString(inMessage)+" " : Tr.tr("You")+" ";
                 switch(com.getOperation()) {
                     case CREATE:
-                        text += Tr.tr("created this group");
+                        text = somebody + Tr.tr("created this group");
                         break;
                     case LEAVE:
-                        text += Tr.tr("left this group");
+                        text = somebody + Tr.tr("left this group");
                         break;
                     case SET:
-                        text += Tr.tr("changed the group");
+                        String subject = com.getSubject();
+                        if (!subject.isEmpty()) {
+                            text = somebody + Tr.tr("set the subject to")
+                                    + " \"" + subject + "\"";
+                        }
+                        List<JID> added = com.getAdded();
+                        if (!added.isEmpty()) {
+                            text = somebody + Tr.tr("added") + " "
+                                    + mView.names(added);
+                        }
+                        List<JID> removed = com.getRemoved();
+                        if (!removed.isEmpty()) {
+                            text = somebody + Tr.tr("removed") + " "
+                                    + mView.names(removed);
+                        }
+                        if (text.isEmpty()) {
+                            text = "did something wrong";
+                        }
                         break;
                 }
                 mTextPane.setText(text);
