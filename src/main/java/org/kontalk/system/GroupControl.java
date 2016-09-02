@@ -64,6 +64,8 @@ final class GroupControl {
 
         abstract void onSetSubject(String subject);
 
+        abstract void onLeave();
+
         abstract boolean beforeDelete();
 
         //
@@ -99,10 +101,29 @@ final class GroupControl {
                 return;
             }
 
-            mControl.createAndSendMessage(mChat, MessageContent.groupCommand(
-                    GroupCommand.set(subject)));
+            GroupCommand command = GroupCommand.set(subject);
+            mControl.createAndSendMessage(mChat,
+                    MessageContent.groupCommand(command));
 
-            mChat.setSubject(subject);
+        }
+
+        @Override
+        void onLeave() {
+            GroupCommand command = GroupCommand.leave();
+            mControl.createAndSendMessage(mChat,
+                    MessageContent.groupCommand(command));
+
+            // NOTE: ignoring if message was sent/received or not
+            onMyCommand(command);
+        }
+
+        private void onMyCommand(GroupCommand command) {
+            Contact me = mModel.contacts().getMe().orElse(null);
+            if (me == null) {
+                LOGGER.warning("no me");
+                return;
+            }
+            onInMessage(command, me);
         }
 
         @Override
@@ -167,7 +188,6 @@ final class GroupControl {
                     LOGGER.warning("unhandled operation: "+command.getOperation());
             }
 
-
             mChat.applyGroupChanges(added, removed, subject);
         }
     }
@@ -187,7 +207,6 @@ final class GroupControl {
         }
         return members;
     }
-
 
     ChatControl getInstanceFor(GroupChat chat) {
         if (chat instanceof KonGroupChat)

@@ -114,15 +114,6 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         return mSubject;
     }
 
-    public void setSubject(String subject) {
-        if (subject.equals(mSubject))
-            return;
-
-        mSubject = subject;
-        this.save();
-        this.changed(ViewChange.SUBJECT);
-    }
-
     @Override
     public void setChatState(final Contact contact, ChatState chatState) {
         Member member = mMemberSet.stream()
@@ -167,7 +158,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
             db.commit();
         }
 
-        if (!subject.isEmpty()) {
+        if (!subject.equals(mSubject)) {
             mSubject = subject;
             this.save();
         }

@@ -43,6 +43,7 @@ public final class SingleChat extends Chat {
         mMember = new Member(contact, mID);
         // NOTE: Kontalk Android client is ignoring the chat XMPP-ID
         mXMPPID = xmppID;
+
         mMember.getContact().addObserver(this);
     }
 

@@ -776,6 +776,10 @@ public final class Control {
             mModel.chats().delete(chat);
         }
 
+        public void leaveGroupChat(GroupChat chat) {
+            mGroupControl.getInstanceFor(chat).onLeave();
+        }
+
         public void setChatSubject(GroupChat chat, String subject) {
             mGroupControl.getInstanceFor(chat).onSetSubject(subject);
         }
