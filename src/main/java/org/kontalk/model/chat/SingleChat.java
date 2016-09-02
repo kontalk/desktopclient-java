@@ -131,7 +131,7 @@ public final class SingleChat extends Chat {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (this == o) return true;
 
         if (!(o instanceof SingleChat)) return false;
