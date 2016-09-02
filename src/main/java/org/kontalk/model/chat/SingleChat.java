@@ -27,6 +27,7 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Contact;
 
 /**
+ * A long-term persistent chat conversation between user and exactly one contact.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -36,10 +37,10 @@ public final class SingleChat extends Chat {
     private final Member mMember;
     private final String mXMPPID;
 
-    SingleChat(Member member, String xmppID) {
-        super(Arrays.asList(member), xmppID, "", null);
+    SingleChat(Contact contact, String xmppID) {
+        super(xmppID, "", null);
 
-        mMember = member;
+        mMember = new Member(contact, mID);
         // NOTE: Kontalk Android client is ignoring the chat XMPP-ID
         mXMPPID = xmppID;
         mMember.getContact().addObserver(this);
@@ -51,8 +52,7 @@ public final class SingleChat extends Chat {
             Member member,
             String xmppID,
             boolean read,
-            String jsonViewSettings
-            ) {
+            String jsonViewSettings) {
         super(id, read, jsonViewSettings);
 
         mMember = member;
@@ -127,7 +127,7 @@ public final class SingleChat extends Chat {
 
     @Override
     void save() {
-        super.save(Arrays.asList(mMember), "");
+        super.save("");
     }
 
     @Override

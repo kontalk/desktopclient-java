@@ -26,28 +26,24 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Model;
 import org.kontalk.persistence.Database;
 
 /**
- * A contact association with a chat.
+ * An association between a contact and a chat.
  * Single chats have exactly one, group chats can have any number of members.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Member {
+public final class Member extends ProtoMember {
     private static final Logger LOGGER = Logger.getLogger(Member.class.getName());
 
-    /**
-     * Long-live authorization model of member in group.
-     * Called 'Affiliation' in MUC
-     * Do not modify, only add! Ordinal used in database
-     */
-    public enum Role {DEFAULT, OWNER, ADMIN};
+    private final int mID;
+    private final int mChatID;
 
     public static final String TABLE = "receiver";
     public static final String COL_CONTACT_ID = "user_id";
@@ -63,11 +59,6 @@ public final class Member {
             "FOREIGN KEY (" + COL_CONTACT_ID + ") REFERENCES " + Contact.TABLE + " (_id) " +
             ")";
 
-    private final Contact mContact;
-    private final Role mRole;
-
-    private int mID;
-
     private ChatState mState = ChatState.gone;
     // note: the Android client does not set active states when only viewing
     // the chat (not necessary according to XEP-0085), this makes the
@@ -75,71 +66,37 @@ public final class Member {
     // TODO save last active date to DB
     private Date mLastActive = null;
 
-    public Member(Contact contact){
-        this(contact, Role.DEFAULT);
+    Member(Contact contact, int chatID) {
+        this(contact, Role.DEFAULT, chatID);
     }
 
-    public Member(Contact contact, Role role) {
-        this(0, contact, role);
+    Member(ProtoMember protoMember, int chatID) {
+        this(protoMember.mContact, protoMember.mRole, chatID);
     }
 
-    private Member(int id, Contact contact, Role role) {
+    private Member(Contact contact, Role role, int chatID) {
+        super(contact, role);
+
+        mChatID = chatID;
+
+        List<Object> recValues = Arrays.asList(
+                mChatID,
+                mContact.getID(),
+                mRole);
+        mID = Model.database().execInsert(TABLE, recValues);
+        if (mID <= 0) {
+            LOGGER.warning("could not insert member");
+        }
+    }
+
+    private Member(int id, Contact contact, Role role, int chatID) {
+        super(contact, role);
         mID = id;
-        mContact = contact;
-        mRole = role;
-    }
-
-    public Contact getContact() {
-        return mContact;
-    }
-
-    public Role getRole() {
-        return mRole;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == this)
-            return true;
-
-        if (!(o instanceof Member))
-            return false;
-
-        return mContact.equals(((Member) o).mContact);
-    }
-
-    @Override
-    public int hashCode() {
-        int hash = 7;
-        hash = 23 * hash + Objects.hashCode(mContact);
-        return hash;
-    }
-
-    @Override
-    public String toString() {
-        return "Mem:cont={"+mContact+"},role="+mRole;
+        mChatID = chatID;
     }
 
     public ChatState getState() {
         return mState;
-    }
-
-    boolean insert(Database db, int chatID) {
-        if (mID > 0) {
-            LOGGER.warning("already in database");
-            return true;
-        }
-
-        List<Object> recValues = Arrays.asList(
-                chatID,
-                getContact().getID(),
-                mRole);
-        mID = db.execInsert(TABLE, recValues);
-        if (mID <= 0) {
-            LOGGER.warning("could not insert member");
-            return false;
-        }
-        return true;
     }
 
     void save(Database db) {
@@ -147,11 +104,6 @@ public final class Member {
     }
 
     boolean delete(Database db) {
-        if (mID <= 0) {
-            LOGGER.warning("not in database");
-            return true;
-        }
-
         return db.execDelete(TABLE, mID);
     }
 
@@ -184,12 +136,18 @@ public final class Member {
                     continue;
                 }
 
-                members.add(new Member(id, c, role));
+                members.add(new Member(id, c, role, chatID));
             }
             resultSet.close();
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't get members", ex);
         }
         return members;
+    }
+
+    @Override
+    public String toString() {
+        return "Mem:id="+mID+",chatID="+mChatID
+                +"cont={"+mContact+"},role="+mRole;
     }
 }

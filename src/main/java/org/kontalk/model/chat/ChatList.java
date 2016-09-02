@@ -109,18 +109,18 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     private SingleChat createNew(Contact contact, String xmppThreadID) {
-        SingleChat newChat = new SingleChat(new Member(contact), xmppThreadID);
+        SingleChat newChat = new SingleChat(contact, xmppThreadID);
         LOGGER.config("new single chat: "+newChat);
         this.putSilent(newChat);
         this.changed(ViewChange.MODIFIED);
         return newChat;
     }
 
-    public GroupChat create(List<Member> members, GroupMetaData gData) {
+    public GroupChat create(List<ProtoMember> members, GroupMetaData gData) {
         return createNew(members, gData, "");
     }
 
-    public GroupChat createNew(List<Member> members, GroupMetaData gData, String subject) {
+    public GroupChat createNew(List<ProtoMember> members, GroupMetaData gData, String subject) {
         GroupChat newChat = GroupChat.create(Model.database(), members, gData, subject);
         LOGGER.config("new group chat: "+newChat);
         this.putSilent(newChat);

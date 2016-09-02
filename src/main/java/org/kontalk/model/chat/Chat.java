@@ -21,7 +21,6 @@ package org.kontalk.model.chat;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -83,7 +82,7 @@ public abstract class Chat extends Observable implements Observer {
 
     private ViewSettings mViewSettings;
 
-    protected Chat(List<Member> members, String xmppID, String subject, GroupMetaData gData) {
+    protected Chat(String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages();
         mRead = true;
         mViewSettings = new ViewSettings();
@@ -97,11 +96,8 @@ public abstract class Chat extends Observable implements Observer {
                 Database.setString(gData == null ? "" : gData.toJSON()));
         mID = Model.database().execInsert(TABLE, values);
         if (mID < 1) {
-            LOGGER.warning("couldn't insert chat");
-            return;
+            LOGGER.warning("could not insert chat");
         }
-
-        members.stream().forEach(member -> member.insert(Model.database(), mID));
     }
 
     // used when loading from database
@@ -204,7 +200,8 @@ public abstract class Chat extends Observable implements Observer {
 
     abstract void save();
 
-    protected void save(List<Member> members, String subject) {
+    // not saving members here
+    protected void save(String subject) {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(subject));
         set.put(COL_READ, mRead);
@@ -212,18 +209,6 @@ public abstract class Chat extends Observable implements Observer {
 
         Database db = Model.database();
         db.execUpdate(TABLE, set, mID);
-
-        // get receiver for this chat
-        List<Member> oldMembers = new ArrayList<>(this.getAllMembers());
-
-        // save new members
-        members.stream()
-                .filter(m -> !oldMembers.contains(m))
-                .forEach(m -> m.insert(db, mID));
-
-        oldMembers.removeAll(members);
-        // whats left is too much and can be deleted
-        oldMembers.stream().forEach(m -> m.delete(db));
     }
 
     void delete() {
@@ -233,12 +218,12 @@ public abstract class Chat extends Observable implements Observer {
             return;
 
         // members
-        succ = this.getAllMembers().stream().allMatch(m -> m.delete(Model.database()));
+        Database db = Model.database();
+        succ = this.getAllMembers().stream().allMatch(m -> m.delete(db));
         if (!succ)
             return;
 
         // chat itself
-        Database db = Model.database();
         db.execDelete(TABLE, mID);
 
         // all done, commit deletions

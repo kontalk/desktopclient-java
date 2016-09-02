@@ -58,6 +58,7 @@ import org.kontalk.model.Avatar;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
+import org.kontalk.model.chat.ProtoMember;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.ProtoMessage;
@@ -747,15 +748,15 @@ public final class Control {
 
         public Optional<GroupChat> createGroupChat(List<Contact> contacts, String subject) {
             // user is part of the group
-            List<Member> members = contacts.stream()
-                    .map(c -> new Member(c))
+            List<ProtoMember> members = contacts.stream()
+                    .map(c -> new ProtoMember(c))
                     .collect(Collectors.toCollection(ArrayList::new));
             Contact me = mModel.contacts().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
                 return Optional.empty();
             }
-            members.add(new Member(me, Member.Role.OWNER));
+            members.add(new ProtoMember(me, Member.Role.OWNER));
 
             GroupChat chat = mModel.chats().createNew(members,
                     GroupControl.newKonGroupData(me.getJID()),
