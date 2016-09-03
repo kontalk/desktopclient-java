@@ -42,6 +42,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     private final HashSet<Member> mMemberSet = new HashSet<>();
     private final D mGroupData;
 
+    /** Chat subject/title set by user. Empty string only if unknown/not set. */
     private String mSubject;
     // TODO overwrite encryption=OFF field
     private boolean mForceEncryptionOff = false;
@@ -158,7 +159,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
             db.commit();
         }
 
-        if (!subject.equals(mSubject)) {
+        if (!subject.isEmpty() && !subject.equals(mSubject)) {
             mSubject = subject;
             this.save();
         }
