@@ -417,7 +417,8 @@ final class ChatView extends WebPanel implements Observer {
             }
         }
 
-        if (arg == Chat.ViewChange.SUBJECT || arg == Chat.ViewChange.CONTACT) {
+        if (arg == Chat.ViewChange.SUBJECT || arg == Chat.ViewChange.CONTACT ||
+                arg == Chat.ViewChange.MEMBERS) {
             this.onChatChange();
         }
     }
