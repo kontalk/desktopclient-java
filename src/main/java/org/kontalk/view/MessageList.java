@@ -650,7 +650,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
     }
 
     private static String getFromString(InMessage message) {
-        return Utils.displayName(message.getContact(), message.getJID(), 40);
+        return Utils.displayName(message.getContact(), message.getJID(), View.MAX_NAME_IN_FROM_LABEL);
     }
 
     private static String toCopyString(KonMessage m) {

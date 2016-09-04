@@ -529,7 +529,8 @@ final class ComponentUtils {
                     int index,
                     boolean isSelected,
                     boolean cellHasFocus) {
-                mNameLabel.setText(Utils.displayName(member.getContact(), 25));
+                mNameLabel.setText(
+                        Utils.displayName(member.getContact(), View.MAX_NAME_IN_GROUP_LENGTH));
                 mRoleLabel.setText(Utils.role(member.getRole()));
 
                 return this;

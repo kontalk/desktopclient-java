@@ -370,7 +370,7 @@ final class ConfigurationDialog extends WebDialog {
             PersonalKey key = mModel.account().getPersonalKey().orElse(null);
             String uid = key != null ? key.getUserId() : null;
             mUserIDArea.setText(uid != null ?
-                    StringUtils.abbreviate(uid, 30) :
+                    StringUtils.abbreviate(uid, View.MAX_USER_ID_LENGTH) :
                     "- "+Tr.tr("no key loaded")+" -");
             if (uid != null)
                 TooltipManager.addTooltip(mUserIDArea, uid);

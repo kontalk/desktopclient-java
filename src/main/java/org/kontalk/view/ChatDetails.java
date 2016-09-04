@@ -174,7 +174,7 @@ final class ChatDetails extends WebPanel {
             WebTextArea xmppIDArea = new WebTextArea().setBoldFont();
             xmppIDArea.setEditable(false);
             xmppIDArea.setOpaque(false);
-            xmppIDArea.setText(StringUtils.abbreviate(xmppID, 30));
+            xmppIDArea.setText(StringUtils.abbreviate(xmppID, View.MAX_XMPP_ID_LENGTH));
             TooltipManager.addTooltip(xmppIDArea,
                     Tr.tr("XMPP chat ID:") + " " + xmppID);
             WebLabel xmppIDLabel = new WebLabel(Tr.tr("Chat ID:"));
