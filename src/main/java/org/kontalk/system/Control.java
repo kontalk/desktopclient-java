@@ -24,7 +24,6 @@ import org.kontalk.model.Account;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
@@ -750,7 +749,7 @@ public final class Control {
             // user is part of the group
             List<ProtoMember> members = contacts.stream()
                     .map(c -> new ProtoMember(c))
-                    .collect(Collectors.toCollection(ArrayList::new));
+                    .collect(Collectors.toList());
             Contact me = mModel.contacts().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
