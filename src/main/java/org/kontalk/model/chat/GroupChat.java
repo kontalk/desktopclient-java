@@ -150,8 +150,6 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
 
         Database db = Model.database();
         for (ProtoMember pm : removed) {
-            pm.getContact().deleteObserver(this);
-
             Member member = mMemberSet.stream()
                     .filter(m -> pm.equals(m))
                     .findFirst().orElse(null);
@@ -159,6 +157,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 LOGGER.warning("(proto)member not in chat: "+pm);
                 continue;
             }
+            member.getContact().deleteObservers();
             boolean succ = mMemberSet.remove(member);
             if (!succ) {
                 LOGGER.warning("member not in chat: "+member);
