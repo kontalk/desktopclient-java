@@ -21,13 +21,13 @@ package org.kontalk.util;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
@@ -226,17 +226,43 @@ public final class ClientUtils {
             case NONE:
                 return Optional.empty();
             case CREATE:
-                List<JID> jids = new ArrayList<>(members.size());
-                for (Member m: members)
-                    jids.add(JID.bare(m.jid));
+                List<JID> jids = members.stream()
+                        .peek(m -> { if (m.operation != Member.Operation.NONE) {
+                            LOGGER.warning("unexpected member operation in "
+                                    + "create command: " + m.operation + " " + m.jid);
+                            }})
+                        .map(m -> JID.bare(m.jid))
+                        .collect(Collectors.toList());
                 return Optional.of(GroupCommand.create(jids, subject));
             case PART:
                 return Optional.of(GroupCommand.leave());
             case SET:
-                // TODO
+                // TODO we have to get the group chat here
+                // * to find out if we are already member
+                // * to find out if the subject is really new or only included
+                // for new members
+                // ignoring duplicate JIDs (no log output)
+                Set<JID> added = new HashSet<>();
+                Set<JID> removed = new HashSet<>();
+                for (Member m : members) {
+                   switch (m.operation) {
+                       case NONE: // treat unchanged members as if they are new
+                       // falltrough
+                       case ADD: added.add(JID.bare(m.jid)); break;
+                       case REMOVE: removed.add((JID.bare(m.jid))); break;
+                   }
+                }
+                // sanity check; prioritize 'removed' over 'added'
+                removed.stream()
+                        .filter(jid -> added.contains(jid))
+                        .peek(jid -> LOGGER.warning(
+                                "member added AND removed (removing) " + jid))
+                        .forEach(jid -> added.remove(jid));
                 return Optional.of(GroupCommand.set(
-                        Collections.emptyList(),
-                        Collections.emptyList(), subject));
+                        new ArrayList<>(added),
+                        new ArrayList<>(removed),
+                        // for now we assume the subject wasn't changed
+                        ""));
             case GET:
             case RESULT:
             default:
