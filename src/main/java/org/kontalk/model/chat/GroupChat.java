@@ -53,9 +53,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         mGroupData = gData;
         mSubject = subject;
 
-        members.stream()
-                .map(m -> new Member(m, mID))
-                .forEach(m -> this.addMemberSilent(m));
+        this.addMembersSilent(members);
     }
 
     // used when loading from database
@@ -96,6 +94,20 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 .collect(Collectors.toList());
     }
 
+    private void addMembersSilent(List<ProtoMember> members) {
+        members.stream()
+        .filter(m -> {
+            if (mMemberSet.contains(m)) {
+                LOGGER.warning("(proto)member already in chat: " + m);
+                return false;
+            } else {
+                return true;
+            }
+        })
+        .map(m -> new Member(m, mID))
+        .forEach(m -> this.addMemberSilent(m));
+    }
+
     private void addMemberSilent(Member member) {
         if (mMemberSet.contains(member)) {
             LOGGER.warning("member already in chat: "+member);
@@ -134,9 +146,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
             List<ProtoMember> added,
             List<ProtoMember> removed,
             String subject) {
-        added.stream()
-                .map(m -> new Member(m, mID))
-                .forEach(m -> this.addMemberSilent(m));
+        this.addMembersSilent(added);
 
         Database db = Model.database();
         for (ProtoMember pm : removed) {
