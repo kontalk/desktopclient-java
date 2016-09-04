@@ -95,6 +95,10 @@ final class ChatDetails extends WebPanel {
 
             WebButton leaveButton = new WebButton(Tr.tr("Leave group"));
             leaveButton.setEnabled(chat.isValid());
+            TooltipManager.addTooltip(leaveButton,
+                    groupChat.containsMe() ? Tr.tr("Leave this group chat")
+                            : Tr.tr("You are not member of this group"));
+
             leaveButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
