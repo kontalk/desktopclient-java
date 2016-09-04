@@ -205,7 +205,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         return myRole == Member.Role.OWNER || myRole == Member.Role.ADMIN;
     }
 
-    private boolean containsMe() {
+    public boolean containsMe() {
         return mMemberSet.stream().anyMatch(m -> m.getContact().isMe());
     }
 

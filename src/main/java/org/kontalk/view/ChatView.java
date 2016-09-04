@@ -20,6 +20,7 @@ package org.kontalk.view;
 
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
+import com.alee.extended.panel.WebOverlay;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.filechooser.WebFileChooser;
@@ -66,6 +67,7 @@ import javax.swing.Box;
 import javax.swing.JFileChooser;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
+import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import org.apache.commons.io.FileUtils;
@@ -73,6 +75,7 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.GroupChat;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
@@ -97,6 +100,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
     private final WebTextArea mSendTextArea;
+    private final WebLabel mOverlayLabel;
     private final WebLabel mEncryptionStatus;
     private final WebButton mSendButton;
     private final WebFileChooser mFileChooser;
@@ -187,6 +191,10 @@ final class ChatView extends WebPanel implements Observer {
                 mSendTextArea.requestFocusInWindow();
             }
         });
+        WebOverlay textAreaOverlay = new WebOverlay();
+        textAreaOverlay.setComponent(new ComponentUtils.ScrollPane(mSendTextArea));
+        mOverlayLabel = new WebLabel().setBoldFont();
+        textAreaOverlay.addOverlay(mOverlayLabel, SwingConstants.CENTER, SwingConstants.CENTER);
 
         // bottom panel...
 
@@ -246,7 +254,7 @@ final class ChatView extends WebPanel implements Observer {
         textBarPanel.setPaintBottom(false);
         bottomPanel.add(textBarPanel, BorderLayout.NORTH);
 
-        bottomPanel.add(new ComponentUtils.ScrollPane(mSendTextArea)
+        bottomPanel.add(textAreaOverlay
                 .setShadeWidth(0)
                 .setRound(0),
                 BorderLayout.CENTER);
@@ -434,14 +442,16 @@ final class ChatView extends WebPanel implements Observer {
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));
         List<Contact> contacts = Utils.contactList(chat);
-        mSubTitleLabel.setText(contacts.isEmpty() ? "("+Tr.tr("Empty")+")" :
-                chat.isGroupChat() ? Utils.displayNames(contacts, 18) :
-                Utils.mainStatus(contacts.iterator().next(), true));
+        mSubTitleLabel.setText(contacts.isEmpty() ? "(" + Tr.tr("No members") + ")"
+                : chat.isGroupChat() ? Utils.displayNames(contacts, 18)
+                        : Utils.mainStatus(contacts.iterator().next(), true));
 
         // text area
         boolean enabled = chat.isValid();
         mSendTextArea.setEnabled(enabled);
         mSendTextArea.setBackground(enabled ? Color.WHITE : Color.LIGHT_GRAY);
+        mOverlayLabel.setText(chat instanceof GroupChat && !((GroupChat) chat).containsMe()
+                ? Tr.tr("You are not member of this group") : "");
 
         // send button
         this.updateEnabledButtons();
@@ -456,8 +466,6 @@ final class ChatView extends WebPanel implements Observer {
         mEncryptionStatus.setForeground(isEncrypted != chat.canSendEncrypted() ?
                 Color.RED :
                 Color.BLACK);
-
-        // TODO set tooltip
     }
 
     private void showPopup(final WebToggleButton invoker) {
@@ -503,9 +511,10 @@ final class ChatView extends WebPanel implements Observer {
     private void sendMsg() {
         Chat chat = this.getCurrentChat().orElse(null);
         if (chat == null)
-            // now current chat
+            // no current chat
             return;
 
+        // TODO sending text AND attachment (?)
        //List<File> attachments = mAttField.getSelectedFiles();
 //       if (!attachments.isEmpty())
 //           mView.getControl().sendAttachment(optChat.get(), attachments.get(0).toPath());
