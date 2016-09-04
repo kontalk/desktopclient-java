@@ -131,7 +131,7 @@ public final class OutMessage extends KonMessage {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (o == this)
             return true;
 

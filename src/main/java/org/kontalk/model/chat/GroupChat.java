@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.GroupMetaData.MUCData;
 import org.kontalk.persistence.Database;
@@ -41,17 +42,18 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     private final HashSet<Member> mMemberSet = new HashSet<>();
     private final D mGroupData;
 
+    /** Chat subject/title set by user. Empty string only if unknown/not set. */
     private String mSubject;
     // TODO overwrite encryption=OFF field
     private boolean mForceEncryptionOff = false;
 
-    private GroupChat(List<Member> members, D gData, String subject) {
-        super(members, "", subject, gData);
+    private GroupChat(List<ProtoMember> members, D gData, String subject) {
+        super("", subject, gData);
 
         mGroupData = gData;
         mSubject = subject;
 
-        members.stream().forEach(m -> this.addMemberSilent(m));
+        this.addMembersSilent(members);
     }
 
     // used when loading from database
@@ -92,6 +94,20 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 .collect(Collectors.toList());
     }
 
+    private void addMembersSilent(List<ProtoMember> members) {
+        members.stream()
+        .filter(m -> {
+            if (mMemberSet.contains(m)) {
+                LOGGER.warning("(proto)member already in chat: " + m);
+                return false;
+            } else {
+                return true;
+            }
+        })
+        .map(m -> new Member(m, mID))
+        .forEach(m -> this.addMemberSilent(m));
+    }
+
     private void addMemberSilent(Member member) {
         if (mMemberSet.contains(member)) {
             LOGGER.warning("member already in chat: "+member);
@@ -102,14 +118,6 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         mMemberSet.add(member);
     }
 
-    private void removeMemberSilent(Member member) {
-        member.getContact().deleteObserver(this);
-        boolean succ = mMemberSet.remove(member);
-        if (!succ) {
-            LOGGER.warning("member not in chat: "+member);
-        }
-    }
-
     public D getGroupData() {
         return mGroupData;
     }
@@ -117,15 +125,6 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     @Override
     public String getSubject() {
         return mSubject;
-    }
-
-    public void setSubject(String subject) {
-        if (subject.equals(mSubject))
-            return;
-
-        mSubject = subject;
-        this.save();
-        this.changed(ViewChange.SUBJECT);
     }
 
     @Override
@@ -143,16 +142,40 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         this.changed(ViewChange.MEMBER_STATE);
     }
 
-    public void applyGroupChanges(List<Member> added, List<Member> removed, String subject) {
-        added.stream().forEach((member) -> this.addMemberSilent(member));
-        removed.stream().forEach((member) -> this.removeMemberSilent(member));
-        if (!subject.isEmpty())
+    public void applyGroupChanges(
+            List<ProtoMember> added,
+            List<ProtoMember> removed,
+            String subject) {
+        this.addMembersSilent(added);
+
+        Database db = Model.database();
+        for (ProtoMember pm : removed) {
+            Member member = mMemberSet.stream()
+                    .filter(m -> pm.equals(m))
+                    .findFirst().orElse(null);
+            if (member == null) {
+                LOGGER.warning("(proto)member not in chat: "+pm);
+                continue;
+            }
+            member.getContact().deleteObservers();
+            boolean succ = mMemberSet.remove(member);
+            if (!succ) {
+                LOGGER.warning("member not in chat: "+member);
+            }
+            member.delete(db);
+        }
+        if (!removed.isEmpty()) {
+            db.commit();
+        }
+
+        if (!subject.isEmpty() && !subject.equals(mSubject)) {
             mSubject = subject;
+            this.save();
+        }
 
-        this.save();
-
-        if (!added.isEmpty() || !removed.isEmpty())
+        if (!added.isEmpty() || !removed.isEmpty()) {
             this.changed(ViewChange.MEMBERS);
+        }
         if (!subject.isEmpty())
             this.changed(ViewChange.SUBJECT);
     }
@@ -191,17 +214,17 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         return myRole == Member.Role.OWNER || myRole == Member.Role.ADMIN;
     }
 
-    private boolean containsMe() {
+    public boolean containsMe() {
         return mMemberSet.stream().anyMatch(m -> m.getContact().isMe());
     }
 
     @Override
     void save() {
-        this.save(new ArrayList<>(mMemberSet), mSubject);
+        this.save(mSubject);
     }
 
     @Override
-    public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (this == o) return true;
 
         if (!(o instanceof GroupChat)) return false;
@@ -223,7 +246,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     public static final class KonGroupChat extends GroupChat<KonGroupData> {
-        private KonGroupChat(List<Member> members, KonGroupData gData, String subject) {
+        private KonGroupChat(List<ProtoMember> members, KonGroupData gData, String subject) {
             super(members, gData, subject);
         }
 
@@ -234,7 +257,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     public static final class MUCChat extends GroupChat<MUCData> {
-        private MUCChat(List<Member> members, MUCData gData, String subject) {
+        private MUCChat(List<ProtoMember> members, MUCData gData, String subject) {
             super(members, gData, subject);
         }
 
@@ -251,10 +274,9 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 new MUCChat(id, members, (MUCData) gData, subject, read, jsonViewSettings);
     }
 
-    static GroupChat create(Database db, List<Member> members, GroupMetaData gData, String subject) {
+    static GroupChat create(Database db, List<ProtoMember> members, GroupMetaData gData, String subject) {
         return (gData instanceof KonGroupData) ?
                 new KonGroupChat(members, (KonGroupData) gData, subject) :
                 new MUCChat(members, (MUCData) gData, subject);
     }
-
 }

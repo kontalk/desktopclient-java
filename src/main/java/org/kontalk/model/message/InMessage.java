@@ -145,7 +145,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public final boolean equals(Object o) {
         if (o == this)
             return true;
 

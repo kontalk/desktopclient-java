@@ -24,7 +24,6 @@ import org.kontalk.model.Account;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
@@ -58,6 +57,7 @@ import org.kontalk.model.Avatar;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
+import org.kontalk.model.chat.ProtoMember;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.ProtoMessage;
@@ -747,15 +747,15 @@ public final class Control {
 
         public Optional<GroupChat> createGroupChat(List<Contact> contacts, String subject) {
             // user is part of the group
-            List<Member> members = contacts.stream()
-                    .map(c -> new Member(c))
-                    .collect(Collectors.toCollection(ArrayList::new));
+            List<ProtoMember> members = contacts.stream()
+                    .map(c -> new ProtoMember(c))
+                    .collect(Collectors.toList());
             Contact me = mModel.contacts().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
                 return Optional.empty();
             }
-            members.add(new Member(me, Member.Role.OWNER));
+            members.add(new ProtoMember(me, Member.Role.OWNER));
 
             GroupChat chat = mModel.chats().createNew(members,
                     GroupControl.newKonGroupData(me.getJID()),
@@ -773,6 +773,10 @@ public final class Control {
             }
 
             mModel.chats().delete(chat);
+        }
+
+        public void leaveGroupChat(GroupChat chat) {
+            mGroupControl.getInstanceFor(chat).onLeave();
         }
 
         public void setChatSubject(GroupChat chat, String subject) {

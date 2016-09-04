@@ -31,6 +31,7 @@ import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.Member;
+import org.kontalk.model.chat.ProtoMember;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.util.EncodingUtils;
@@ -62,6 +63,8 @@ final class GroupControl {
         abstract void onCreate();
 
         abstract void onSetSubject(String subject);
+
+        abstract void onLeave();
 
         abstract boolean beforeDelete();
 
@@ -98,10 +101,29 @@ final class GroupControl {
                 return;
             }
 
-            mControl.createAndSendMessage(mChat, MessageContent.groupCommand(
-                    GroupCommand.set(subject)));
+            GroupCommand command = GroupCommand.set(subject);
+            mControl.createAndSendMessage(mChat,
+                    MessageContent.groupCommand(command));
 
-            mChat.setSubject(subject);
+        }
+
+        @Override
+        void onLeave() {
+            GroupCommand command = GroupCommand.leave();
+            mControl.createAndSendMessage(mChat,
+                    MessageContent.groupCommand(command));
+
+            // NOTE: ignoring if message was sent/received or not
+            onMyCommand(command);
+        }
+
+        private void onMyCommand(GroupCommand command) {
+            Contact me = mModel.contacts().getMe().orElse(null);
+            if (me == null) {
+                LOGGER.warning("no me");
+                return;
+            }
+            onInMessage(command, me);
         }
 
         @Override
@@ -133,8 +155,8 @@ final class GroupControl {
             }
 
             // apply group command
-            List<Member> added = new ArrayList<>();
-            List<Member> removed = new ArrayList<>();
+            List<ProtoMember> added = new ArrayList<>();
+            List<ProtoMember> removed = new ArrayList<>();
             String subject = "";
 
             switch(command.getOperation()) {
@@ -148,7 +170,7 @@ final class GroupControl {
                     subject = command.getSubject();
                     break;
                 case LEAVE:
-                    removed.add(new Member(sender));
+                    removed.add(new ProtoMember(sender));
                     break;
                 case SET:
                     added.addAll(JIDsToMembers(command.getAdded()));
@@ -158,7 +180,7 @@ final class GroupControl {
                             LOGGER.warning("can't get removed contact, jid="+jid);
                             continue;
                         }
-                        removed.add(new Member(contact));
+                        removed.add(new ProtoMember(contact));
                     }
                     subject = command.getSubject();
                     break;
@@ -170,8 +192,8 @@ final class GroupControl {
         }
     }
 
-    private List<Member> JIDsToMembers(List<JID> jids) {
-        List<Member> members = new ArrayList<>();
+    private List<ProtoMember> JIDsToMembers(List<JID> jids) {
+        List<ProtoMember> members = new ArrayList<>();
         for (JID jid: jids) {
             // add contacts if necessary
             // TODO design problem here: we need at least the public keys, but user
@@ -181,11 +203,10 @@ final class GroupControl {
                 LOGGER.warning("can't get contact, jid: "+jid);
                 continue;
             }
-            members.add(new Member(contact));
+            members.add(new ProtoMember(contact));
         }
         return members;
     }
-
 
     ChatControl getInstanceFor(GroupChat chat) {
         if (chat instanceof KonGroupChat)
@@ -225,7 +246,7 @@ final class GroupControl {
 
         return Optional.of(
                 mModel.chats().create(
-                        Arrays.asList(new Member(sender, Member.Role.OWNER)),
+                        Arrays.asList(new ProtoMember(sender, Member.Role.OWNER)),
                         gData));
     }
 

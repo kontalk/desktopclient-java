@@ -23,6 +23,7 @@ import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
+import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.radiobutton.WebRadioButton;
 import com.alee.laf.separator.WebSeparator;
@@ -80,7 +81,8 @@ final class ChatDetails extends WebPanel {
         // editable fields
         mSubjectField = new ComponentUtils.EditableTextField(mChat.getSubject(),
                 View.MAX_SUBJ_LENGTH, mChat.isAdministratable(), 16, this);
-        if (chat.isGroupChat()) {
+        if (mChat instanceof GroupChat) {
+            GroupChat groupChat = (GroupChat) mChat;
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
                     new WebLabel(Tr.tr("Subject:")), mSubjectField));
 
@@ -91,8 +93,25 @@ final class ChatDetails extends WebPanel {
             mParticipantsList.setVisibleRowCount(Math.min(chatMember.size(), 5));
             groupPanel.add(new ComponentUtils.ScrollPane(mParticipantsList, false).setPreferredWidth(160));
 
+            WebButton leaveButton = new WebButton(Tr.tr("Leave group"));
+            leaveButton.setEnabled(chat.isValid());
+            TooltipManager.addTooltip(leaveButton,
+                    groupChat.containsMe() ? Tr.tr("Leave this group chat")
+                            : Tr.tr("You are not member of this group"));
+
+            leaveButton.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
+                    boolean left = ChatDetails.this.leave(groupChat);
+                    if (left)
+                        popup.close();
+                }
+            });
+            groupPanel.add(leaveButton);
+
             groupPanel.add(new WebSeparator(true, true));
         }
+
         final WebSlider colorSlider = new WebSlider(WebSlider.HORIZONTAL);
 
         groupPanel.add(new WebLabel(Tr.tr("Custom Background")));
@@ -155,7 +174,7 @@ final class ChatDetails extends WebPanel {
             WebTextArea xmppIDArea = new WebTextArea().setBoldFont();
             xmppIDArea.setEditable(false);
             xmppIDArea.setOpaque(false);
-            xmppIDArea.setText(StringUtils.abbreviate(xmppID, 30));
+            xmppIDArea.setText(StringUtils.abbreviate(xmppID, View.MAX_XMPP_ID_LENGTH));
             TooltipManager.addTooltip(xmppIDArea,
                     Tr.tr("XMPP chat ID:") + " " + xmppID);
             WebLabel xmppIDLabel = new WebLabel(Tr.tr("Chat ID:"));
@@ -170,7 +189,6 @@ final class ChatDetails extends WebPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ChatDetails.this.save();
-
                 popup.close();
             }
         });
@@ -179,6 +197,22 @@ final class ChatDetails extends WebPanel {
         GroupPanel buttonPanel = new GroupPanel(2, saveButton);
         buttonPanel.setLayout(new FlowLayout(FlowLayout.TRAILING));
         this.add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    boolean leave(GroupChat chat) {
+        String warningText =
+                Tr.tr("You won't be able to enter this group again after you leave.");
+        int selectedOption = WebOptionPane.showConfirmDialog(this,
+                warningText,
+                Tr.tr("Please Confirm"),
+                WebOptionPane.OK_CANCEL_OPTION,
+                WebOptionPane.WARNING_MESSAGE);
+
+        if (selectedOption == WebOptionPane.OK_OPTION) {
+            mView.getControl().leaveGroupChat(chat);
+            return true;
+        }
+        return false;
     }
 
     private void save() {

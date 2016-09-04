@@ -40,9 +40,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.ToolTipManager;
 import java.awt.BorderLayout;
 import java.util.EnumSet;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import org.kontalk.client.FeatureDiscovery;
+import org.kontalk.misc.JID;
 import org.kontalk.persistence.Config;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.chat.Chat;
@@ -78,7 +80,16 @@ public final class View implements Observer {
 
     static final int MAX_SUBJ_LENGTH = 30;
     static final int MAX_NAME_LENGTH = 60;
+    static final int MAX_NAME_IN_LIST_LENGTH = 18;
+    static final int MAX_NAME_IN_GROUP_LENGTH = 25;
+    static final int MAX_NAME_IN_FROM_LABEL = 40;
+    static final int MAX_NAME_IN_NOTIER = 20;
     static final int MAX_JID_LENGTH = 100;
+    static final int MAX_JID_IN_NOTIFIER = 30;
+    static final int MAX_USER_ID_LENGTH = 30;
+    static final int MAX_XMPP_ID_LENGTH = 30;
+
+    static final int PRETTY_JID_LENGTH = 28;
 
     static final Color BLUE = new Color(130, 170, 240);
     static final Color LIGHT_BLUE = new Color(220, 220, 250);
@@ -430,6 +441,11 @@ public final class View implements Observer {
 
     void updateTray() {
         mTrayManager.setTray();
+    }
+
+    // TODO is this good?
+    String names(List<JID> jids) {
+        return Utils.displayNames(jids, mModel.contacts(), View.PRETTY_JID_LENGTH);
     }
 
     /* static */

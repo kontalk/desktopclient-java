@@ -196,6 +196,17 @@ final class Utils {
         return !name.isEmpty() ? name : jid(jid, maxLength);
     }
 
+    static String displayNames(List<JID> jids, ContactList contactList, int maxJIDLength) {
+        List<String> nameList = new ArrayList<>(jids.size());
+        for (JID jid : jids) {
+            Contact contact = contactList.get(jid).orElse(null);
+            return contact != null ?
+                    displayName(contact, jid, Integer.MAX_VALUE) :
+                    jid(jid, maxJIDLength);
+        }
+        return StringUtils.join(nameList, ", ");
+    }
+
     private static String displayNames(List<Contact> contacts) {
         return displayNames(contacts, Integer.MAX_VALUE);
     }

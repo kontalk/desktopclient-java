@@ -339,7 +339,6 @@ public abstract class KonMessage extends Observable {
         Date serverDate = sDate == 0 ? null : new Date(sDate);
 
         KonMessage.Builder builder = new KonMessage.Builder(id, chat, status, date, content);
-        // TODO one SQL SELECT for each message, performance? looks ok
         builder.transmissions(Transmission.load(id, contactMap));
         builder.xmppID(xmppID);
         if (serverDate != null)
