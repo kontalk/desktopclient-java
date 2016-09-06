@@ -475,6 +475,7 @@ public final class Control {
 
         mClient.sendPublicKeyRequest(contact.getJID());
     }
+
     Optional<Contact> getOrCreateContact(JID jid) {
         Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact != null)
@@ -504,6 +505,8 @@ public final class Control {
     private Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
         if (!mClient.isConnected()) {
             // workaround: create only if contact can be added to roster
+            // this is a general problem with XMPPs roster: no real sync possible
+            LOGGER.warning("can't create contact, not connected: "+jid);
             return Optional.empty();
         }
 

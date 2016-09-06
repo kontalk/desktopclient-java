@@ -301,6 +301,7 @@ final class MainFrame extends WebFrame {
             case ERROR:
                 mConnectMenuItem.setEnabled(true);
                 mDisconnectMenuItem.setEnabled(false);
+                mAddContactButton.setEnabled(false);
             break;
         }
     }

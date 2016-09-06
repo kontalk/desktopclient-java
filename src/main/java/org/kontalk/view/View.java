@@ -274,6 +274,8 @@ public final class View implements Observer {
         mServerFeatures = features;
 
         mChatView.onStatusChange(status, features);
+        mMainFrame.onStatusChanged(status);
+
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Connecting…"));
@@ -303,9 +305,7 @@ public final class View implements Observer {
             case ERROR:
                 mStatusBarLabel.setText(Tr.tr("Connection error"));
                 break;
-            }
-
-        mMainFrame.onStatusChanged(status);
+        }
     }
 
     void showPasswordDialog(boolean wasWrong) {
