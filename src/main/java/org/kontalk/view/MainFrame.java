@@ -51,9 +51,12 @@ import java.awt.event.KeyEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import javax.swing.Icon;
+import javax.swing.SwingConstants;
 import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
 import org.kontalk.persistence.Config;
 import org.kontalk.Kontalk;
 import org.kontalk.model.Model;
@@ -207,9 +210,9 @@ final class MainFrame extends WebFrame {
 
         // ...left...
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-        //String chatOverlayText =
-        //        Tr.t/r("No chats to display. You can create a new chat from your contacts");
-        WebScrollPane chatPane = createTablePane(chatList, "chatOverlayText");
+        String chatOverlayText =
+                Tr.tr("No chats to display. You can create a new chat from the contact list.");
+        WebScrollPane chatPane = createTablePane(chatList, chatOverlayText);
         mAddGroupButton = new ComponentUtils.ToggleButton(
                 // TODO different button
                 Utils.getIcon("ic_ui_add.png"),
@@ -222,8 +225,8 @@ final class MainFrame extends WebFrame {
         mTabbedPane.setTabComponentAt(Tab.CHATS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
-        //String contactOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
-        WebScrollPane contactPane = createTablePane(contactList, "contactOverlayText");
+        String contactOverlayText = Tr.tr("No contacts to display. You have no friends :(");
+        WebScrollPane contactPane = createTablePane(contactList, contactOverlayText);
         mAddContactButton = new ComponentUtils.ToggleButton(
                 Utils.getIcon("ic_ui_add.png"),
                 Tr.tr("Add a new contact"),
@@ -321,41 +324,30 @@ final class MainFrame extends WebFrame {
 
     private static WebScrollPane createTablePane(final ListView<?, ?> list,
             String overlayText) {
-
-        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(list);
-        scrollPane.setDrawBorder(false);
         // overlay for empty list
-        WebOverlay listOverlayPanel = new WebOverlay(scrollPane);
-        listOverlayPanel.setOverlayMargin(20);
+        WebOverlay listOverlay = new WebOverlay(list);
+        listOverlay.setOverlayMargin(20);
         final WebTextArea overlayArea = new WebTextArea();
         overlayArea.setText(overlayText);
         overlayArea.setLineWrap(true);
         overlayArea.setWrapStyleWord(true);
         overlayArea.setMargin(View.MARGIN_DEFAULT);
-        overlayArea.setFontSize(15);
+        overlayArea.setFontSize(View.FONT_SIZE_BIG);
         overlayArea.setEditable(false);
         BorderPainter<WebTextArea> borderPainter = new BorderPainter<>(Color.LIGHT_GRAY);
         borderPainter.setRound(15);
         overlayArea.setPainter(borderPainter);
-        // TODO
-//        table.addListDataListener(new ListDataListener() {
-//            @Override
-//            public void intervalAdded(ListDataEvent e) {
-//                this.setOverlay();
-//            }
-//            @Override
-//            public void intervalRemoved(ListDataEvent e) {
-//                this.setOverlay();
-//            }
-//            @Override
-//            public void contentsChanged(ListDataEvent e) {
-//            }
-//            private void setOverlay() {
-//                overlayArea.setVisible(table.getModelSize() == 0);
-//            }
-//        });
-        //listOverlayPanel.addOverlay(new GroupPanel(false, overlayArea));
-        //listPanel.add(listOverlayPanel, BorderLayout.CENTER);
+        list.getModel().addTableModelListener(new TableModelListener() {
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                overlayArea.setVisible(list.getModel().getRowCount() == 0);
+            }
+        });
+        overlayArea.setVisible(list.getModel().getRowCount() == 0);
+        listOverlay.addOverlay(overlayArea, SwingConstants.CENTER, SwingConstants.CENTER);
+
+        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(listOverlay);
+        scrollPane.setDrawBorder(false);
         return scrollPane;
     }
 }
