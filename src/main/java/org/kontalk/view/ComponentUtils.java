@@ -104,6 +104,7 @@ import org.kontalk.persistence.Config;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
+import org.kontalk.view.AvatarLoader.AvatarImg;
 
 /**
  * Some own component classes used in view.
@@ -844,7 +845,7 @@ final class ComponentUtils {
     // -> component size depends on image size
     static class AvatarImage extends WebDecoratedImage {
 
-        private final int mSize;
+        protected final int mSize;
 
         AvatarImage(int size) {
             mSize = size;
@@ -853,35 +854,41 @@ final class ComponentUtils {
         }
 
         void setAvatarImage(Contact c) {
-            this.setImage(AvatarLoader.load(c, mSize));
+            this.setAvatarImg(AvatarLoader.load(c, mSize));
         }
 
         void setAvatarImage(Chat c) {
-            this.setImage(AvatarLoader.load(c, mSize));
+            this.setAvatarImg(AvatarLoader.load(c, mSize));
+        }
+
+        protected void setAvatarImg(AvatarImg avatarImg) {
+            this.setDrawGlassLayer(avatarImg.isFallback);
+            this.setImage(avatarImg.image);
         }
     }
 
-    static abstract class EditableAvatarImage extends WebDecoratedImage {
+    static abstract class EditableAvatarImage extends AvatarImage {
 
-        private final int mSize;
         private final WebFileChooser mImgChooser;
 
         private BufferedImage mImage = null;
         private boolean mImageChanged = false;
 
+        EditableAvatarImage(int size) {
+            this(size, true, Optional.empty());
+        }
+
         EditableAvatarImage(int size, boolean enabled, Optional<BufferedImage> image) {
-            mSize = size;
+            super(size);
 
             mImgChooser = new WebFileChooser();
             mImgChooser.setFileFilter(new ImageFilesFilter());
 
             mImage = image.orElse(null);
+            this.setImageOrDefault(mImage);
 
-            this.setRound(0);
             this.setGrayscale(!enabled);
             this.setEnabled(enabled);
-
-            this.setImage(mImage != null ? mImage : this.defaultImage());
 
             this.addMouseListener(new MouseAdapter() {
                 @Override
@@ -911,9 +918,19 @@ final class ComponentUtils {
         private void changeImage(BufferedImage image) {
             mImage = image;
             mImageChanged = true;
-            this.setImage(image != null ? image : this.defaultImage());
+            this.setImageOrDefault(image);
             this.onImageChange(Optional.ofNullable(image));
             TooltipManager.setTooltip(this, this.tooltipText());
+        }
+
+        private void setImageOrDefault(BufferedImage image) {
+            if (image == null) {
+                this.setAvatarImg(this.defaultImage());
+                return;
+            }
+
+            this.setDrawGlassLayer(false);
+            this.setImage(image);
         }
 
         void onImageChange(Optional<BufferedImage> optImage) {}
@@ -926,7 +943,7 @@ final class ComponentUtils {
             return Optional.ofNullable(mImage);
         }
 
-        abstract BufferedImage defaultImage();
+        abstract AvatarLoader.AvatarImg defaultImage();
 
         abstract boolean canRemove();
 
@@ -937,7 +954,9 @@ final class ComponentUtils {
         }
 
         protected void update() {
-            mImage = this.defaultImage();
+            AvatarImg img = this.defaultImage();
+            mImage = img.image;
+            this.setDrawGlassLayer(img.isFallback);
             mImageChanged = false;
             this.setImage(mImage);
         }

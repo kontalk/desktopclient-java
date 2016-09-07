@@ -101,6 +101,7 @@ public final class View implements Observer {
     static final int AVATAR_LIST_SIZE = 30;
     static final int AVATAR_CHAT_SIZE = 40;
     static final int AVATAR_DETAIL_SIZE = 60;
+    static final int AVATAR_PROFILE_SIZE = 150;
 
     private final ViewControl mControl;
     private final Model mModel;

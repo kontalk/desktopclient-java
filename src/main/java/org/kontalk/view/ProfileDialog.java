@@ -41,17 +41,15 @@ import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.model.Avatar;
+import org.kontalk.view.AvatarLoader.AvatarImg;
 
 /**
  * The User profile page. With avatar and status text.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ProfileDialog extends WebDialog {
-
-    private static final int AVATAR_SIZE = 150;
 
     private final View mView;
     private final ComponentUtils.EditableAvatarImage mAvatarImage;
@@ -76,12 +74,11 @@ final class ProfileDialog extends WebDialog {
 
         // permanent, user has to re-open the dialog on change
         final boolean supported = mView.serverFeatures().contains(FeatureDiscovery.Feature.USER_AVATAR);
-        Avatar.UserAvatar userAvatar = Avatar.UserAvatar.get().orElse(null);
-        mAvatarImage = new ComponentUtils.EditableAvatarImage(AVATAR_SIZE, supported,
-                userAvatar != null ? userAvatar.loadImage() : Optional.empty()) {
+        mAvatarImage = new ComponentUtils.EditableAvatarImage(View.AVATAR_PROFILE_SIZE, supported,
+                Avatar.UserAvatar.get().flatMap(userAvatar -> userAvatar.loadImage())) {
             @Override
-            BufferedImage defaultImage() {
-                return AvatarLoader.loadFallback(AVATAR_SIZE);
+            AvatarImg defaultImage() {
+                return AvatarLoader.loadFallback(View.AVATAR_PROFILE_SIZE);
             }
             @Override
             boolean canRemove() {
