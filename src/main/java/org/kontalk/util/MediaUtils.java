@@ -110,12 +110,10 @@ public class MediaUtils {
 
         try {
             // path must be relative to classpath for some reason
-            mAudioClip = new OggClip(fileName);
+            mAudioClip = OggClip.play(fileName);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't create clip", ex);
-            return;
         }
-        mAudioClip.play();
     }
 
     public static BufferedImage readImage(Path path) {
