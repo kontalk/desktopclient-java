@@ -42,7 +42,6 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
-import java.awt.EventQueue;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -52,6 +51,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
 import java.awt.event.AdjustmentListener;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
@@ -190,12 +191,7 @@ final class ChatView extends WebPanel implements Observer {
                 ChatView.this.onKeyTypeEvent(e.getDocument().getLength() == 0);
             }
         });
-        EventQueue.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                mSendTextArea.requestFocusInWindow();
-            }
-        });
+
         WebOverlay textAreaOverlay = new WebOverlay();
         textAreaOverlay.setComponent(new ComponentUtils.ScrollPane(mSendTextArea));
         mOverlayLabel = new WebLabel().setBoldFont();
@@ -221,7 +217,9 @@ final class ChatView extends WebPanel implements Observer {
                 Component focusOwner = SwingUtilities.getWindowAncestor(ChatView.this).getFocusOwner();
                 if (focusOwner != mSendTextArea && focusOwner != mSendButton)
                     return;
+
                 ChatView.this.sendMsg();
+                mSendTextArea.requestFocusInWindow();
             }
         });
         // file chooser button
@@ -269,6 +267,13 @@ final class ChatView extends WebPanel implements Observer {
                 bottomPanel);
         splitPane.setResizeWeight(1.0);
         this.add(splitPane, BorderLayout.CENTER);
+
+        this.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                mSendTextArea.requestFocusInWindow();
+            }
+        });
 
         this.loadDefaultBG();
     }

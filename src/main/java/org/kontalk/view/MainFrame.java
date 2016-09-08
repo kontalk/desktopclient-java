@@ -41,6 +41,8 @@ import com.alee.utils.WebUtils;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
+import java.awt.DefaultFocusTraversalPolicy;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GridLayout;
@@ -251,6 +253,13 @@ final class MainFrame extends WebFrame {
 
         // ...right...
         this.add(content, BorderLayout.CENTER);
+
+        this.setFocusTraversalPolicy(new DefaultFocusTraversalPolicy() {
+            @Override
+            public Component getDefaultComponent(Container aContainer) {
+                return content;
+            }
+        });
 
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);

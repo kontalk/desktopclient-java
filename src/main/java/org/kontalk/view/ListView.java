@@ -310,13 +310,12 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
     }
 
     protected void updateSorting(){
-        int viewRow = this.getSelectedRow();
-        int modelRow = viewRow > -1 ?
-                mRowSorter.convertRowIndexToModel(viewRow) :
-                -1;
-        mModel.fireTableDataChanged();
-        if (modelRow > -1)
-            this.setSelectedItem(mRowSorter.convertRowIndexToView(modelRow));
+        if (mModel.getRowCount() == 0)
+            return;
+
+        // do no change selection
+        //mModel.fireTableDataChanged();
+        mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
     }
 
     private void showTooltip(TableItem item) {
