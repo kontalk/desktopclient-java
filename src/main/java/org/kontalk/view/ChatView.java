@@ -107,6 +107,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebTextArea mSendTextArea;
     private final WebLabel mOverlayLabel;
     private final WebLabel mEncryptionStatus;
+    private final WebSplitPane mSplitPane;
     private final WebButton mSendButton;
     private final WebFileChooser mFileChooser;
     private final WebButton mFileButton;
@@ -262,11 +263,13 @@ final class ChatView extends WebPanel implements Observer {
                 .setRound(0),
                 BorderLayout.CENTER);
 
-        WebSplitPane splitPane = new WebSplitPane(VERTICAL_SPLIT,
+        mSplitPane = new WebSplitPane(VERTICAL_SPLIT,
                 mScrollPane,
                 bottomPanel);
-        splitPane.setResizeWeight(1.0);
-        this.add(splitPane, BorderLayout.CENTER);
+        mSplitPane.setResizeWeight(1.0);
+        mSplitPane.setDividerLocation(Config.getInstance()
+                .getInt(Config.VIEW_CHAT_SPLITTER_POS));
+        this.add(mSplitPane, BorderLayout.CENTER);
 
         this.addFocusListener(new FocusAdapter() {
             @Override
@@ -276,6 +279,11 @@ final class ChatView extends WebPanel implements Observer {
         });
 
         this.loadDefaultBG();
+    }
+
+    void save() {
+        Config.getInstance().setProperty(Config.VIEW_CHAT_SPLITTER_POS,
+                mSplitPane.getDividerLocation());
     }
 
     private MessageList currentMessageListOrNull() {

@@ -295,6 +295,7 @@ public final class View implements Observer {
                 break;
             case SHUTTING_DOWN:
                 mMainFrame.save();
+                mChatView.save();
                 mChatListView.save();
                 mTrayManager.removeTray();
                 mMainFrame.setVisible(false);
