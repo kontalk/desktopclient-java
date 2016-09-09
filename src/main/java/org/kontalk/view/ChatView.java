@@ -18,6 +18,7 @@
 
 package org.kontalk.view;
 
+import com.alee.extended.drag.FileDragAndDropHandler;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.extended.panel.WebOverlay;
@@ -104,6 +105,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebLabel mTitleLabel;
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
+    private final FileDragAndDropHandler mDropHandler;
     private final WebTextArea mSendTextArea;
     private final WebLabel mOverlayLabel;
     private final WebLabel mEncryptionStatus;
@@ -231,7 +233,7 @@ final class ChatView extends WebPanel implements Observer {
                 Tr.tr("Supported files")) {
             @Override
             public boolean accept(File file) {
-                return file.length() <= AttachmentManager.MAX_ATT_SIZE;
+                return isAllowed(file);
             }
         });
 //        mAttField.setPreferredWidth(150);
@@ -262,6 +264,9 @@ final class ChatView extends WebPanel implements Observer {
                 .setShadeWidth(0)
                 .setRound(0),
                 BorderLayout.CENTER);
+
+        mDropHandler = new FileDropHandler();
+        bottomPanel.setTransferHandler(mDropHandler);
 
         mSplitPane = new WebSplitPane(VERTICAL_SPLIT,
                 mScrollPane,
@@ -524,6 +529,7 @@ final class ChatView extends WebPanel implements Observer {
         mSendButton.setEnabled(canSendMessage &&
                 // + there is text to send...
                 !mSendTextArea.getText().trim().isEmpty());
+        mDropHandler.setDropEnabled(canSendMessage);
     }
 
     private void sendMsg() {
@@ -543,12 +549,16 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void showFileDialog() {
-        if (mFileChooser.showOpenDialog(ChatView.this) != WebFileChooser.APPROVE_OPTION)
+        int option = mFileChooser.showOpenDialog(ChatView.this);
+        if (option != WebFileChooser.APPROVE_OPTION)
             return;
 
         File file = mFileChooser.getSelectedFile();
         mFileChooser.setCurrentDirectory(file.toPath().getParent().toString());
+        this.sendFile(file);
+    }
 
+    private void sendFile(File file) {
         Chat chat = this.getCurrentChat().orElse(null);
         if (chat == null)
             return;
@@ -678,6 +688,22 @@ final class ChatView extends WebPanel implements Observer {
                 return false;
             }
         }
+    }
+
+    final class FileDropHandler extends FileDragAndDropHandler {
+        @Override
+        public boolean filesDropped(List<File> files) {
+            for (File file: files) {
+                if (isAllowed(file)) {
+                    ChatView.this.sendFile(file);
+                }
+            }
+            return true;
+        }
+    }
+
+    private static boolean isAllowed(File file) {
+        return file.length() <= AttachmentManager.MAX_ATT_SIZE;
     }
 
     private static WebPopupMenu rightClickMenu() {
