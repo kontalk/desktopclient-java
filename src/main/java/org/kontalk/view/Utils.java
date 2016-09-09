@@ -50,8 +50,11 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLHandshakeException;
+import javax.swing.Action;
 import javax.swing.Icon;
 import javax.swing.ImageIcon;
+import javax.swing.KeyStroke;
+import javax.swing.text.DefaultEditorKit;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
@@ -158,6 +161,30 @@ final class Utils {
                 }
             }
         };
+    }
+
+    static WebPopupMenu createCopyMenu(boolean modifiable) {
+        WebPopupMenu menu = new WebPopupMenu();
+        if (modifiable) {
+            Action cut = new DefaultEditorKit.CutAction();
+            cut.putValue(Action.NAME, Tr.tr("Cut"));
+            cut.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control X"));
+            menu.add(cut);
+        }
+
+        Action copy = new DefaultEditorKit.CopyAction();
+        copy.putValue(Action.NAME, Tr.tr("Copy"));
+        copy.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
+        menu.add(copy);
+
+        if (modifiable) {
+            Action paste = new DefaultEditorKit.PasteAction();
+            paste.putValue(Action.NAME, Tr.tr("Paste"));
+            paste.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control V"));
+            menu.add(paste);
+        }
+
+        return menu;
     }
 
     /* images */

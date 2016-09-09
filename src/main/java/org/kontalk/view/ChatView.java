@@ -26,7 +26,6 @@ import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
 import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
-import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.splitpane.WebSplitPane;
@@ -66,16 +65,13 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import javax.swing.Action;
 import javax.swing.Box;
 import javax.swing.JFileChooser;
 import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
-import javax.swing.KeyStroke;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
-import javax.swing.text.DefaultEditorKit;
 import org.apache.commons.io.FileUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.FeatureDiscovery;
@@ -187,7 +183,7 @@ final class ChatView extends WebPanel implements Observer {
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
         mSendTextArea.setFontSize(View.FONT_SIZE_NORMAL);
-        mSendTextArea.setComponentPopupMenu(rightClickMenu());
+        mSendTextArea.setComponentPopupMenu(Utils.createCopyMenu(true));
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
             public void documentChanged(DocumentEvent e) {
@@ -704,25 +700,5 @@ final class ChatView extends WebPanel implements Observer {
 
     private static boolean isAllowed(File file) {
         return file.length() <= AttachmentManager.MAX_ATT_SIZE;
-    }
-
-    private static WebPopupMenu rightClickMenu() {
-        WebPopupMenu menu = new WebPopupMenu();
-        Action cut = new DefaultEditorKit.CutAction();
-        cut.putValue(Action.NAME, Tr.tr("Cut"));
-        cut.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control X"));
-        menu.add(cut);
-
-        Action copy = new DefaultEditorKit.CopyAction();
-        copy.putValue(Action.NAME, Tr.tr("Copy"));
-        copy.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
-        menu.add(copy);
-
-        Action paste = new DefaultEditorKit.PasteAction();
-        paste.putValue(Action.NAME, Tr.tr("Paste"));
-        paste.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control V"));
-        menu.add(paste);
-
-        return menu;
     }
 }

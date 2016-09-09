@@ -89,6 +89,9 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
     private static final Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
     private static final Icon CRYPT_WARNING_ICON = Utils.getIcon("ic_msg_crypt_warning.png");
 
+    private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();
+    private static final WebPopupMenu TEXT_COPY_MENU = Utils.createCopyMenu(false);
+
     private final ChatView mChatView;
     private final Chat mChat;
     private Optional<Background> mBackground = Optional.empty();
@@ -273,12 +276,13 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             //mTextPane.setFontSize(View.FONT_SIZE_SMALL);
             // sets default font
             mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
-            //for detecting clicks
+            // for detecting clicks
             mTextPane.addMouseListener(LinkUtils.CLICK_LISTENER);
-            //for detecting motion
+            // for detecting motion
             mTextPane.addMouseMotionListener(LinkUtils.MOTION_LISTENER);
             // fix word wrap for long words
             mTextPane.setEditorKit(FIX_WRAP_KIT);
+            mTextPane.setComponentPopupMenu(TEXT_COPY_MENU);
             mContentPanel.add(mTextPane, BorderLayout.CENTER);
             mPanel.add(mContentPanel, BorderLayout.CENTER);
 
@@ -660,8 +664,6 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 Tr.tr("me");
         return date + " - " + from + " : " + m.getContent().getText();
     }
-
-    private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();
 
     /**
      * Fix for the infamous "Wrap long words" problem in Java 7+.
