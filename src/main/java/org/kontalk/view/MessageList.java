@@ -382,29 +382,26 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 InMessage inMessage = mValue instanceof InMessage ?
                         (InMessage) mValue : null;
                 String somebody = inMessage != null ?
-                        getFromString(inMessage)+" " : Tr.tr("You")+" ";
+                        getFromString(inMessage) : Tr.tr("You");
                 switch(com.getOperation()) {
                     case CREATE:
-                        text = somebody + Tr.tr("created this group");
+                        text = String.format(Tr.tr("%1$s created this group"), somebody);
                         break;
                     case LEAVE:
-                        text = somebody + Tr.tr("left this group");
+                        text = String.format(Tr.tr("%1$s left this group"), somebody);
                         break;
                     case SET:
                         String subject = com.getSubject();
                         if (!subject.isEmpty()) {
-                            text = somebody + Tr.tr("set the subject to")
-                                    + " \"" + subject + "\"";
+                            text = String.format(Tr.tr("%1$s set the subject to \"%2$s\""), somebody, subject);
                         }
                         List<JID> added = com.getAdded();
                         if (!added.isEmpty()) {
-                            text = somebody + Tr.tr("added") + " "
-                                    + mView.names(added);
+                            text = String.format(Tr.tr("%1$s added %2$s"), somebody, mView.names(added));
                         }
                         List<JID> removed = com.getRemoved();
                         if (!removed.isEmpty()) {
-                            text = somebody + Tr.tr("removed") + " "
-                                    + mView.names(removed);
+                            text = String.format(Tr.tr("%1$s removed %2$s"), somebody, mView.names(removed));
                         }
                         if (text.isEmpty()) {
                             text = "did something wrong";
