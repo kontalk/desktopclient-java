@@ -68,7 +68,7 @@ import javax.swing.table.TableRowSorter;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class FlyweightListView<I extends FlyweightListView<I, V>.FlyweightTableItem, V extends Observable> extends WebTable implements Observer {
+abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V extends Observable> extends WebTable implements Observer {
     private static final Logger LOGGER = Logger.getLogger(FlyweightListView.class.getName());
 
     protected final View mView;
@@ -130,7 +130,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.FlyweightTabl
         this.setShowVerticalLines(false);
 
         // use custom renderer
-        this.setDefaultRenderer(FlyweightTableItem.class, new TableRenderer());
+        this.setDefaultRenderer(Item.class, new TableRenderer());
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -252,7 +252,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.FlyweightTabl
     }
 
     protected void clearItems() {
-        for (FlyweightTableItem i : mItems.values()) {
+        for (Item i : mItems.values()) {
             i.mValue.deleteObserver(i);
         }
         mModel.setRowCount(0);
@@ -320,7 +320,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.FlyweightTabl
         mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
     }
 
-    private void showTooltip(FlyweightTableItem item) {
+    private void showTooltip(Item item) {
         String text = item.getTooltipText();
         if (text.isEmpty())
             return;
@@ -351,7 +351,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.FlyweightTabl
     // JTabel uses this to determine the renderer
     @Override
     public Class<?> getColumnClass(int column) {
-        return FlyweightTableItem.class;
+        return Item.class;
     }
 
     @Override
@@ -372,11 +372,11 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.FlyweightTabl
 
     protected void onRenameEvent() {}
 
-    abstract class FlyweightTableItem extends WebPanel implements Observer, Comparable<FlyweightTableItem> {
+    abstract class Item extends WebPanel implements Observer, Comparable<Item> {
 
         protected final V mValue;
 
-        protected FlyweightTableItem(V value) {
+        protected Item(V value) {
             mValue = value;
         }
 
@@ -402,7 +402,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.FlyweightTabl
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    FlyweightTableItem.this.update(arg);
+                    Item.this.update(arg);
                 }
             });
         }
@@ -441,7 +441,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.FlyweightTabl
                 boolean hasFocus,
                 int row,
                 int column) {
-            FlyweightTableItem item = (FlyweightTableItem) value;
+            Item item = (Item) value;
             // hopefully return value is not used
             if (table == null || item == null)
                 return item;

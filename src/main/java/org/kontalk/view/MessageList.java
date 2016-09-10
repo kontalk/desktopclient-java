@@ -77,7 +77,7 @@ import org.kontalk.view.ComponentUtils.AttachmentPanel;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
+final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
@@ -105,7 +105,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         this.setSelectionModel(new UnselectableListModel());
 
         // use custom editor (for mouse events)
-        this.setDefaultEditor(ListView.TableItem.class, new TableEditor());
+        this.setDefaultEditor(FlyweightListView.Item.class, new TableEditor());
 
         //this.setEditable(false);
         //this.setAutoscrolls(true);
@@ -224,7 +224,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
      * The content is added to a panel inside this panel. For performance
      * reasons the content is created when the item is rendered in the table
      */
-    final class MessageItem extends ListView<MessageItem, KonMessage>.TableItem {
+    final class MessageItem extends FlyweightListView<MessageItem, KonMessage>.Item {
 
         private WebPanel mPanel;
         private WebLabel mFromLabel = null;
@@ -624,7 +624,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         }
 
         @Override
-        public int compareTo(TableItem o) {
+        public int compareTo(Item o) {
             int idComp = Integer.compare(mValue.getID(), o.mValue.getID());
             int dateComp = mValue.getDate().compareTo(mValue.getDate());
             return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
@@ -634,14 +634,14 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
     // needed for correct mouse behaviour for components in items
     // (and breaks selection behaviour somehow)
     private class TableEditor extends AbstractCellEditor implements TableCellEditor {
-        private ListView<?, ?>.TableItem mValue;
+        private FlyweightListView<?, ?>.Item mValue;
         @Override
         public Component getTableCellEditorComponent(JTable table,
                 Object value,
                 boolean isSelected,
                 int row,
                 int column) {
-            mValue = (ListView.TableItem) value;
+            mValue = (FlyweightListView.Item) value;
             return mValue;
         }
         @Override
