@@ -47,6 +47,7 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.swing.AbstractCellEditor;
 import javax.swing.JTable;
 import javax.swing.RowFilter;
 import javax.swing.RowFilter.Entry;
@@ -56,6 +57,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableRowSorter;
 
 /**
@@ -131,6 +133,9 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
 
         // use custom renderer
         this.setDefaultRenderer(Item.class, new TableRenderer());
+
+        // use custom editor (for mouse events)
+        this.setDefaultEditor(FlyweightListView.Item.class, new TableEditor());
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -455,6 +460,25 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
                 // NOTE: this calls resizeAndRepaint()
                 table.setRowHeight(row, height);
             return item;
+        }
+    }
+
+    // needed for correct mouse behaviour for components in items
+    // (and breaks selection behaviour somehow)
+    private class TableEditor extends AbstractCellEditor implements TableCellEditor {
+        private FlyweightListView<?, ?>.Item mValue;
+        @Override
+        public Component getTableCellEditorComponent(JTable table,
+                Object value,
+                boolean isSelected,
+                int row,
+                int column) {
+            mValue = (FlyweightListView.Item) value;
+            return mValue;
+        }
+        @Override
+        public Object getCellEditorValue() {
+            return mValue;
         }
     }
 }

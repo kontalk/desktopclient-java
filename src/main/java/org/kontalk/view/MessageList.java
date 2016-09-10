@@ -28,7 +28,6 @@ import com.alee.laf.text.WebTextPane;
 import com.alee.managers.tooltip.TooltipManager;
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
@@ -41,11 +40,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.AbstractCellEditor;
 import javax.swing.Icon;
-import javax.swing.JTable;
 import javax.swing.SwingUtilities;
-import javax.swing.table.TableCellEditor;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.BoxView;
 import javax.swing.text.ComponentView;
@@ -103,9 +99,6 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
 
         // disable selection
         this.setSelectionModel(new UnselectableListModel());
-
-        // use custom editor (for mouse events)
-        this.setDefaultEditor(FlyweightListView.Item.class, new TableEditor());
 
         //this.setEditable(false);
         //this.setAutoscrolls(true);
@@ -628,25 +621,6 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
             int idComp = Integer.compare(mValue.getID(), o.mValue.getID());
             int dateComp = mValue.getDate().compareTo(mValue.getDate());
             return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
-        }
-    }
-
-    // needed for correct mouse behaviour for components in items
-    // (and breaks selection behaviour somehow)
-    private class TableEditor extends AbstractCellEditor implements TableCellEditor {
-        private FlyweightListView<?, ?>.Item mValue;
-        @Override
-        public Component getTableCellEditorComponent(JTable table,
-                Object value,
-                boolean isSelected,
-                int row,
-                int column) {
-            mValue = (FlyweightListView.Item) value;
-            return mValue;
-        }
-        @Override
-        public Object getCellEditorValue() {
-            return mValue;
         }
     }
 
