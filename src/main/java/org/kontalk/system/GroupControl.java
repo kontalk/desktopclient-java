@@ -104,7 +104,7 @@ final class GroupControl {
             GroupCommand command = GroupCommand.set(subject);
             mControl.createAndSendMessage(mChat,
                     MessageContent.groupCommand(command));
-            onMyCommand(command);
+            applyMyCommand(command);
         }
 
         // NOTE: after we left, group members are actually unknown cause we
@@ -116,16 +116,7 @@ final class GroupControl {
                     MessageContent.groupCommand(command));
 
             // NOTE: ignoring if message was sent/received or not
-            onMyCommand(command);
-        }
-
-        private void onMyCommand(GroupCommand command) {
-            Contact me = mModel.contacts().getMe().orElse(null);
-            if (me == null) {
-                LOGGER.warning("no me");
-                return;
-            }
-            onInMessage(command, me);
+            applyMyCommand(command);
         }
 
         @Override
@@ -135,9 +126,25 @@ final class GroupControl {
             // TODO if encryption is forced for one member but there is no key,
             // chat cannot be deleted
 
+            GroupCommand command = GroupCommand.leave();
             // NOTE: group chats are not deleted remotely, were just leaving them
-            return mControl.createAndSendMessage(mChat,
-                    MessageContent.groupCommand(GroupCommand.leave()));
+            boolean succ = mControl.createAndSendMessage(mChat,
+                    MessageContent.groupCommand(command));
+            if (!succ) {
+                // message wasn't send (e.g. not connected), apply leave and
+                // TODO delete chat when command was sent
+                applyMyCommand(command);
+            }
+            return succ;
+        }
+
+        private void applyMyCommand(GroupCommand command) {
+            Contact me = mModel.contacts().getMe().orElse(null);
+            if (me == null) {
+                LOGGER.warning("no me");
+                return;
+            }
+            onInMessage(command, me);
         }
 
         @Override
