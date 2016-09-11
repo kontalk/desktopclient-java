@@ -358,47 +358,46 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
 
         // TODO rename mValue
         @Override
-        protected void render(KonMessage mValue, int listWidth) {
-            if (mValue == mLastValue)
+        protected void render(KonMessage value, int listWidth) {
+            if (value == mLastValue)
                 return; // performance
-            mLastValue = mValue;
+            mLastValue = value;
 
             // background
-            boolean hasGroupCommand = mValue.getContent().getGroupCommand().isPresent();
+            boolean hasGroupCommand = value.getContent().getGroupCommand().isPresent();
             mPanel.setBackground(hasGroupCommand ? View.LIGHT_GREEN :
-                    mValue.isInMessage() ?
+                    value.isInMessage() ?
                     Color.WHITE :
                     View.LIGHT_BLUE);
 
             // from label
-            mFromLabel.setVisible(mValue.isInMessage() && mValue.getChat().isGroupChat());
+            mFromLabel.setVisible(value.isInMessage() && value.getChat().isGroupChat());
 
             // icon
-            if (mValue.getCoderStatus().isSecure()) {
+            if (value.getCoderStatus().isSecure()) {
                 mEncryptIconLabel.setIcon(CRYPT_ICON);
             } else {
                 mEncryptIconLabel.setIcon(UNENCRYPT_ICON);
             }
 
             // date label
-            dateLabel.setText(Utils.SHORT_DATE_FORMAT.format(
-                    mValue.isInMessage() ?
-                            mValue.getServerDate().orElse(mValue.getDate()) :
-                            mValue.getDate()));
+            dateLabel.setText(Utils.SHORT_DATE_FORMAT.format(value.isInMessage() ?
+                            value.getServerDate().orElse(value.getDate()) :
+                            value.getDate()));
 
             // title
-            mFromLabel.setText(!mValue.getContent().getGroupCommand().isPresent() &&
-                    mValue instanceof InMessage ?
-                    " "+getFromString((InMessage) mValue) :
+            mFromLabel.setText(!value.getContent().getGroupCommand().isPresent() &&
+                    value instanceof InMessage ?
+                    " "+getFromString((InMessage) value) :
                     "");
 
             // text in text area, before/after encryption
-            boolean encrypted = mValue.isEncrypted();
-            GroupCommand com = mValue.getContent().getGroupCommand().orElse(null);
+            boolean encrypted = value.isEncrypted();
+            GroupCommand com = value.getContent().getGroupCommand().orElse(null);
             String text = "";
             if (com != null) {
-                InMessage inMessage = mValue instanceof InMessage ?
-                        (InMessage) mValue : null;
+                InMessage inMessage = value instanceof InMessage ?
+                        (InMessage) value : null;
                 String somebody = inMessage != null ?
                         getFromString(inMessage) : Tr.tr("You");
                 switch(com.getOperation()) {
@@ -432,7 +431,7 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
                 text = encrypted ?
                         Tr.tr("[encrypted]") :
                         // removing whitespace (Pidgin adds weird tab characters)
-                        mValue.getContent().getText().trim();
+                        value.getContent().getText().trim();
                 mTextPane.setFontStyle(false, encrypted);
                 LinkUtils.linkify(mTextPane.getStyledDocument(), text);
             }
@@ -442,18 +441,18 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
 
             // status
             Date deliveredDate = null;
-            Set<Transmission> transmissions = mValue.getTransmissions();
+            Set<Transmission> transmissions = value.getTransmissions();
             if (transmissions.size() == 1)
                 deliveredDate = transmissions.stream().findFirst().get().getReceivedDate().orElse(null);
 
             // status icon
             Icon statusIcon = null;
-            boolean isOut = !mValue.isInMessage();
+            boolean isOut = !value.isInMessage();
             if (isOut) {
                 if (deliveredDate != null) {
                     statusIcon = DELIVERED_ICON;
                 } else {
-                    switch (mValue.getStatus()) {
+                    switch (value.getStatus()) {
                         case PENDING :
                             statusIcon = PENDING_ICON;
                             break;
@@ -472,15 +471,15 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
                     }
                 }
             } else { // IN message
-                if (!mValue.getCoderStatus().getErrors().isEmpty()) {
+                if (!value.getCoderStatus().getErrors().isEmpty()) {
                     statusIcon = WARNING_ICON;
                 }
             }
             mStatusIconLabel.setIcon(statusIcon);
 
             // encryption icon
-            Coder.Encryption enc = mValue.getCoderStatus().getEncryption();
-            Coder.Signing sign = mValue.getCoderStatus().getSigning();
+            Coder.Encryption enc = value.getCoderStatus().getEncryption();
+            Coder.Signing sign = value.getCoderStatus().getSigning();
             boolean noSecurity = enc == Coder.Encryption.NOT && sign == Coder.Signing.NOT;
             boolean fullSecurity = enc == Coder.Encryption.DECRYPTED &&
                     ((isOut && sign == Coder.Signing.SIGNED) ||
@@ -501,8 +500,8 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
                     secStat = Tr.tr("Delivered:");
                     statusDate = deliveredDate;
                 } else {
-                    statusDate = mValue.getServerDate().orElse(null);
-                    switch (mValue.getStatus()) {
+                    statusDate = value.getServerDate().orElse(null);
+                    switch (value.getStatus()) {
                         case PENDING:
                             break;
                         case SENT:
@@ -516,7 +515,7 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
                             secStat = Tr.tr("Error report:");
                             break;
                         default:
-                            LOGGER.warning("unexpected msg status: "+mValue.getStatus());
+                            LOGGER.warning("unexpected msg status: "+value.getStatus());
                     }
                 }
 
@@ -524,16 +523,16 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
                         Utils.MID_DATE_FORMAT.format(statusDate) :
                         null;
 
-                String create = Utils.MID_DATE_FORMAT.format(mValue.getDate());
+                String create = Utils.MID_DATE_FORMAT.format(value.getDate());
                 if (!create.equals(status))
                     html += Tr.tr("Created:")+ " " + create + "<br>";
 
                 if (status != null && secStat != null)
                     html += secStat + " " + status + "<br>";
             } else { // IN message
-                Date receivedDate = mValue.getDate();
+                Date receivedDate = value.getDate();
                 String rec = Utils.MID_DATE_FORMAT.format(receivedDate);
-                Date sentDate = mValue.getServerDate().orElse(null);
+                Date sentDate = value.getServerDate().orElse(null);
                 if (sentDate != null) {
                     String sent = Utils.MID_DATE_FORMAT.format(sentDate);
                     if (!sent.equals(rec))
@@ -565,13 +564,13 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
             html += Tr.tr("Encryption")+": " + sec + "<br>";
 
             String errors = "";
-            for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
+            for (Coder.Error error: value.getCoderStatus().getErrors()) {
                 errors += error.toString() + " <br> ";
             }
             if (!errors.isEmpty())
                 html += Tr.tr("Security errors")+": " + errors;
 
-            String serverErrText = mValue.getServerError().text;
+            String serverErrText = value.getServerError().text;
             if (!serverErrText.isEmpty())
                 html += Tr.tr("Server error")+": " + serverErrText + " <br> ";
 
@@ -585,11 +584,11 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
             }
 
             // attachment / image; NOTE: loading many (big) images is very slow
-            Attachment att = mValue.getContent().getAttachment().orElse(null);
+            Attachment att = value.getContent().getAttachment().orElse(null);
             mAttPanel.setVisible(att != null);
             if (att != null) {
                 // image thumbnail preview
-                Path imagePath = mView.getControl().getImagePath(mValue).orElse(Paths.get(""));
+                Path imagePath = mView.getControl().getImagePath(value).orElse(Paths.get(""));
                 mAttPanel.setImage(imagePath);
 
                 // link to the file

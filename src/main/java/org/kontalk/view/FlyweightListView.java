@@ -22,13 +22,9 @@ import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.table.WebTable;
 import com.alee.laf.table.renderers.WebTableCellRenderer;
-import com.alee.managers.language.data.TooltipWay;
-import com.alee.managers.tooltip.TooltipManager;
 import com.alee.managers.tooltip.WebCustomTooltip;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -45,8 +41,6 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.AbstractCellEditor;
 import javax.swing.JTable;
 import javax.swing.RowFilter;
@@ -68,10 +62,10 @@ import javax.swing.table.TableRowSorter;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V extends Observable> extends WebTable implements Observer {
-    private static final Logger LOGGER = Logger.getLogger(FlyweightListView.class.getName());
+abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V extends Observable>
+        extends WebTable implements Observer {
 
-    protected enum Change{
+    protected enum Change {
         TIMER
     };
 
@@ -140,7 +134,6 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         this.setDefaultRenderer(Item.class, new TableRenderer());
 
         // use custom editor (for mouse interaction)
-        // TODO
         this.setDefaultEditor(FlyweightListView.Item.class, new TableEditor());
 
         // actions triggered by selection
@@ -331,35 +324,6 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
     }
 
-    // TODO
-    private void showTooltip(Item item) {
-        String text = item.getTooltipText();
-        if (text.isEmpty())
-            return;
-
-        // weblaf currently cant show tooltips for comps with table/list/...
-        // renderer, we need to set the position ourself
-        Point p = this.getMousePosition();
-        if (p == null)
-            return;
-        Rectangle rec = this.getCellRect(this.rowAtPoint(p), 0, false);
-        Point pos = new Point(rec.x + rec.width, rec.y + rec.height / 2);
-
-        if (mTip != null && pos.equals(mTip.getDisplayLocation()) && mTip.isShowing())
-            return;
-
-        if (mTip != null)
-            mTip.closeTooltip();
-
-        // TODO temporary catching for tracing bug
-        try {
-            mTip = TooltipManager.showOneTimeTooltip(this, pos, text, TooltipWay.right);
-        } catch (ArrayIndexOutOfBoundsException ex) {
-            LOGGER.log(Level.WARNING, "can't show tooltip", ex);
-            LOGGER.warning("this="+this+",pos="+pos+",text="+text);
-        }
-    }
-
     // JTabel uses this to determine the renderer/editor
     @Override
     public Class<?> getColumnClass(int column) {
@@ -392,10 +356,6 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
             mValue = value;
         }
 
-        protected String getTooltipText() {
-            return "";
-        };
-
         /**
          * Return if the content of the item contains the search string.
          * Used for filtering.
@@ -424,17 +384,6 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         }
 
         protected abstract void updateOnEDT(Object arg);
-
-        // catch the event, when a tooltip should be shown for this item and
-        // create a own one
-        // note: together with the cell renderer the tooltip can be added
-        // directly to the item, but the behaviour is buggy so we keep this
-        // TODO
-//        @Override
-//        public String getToolTipText(MouseEvent event) {
-//            FlyweightListView.this.showTooltip(this);
-//            return null;
-//        }
 
         protected void onRemove() {};
     }
