@@ -104,9 +104,11 @@ final class GroupControl {
             GroupCommand command = GroupCommand.set(subject);
             mControl.createAndSendMessage(mChat,
                     MessageContent.groupCommand(command));
-
+            onMyCommand(command);
         }
 
+        // NOTE: after we left, group members are actually unknown cause we
+        // don't get any change notifications anymmore.
         @Override
         void onLeave() {
             GroupCommand command = GroupCommand.leave();
@@ -130,8 +132,10 @@ final class GroupControl {
         public boolean beforeDelete() {
             if (!mChat.isValid())
                 return true;
+            // TODO if encryption is forced for one member but there is no key,
+            // chat cannot be deleted
 
-            // note: group chats are not 'deleted', were just leaving them
+            // NOTE: group chats are not deleted remotely, were just leaving them
             return mControl.createAndSendMessage(mChat,
                     MessageContent.groupCommand(GroupCommand.leave()));
         }
