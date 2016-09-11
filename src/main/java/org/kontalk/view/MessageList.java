@@ -93,7 +93,11 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
     private Optional<Background> mBackground = Optional.empty();
 
     MessageList(View view, ChatView chatView, Chat chat) {
-        super(view, new MessageListFlyWeightItem(view), false);
+        // render and editor item are equal (but not the same!)
+        super(view,
+                new MessageListFlyWeightItem(view),
+                new MessageListFlyWeightItem(view),
+                false);
         mChatView = chatView;
         mChat = chat;
 

@@ -80,8 +80,10 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
     private final TableRowSorter<DefaultTableModel> mRowSorter;
     /** Map synced with model for faster access. */
     private final Map<V, I> mItems = new HashMap<>();
-    /** Flyweight item that is used by CellRenderer and CellEditor. */
+    /** Flyweight item that is used by cell renderer. */
     private final FlyweightItem mRenderItem;
+    /** Flyweight item that is used by cell editor. */
+    private final FlyweightItem mEditorItem;
     private final Timer mTimer;
 
     /** The current search string. */
@@ -91,7 +93,9 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    FlyweightListView(View view, FlyweightItem renderItem, boolean activateTimer) {
+    FlyweightListView(View view,
+            FlyweightItem renderItem, FlyweightItem editorItem,
+            boolean activateTimer) {
         mView = view;
 
         // model
@@ -123,6 +127,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         this.setRowSorter(mRowSorter);
 
         mRenderItem = renderItem;
+        mEditorItem = editorItem;
 
         // hide header
         this.setTableHeader(null);
@@ -136,7 +141,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
 
         // use custom editor (for mouse interaction)
         // TODO
-        //this.setDefaultEditor(FlyweightListView.Item.class, new FlyweightTableEditor());
+        this.setDefaultEditor(FlyweightListView.Item.class, new TableEditor());
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -449,13 +454,12 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         public Component getTableCellRendererComponent(JTable table,
                 Object value, boolean isSelected, boolean hasFocus,
                 int row, int column) {
-            return updateFlyweight(table, value, row);
+            return updateFlyweight(mRenderItem, table, value, row);
         }
     }
 
     // needed for correct mouse behaviour for components in items
     // (and breaks selection behaviour somehow)
-    // TODO
     private class TableEditor extends AbstractCellEditor implements TableCellEditor {
         private FlyweightListView<?, ?>.Item mValue;
         @Override
@@ -465,27 +469,28 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
                 int row,
                 int column) {
             mValue = (FlyweightListView.Item) value;
-            //return mValue;
-            return null;
+            return updateFlyweight(mEditorItem, table, value, row);
         }
         @Override
         public Object getCellEditorValue() {
+            // no idea what this is used for
             return mValue;
         }
     }
 
     // NOTE: table and value can be NULL
     @SuppressWarnings("unchecked")
-    private FlyweightItem updateFlyweight(JTable table, Object value, int row) {
-        Item item = (Item) value;
+    private static FlyweightItem updateFlyweight(FlyweightItem item,
+            JTable table, Object value, int row) {
+        FlyweightListView.Item valueItem = (FlyweightListView.Item) value;
         // hopefully return value is not used
-        if (table == null || item == null) {
-            return mRenderItem;
+        if (table == null || valueItem == null) {
+            return item;
         }
 
-        mRenderItem.render(item.mValue, table.getWidth());
+        item.render(valueItem.mValue, table.getWidth());
 
-        int height = Math.max(table.getRowHeight(), mRenderItem.getPreferredSize().height);
+        int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
         // view item needs a little more then it preferres
         height += 1;
         if (height != table.getRowHeight(row)) {
@@ -493,6 +498,6 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
             table.setRowHeight(row, height);
         }
 
-        return mRenderItem;
+        return item;
     }
 }
