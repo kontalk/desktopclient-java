@@ -73,7 +73,7 @@ import org.kontalk.view.ComponentUtils.AttachmentPanel;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMessage> {
+final class MessageList extends FlyweightListView<KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
@@ -155,21 +155,16 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
             mChatView.setScrolling();
     }
 
-    @Override
-    protected MessageItem newItem(KonMessage value) {
-        return new MessageItem(value);
-    }
-
     private void setBackground(Chat.ViewSettings s) {
         // simply overwrite
         mBackground = mChatView.createBG(s);
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(MessageItem item) {
+    protected WebPopupMenu rightClickMenu(KonMessage item) {
         WebPopupMenu menu = new WebPopupMenu();
 
-        final KonMessage m = item.mValue;
+        final KonMessage m = item;
         if (m instanceof InMessage) {
             InMessage im = (InMessage) m;
             if (m.isEncrypted()) {
@@ -216,32 +211,6 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
         menu.add(cItem);
 
         return menu;
-    }
-
-    /**
-     * View item for one message.
-     */
-    final class MessageItem extends FlyweightListView<MessageItem, KonMessage>.Item {
-
-        MessageItem(KonMessage message) {
-            super(message);
-
-            for (Transmission t: mValue.getTransmissions()) {
-                t.getContact().addObserver(this);
-            }
-        }
-
-        @Override
-        protected void updateOnEDT(Object arg) {
-            // TODO render again or tablemodellistener?
-        }
-
-        @Override
-        protected void onRemove() {
-            for (Transmission t: mValue.getTransmissions()) {
-                t.getContact().deleteObserver(this);
-            }
-        }
     }
 
     /**
@@ -629,12 +598,12 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
         }
     }
 
-    private static Comparator<MessageItem> comparator() {
-        return new Comparator<MessageItem>() {
+    private static Comparator<KonMessage> comparator() {
+        return new Comparator<KonMessage>() {
             @Override
-            public int compare(MessageItem o1, MessageItem o2) {
-                int idComp = Integer.compare(o1.mValue.getID(), o2.mValue.getID());
-                int dateComp = o1.mValue.getDate().compareTo(o2.mValue.getDate());
+            public int compare(KonMessage o1, KonMessage o2) {
+                int idComp = Integer.compare(o1.getID(), o2.getID());
+                int dateComp = o1.getDate().compareTo(o2.getDate());
                 return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
             }
         };

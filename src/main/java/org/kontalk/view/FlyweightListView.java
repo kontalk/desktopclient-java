@@ -30,11 +30,11 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -61,21 +61,19 @@ import org.kontalk.misc.Searchable;
  * Implemented as table with one column.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
- * @param <I> the view item in this list
- * @param <V> the value of one view item
+ * @param <V> the (model) value of one item in the list
  */
-abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V extends Observable & Searchable>
+abstract class FlyweightListView<V extends Observable & Searchable>
         extends WebTable implements Observer {
 
     protected enum Change {
         TIMER
     };
 
+    private final Class mVClass;
     protected final View mView;
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
-    /** Map synced with model for faster access. */
-    private final Map<V, I> mItems = new HashMap<>();
     /** Flyweight item that is used by cell renderer. */
     private final FlyweightItem mRenderItem;
     /** Flyweight item that is used by cell editor. */
@@ -91,8 +89,12 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
     @SuppressWarnings("unchecked")
     FlyweightListView(View view,
             FlyweightItem renderItem, FlyweightItem editorItem,
-            Comparator<I> comparator,
+            Comparator<V> comparator,
             boolean activateTimer) {
+        // damn Java
+        mVClass = (Class<V>) ((ParameterizedType) getClass()
+                .getGenericSuperclass()).getActualTypeArguments()[0];
+
         mView = view;
 
         // model
@@ -117,8 +119,8 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         RowFilter<DefaultTableModel, Integer> rowFilter = new RowFilter<DefaultTableModel, Integer>() {
         @Override
         public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-                I i = (I) entry.getValue(0);
-                return i.mValue.contains(mSearch);
+                V v = (V) entry.getValue(0);
+                return v.contains(mSearch);
             }
         };
         mRowSorter.setRowFilter(rowFilter);
@@ -135,10 +137,10 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         this.setShowVerticalLines(false);
 
         // use custom renderer
-        this.setDefaultRenderer(Item.class, new TableRenderer());
+        this.setDefaultRenderer(mVClass, new TableRenderer());
 
         // use custom editor (for mouse interaction)
-        this.setDefaultEditor(FlyweightListView.Item.class, new TableEditor());
+        this.setDefaultEditor(mVClass, new TableEditor());
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -216,73 +218,67 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         }
     }
 
-    private void showPopupMenu(MouseEvent e, I item) {
+    private void showPopupMenu(MouseEvent e, V item) {
         WebPopupMenu menu = this.rightClickMenu(item);
         menu.show(this, e.getX(), e.getY());
     }
 
     protected void selectionChanged(Optional<V> value){};
 
-    protected abstract WebPopupMenu rightClickMenu(I item);
+    protected abstract WebPopupMenu rightClickMenu(V item);
 
     @SuppressWarnings("unchecked")
     protected boolean sync(Set<V> values) {
+        Set<V> items = new HashSet<>();
         // remove old
         for (int i=0; i < mModel.getRowCount(); i++) {
-            I item = (I) mModel.getValueAt(i, 0);
-            if (!values.contains(item.mValue)) {
-                item.onRemove();
-                item.mValue.deleteObserver(item);
+            V item = (V) mModel.getValueAt(i, 0);
+            if (!values.contains(item)) {
+                item.deleteObserver(this);
                 mModel.removeRow(i);
                 i--;
-                mItems.remove(item.mValue);
+            } else {
+                items.add(item);
             }
         }
+
         // add new
         boolean added = false;
         for (V v: values) {
-            if (!mItems.containsKey(v)) {
-                I item = this.newItem(v);
-                item.mValue.addObserver(item);
-                mItems.put(item.mValue, item);
-                mModel.addRow(new Object[]{item});
+            if (!items.contains(v)) {
+                mModel.addRow(new Object[]{v});
+                v.addObserver(this);
                 added = true;
             }
         }
         return added;
     }
 
-    protected abstract I newItem(V value);
-
-    @SuppressWarnings("unchecked")
-    protected I getDisplayedItemAt(int i) {
-        return (I) mModel.getValueAt(mRowSorter.convertRowIndexToModel(i), 0);
-    }
-
     protected void clearItems() {
-        for (Item i : mItems.values()) {
-            i.mValue.deleteObserver(i);
-        }
         mModel.setRowCount(0);
-        mItems.clear();
     }
 
     @SuppressWarnings("unchecked")
-    protected I getSelectedItem() {
-        return (I) mModel.getValueAt(mRowSorter.convertRowIndexToModel(this.getSelectedRow()), 0);
+    protected V getDisplayedItemAt(int i) {
+        return (V) mModel.getValueAt(mRowSorter.convertRowIndexToModel(i), 0);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected V getSelectedItem() {
+        return (V) mModel.getValueAt(mRowSorter.convertRowIndexToModel(this.getSelectedRow()), 0);
     }
 
     protected Optional<V> getSelectedValue() {
         if (this.getSelectedRow() == -1)
             return Optional.empty();
-        return Optional.of(this.getSelectedItem().mValue);
+        return Optional.of(this.getSelectedItem());
     }
 
     /** Resets filtering and selects the item containing the value specified. */
     void setSelectedItem(V value) {
         this.filterItems("");
         for (int i=0; i< mModel.getRowCount(); i++) {
-            if (this.getDisplayedItemAt(i).mValue == value) {
+            if (this.getDisplayedItemAt(i) == value) {
                 this.setSelectedItem(i);
                 break;
             }
@@ -314,8 +310,9 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
     @SuppressWarnings("unchecked")
     private void timerUpdate() {
         for (int i = 0; i < mModel.getRowCount(); i++) {
-            I item = (I) mModel.getValueAt(i, 0);
-            item.update(null, Change.TIMER);
+            V item = (V) mModel.getValueAt(i, 0);
+            // TODO
+            //item.update(null, Change.TIMER);
         }
     }
 
@@ -331,7 +328,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
     // JTabel uses this to determine the renderer/editor
     @Override
     public Class<?> getColumnClass(int column) {
-        return Item.class;
+        return mVClass;
     }
 
     @Override
@@ -348,43 +345,10 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         });
     }
 
+    // TODO update items
     abstract protected void updateOnEDT(Object arg);
 
     protected void onRenameEvent() {}
-
-    abstract class Item implements Observer {
-
-        protected final V mValue;
-
-        protected Item(V value) {
-            mValue = value;
-        }
-
-        @Override
-        public void update(Observable o, final Object arg) {
-            if (SwingUtilities.isEventDispatchThread()) {
-                this.update(arg);
-                return;
-            }
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    Item.this.update(arg);
-                }
-            });
-        }
-
-        private void update(Object arg) {
-            this.updateOnEDT(arg);
-
-            //mModel.fireTableCellUpdated(?, 0);
-            FlyweightListView.this.repaint();
-        }
-
-        protected abstract void updateOnEDT(Object arg);
-
-        protected void onRemove() {};
-    }
 
     /** Render component used as flyweight object.
      * Each table has only one render item.
@@ -408,14 +372,14 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
     // needed for correct mouse behaviour for components in items
     // (and breaks selection behaviour somehow)
     private class TableEditor extends AbstractCellEditor implements TableCellEditor {
-        private FlyweightListView<?, ?>.Item mValue;
+        private V mValue;
         @Override
         public Component getTableCellEditorComponent(JTable table,
                 Object value,
                 boolean isSelected,
                 int row,
                 int column) {
-            mValue = (FlyweightListView.Item) value;
+            mValue = (V) value;
             return updateFlyweight(mEditorItem, table, value, row);
         }
         @Override
@@ -427,15 +391,15 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
 
     // NOTE: table and value can be NULL
     @SuppressWarnings("unchecked")
-    private static FlyweightItem updateFlyweight(FlyweightItem item,
+    private FlyweightItem updateFlyweight(FlyweightItem item,
             JTable table, Object value, int row) {
-        FlyweightListView.Item valueItem = (FlyweightListView.Item) value;
+        V valueItem = (V) value;
         // hopefully return value is not used
         if (table == null || valueItem == null) {
             return item;
         }
 
-        item.render(valueItem.mValue, table.getWidth());
+        item.render(valueItem, table.getWidth());
 
         int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
         // view item needs a little more then it preferres
