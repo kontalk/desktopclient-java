@@ -35,6 +35,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -97,6 +98,7 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
         super(view,
                 new MessageListFlyWeightItem(view),
                 new MessageListFlyWeightItem(view),
+                comparator(),
                 false);
         mChatView = chatView;
         mChat = chat;
@@ -239,13 +241,6 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
             for (Transmission t: mValue.getTransmissions()) {
                 t.getContact().deleteObserver(this);
             }
-        }
-
-        @Override
-        public int compareTo(Item o) {
-            int idComp = Integer.compare(mValue.getID(), o.mValue.getID());
-            int dateComp = mValue.getDate().compareTo(mValue.getDate());
-            return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
         }
     }
 
@@ -632,6 +627,17 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
                     ComponentOrientation.LEFT_TO_RIGHT:
                     ComponentOrientation.RIGHT_TO_LEFT);
         }
+    }
+
+    private static Comparator<MessageItem> comparator() {
+        return new Comparator<MessageItem>() {
+            @Override
+            public int compare(MessageItem o1, MessageItem o2) {
+                int idComp = Integer.compare(o1.mValue.getID(), o2.mValue.getID());
+                int dateComp = o1.mValue.getDate().compareTo(o2.mValue.getDate());
+                return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
+            }
+        };
     }
 
     private static String getFromString(InMessage message) {

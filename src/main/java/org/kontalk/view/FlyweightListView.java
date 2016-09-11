@@ -31,6 +31,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionListener;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,6 +91,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
     @SuppressWarnings("unchecked")
     FlyweightListView(View view,
             FlyweightItem renderItem, FlyweightItem editorItem,
+            Comparator<I> comparator,
             boolean activateTimer) {
         mView = view;
 
@@ -105,6 +107,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
 
         // sorter
         mRowSorter = new TableRowSorter<>(mModel);
+        mRowSorter.setComparator(0, comparator);
         List<RowSorter.SortKey> sortKeys = new ArrayList<>();
         sortKeys.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
         mRowSorter.setSortKeys(sortKeys);
@@ -349,7 +352,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
 
     protected void onRenameEvent() {}
 
-    abstract class Item implements Observer, Comparable<Item> {
+    abstract class Item implements Observer {
 
         protected final V mValue;
 
