@@ -64,8 +64,6 @@ import javax.swing.table.TableRowSorter;
  * A generic list view for subclassing.
  * Implemented as table with one column.
  *
- * TODO make me flyweight
- *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  * @param <I> the view item in this list
  * @param <V> the value of one view item
@@ -73,17 +71,17 @@ import javax.swing.table.TableRowSorter;
 abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V extends Observable> extends WebTable implements Observer {
     private static final Logger LOGGER = Logger.getLogger(FlyweightListView.class.getName());
 
-    protected final View mView;
-
     protected enum Change{
         TIMER
     };
 
+    protected final View mView;
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
     /** Map synced with model for faster access. */
     private final Map<V, I> mItems = new HashMap<>();
-
+    /** Flyweight item that is used by CellRenderer and CellEditor. */
+    private final FlyweightItem mRenderItem;
     private final Timer mTimer;
 
     /** The current search string. */
@@ -93,7 +91,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    FlyweightListView(View view, boolean activateTimer) {
+    FlyweightListView(View view, FlyweightItem renderItem, boolean activateTimer) {
         mView = view;
 
         // model
@@ -124,6 +122,8 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         mRowSorter.setRowFilter(rowFilter);
         this.setRowSorter(mRowSorter);
 
+        mRenderItem = renderItem;
+
         // hide header
         this.setTableHeader(null);
 
@@ -134,8 +134,9 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         // use custom renderer
         this.setDefaultRenderer(Item.class, new TableRenderer());
 
-        // use custom editor (for mouse events)
-        this.setDefaultEditor(FlyweightListView.Item.class, new TableEditor());
+        // use custom editor (for mouse interaction)
+        // TODO
+        //this.setDefaultEditor(FlyweightListView.Item.class, new FlyweightTableEditor());
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -325,6 +326,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
     }
 
+    // TODO
     private void showTooltip(Item item) {
         String text = item.getTooltipText();
         if (text.isEmpty())
@@ -353,7 +355,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         }
     }
 
-    // JTabel uses this to determine the renderer
+    // JTabel uses this to determine the renderer/editor
     @Override
     public Class<?> getColumnClass(int column) {
         return Item.class;
@@ -377,16 +379,13 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
 
     protected void onRenameEvent() {}
 
-    abstract class Item extends WebPanel implements Observer, Comparable<Item> {
+    abstract class Item implements Observer, Comparable<Item> {
 
         protected final V mValue;
 
         protected Item(V value) {
             mValue = value;
         }
-
-        /** Set internal properties before rendering this item. */
-        abstract protected void render(int tableWidth, boolean isSelected);
 
         protected String getTooltipText() {
             return "";
@@ -425,46 +424,38 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         // create a own one
         // note: together with the cell renderer the tooltip can be added
         // directly to the item, but the behaviour is buggy so we keep this
-        @Override
-        public String getToolTipText(MouseEvent event) {
-            FlyweightListView.this.showTooltip(this);
-            return null;
-        }
+        // TODO
+//        @Override
+//        public String getToolTipText(MouseEvent event) {
+//            FlyweightListView.this.showTooltip(this);
+//            return null;
+//        }
 
         protected void onRemove() {};
     }
 
+    /** Render component used as flyweight object.
+     * Each table has only one render item.
+     */
+    abstract static class FlyweightItem<V> extends WebPanel {
+        /** Update before painting. */
+        protected abstract void render(V value, int listWidth);
+    }
+
     private class TableRenderer extends WebTableCellRenderer {
         // return for each item (value) in the list/table the component to
-        // render - which is the item itself here
-        // NOTE: table and value can be NULL
+        // render - which is the updated render item
         @Override
-        @SuppressWarnings("unchecked")
         public Component getTableCellRendererComponent(JTable table,
-                Object value,
-                boolean isSelected,
-                boolean hasFocus,
-                int row,
-                int column) {
-            Item item = (Item) value;
-            // hopefully return value is not used
-            if (table == null || item == null)
-                return item;
-
-            item.render(table.getWidth(), isSelected);
-
-            int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
-            // view item needs a little more then it preferres
-            height += 1;
-            if (height != table.getRowHeight(row))
-                // NOTE: this calls resizeAndRepaint()
-                table.setRowHeight(row, height);
-            return item;
+                Object value, boolean isSelected, boolean hasFocus,
+                int row, int column) {
+            return updateFlyweight(table, value, row);
         }
     }
 
     // needed for correct mouse behaviour for components in items
     // (and breaks selection behaviour somehow)
+    // TODO
     private class TableEditor extends AbstractCellEditor implements TableCellEditor {
         private FlyweightListView<?, ?>.Item mValue;
         @Override
@@ -474,11 +465,34 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
                 int row,
                 int column) {
             mValue = (FlyweightListView.Item) value;
-            return mValue;
+            //return mValue;
+            return null;
         }
         @Override
         public Object getCellEditorValue() {
             return mValue;
         }
+    }
+
+    // NOTE: table and value can be NULL
+    @SuppressWarnings("unchecked")
+    private FlyweightItem updateFlyweight(JTable table, Object value, int row) {
+        Item item = (Item) value;
+        // hopefully return value is not used
+        if (table == null || item == null) {
+            return mRenderItem;
+        }
+
+        mRenderItem.render(item.mValue, table.getWidth());
+
+        int height = Math.max(table.getRowHeight(), mRenderItem.getPreferredSize().height);
+        // view item needs a little more then it preferres
+        height += 1;
+        if (height != table.getRowHeight(row)) {
+            // NOTE: this calls resizeAndRepaint()
+            table.setRowHeight(row, height);
+        }
+
+        return mRenderItem;
     }
 }

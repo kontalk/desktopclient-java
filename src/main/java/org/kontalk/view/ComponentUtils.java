@@ -809,16 +809,16 @@ final class ComponentUtils {
 
             mImagePath = path;
             // file should be present and should be an image, show it
+            // TODO we can't do this async anymore
             ImageLoader.setImageIconAsync(mAttLabel, mImagePath);
         }
 
         void setStatus(String text) {
-            mStatus.setText(Tr.tr("Attachment:") + " " + text);
+            mStatus.setText(text);
         }
 
         void setLink(String text, Path linkPath) {
             mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
-            mStatus.setText("");
         }
     }
 
