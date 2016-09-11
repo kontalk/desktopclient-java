@@ -235,19 +235,6 @@ final class MessageList extends FlyweightListView<MessageList.MessageItem, KonMe
         }
 
         @Override
-        protected boolean contains(String search) {
-            if (mValue.getContent().getText().toLowerCase().contains(search))
-                return true;
-            for (Transmission t: mValue.getTransmissions()) {
-                if (t.getContact().getName().toLowerCase().contains(search) ||
-                        t.getContact().getJID().string().toLowerCase().contains(search))
-                    return true;
-            }
-
-            return false;
-        }
-
-        @Override
         protected void onRemove() {
             for (Transmission t: mValue.getTransmissions()) {
                 t.getContact().deleteObserver(this);

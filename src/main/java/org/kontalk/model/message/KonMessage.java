@@ -37,6 +37,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.persistence.Database;
 import org.kontalk.crypto.Coder;
+import org.kontalk.misc.Searchable;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.message.MessageContent.Preview;
@@ -47,7 +48,7 @@ import org.kontalk.util.EncodingUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public abstract class KonMessage extends Observable {
+public abstract class KonMessage extends Observable implements Searchable {
     private static final Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
@@ -292,6 +293,15 @@ public abstract class KonMessage extends Observable {
         hash = 17 * hash + Objects.hashCode(this.mChat);
         hash = 17 * hash + Objects.hashCode(this.mXMPPID);
         return hash;
+    }
+
+    @Override
+    public boolean contains(String search) {
+        if (mContent.getText().toLowerCase().contains(search))
+            return true;
+        return this.getTransmissions().stream()
+                .anyMatch(t -> t.getContact().getName().toLowerCase().contains(search) ||
+                        t.getContact().getJID().string().toLowerCase().contains(search));
     }
 
     @Override

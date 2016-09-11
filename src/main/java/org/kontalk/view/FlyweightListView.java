@@ -53,6 +53,7 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableRowSorter;
+import org.kontalk.misc.Searchable;
 
 /**
  * A generic list view for subclassing.
@@ -62,7 +63,7 @@ import javax.swing.table.TableRowSorter;
  * @param <I> the view item in this list
  * @param <V> the value of one view item
  */
-abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V extends Observable>
+abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V extends Observable & Searchable>
         extends WebTable implements Observer {
 
     protected enum Change {
@@ -114,7 +115,7 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         @Override
         public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
                 I i = (I) entry.getValue(0);
-                return i.contains(mSearch);
+                return i.mValue.contains(mSearch);
             }
         };
         mRowSorter.setRowFilter(rowFilter);
@@ -355,12 +356,6 @@ abstract class FlyweightListView<I extends FlyweightListView<I, V>.Item, V exten
         protected Item(V value) {
             mValue = value;
         }
-
-        /**
-         * Return if the content of the item contains the search string.
-         * Used for filtering.
-         */
-        protected abstract boolean contains(String search);
 
         @Override
         public void update(Observable o, final Object arg) {
