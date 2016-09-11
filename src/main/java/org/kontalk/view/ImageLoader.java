@@ -22,6 +22,8 @@ import com.alee.extended.label.WebLinkLabel;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.ImageIcon;
 import javax.swing.SwingUtilities;
 import org.kontalk.system.AttachmentManager;
@@ -33,6 +35,8 @@ import org.kontalk.util.MediaUtils;
  */
 class ImageLoader {
 
+    private static final Map<Path, ImageIcon> CACHE = new HashMap<>();
+
     private ImageLoader() {}
 
     // TODO Swing + async == a damn mess
@@ -41,6 +45,23 @@ class ImageLoader {
         // TODO all at once? queue not that good either
         //new Chat(run).start();
         run.run();
+    }
+
+    static ImageIcon imageIcon(Path path) {
+        if (CACHE.containsKey(path))
+            return CACHE.get(path);
+
+        ImageIcon imageIcon = load(path);
+        CACHE.put(path, imageIcon);
+        return imageIcon;
+    }
+
+    private static ImageIcon load(Path path) {
+        return new ImageIcon(
+                MediaUtils.scale(
+                        MediaUtils.readImage(path),
+                        AttachmentManager.THUMBNAIL_DIM.width,
+                        AttachmentManager.THUMBNAIL_DIM.height));
     }
 
     private static final class AsyncLoader implements Runnable {

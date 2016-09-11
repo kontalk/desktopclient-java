@@ -809,8 +809,7 @@ final class ComponentUtils {
 
             mImagePath = path;
             // file should be present and should be an image, show it
-            // TODO we can't do this async anymore
-            ImageLoader.setImageIconAsync(mAttLabel, mImagePath);
+            mAttLabel.setIcon(ImageLoader.imageIcon(path));
         }
 
         void setStatus(String text) {
