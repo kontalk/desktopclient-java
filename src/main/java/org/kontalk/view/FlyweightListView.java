@@ -332,20 +332,28 @@ abstract class FlyweightListView<V extends Observable & Searchable>
     }
 
     @Override
-    public void update(Observable o, final Object arg) {
+    public void update(Observable o, Object arg) {
         if (SwingUtilities.isEventDispatchThread()) {
-            this.updateOnEDT(arg);
+            this.updateOnEDT(o, arg);
             return;
         }
         SwingUtilities.invokeLater(new Runnable() {
             @Override
             public void run() {
-                FlyweightListView.this.updateOnEDT(arg);
+                FlyweightListView.this.updateOnEDT(o, arg);
             }
         });
     }
 
-    // TODO update items
+    private void updateOnEDT(Observable o, Object arg) {
+        if (mVClass.isAssignableFrom(o.getClass())) {
+            // a message changed, render everything again
+            mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
+            return;
+        }
+        this.updateOnEDT(arg);
+    }
+
     abstract protected void updateOnEDT(Object arg);
 
     protected void onRenameEvent() {}
