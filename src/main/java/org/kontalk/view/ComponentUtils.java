@@ -66,7 +66,6 @@ import java.awt.event.WindowStateListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -791,7 +790,6 @@ final class ComponentUtils {
 
         private final WebLabel mStatus;
         private final WebLinkLabel mAttLabel;
-        private Path mImagePath = Paths.get("");
 
         AttachmentPanel() {
            super(View.GAP_SMALL, false);
@@ -803,13 +801,13 @@ final class ComponentUtils {
            this.add(mAttLabel);
         }
 
-        void setImage(Path path) {
-            if (path.equals(mImagePath))
+        void setImage(Optional<Path> path) {
+            if (!path.isPresent()) {
+                mAttLabel.setIcon(null);
                 return;
-
-            mImagePath = path;
+            }
             // file should be present and should be an image, show it
-            mAttLabel.setIcon(ImageLoader.imageIcon(path));
+            mAttLabel.setIcon(ImageLoader.imageIcon(path.get()));
         }
 
         void setStatus(String text) {

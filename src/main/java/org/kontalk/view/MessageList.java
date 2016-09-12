@@ -34,7 +34,6 @@ import java.awt.FlowLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
@@ -539,15 +538,14 @@ final class MessageList extends FlyweightListView<KonMessage> {
             mAttPanel.setVisible(att != null);
             if (att != null) {
                 // image thumbnail preview
-                Path imagePath = mView.getControl().getImagePath(value).orElse(Paths.get(""));
-                mAttPanel.setImage(imagePath);
+                Path imagePath = mView.getControl().getImagePath(value).orElse(null);
+                mAttPanel.setImage(Optional.ofNullable(imagePath));
 
                 // link to the file
                 Path linkPath = mView.getControl().getFilePath(att);
                 mAttPanel.setLink(
                         // if there is a preview, no link text needed
-                        !imagePath.toString().isEmpty() ?
-                                "" :linkPath.getFileName().toString(),
+                        imagePath != null ? "" : linkPath.getFileName().toString(),
                         linkPath);
 
                 // status text
