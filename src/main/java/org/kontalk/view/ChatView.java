@@ -150,8 +150,7 @@ final class ChatView extends WebPanel implements Observer {
         titlePanel.add(editButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
-        mScrollPane = new ComponentUtils.ScrollPane(this)
-                .setShadeWidth(0);
+        mScrollPane = new ComponentUtils.ScrollPane(this).setShadeWidth(0);
         mScrollPane.getVerticalScrollBar().addAdjustmentListener(new AdjustmentListener() {
             @Override
             public void adjustmentValueChanged(AdjustmentEvent e) {
@@ -264,9 +263,7 @@ final class ChatView extends WebPanel implements Observer {
         mDropHandler = new FileDropHandler();
         bottomPanel.setTransferHandler(mDropHandler);
 
-        mSplitPane = new WebSplitPane(VERTICAL_SPLIT,
-                mScrollPane,
-                bottomPanel);
+        mSplitPane = new WebSplitPane(VERTICAL_SPLIT, mScrollPane, bottomPanel);
         mSplitPane.setResizeWeight(1.0);
         mSplitPane.setDividerLocation(Config.getInstance()
                 .getInt(Config.VIEW_CHAT_SPLITTER_POS));
@@ -348,7 +345,7 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     Optional<Background> createBG(Chat.ViewSettings s) {
-        JViewport p = this.mScrollPane.getViewport();
+        JViewport p = mScrollPane.getViewport();
         if (s.getBGColor().isPresent()) {
             Color c = s.getBGColor().get();
             return Optional.of(new Background(p, c));
@@ -359,7 +356,7 @@ final class ChatView extends WebPanel implements Observer {
         }
     }
 
-    void setScrolling() {
+    void setScrollDown() {
         mScrollDown = true;
     }
 

@@ -265,7 +265,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
     @SuppressWarnings("unchecked")
     protected V getSelectedItem() {
-        return (V) mModel.getValueAt(mRowSorter.convertRowIndexToModel(this.getSelectedRow()), 0);
+        return this.getDisplayedItemAt(this.getSelectedRow());
     }
 
     protected Optional<V> getSelectedValue() {
@@ -358,9 +358,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
     protected void onRenameEvent() {}
 
-    /** Render component used as flyweight object.
-     * Each table has only one render item.
-     */
+    /** View item used as flyweight object. */
     abstract static class FlyweightItem<V> extends WebPanel {
         /** Update before painting. */
         protected abstract void render(V value, int listWidth);
@@ -379,6 +377,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
     // needed for correct mouse behaviour for components in items
     // (and breaks selection behaviour somehow)
+    @SuppressWarnings("unchecked")
     private class TableEditor extends AbstractCellEditor implements TableCellEditor {
         private V mValue;
         @Override

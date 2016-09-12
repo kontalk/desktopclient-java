@@ -149,9 +149,10 @@ final class MessageList extends FlyweightListView<KonMessage> {
 
     private void insertMessages() {
         boolean newAdded = this.sync(mChat.getMessages().getAll());
-        if (newAdded)
-            // trigger scrolling
-            mChatView.setScrolling();
+        if (newAdded) {
+            //this.scrollToRow(this.getRowCount() -1);
+            mChatView.setScrollDown();
+        }
     }
 
     private void setBackground(Chat.ViewSettings s) {
@@ -288,7 +289,6 @@ final class MessageList extends FlyweightListView<KonMessage> {
             mContentPanel.add(mAttPanel, BorderLayout.SOUTH);
             mPanel.add(mContentPanel, BorderLayout.CENTER);
 
-            // TODO make south panel obsolete
             WebPanel southPanel = new WebPanel();
             southPanel.setOpaque(false);
             mStatusPanel = new WebPanel();
@@ -306,7 +306,6 @@ final class MessageList extends FlyweightListView<KonMessage> {
             this.add(mPanel);
         }
 
-        // TODO rename mValue
         @Override
         protected void render(KonMessage value, int listWidth) {
             if (value == mLastValue)
