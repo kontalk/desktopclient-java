@@ -18,12 +18,10 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.label.WebLinkLabel;
-import java.awt.Image;
-import java.awt.image.BufferedImage;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
 import javax.swing.ImageIcon;
-import javax.swing.SwingUtilities;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.MediaUtils;
 
@@ -33,46 +31,24 @@ import org.kontalk.util.MediaUtils;
  */
 class ImageLoader {
 
+    private static final Map<Path, ImageIcon> CACHE = new HashMap<>();
+
     private ImageLoader() {}
 
-    // TODO Swing + async == a damn mess
-    static void setImageIconAsync(WebLinkLabel view, Path path) {
-        AsyncLoader run = new AsyncLoader(view, path);
-        // TODO all at once? queue not that good either
-        //new Chat(run).start();
-        run.run();
+    static ImageIcon imageIcon(Path path) {
+        if (CACHE.containsKey(path))
+            return CACHE.get(path);
+
+        ImageIcon imageIcon = load(path);
+        CACHE.put(path, imageIcon);
+        return imageIcon;
     }
 
-    private static final class AsyncLoader implements Runnable {
-
-        private final WebLinkLabel view;
-        private final Path path;
-
-        AsyncLoader(WebLinkLabel view, Path path) {
-            this.view = view;
-            this.path = path;
-        }
-
-        @Override
-        public void run() {
-            BufferedImage image = MediaUtils.readImage(path);
-            Image scaledImage = MediaUtils.scaleAsync(image,
-                    AttachmentManager.THUMBNAIL_DIM.width,
-                    AttachmentManager.THUMBNAIL_DIM.height);
-
-            if (scaledImage.getWidth(view) == -1)
-                return;
-
-            this.setOnEDT(scaledImage);
-        }
-
-        private void setOnEDT(final Image image) {
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    view.setIcon(new ImageIcon(image));
-                }
-            });
-        }
+    private static ImageIcon load(Path path) {
+        return new ImageIcon(
+                MediaUtils.scale(
+                        MediaUtils.readImage(path),
+                        AttachmentManager.THUMBNAIL_DIM.width,
+                        AttachmentManager.THUMBNAIL_DIM.height));
     }
 }
