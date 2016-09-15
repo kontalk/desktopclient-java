@@ -18,7 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.drag.FileDragAndDropHandler;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
 import com.alee.extended.panel.WebOverlay;
@@ -47,6 +46,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -58,6 +59,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 import java.io.File;
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -71,6 +73,7 @@ import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import javax.swing.JViewport;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
 import javax.swing.event.DocumentEvent;
 import org.apache.commons.io.FileUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -101,7 +104,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebLabel mTitleLabel;
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
-    private final FileDragAndDropHandler mDropHandler;
+    private final FileDropHandler mDropHandler;
     private final WebTextArea mSendTextArea;
     private final WebLabel mOverlayLabel;
     private final WebLabel mEncryptionStatus;
@@ -260,8 +263,10 @@ final class ChatView extends WebPanel implements Observer {
                 .setRound(0),
                 BorderLayout.CENTER);
 
-        mDropHandler = new FileDropHandler();
+        // old transfer handler of text area is fallback for text area
+        mDropHandler = new FileDropHandler(mSendTextArea.getTransferHandler());
         bottomPanel.setTransferHandler(mDropHandler);
+        mSendTextArea.setTransferHandler(mDropHandler);
 
         mSplitPane = new WebSplitPane(VERTICAL_SPLIT, mScrollPane, bottomPanel);
         mSplitPane.setResizeWeight(1.0);
@@ -683,15 +688,65 @@ final class ChatView extends WebPanel implements Observer {
         }
     }
 
-    final class FileDropHandler extends FileDragAndDropHandler {
+    private final class FileDropHandler extends TransferHandler {
+
+        private final TransferHandler mTextHandler;
+
+        private boolean mDropEnabled = true;
+
+        public FileDropHandler(TransferHandler textHandler) {
+            mTextHandler = textHandler;
+        }
+
+        void setDropEnabled(boolean enabled) {
+            mDropEnabled = enabled;
+        }
+
         @Override
-        public boolean filesDropped(List<File> files) {
+        public boolean canImport(TransferSupport support) {
+            if (!support.isDrop() || !mDropEnabled)
+                return false;
+
+            if (support.getComponent() == mSendTextArea
+                    && mTextHandler.canImport(support))
+                return true;
+
+            for (DataFlavor flavor : support.getDataFlavors()) {
+                if (flavor.isFlavorJavaFileListType()) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean importData(TransferHandler.TransferSupport support) {
+            if (!this.canImport(support))
+                return false;
+
+            if (support.getComponent() == mSendTextArea &&
+                    mTextHandler.importData(support)) {
+                // dropping text on text area was handled
+                return true;
+            }
+
+            List<File> files;
+            try {
+                files = (List<File>) support.getTransferable()
+                        .getTransferData(DataFlavor.javaFileListFlavor);
+            } catch (UnsupportedFlavorException | IOException ex) {
+                // should never happen (or JDK is buggy)
+                return false;
+            }
+
             for (File file: files) {
                 if (isAllowed(file)) {
                     ChatView.this.sendFile(file);
                 }
             }
-            return true;
+            return !files.isEmpty();
         }
     }
 
