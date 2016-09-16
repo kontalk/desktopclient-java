@@ -791,6 +791,8 @@ final class ComponentUtils {
         private final WebLabel mStatus;
         private final WebLinkLabel mAttLabel;
 
+        private Path mFilePath = null;
+
         AttachmentPanel() {
            super(View.GAP_SMALL, false);
 
@@ -801,21 +803,27 @@ final class ComponentUtils {
            this.add(mAttLabel);
         }
 
-        void setImage(Optional<Path> path) {
-            if (!path.isPresent()) {
-                mAttLabel.setIcon(null);
-                return;
-            }
-            // file should be present and should be an image, show it
-            mAttLabel.setIcon(ImageLoader.imageIcon(path.get()));
+        /** Set image preview. */
+        void setAttachment(Path imagePath, Path linkPath) {
+            this.setAttachment("", imagePath, linkPath);
+        }
+
+        /** Set link text. */
+        void setAttachment(String text, Path linkPath) {
+            this.setAttachment(text, null, linkPath);
+        }
+
+        private void setAttachment(String text, Path imagePath, Path linkPath) {
+            mFilePath = linkPath;
+            mAttLabel.setIcon(imagePath == null ?
+                    null :
+                    // file should be present and should be an image, show it
+                    ImageLoader.imageIcon(imagePath));
+            mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
         }
 
         void setStatus(String text) {
             mStatus.setText(text);
-        }
-
-        void setLink(String text, Path linkPath) {
-            mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
         }
     }
 

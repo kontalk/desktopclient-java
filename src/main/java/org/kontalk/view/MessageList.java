@@ -536,16 +536,12 @@ final class MessageList extends FlyweightListView<KonMessage> {
             Attachment att = value.getContent().getAttachment().orElse(null);
             mAttPanel.setVisible(att != null);
             if (att != null) {
-                // image thumbnail preview
                 Path imagePath = mView.getControl().getImagePath(value).orElse(null);
-                mAttPanel.setImage(Optional.ofNullable(imagePath));
-
-                // link to the file
                 Path linkPath = mView.getControl().getFilePath(att);
-                mAttPanel.setLink(
-                        // if there is a preview, no link text needed
-                        imagePath != null ? "" : linkPath.getFileName().toString(),
-                        linkPath);
+                if (imagePath != null)
+                    mAttPanel.setAttachment(imagePath, linkPath);
+                else
+                    mAttPanel.setAttachment(linkPath.getFileName().toString(), linkPath);
 
                 // status text
                 String statusText;
