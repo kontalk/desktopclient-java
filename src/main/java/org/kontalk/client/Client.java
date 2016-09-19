@@ -30,29 +30,30 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.jivesoftware.smack.StanzaListener;
-import org.jivesoftware.smack.roster.Roster;
-import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.IQTypeFilter;
 import org.jivesoftware.smack.filter.StanzaFilter;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
+import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
-import org.kontalk.persistence.Config;
-import org.kontalk.misc.KonException;
+import org.jivesoftware.smackx.iqlast.packet.LastActivity;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.JID;
+import org.kontalk.misc.KonException;
 import org.kontalk.model.message.OutMessage;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
@@ -167,13 +168,16 @@ public final class Client implements StanzaListener, Runnable {
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
         mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterHandler), presenceFilter);
 
+        StanzaFilter lastActivityFilter = new StanzaTypeFilter(LastActivity.class);
+        mConn.addAsyncStanzaListener(new LastActivityListener(mControl), lastActivityFilter);
+
         if (config.getBoolean(Config.NET_REQUEST_AVATARS)) {
             // our service discovery: want avatar from other users
             ServiceDiscoveryManager.getInstanceFor(mConn).
                     addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
         }
 
-        // listen to all acks
+        // listen to all ACKs
         mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
 
         // listen to all IQ errors
@@ -359,6 +363,13 @@ public final class Client implements StanzaListener, Runnable {
         message.addExtension(new ChatStateExtension(state));
 
         this.sendPacket(message);
+    }
+
+    // TODO check if feature is suppported by target server
+    public void sendLastActivityRequest(JID jid) {
+        LastActivity request = new LastActivity(jid.string());
+
+        this.sendPacket(request);
     }
 
     synchronized boolean sendPackets(Stanza[] stanzas) {

@@ -21,7 +21,6 @@ package org.kontalk.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
-import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +29,8 @@ import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.kontalk.misc.JID;
 import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -40,7 +41,7 @@ import org.kontalk.util.XMPPUtils;
  * TODO group chats need some weaker entity here: not deletable,
  * not shown in ui contact list(?), but with public key
  *
- * idea: "deletable" or / "weak" field: contact gets deleted
+ * idea: "deletable"/"weak" field: contact gets deleted
  * when no group chat exists anymore
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
@@ -190,6 +191,21 @@ public final class Contact extends Observable {
 
     public Optional<Date> getLastSeen() {
         return Optional.ofNullable(mLastSeen);
+    }
+
+    public void setLastSeen(Date lastSeen, String status) {
+        boolean save = false;
+        if (!lastSeen.equals(mLastSeen)) {
+            mLastSeen = lastSeen;
+            save = true;
+        }
+        if (!status.isEmpty() && !status.equals(mStatus)) {
+            mStatus = status;
+            save = true;
+        }
+
+        if (save)
+            this.save();
     }
 
     public boolean getEncrypted() {

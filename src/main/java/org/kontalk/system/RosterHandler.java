@@ -18,11 +18,11 @@
 
 package org.kontalk.system;
 
-import org.kontalk.persistence.Config;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
+
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
@@ -30,11 +30,12 @@ import org.kontalk.client.Client;
 import org.kontalk.client.HKPClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Contact;
-import org.kontalk.misc.JID;
 import org.kontalk.model.Contact.Subscription;
 import org.kontalk.model.Model;
+import org.kontalk.persistence.Config;
 
 /**
  * Process incoming roster and presence changes.
@@ -68,6 +69,7 @@ public final class RosterHandler {
             String name,
             RosterPacket.ItemType type,
             RosterPacket.ItemStatus itemStatus) {
+
         if (mModel.contacts().contains(jid)) {
             this.onEntryUpdate(jid, name, type, itemStatus);
             return;
@@ -113,7 +115,7 @@ public final class RosterHandler {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
-        // subcription may have changed
+        // subscription may have changed
         contact.setSubscriptionStatus(rosterToModelSubscription(itemStatus, type));
 
         // maybe subscribed now
@@ -122,6 +124,10 @@ public final class RosterHandler {
         // name may have changed
         if (contact.getName().isEmpty() && !name.equals(jid.local()))
             contact.setName(name);
+
+        // TODO too often?
+        if (contact.getSubScription() == Subscription.SUBSCRIBED)
+            mClient.sendLastActivityRequest(contact.getJID());
     }
 
     public void onSubscriptionRequest(JID jid, byte[] rawKey) {
@@ -154,8 +160,7 @@ public final class RosterHandler {
 
         if (type == Presence.Type.available) {
             contact.setOnlineStatus(Contact.Online.YES);
-        }
-        if (type == Presence.Type.unavailable) {
+        } else if (type == Presence.Type.unavailable) {
             contact.setOnlineStatus(Contact.Online.NO);
         }
 
