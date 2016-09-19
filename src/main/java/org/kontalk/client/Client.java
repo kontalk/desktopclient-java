@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -71,7 +72,8 @@ public final class Client implements StanzaListener, Runnable {
 
     public enum PresenceCommand {REQUEST, GRANT, DENY};
 
-    private enum Command {CONNECT, DISCONNECT};
+    // NOTE: disconnect is instantaneous, all resulting exceptions should be catched
+    private enum Command {CONNECT, LAST_ACTIVITY};
 
     private final Control mControl;
 
@@ -81,6 +83,7 @@ public final class Client implements StanzaListener, Runnable {
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
     private HTTPFileSlotRequester mSlotRequester = null;
+    private FeatureDiscovery mFeatureDiscovery = null;
 
     private Client(Control control, Path appDir) {
         mControl = control;
@@ -88,7 +91,7 @@ public final class Client implements StanzaListener, Runnable {
 
         mMessageSender = new KonMessageSender(this);
 
-        // enable Smack debugging (print raw XML packet)
+        // enable Smack debugging (print raw XML packets)
         //SmackConfiguration.DEBUG = true;
 
         mFeatures = new EnumMap<>(FeatureDiscovery.Feature.class);
@@ -184,8 +187,7 @@ public final class Client implements StanzaListener, Runnable {
         mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
 
         // continue async
-        List<?> args = new ArrayList<>(0);
-        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.CONNECT, args));
+        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.CONNECT, new ArrayList<>(0)));
     }
 
     private void connectAsync() {
@@ -213,8 +215,10 @@ public final class Client implements StanzaListener, Runnable {
             }
         }
 
+        mFeatureDiscovery = new FeatureDiscovery(mConn);
+
         mFeatures.clear();
-        mFeatures.putAll(FeatureDiscovery.discover(mConn));
+        mFeatures.putAll(mFeatureDiscovery.getServerFeatures());
 
         mSlotRequester = mFeatures.containsKey(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD) ?
                 new HTTPFileSlotRequester(mConn,
@@ -268,13 +272,10 @@ public final class Client implements StanzaListener, Runnable {
         this.newStatus(Control.Status.CONNECTED);
     }
 
-
     public void disconnect() {
-        synchronized (this) {
-            if (mConn != null && mConn.isConnected()) {
-                this.newStatus(Control.Status.DISCONNECTING);
-                mConn.disconnect();
-            }
+        if (mConn != null && mConn.isConnected()) {
+            this.newStatus(Control.Status.DISCONNECTING);
+            mConn.disconnect();
         }
     }
 
@@ -365,10 +366,23 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(message);
     }
 
-    // TODO check if feature is suppported by target server
     public void sendLastActivityRequest(JID jid) {
-        LastActivity request = new LastActivity(jid.string());
+        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.LAST_ACTIVITY, Arrays.asList(jid)));
+    }
 
+    private void sendLastActivityRequestAsync(JID jid) {
+        if (mFeatureDiscovery == null) {
+            LOGGER.warning("no feature discovery");
+            return;
+        }
+
+        // blocking
+        if (!mFeatureDiscovery.getFeaturesFor(jid.domain())
+                .containsKey(FeatureDiscovery.Feature.LAST_ACTIVITY))
+            // not supported by server
+            return;
+
+        LastActivity request = new LastActivity(jid.string());
         this.sendPacket(request);
     }
 
@@ -536,8 +550,8 @@ public final class Client implements StanzaListener, Runnable {
                 case CONNECT:
                     this.connectAsync();
                     break;
-                case DISCONNECT:
-                    this.disconnect();
+                case LAST_ACTIVITY:
+                    this.sendLastActivityRequestAsync((JID) t.args.get(0));
                     break;
             }
         }
