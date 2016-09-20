@@ -17,20 +17,8 @@
  */
 package org.kontalk.view;
 
-import com.alee.extended.colorchooser.GradientData;
-import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
-import com.alee.laf.button.WebButton;
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.optionpane.WebOptionPane;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.radiobutton.WebRadioButton;
-import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.slider.WebSlider;
-import com.alee.laf.text.WebTextArea;
-import com.alee.managers.tooltip.TooltipManager;
-import com.alee.utils.swing.UnselectableButtonGroup;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -39,8 +27,20 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.util.List;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+
+import com.alee.extended.colorchooser.GradientData;
+import com.alee.extended.filechooser.WebFileChooserField;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
+import com.alee.laf.button.WebButton;
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.optionpane.WebOptionPane;
+import com.alee.laf.radiobutton.WebRadioButton;
+import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.slider.WebSlider;
+import com.alee.laf.text.WebTextArea;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.swing.UnselectableButtonGroup;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
@@ -53,7 +53,7 @@ import org.kontalk.view.ComponentUtils.MemberList;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ChatDetails extends WebPanel {
+final class ChatDetails extends ComponentUtils.PopupPanel {
 
     private static final Color DEFAULT_BG = Color.WHITE;
 
@@ -66,7 +66,7 @@ final class ChatDetails extends WebPanel {
     private final WebFileChooserField mImgChooser;
     //WebCheckBoxList mParticipantsList;
 
-    ChatDetails(View view, final ComponentUtils.ModalPopup popup, Chat chat) {
+    ChatDetails(View view, Chat chat) {
         mView = view;
         mChat = chat;
 
@@ -104,7 +104,7 @@ final class ChatDetails extends WebPanel {
                 public void actionPerformed(ActionEvent e) {
                     boolean left = ChatDetails.this.leave(groupChat);
                     if (left)
-                        popup.close();
+                        ChatDetails.this.setVisible(false);
                 }
             });
             groupPanel.add(leaveButton);
@@ -189,7 +189,7 @@ final class ChatDetails extends WebPanel {
             @Override
             public void actionPerformed(ActionEvent e) {
                 ChatDetails.this.save();
-                popup.close();
+                ChatDetails.this.setVisible(false);
             }
         });
         //this.getRootPane().setDefaultButton(saveButton);

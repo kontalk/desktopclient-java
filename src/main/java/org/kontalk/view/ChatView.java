@@ -18,25 +18,16 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
-import com.alee.extended.panel.WebOverlay;
-import com.alee.laf.button.WebButton;
-import com.alee.laf.button.WebToggleButton;
-import com.alee.laf.filechooser.WebFileChooser;
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.splitpane.WebSplitPane;
-import com.alee.laf.text.WebTextArea;
-import com.alee.laf.viewport.WebViewport;
-import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.data.TooltipWay;
-import com.alee.managers.tooltip.TooltipManager;
-import com.alee.utils.filefilter.AllFilesFilter;
-import com.alee.utils.filefilter.CustomFileFilter;
-import com.alee.utils.swing.DocumentChangeListener;
+import static javax.swing.JSplitPane.VERTICAL_SPLIT;
+import static org.kontalk.view.View.MARGIN_SMALL;
+
+import javax.swing.Box;
+import javax.swing.JFileChooser;
+import javax.swing.JViewport;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
+import javax.swing.event.DocumentEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -67,27 +58,38 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import javax.swing.Box;
-import javax.swing.JFileChooser;
-import static javax.swing.JSplitPane.VERTICAL_SPLIT;
-import javax.swing.JViewport;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.TransferHandler;
-import javax.swing.event.DocumentEvent;
+
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
+import com.alee.extended.panel.WebOverlay;
+import com.alee.laf.button.WebButton;
+import com.alee.laf.button.WebToggleButton;
+import com.alee.laf.filechooser.WebFileChooser;
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.scroll.WebScrollPane;
+import com.alee.laf.splitpane.WebSplitPane;
+import com.alee.laf.text.WebTextArea;
+import com.alee.laf.viewport.WebViewport;
+import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.hotkey.HotkeyData;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.filefilter.AllFilesFilter;
+import com.alee.utils.filefilter.CustomFileFilter;
+import com.alee.utils.swing.DocumentChangeListener;
 import org.apache.commons.io.FileUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.FeatureDiscovery;
-import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
-import org.kontalk.system.AttachmentManager;
 import org.kontalk.persistence.Config;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Control;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
-import static org.kontalk.view.View.MARGIN_SMALL;
 
 /**
  * Panel showing the currently selected chat.
@@ -115,7 +117,6 @@ final class ChatView extends WebPanel implements Observer {
 
     private final Map<Chat, MessageList> mMessageListCache = new HashMap<>();
 
-    private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
@@ -139,17 +140,17 @@ final class ChatView extends WebPanel implements Observer {
         titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubTitleLabel),
                 BorderLayout.CENTER);
 
-        final WebToggleButton editButton = new WebToggleButton(
-                Utils.getIcon("ic_ui_menu.png"));
-        //editButton.setToolTipText(Tr.tr("Edit this chat"));
+        WebToggleButton editButton = new ComponentUtils.ToggleButton(
+                Utils.getIcon("ic_ui_menu.png"),
+                Tr.tr("Edit this chat")) {
+            @Override
+            Optional<ComponentUtils.PopupPanel> getPanel() {
+                return ChatView.this.getPopupPanel();
+            }
+        };
         editButton.setTopBgColor(titlePanel.getBackground());
         editButton.setBottomBgColor(titlePanel.getBackground());
-        editButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                    ChatView.this.showPopup(editButton);
-            }
-        });
+
         titlePanel.add(editButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
@@ -489,16 +490,9 @@ final class ChatView extends WebPanel implements Observer {
                 Color.BLACK);
     }
 
-    private void showPopup(final WebToggleButton invoker) {
+    private Optional<ComponentUtils.PopupPanel> getPopupPanel() {
         Chat chat = ChatView.this.getCurrentChat().orElse(null);
-        if (chat == null)
-            return;
-        if (mPopup == null)
-            mPopup = new ComponentUtils.ModalPopup(invoker);
-
-        mPopup.removeAll();
-        mPopup.add(new ChatDetails(mView, mPopup, chat));
-        mPopup.showPopup();
+        return chat == null ? Optional.empty() : Optional.of(new ChatDetails(mView, chat));
     }
 
     private void onKeyTypeEvent(boolean empty) {

@@ -18,60 +18,6 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.image.WebDecoratedImage;
-import com.alee.extended.image.WebImage;
-import com.alee.extended.label.WebLinkLabel;
-import com.alee.extended.layout.FormLayout;
-import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
-import com.alee.laf.button.WebButton;
-import com.alee.laf.button.WebToggleButton;
-import com.alee.laf.checkbox.WebCheckBox;
-import com.alee.laf.filechooser.WebFileChooser;
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.list.WebList;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.tabbedpane.WebTabbedPane;
-import com.alee.laf.text.WebPasswordField;
-import com.alee.laf.text.WebTextField;
-import com.alee.managers.popup.PopupAdapter;
-import com.alee.managers.popup.WebPopup;
-import com.alee.managers.tooltip.TooltipManager;
-import com.alee.utils.ImageUtils;
-import com.alee.utils.SwingUtils;
-import com.alee.utils.filefilter.ImageFilesFilter;
-import com.alee.utils.swing.DocumentChangeListener;
-import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.FlowLayout;
-import java.awt.Window;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowStateListener;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
 import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -93,6 +39,61 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.PlainDocument;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowStateListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+
+import com.alee.extended.image.WebDecoratedImage;
+import com.alee.extended.image.WebImage;
+import com.alee.extended.label.WebLinkLabel;
+import com.alee.extended.layout.FormLayout;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
+import com.alee.laf.button.WebButton;
+import com.alee.laf.button.WebToggleButton;
+import com.alee.laf.checkbox.WebCheckBox;
+import com.alee.laf.filechooser.WebFileChooser;
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.list.WebList;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.scroll.WebScrollPane;
+import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.tabbedpane.WebTabbedPane;
+import com.alee.laf.text.WebPasswordField;
+import com.alee.laf.text.WebTextField;
+import com.alee.managers.popup.WebPopup;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.ImageUtils;
+import com.alee.utils.SwingUtils;
+import com.alee.utils.filefilter.ImageFilesFilter;
+import com.alee.utils.swing.DocumentChangeListener;
+import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
@@ -132,45 +133,124 @@ final class ComponentUtils {
         }
     }
 
-    static abstract class PopupPanel extends WebPanel {
+    /** A button that toggles showing a panel on click. */
+    static abstract class ToggleButton extends WebToggleButton {
 
-        abstract void onShow();
+        private ModalPopup mPopup;
 
-    }
-
-    static class ToggleButton extends WebToggleButton {
-
-        private final PopupPanel mPanel;
-        private WebPopup mPopup = new WebPopup();
-
-        ToggleButton(Icon icon, String tooltip, PopupPanel panel) {
+        ToggleButton(Icon icon, String tooltip) {
             super(icon);
-            mPanel = panel;
-            this.setShadeWidth(0).setRound(0);
             TooltipManager.addTooltip(this, tooltip);
             this.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (!mPopup.isShowing())
-                        ToggleButton.this.showAddContactPopup();
+                    //if (mPopup == null || !mPopup.isShowing())
+                        ToggleButton.this.showPopupPanel();
                 }
             });
         }
 
-        private void showAddContactPopup() {
-            mPopup = new WebPopup();
-            mPopup.setCloseOnFocusLoss(true);
-            mPopup.addPopupListener(new PopupAdapter() {
+        private void showPopupPanel() {
+            if (mPopup == null)
+                mPopup = new ComponentUtils.ModalPopup(this);
+
+            PopupPanel panel = this.getPanel().orElse(null);
+            if (panel == null)
+                return;
+
+            mPopup.removeAll();
+            panel.onShow();
+
+            for (ComponentListener cl : panel.getComponentListeners())
+                panel.removeComponentListener(cl);
+
+            panel.addComponentListener(new ComponentAdapter() {
                 @Override
-                public void popupWillBeClosed() {
-                    ToggleButton.this.doClick();
+                public void componentHidden(ComponentEvent e) {
+                    mPopup.close();
                 }
             });
-            mPanel.onShow();
-            mPopup.add(mPanel);
-            //mPopup.packPopup();
-            mPopup.showAsPopupMenu(this);
+            mPopup.add(panel);
+            mPopup.showPopup();
         }
+
+        abstract Optional<PopupPanel> getPanel();
+    }
+
+    /** A modal popup invoked by a toggle button.
+     *  Cannot be instantiated on UI start!
+     */
+    private static class ModalPopup extends WebPopup {
+
+        private final AbstractButton mInvoker;
+        private final WebPanel layerPanel;
+
+        ModalPopup(AbstractButton invokerButton) {
+            mInvoker = invokerButton;
+
+            layerPanel = new WebPanel();
+            layerPanel.setOpaque(false);
+
+            JRootPane rootPane = SwingUtils.getRootPane(mInvoker);
+            if (rootPane == null) {
+                throw new IllegalStateException("not on UI start, dummkopf!");
+            }
+            installPopupLayer(layerPanel, rootPane);
+            layerPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    ModalPopup.this.close();
+                }
+            });
+
+            this.setRequestFocusOnShow(false);
+        }
+
+        void showPopup() {
+            layerPanel.setVisible(true);
+            this.showAsPopupMenu(mInvoker);
+        }
+
+        void close() {
+            this.hidePopup();
+            mInvoker.setSelected(false);
+            layerPanel.setVisible(false);
+        }
+
+        // taken from com.alee.managers.popup.PopupManager
+        private static void installPopupLayer(final WebPanel popupLayer,
+                                              JRootPane rootPane) {
+            final JLayeredPane layeredPane = rootPane.getLayeredPane();
+            popupLayer.setBounds(0, 0, layeredPane.getWidth(), layeredPane.getHeight());
+            layeredPane.add(popupLayer, JLayeredPane.DEFAULT_LAYER);
+            layeredPane.revalidate();
+
+            layeredPane.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(final ComponentEvent e) {
+                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
+                            layeredPane.getHeight());
+                    popupLayer.revalidate();
+                }
+            });
+
+            final Window window = SwingUtils.getWindowAncestor(rootPane);
+            window.addWindowStateListener(new WindowStateListener() {
+                @Override
+                public void windowStateChanged(final WindowEvent e) {
+                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
+                            layeredPane.getHeight());
+                    popupLayer.revalidate();
+                }
+            });
+        }
+    }
+
+    /** Base class for panels shown in a modal popup invoked by a toggle button.
+     *  Popup is closed if panel visibility is set to false.
+     */
+    static class PopupPanel extends WebPanel {
+        protected void onShow() {};
     }
 
     static class AddContactPanel extends PopupPanel {
@@ -189,7 +269,7 @@ final class ComponentUtils {
         private final WebCheckBox mEncryptionBox;
         private final WebButton mSaveButton;
 
-        AddContactPanel(View view, final Component focusGainer) {
+        AddContactPanel(View view) {
             mView = view;
 
             GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
@@ -264,7 +344,7 @@ final class ComponentUtils {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     AddContactPanel.this.saveContact();
-                    focusGainer.requestFocus();
+                    AddContactPanel.this.setVisible(false);
                 }
             });
 
@@ -311,10 +391,6 @@ final class ComponentUtils {
                 }
             });
         }
-
-        @Override
-        void onShow() {
-        }
     }
 
     static class AddGroupChatPanel extends PopupPanel {
@@ -326,7 +402,7 @@ final class ComponentUtils {
 
         private final WebButton mCreateButton;
 
-        AddGroupChatPanel(View view, Model model, final Component focusGainer) {
+        AddGroupChatPanel(View view, Model model) {
             mView = view;
             mModel = model;
 
@@ -368,7 +444,7 @@ final class ComponentUtils {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     AddGroupChatPanel.this.createGroup();
-                    focusGainer.requestFocus();
+                    AddGroupChatPanel.this.setVisible(false);
                 }
             });
 
@@ -394,7 +470,7 @@ final class ComponentUtils {
         }
 
         @Override
-        void onShow() {
+        protected void onShow() {
             List<Contact> contacts = new LinkedList<>();
             for (Contact c : Utils.allContacts(mModel.contacts(), false)) {
                 if (c.isKontalkUser() && !c.isMe())
@@ -705,6 +781,7 @@ final class ComponentUtils {
 
         private void switchToLabelMode() {
             this.setText(this.labelText());
+            // layout problem here
             this.setDrawBorder(false);
             this.getTrailingComponent().setVisible(true);
         }
@@ -718,72 +795,6 @@ final class ComponentUtils {
         }
 
         protected void onFocusLost() {};
-    }
-
-    static class ModalPopup extends WebPopup {
-
-        private final AbstractButton mInvoker;
-        private final WebPanel layerPanel;
-
-        ModalPopup(AbstractButton invokerButton) {
-            mInvoker = invokerButton;
-
-            layerPanel = new WebPanel();
-            layerPanel.setOpaque(false);
-
-            JRootPane rootPane = SwingUtils.getRootPane(mInvoker);
-            if (rootPane == null) {
-                throw new IllegalStateException("not on UI start, dummkopf!");
-            }
-            installPopupLayer(layerPanel, rootPane);
-            layerPanel.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    ModalPopup.this.close();
-                }
-            });
-
-            this.setRequestFocusOnShow(false);
-        }
-
-        void showPopup() {
-            layerPanel.setVisible(true);
-            this.showAsPopupMenu(mInvoker);
-        }
-
-        void close() {
-            this.hidePopup();
-            mInvoker.setSelected(false);
-            layerPanel.setVisible(false);
-        }
-
-        // taken from com.alee.managers.popup.PopupManager
-        private static void installPopupLayer(final WebPanel popupLayer,
-                JRootPane rootPane) {
-            final JLayeredPane layeredPane = rootPane.getLayeredPane();
-            popupLayer.setBounds(0, 0, layeredPane.getWidth(), layeredPane.getHeight());
-            layeredPane.add(popupLayer, JLayeredPane.DEFAULT_LAYER);
-            layeredPane.revalidate();
-
-            layeredPane.addComponentListener(new ComponentAdapter() {
-                @Override
-                public void componentResized(final ComponentEvent e) {
-                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
-                            layeredPane.getHeight());
-                    popupLayer.revalidate();
-                }
-            });
-
-            final Window window = SwingUtils.getWindowAncestor(rootPane);
-            window.addWindowStateListener(new WindowStateListener() {
-                @Override
-                public void windowStateChanged(final WindowEvent e) {
-                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
-                            layeredPane.getHeight());
-                    popupLayer.revalidate();
-                }
-            });
-        }
     }
 
     static class AttachmentPanel extends GroupPanel {
