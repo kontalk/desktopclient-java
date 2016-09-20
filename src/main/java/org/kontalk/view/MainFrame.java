@@ -227,7 +227,7 @@ final class MainFrame extends WebFrame {
         mTabbedPane.setTabComponentAt(Tab.CHATS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
-        String contactOverlayText = Tr.tr("No contacts to display. You have no friends :(");
+        String contactOverlayText = Tr.tr("No contacts to display.");
         WebScrollPane contactPane = createTablePane(contactList, contactOverlayText);
         mAddContactButton = new ComponentUtils.ToggleButton(
                 Utils.getIcon("ic_ui_add.png"),
