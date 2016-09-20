@@ -135,6 +135,10 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         this.changed(ViewChange.MODIFIED);
     }
 
+    void onShutDown() {
+        mJIDMap.values().stream().forEach(c -> c.onShutDown());
+    }    
+
     /**
      * Return whether a contact with a specified JID exists.
      */

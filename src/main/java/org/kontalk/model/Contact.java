@@ -62,7 +62,7 @@ public final class Contact extends Observable {
     }
 
     public enum ViewChange {
-        JID, NAME, ONLINE_STATUS, KEY, BLOCKING, SUBSCRIPTION, AVATAR, DELETED
+        JID, NAME, LAST_SEEN, ONLINE_STATUS, KEY, BLOCKING, SUBSCRIPTION, AVATAR, DELETED
     }
 
     public static final String TABLE = "user";
@@ -92,17 +92,16 @@ public final class Contact extends Observable {
     private String mName;
     private String mStatus = "";
     private Date mLastSeen = null;
-    // not in database
-    private Online mOnline = Online.UNKNOWN;
+    private Online mOnline = Online.UNKNOWN; // not in database
     private boolean mEncrypted = true;
     private String mKey = "";
     private String mFingerprint = "";
     private boolean mBlocked = false;
-    // not in database
-    private Subscription mSubStatus = Subscription.UNKNOWN;
+    private Subscription mSubStatus = Subscription.UNKNOWN; // not in database
     //private ItemType mType;
     private Avatar.DefaultAvatar mAvatar = null;
     private Avatar.CustomAvatar mCustomAvatar = null;
+    private boolean mSaveOnShutdown = false;
 
     // new contact (eg from roster)
     Contact(JID jid, String name) {
@@ -194,18 +193,16 @@ public final class Contact extends Observable {
     }
 
     public void setLastSeen(Date lastSeen, String status) {
-        boolean save = false;
         if (!lastSeen.equals(mLastSeen)) {
             mLastSeen = lastSeen;
-            save = true;
+            mSaveOnShutdown = true;
+            this.changed(ViewChange.LAST_SEEN);
         }
         if (!status.isEmpty() && !status.equals(mStatus)) {
             mStatus = status;
-            save = true;
+            mSaveOnShutdown = true;
+            // notify on status change not required
         }
-
-        if (save)
-            this.save();
     }
 
     public boolean getEncrypted() {
@@ -229,7 +226,8 @@ public final class Contact extends Observable {
             return;
 
         mStatus = status;
-        this.save();
+        mSaveOnShutdown = true;
+        // notify on status change not required
     }
 
     public void setOnlineStatus(Online onlineStatus) {
@@ -239,11 +237,11 @@ public final class Contact extends Observable {
         if (onlineStatus == Online.YES ||
                 (onlineStatus == Online.NO && mOnline == Online.YES)) {
             mLastSeen = new Date();
-            this.save();
+            mSaveOnShutdown = true;
+            // notify on last_seen change not required here
         }
 
         mOnline = onlineStatus;
-
         this.changed(ViewChange.ONLINE_STATUS);
     }
 
@@ -378,6 +376,11 @@ public final class Contact extends Observable {
         return mJID.string().equals(Integer.toString(mID));
     }
 
+    void onShutDown() {
+        if (!this.isDeleted() && mSaveOnShutdown)
+            this.save();
+    }
+
     private void save() {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
@@ -389,6 +392,8 @@ public final class Contact extends Observable {
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
         set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.getID() : ""));
         Model.database().execUpdate(TABLE, set, mID);
+
+        mSaveOnShutdown = false;
     }
 
     private void changed(ViewChange change) {

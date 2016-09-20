@@ -160,6 +160,8 @@ public final class Control {
 
         mViewControl.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
                 EnumSet.noneOf(FeatureDiscovery.Feature.class)));
+
+        mModel.onShutDown();
         try {
             mDB.close();
         } catch (RuntimeException ex) {
