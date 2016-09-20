@@ -18,11 +18,7 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
+import javax.swing.Box;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
@@ -31,7 +27,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.Observer;
 import java.util.Optional;
-import javax.swing.Box;
+
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
@@ -258,6 +259,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
             if (arg == null || arg == Contact.ViewChange.SUBSCRIPTION ||
                     arg == Contact.ViewChange.ONLINE_STATUS ||
                     arg == Contact.ViewChange.BLOCKING ||
+                    arg == Contact.ViewChange.LAST_SEEN ||
                     arg == Change.TIMER) {
                 mStatusLabel.setText(Utils.mainStatus(mValue, false));
             }
