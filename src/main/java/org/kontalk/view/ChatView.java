@@ -188,6 +188,8 @@ final class ChatView extends WebPanel implements Observer {
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
         mSendTextArea.setFontSize(View.FONT_SIZE_NORMAL);
+        mSendTextArea.setInputPrompt(Tr.tr("Type to compose"));
+        mSendTextArea.setInputPromptHorizontalPosition(SwingConstants.LEFT);
         mSendTextArea.setComponentPopupMenu(Utils.createCopyMenu(true));
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
