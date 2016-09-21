@@ -106,6 +106,7 @@ public final class RosterHandler {
         mControl.getViewControl().changed(new ViewEvent.ContactDeleted(contact));
     }
 
+    // NOTE: also called for every contact in roster on every (re-)connect
     public void onEntryUpdate(JID jid,
             String name,
             RosterPacket.ItemType type,
@@ -126,7 +127,9 @@ public final class RosterHandler {
             contact.setName(name);
 
         // TODO too often?
-        if (contact.getSubScription() == Subscription.SUBSCRIBED)
+        if (contact.getSubScription() == Subscription.SUBSCRIBED &&
+                (contact.getOnline() == Contact.Online.UNKNOWN ||
+                        contact.getOnline() == Contact.Online.NO))
             mClient.sendLastActivityRequest(contact.getJID());
     }
 
