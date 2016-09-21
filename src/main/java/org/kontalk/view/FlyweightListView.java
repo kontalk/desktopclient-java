@@ -18,11 +18,18 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.table.WebTable;
-import com.alee.laf.table.renderers.WebTableCellRenderer;
-import com.alee.managers.tooltip.WebCustomTooltip;
+import javax.swing.AbstractCellEditor;
+import javax.swing.CellEditor;
+import javax.swing.JTable;
+import javax.swing.RowFilter;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableRowSorter;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.event.KeyAdapter;
@@ -42,18 +49,12 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
-import javax.swing.AbstractCellEditor;
-import javax.swing.JTable;
-import javax.swing.RowFilter;
-import javax.swing.RowFilter.Entry;
-import javax.swing.RowSorter;
-import javax.swing.SortOrder;
-import javax.swing.SwingUtilities;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellEditor;
-import javax.swing.table.TableRowSorter;
+
+import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.table.WebTable;
+import com.alee.laf.table.renderers.WebTableCellRenderer;
+import com.alee.managers.tooltip.WebCustomTooltip;
 import org.kontalk.misc.Searchable;
 
 /**
@@ -182,6 +183,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
                 if (e.isPopupTrigger()) {
                     int row = FlyweightListView.this.rowAtPoint(e.getPoint());
                     FlyweightListView.this.setSelectedItem(row);
+                    // TODO multiple items can be selected now
                     FlyweightListView.this.showPopupMenu(e, FlyweightListView.this.getSelectedItem());
                 }
             }
@@ -216,6 +218,17 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         } else {
             mTimer = null;
         }
+
+        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                // HACK, cell editing blocks item selection (item is not instantly selected on
+                // click), see https://stackoverflow.com/a/17636224
+                CellEditor cellEditor = FlyweightListView.this.getCellEditor();
+                if (cellEditor != null)
+                    cellEditor.stopCellEditing();
+            }
+        });
     }
 
     private void showPopupMenu(MouseEvent e, V item) {
@@ -345,6 +358,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         });
     }
 
+    @SuppressWarnings("unchecked")
     private void updateOnEDT(Observable o, Object arg) {
         if (mVClass.isAssignableFrom(o.getClass())) {
             // a message changed, render everything again
@@ -361,7 +375,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
     /** View item used as flyweight object. */
     abstract static class FlyweightItem<V> extends WebPanel {
         /** Update before painting. */
-        protected abstract void render(V value, int listWidth);
+        protected abstract void render(V value, int listWidth, boolean isSelected);
     }
 
     private class TableRenderer extends WebTableCellRenderer {
@@ -371,7 +385,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         public Component getTableCellRendererComponent(JTable table,
                 Object value, boolean isSelected, boolean hasFocus,
                 int row, int column) {
-            return updateFlyweight(mRenderItem, table, value, row);
+            return updateFlyweight(mRenderItem, table, value, row, isSelected);
         }
     }
 
@@ -387,7 +401,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
                 int row,
                 int column) {
             mValue = (V) value;
-            return updateFlyweight(mEditorItem, table, value, row);
+            return updateFlyweight(mEditorItem, table, value, row, isSelected);
         }
         @Override
         public Object getCellEditorValue() {
@@ -399,14 +413,14 @@ abstract class FlyweightListView<V extends Observable & Searchable>
     // NOTE: table and value can be NULL
     @SuppressWarnings("unchecked")
     private FlyweightItem updateFlyweight(FlyweightItem item,
-            JTable table, Object value, int row) {
+            JTable table, Object value, int row, boolean isSelected) {
         V valueItem = (V) value;
         // hopefully return value is not used
         if (table == null || valueItem == null) {
             return item;
         }
 
-        item.render(valueItem, table.getWidth());
+        item.render(valueItem, table.getWidth(), isSelected);
 
         int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
         // view item needs a little more then it preferres

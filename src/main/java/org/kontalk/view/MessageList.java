@@ -18,14 +18,19 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.list.UnselectableListModel;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.text.WebEditorPane;
-import com.alee.laf.text.WebTextPane;
-import com.alee.managers.tooltip.TooltipManager;
+import javax.swing.Icon;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.BoxView;
+import javax.swing.text.ComponentView;
+import javax.swing.text.Element;
+import javax.swing.text.IconView;
+import javax.swing.text.LabelView;
+import javax.swing.text.ParagraphView;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledEditorKit;
+import javax.swing.text.ViewFactory;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.ComponentOrientation;
@@ -41,23 +46,19 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.Icon;
-import javax.swing.SwingUtilities;
-import javax.swing.text.AbstractDocument;
-import javax.swing.text.BoxView;
-import javax.swing.text.ComponentView;
-import javax.swing.text.Element;
-import javax.swing.text.IconView;
-import javax.swing.text.LabelView;
-import javax.swing.text.ParagraphView;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyledEditorKit;
-import javax.swing.text.ViewFactory;
+
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.text.WebEditorPane;
+import com.alee.laf.text.WebTextPane;
+import com.alee.managers.tooltip.TooltipManager;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
-import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
@@ -102,8 +103,8 @@ final class MessageList extends FlyweightListView<KonMessage> {
         mChatView = chatView;
         mChat = chat;
 
-        // disable selection
-        this.setSelectionModel(new UnselectableListModel());
+        // allow multiple selections for "copy" action
+        this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         //this.setEditable(false);
         //this.setAutoscrolls(true);
@@ -233,13 +234,11 @@ final class MessageList extends FlyweightListView<KonMessage> {
 
         private final AttachmentPanel mAttPanel;
 
-        private KonMessage mLastValue = null;
-
         MessageListFlyWeightItem(View view) {
             mView = view;
 
-            this.setOpaque(false);
             //this.setBorder(new EmptyBorder(10, 10, 10, 10));
+            this.setBackground(View.BLUE); // seen when selected
 
             mPanel = new WebPanel(true);
             mPanel.setWebColoredBackground(false);
@@ -307,12 +306,11 @@ final class MessageList extends FlyweightListView<KonMessage> {
         }
 
         @Override
-        protected void render(KonMessage value, int listWidth) {
-            if (value == mLastValue)
-                return; // performance
-            mLastValue = value;
+        protected void render(KonMessage value, int listWidth, boolean isSelected) {
+            // background (item panel)
+            this.setOpaque(isSelected);
 
-            // background
+            // background (message panel)
             boolean hasGroupCommand = value.getContent().getGroupCommand().isPresent();
             mPanel.setBackground(hasGroupCommand ? View.LIGHT_GREEN :
                     value.isInMessage() ?
