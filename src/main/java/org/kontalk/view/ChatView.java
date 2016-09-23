@@ -22,6 +22,7 @@ import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static org.kontalk.view.View.MARGIN_SMALL;
 
 import javax.swing.Box;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JViewport;
 import javax.swing.SwingConstants;
@@ -37,6 +38,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
@@ -698,7 +700,7 @@ final class ChatView extends WebPanel implements Observer {
 
         @Override
         public boolean canImport(TransferSupport support) {
-            if (!support.isDrop() || !mDropEnabled)
+            if (support.isDrop() && !mDropEnabled)
                 return false;
 
             if (support.getComponent() == mSendTextArea
@@ -741,6 +743,11 @@ final class ChatView extends WebPanel implements Observer {
                 }
             }
             return !files.isEmpty();
+        }
+
+        @Override
+        public void exportToClipboard(JComponent comp, Clipboard clip, int action) throws IllegalStateException {
+            mTextHandler.exportToClipboard(comp, clip, action);
         }
     }
 
