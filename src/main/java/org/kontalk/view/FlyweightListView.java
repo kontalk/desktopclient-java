@@ -55,6 +55,7 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.table.WebTable;
 import com.alee.laf.table.renderers.WebTableCellRenderer;
 import com.alee.managers.tooltip.WebCustomTooltip;
+import org.apache.commons.lang.ArrayUtils;
 import org.kontalk.misc.Searchable;
 
 /**
@@ -181,9 +182,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    int row = FlyweightListView.this.rowAtPoint(e.getPoint());
-                    FlyweightListView.this.setSelectedItem(row);
-                    FlyweightListView.this.showPopupMenu(e, FlyweightListView.this.getSelectedItems());
+                    FlyweightListView.this.onPopupClick(e);
                 }
             }
             @Override
@@ -228,6 +227,15 @@ abstract class FlyweightListView<V extends Observable & Searchable>
                     cellEditor.stopCellEditing();
             }
         });
+    }
+
+    private void onPopupClick(MouseEvent e) {
+        int row = this.rowAtPoint(e.getPoint());
+
+        if (!ArrayUtils.contains(this.getSelectedRows(), row))
+            this.setSelectedItem(row);
+
+        this.showPopupMenu(e, this.getSelectedItems());
     }
 
     private void showPopupMenu(MouseEvent e, List<V> items) {
