@@ -183,8 +183,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
                 if (e.isPopupTrigger()) {
                     int row = FlyweightListView.this.rowAtPoint(e.getPoint());
                     FlyweightListView.this.setSelectedItem(row);
-                    // TODO multiple items can be selected now
-                    FlyweightListView.this.showPopupMenu(e, FlyweightListView.this.getSelectedItem());
+                    FlyweightListView.this.showPopupMenu(e, FlyweightListView.this.getSelectedItems());
                 }
             }
             @Override
@@ -231,14 +230,14 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         });
     }
 
-    private void showPopupMenu(MouseEvent e, V item) {
-        WebPopupMenu menu = this.rightClickMenu(item);
+    private void showPopupMenu(MouseEvent e, List<V> items) {
+        WebPopupMenu menu = this.rightClickMenu(items);
         menu.show(this, e.getX(), e.getY());
     }
 
     protected void selectionChanged(Optional<V> value){};
 
-    protected abstract WebPopupMenu rightClickMenu(V item);
+    protected abstract WebPopupMenu rightClickMenu(List<V> items);
 
     @SuppressWarnings("unchecked")
     protected boolean sync(Set<V> values) {
@@ -271,14 +270,26 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         mModel.setRowCount(0);
     }
 
+    protected V getDisplayedItemAt(int row) {
+        return this.getItemAtModelIndex(mRowSorter.convertRowIndexToModel(row));
+    }
+
     @SuppressWarnings("unchecked")
-    protected V getDisplayedItemAt(int i) {
-        return (V) mModel.getValueAt(mRowSorter.convertRowIndexToModel(i), 0);
+    protected V getItemAtModelIndex(int row) {
+        return (V) mModel.getValueAt(row, 0);
     }
 
     @SuppressWarnings("unchecked")
     protected V getSelectedItem() {
         return this.getDisplayedItemAt(this.getSelectedRow());
+    }
+
+    private List<V> getSelectedItems() {
+        List<V> items = new ArrayList<>();
+        for (int i : this.getSelectedRows()) {
+            items.add(this.getDisplayedItemAt(i));
+        }
+        return items;
     }
 
     protected Optional<V> getSelectedValue() {

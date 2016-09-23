@@ -18,9 +18,14 @@
 
 package org.kontalk.view;
 
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.Icon;
+import javax.swing.JComponent;
+import javax.swing.KeyStroke;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.BoxView;
 import javax.swing.text.ComponentView;
@@ -36,6 +41,8 @@ import java.awt.Color;
 import java.awt.ComponentOrientation;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.nio.file.Path;
@@ -59,6 +66,7 @@ import org.kontalk.misc.JID;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
@@ -116,6 +124,13 @@ final class MessageList extends FlyweightListView<KonMessage> {
         this.setVisible(false);
         this.updateOnEDT(null);
         this.setVisible(true);
+
+        // static menu, cannot use this
+        //this.setComponentPopupMenu(...);
+
+        // copy items to clipboard using the in-build 'copy' action, invoked by custom right-click
+        // menu or default ctrl+c shortcut
+        this.setTransferHandler(new CopyTransferHandler(mView));
     }
 
     Chat getChat() {
@@ -162,10 +177,29 @@ final class MessageList extends FlyweightListView<KonMessage> {
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(KonMessage item) {
+    protected WebPopupMenu rightClickMenu(List<KonMessage> items) {
         WebPopupMenu menu = new WebPopupMenu();
 
-        final KonMessage m = item;
+        Action copyAction = new AbstractAction(Tr.tr("Copy")) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Action copy = MessageList.this.getActionMap().get("copy");
+                ActionEvent ae = new ActionEvent(MessageList.this, ActionEvent.ACTION_PERFORMED, "");
+                copy.actionPerformed(ae);
+            }
+        };
+        copyAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
+        menu.add(copyAction);
+
+        if (items.isEmpty()) {
+            LOGGER.warning("no items");
+            return menu;
+        }
+
+        if (items.size() > 1)
+            return menu;
+
+        final KonMessage m = items.get(0);
         if (m instanceof InMessage) {
             InMessage im = (InMessage) m;
             if (m.isEncrypted()) {
@@ -205,11 +239,6 @@ final class MessageList extends FlyweightListView<KonMessage> {
                 menu.add(sendMenuItem);
             }
         }
-
-        WebMenuItem cItem = Utils.createCopyMenuItem(
-                toCopyString(m),
-                Tr.tr("Copy message content"));
-        menu.add(cItem);
 
         return menu;
     }
@@ -256,9 +285,9 @@ final class MessageList extends FlyweightListView<KonMessage> {
             //mTextPane.setFontSize(View.FONT_SIZE_SMALL);
             // sets default font
             mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
-            //for detecting clicks
+            // for detecting link clicks
             mTextPane.addMouseListener(LinkUtils.CLICK_LISTENER);
-            //for detecting motion
+            // for detecting motion
             mTextPane.addMouseMotionListener(LinkUtils.MOTION_LISTENER);
             // fix word wrap for long words
             mTextPane.setEditorKit(FIX_WRAP_KIT);
@@ -338,48 +367,13 @@ final class MessageList extends FlyweightListView<KonMessage> {
                     " "+getFromString((InMessage) value) :
                     "");
 
-            // text in text area, before/after encryption
-            boolean encrypted = value.isEncrypted();
-            GroupCommand com = value.getContent().getGroupCommand().orElse(null);
-            String text = "";
-            if (com != null) {
-                InMessage inMessage = value instanceof InMessage ?
-                        (InMessage) value : null;
-                String somebody = inMessage != null ?
-                        getFromString(inMessage) : Tr.tr("You");
-                switch(com.getOperation()) {
-                    case CREATE:
-                        text = String.format(Tr.tr("%1$s created this group"), somebody);
-                        break;
-                    case LEAVE:
-                        text = String.format(Tr.tr("%1$s left this group"), somebody);
-                        break;
-                    case SET:
-                        String subject = com.getSubject();
-                        if (!subject.isEmpty()) {
-                            text = String.format(Tr.tr("%1$s set the subject to \"%2$s\""), somebody, subject);
-                        }
-                        List<JID> added = com.getAdded();
-                        if (!added.isEmpty()) {
-                            text = String.format(Tr.tr("%1$s added %2$s"), somebody, mView.names(added));
-                        }
-                        List<JID> removed = com.getRemoved();
-                        if (!removed.isEmpty()) {
-                            text = String.format(Tr.tr("%1$s removed %2$s"), somebody, mView.names(removed));
-                        }
-                        if (text.isEmpty()) {
-                            text = "did something wrong";
-                        }
-                        break;
-                }
+            // text in text area
+            String text = messageToString(value, mView, false);
+            if (value.getContent().getGroupCommand().isPresent()) {
                 mTextPane.setText(text);
                 mTextPane.setFontStyle(false, true);
             } else {
-                text = encrypted ?
-                        Tr.tr("[encrypted]") :
-                        // removing whitespace (Pidgin adds weird tab characters)
-                        value.getContent().getText().trim();
-                mTextPane.setFontStyle(false, encrypted);
+                mTextPane.setFontStyle(false, value.isEncrypted());
                 LinkUtils.linkify(mTextPane.getStyledDocument(), text);
             }
 
@@ -604,14 +598,6 @@ final class MessageList extends FlyweightListView<KonMessage> {
         return Utils.displayName(message.getContact(), message.getJID(), View.MAX_NAME_IN_FROM_LABEL);
     }
 
-    private static String toCopyString(KonMessage m) {
-        String date = Utils.LONG_DATE_FORMAT.format(m.getDate());
-        String from = m instanceof InMessage ?
-                getFromString((InMessage) m) :
-                Tr.tr("me");
-        return date + " - " + from + " : " + m.getContent().getText();
-    }
-
     /**
      * Fix for the infamous "Wrap long words" problem in Java 7+.
      * Source: https://stackoverflow.com/a/13375811
@@ -662,5 +648,98 @@ final class MessageList extends FlyweightListView<KonMessage> {
                 }
             }
         }
+    }
+
+    // overwriting non-public BasicTableUI.TableTransferHandler for copy action
+    private static class CopyTransferHandler extends TransferHandler {
+
+        private final View mView;
+
+        private CopyTransferHandler(View view) {
+            mView = view;
+        }
+
+        protected Transferable createTransferable(JComponent c) {
+            if (!(c instanceof MessageList)) {
+                return null;
+            }
+
+            MessageList table = (MessageList) c;
+            int[] rows = table.getSelectedRows();
+
+            if (rows.length == 0) {
+                return null; // nothing selected
+            }
+
+            StringBuffer plainBuf = new StringBuffer();
+            for (int row = 0; row < rows.length; row++) {
+                KonMessage m = table.getItemAtModelIndex(rows[row]);
+                String val = messageToString(m, mView, true);
+                plainBuf.append(val + "\n"); // NOTE: newline after last line
+            }
+
+            //return new BasicTransferable(plainBuf.toString(), htmlBuf.toString());
+            return new StringSelection(plainBuf.toString());
+        }
+
+        public int getSourceActions(JComponent c) {
+            return COPY;
+        }
+    }
+
+    private static String messageToString(KonMessage message, View view, boolean copy) {
+        String pre = "";
+        if (copy) {
+            String date = Utils.LONG_DATE_FORMAT.format(message.getDate());
+            String from = message instanceof InMessage ?
+                    getFromString((InMessage) message) :
+                    Tr.tr("me"); // TODO get my name
+            MessageContent c = message.getContent();
+            Attachment att = c.getAttachment().orElse(null);
+            String as = att == null ? "" : "[" + att.getFilePath().getFileName() + "] ";
+            pre = date + " - " + from + " : " + as;
+        }
+
+        GroupCommand com = message.getContent().getGroupCommand().orElse(null);
+        String text = "";
+        if (com != null) {
+            InMessage inMessage = message instanceof InMessage ?
+                    (InMessage) message : null;
+            String somebody = inMessage != null ?
+                    getFromString(inMessage) : Tr.tr("You");
+            String cs = "";
+            switch (com.getOperation()) {
+                case CREATE:
+                    cs = String.format(Tr.tr("%1$s created this group"), somebody);
+                    break;
+                case LEAVE:
+                    cs = String.format(Tr.tr("%1$s left this group"), somebody);
+                    break;
+                case SET:
+                    String subject = com.getSubject();
+                    if (!subject.isEmpty()) {
+                        cs = String.format(Tr.tr("%1$s set the subject to \"%2$s\""), somebody, subject);
+                    }
+                    List<JID> added = com.getAdded();
+                    if (!added.isEmpty()) {
+                        cs = String.format(Tr.tr("%1$s added %2$s"), somebody, view.names(added));
+                    }
+                    List<JID> removed = com.getRemoved();
+                    if (!removed.isEmpty()) {
+                        cs = String.format(Tr.tr("%1$s removed %2$s"), somebody, view.names(removed));
+                    }
+                    if (cs.isEmpty()) {
+                        cs = "did something wrong";
+                    }
+                    break;
+            }
+            text = "[" + cs + "]";
+        } else {
+            text = message.isEncrypted() ?
+                    Tr.tr("[encrypted]") :
+                    // removing whitespace (Pidgin adds weird tab characters)
+                    message.getContent().getText().trim();
+        }
+        return pre + text;
     }
 }
