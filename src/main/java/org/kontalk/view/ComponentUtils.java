@@ -30,6 +30,7 @@ import javax.swing.JRootPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -42,6 +43,7 @@ import javax.swing.text.PlainDocument;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -86,6 +88,7 @@ import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebPasswordField;
+import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.popup.WebPopup;
 import com.alee.managers.tooltip.TooltipManager;
@@ -130,6 +133,55 @@ final class ComponentUtils {
             this.setHorizontalScrollBarPolicy(
                     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             this.getVerticalScrollBar().setUnitIncrement(25);
+        }
+    }
+
+    static class GrowingScrollPane extends ScrollPane {
+
+        private final WebTextArea mTextArea;
+        private final Component mRelativeComponent;
+
+        GrowingScrollPane(WebTextArea textArea, Component relativeComponent) {
+            super(textArea, false);
+
+            mTextArea = textArea;
+            mRelativeComponent = relativeComponent;
+
+            // when text changed...
+            mTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
+                @Override
+                public void documentChanged(DocumentEvent e) {
+                    // these are strange times
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            GrowingScrollPane.this.adjustSize();
+                       }
+                    });
+                }
+            });
+
+            // or window is resized...
+            mRelativeComponent.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    GrowingScrollPane.this.adjustSize();
+                }
+            });
+        }
+
+        private void adjustSize() {
+            int newHeight = mTextArea.getPreferredSize().height;
+            int maxHeight = mRelativeComponent.getHeight() / 3;
+
+            this.setPreferredSize(new Dimension(this.getWidth(),
+                    newHeight < maxHeight ?
+                            // grow
+                            newHeight +1 : // +1 for border
+                            // fixed height
+                            maxHeight));
+
+            // swing does not figure this out itself
+            mRelativeComponent.revalidate();
         }
     }
 

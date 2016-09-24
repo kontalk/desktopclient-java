@@ -18,7 +18,6 @@
 
 package org.kontalk.view;
 
-import static javax.swing.JSplitPane.VERTICAL_SPLIT;
 import static org.kontalk.view.View.MARGIN_SMALL;
 
 import javax.swing.Box;
@@ -32,7 +31,6 @@ import javax.swing.event.DocumentEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
@@ -70,7 +68,6 @@ import com.alee.laf.filechooser.WebFileChooser;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.splitpane.WebSplitPane;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.viewport.WebViewport;
 import com.alee.managers.hotkey.Hotkey;
@@ -112,7 +109,6 @@ final class ChatView extends WebPanel implements Observer {
     private final WebTextArea mSendTextArea;
     private final WebLabel mOverlayLabel;
     private final WebLabel mEncryptionStatus;
-    private final WebSplitPane mSplitPane;
     private final WebButton mSendButton;
     private final WebFileChooser mFileChooser;
     private final WebButton mFileButton;
@@ -181,6 +177,10 @@ final class ChatView extends WebPanel implements Observer {
                     g.drawImage(bg, 0, 0, this.getWidth(), this.getHeight(), null);
             }
         });
+        this.add(mScrollPane, BorderLayout.CENTER);
+
+        // bottom panel...
+        WebPanel bottomPanel = new WebPanel();
 
         // text area
         mSendTextArea = new WebTextArea();
@@ -198,15 +198,14 @@ final class ChatView extends WebPanel implements Observer {
             }
         });
 
+        // text area scroll pane
+        WebScrollPane textScrollPane = new ComponentUtils.GrowingScrollPane(mSendTextArea, this);
+
+        // text area overlay
         WebOverlay textAreaOverlay = new WebOverlay();
-        textAreaOverlay.setComponent(new ComponentUtils.ScrollPane(mSendTextArea));
+        textAreaOverlay.setComponent(textScrollPane);
         mOverlayLabel = new WebLabel().setBoldFont();
         textAreaOverlay.addOverlay(mOverlayLabel, SwingConstants.CENTER, SwingConstants.CENTER);
-
-        // bottom panel...
-
-        WebPanel bottomPanel = new WebPanel();
-        bottomPanel.setMinimumSize(new Dimension(0, 64));
 
         // send button
         mSendButton = new WebButton(Tr.tr("Send"))
@@ -263,9 +262,7 @@ final class ChatView extends WebPanel implements Observer {
         textBarPanel.setPaintBottom(false);
         bottomPanel.add(textBarPanel, BorderLayout.NORTH);
 
-        bottomPanel.add(textAreaOverlay
-                .setShadeWidth(0)
-                .setRound(0),
+        bottomPanel.add(textAreaOverlay.setShadeWidth(0).setRound(0),
                 BorderLayout.CENTER);
 
         // old transfer handler of text area is fallback for text area
@@ -273,11 +270,7 @@ final class ChatView extends WebPanel implements Observer {
         bottomPanel.setTransferHandler(mDropHandler);
         mSendTextArea.setTransferHandler(mDropHandler);
 
-        mSplitPane = new WebSplitPane(VERTICAL_SPLIT, mScrollPane, bottomPanel);
-        mSplitPane.setResizeWeight(1.0);
-        mSplitPane.setDividerLocation(Config.getInstance()
-                .getInt(Config.VIEW_CHAT_SPLITTER_POS));
-        this.add(mSplitPane, BorderLayout.CENTER);
+        this.add(bottomPanel, BorderLayout.SOUTH);
 
         this.addFocusListener(new FocusAdapter() {
             @Override
@@ -287,11 +280,6 @@ final class ChatView extends WebPanel implements Observer {
         });
 
         this.loadDefaultBG();
-    }
-
-    void save() {
-        Config.getInstance().setProperty(Config.VIEW_CHAT_SPLITTER_POS,
-                mSplitPane.getDividerLocation());
     }
 
     private MessageList currentMessageListOrNull() {
@@ -367,6 +355,14 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void setScrollDown() {
+        // does still not work
+//        SwingUtilities.invokeLater(new Runnable() {
+//            @Override
+//            public void run() {
+//                WebScrollBar verticalBar = mScrollPane.getWebVerticalScrollBar();
+//                verticalBar.setValue(verticalBar.getMaximum());
+//            }
+//        });
         mScrollDown = true;
     }
 
