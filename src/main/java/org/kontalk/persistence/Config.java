@@ -49,7 +49,6 @@ public final class Config extends PropertiesConfiguration {
     public static final String ACC_JID = "account.jid";
     public static final String VIEW_FRAME_WIDTH = "view.frame.width";
     public static final String VIEW_FRAME_HEIGHT = "view.frame.height";
-    public static final String VIEW_CHAT_SPLITTER_POS = "view.splitter_pos";
     public static final String VIEW_SELECTED_CHAT = "view.thread";
     public static final String VIEW_CHAT_BG = "view.thread_bg";
     public static final String VIEW_USER_CONTACT = "view.user_in_contactlist";
@@ -97,7 +96,6 @@ public final class Config extends PropertiesConfiguration {
         map.put(ACC_JID, "");
         map.put(VIEW_FRAME_WIDTH, 600);
         map.put(VIEW_FRAME_HEIGHT, 650);
-        map.put(VIEW_CHAT_SPLITTER_POS, -1);
         map.put(VIEW_SELECTED_CHAT, -1);
         map.put(VIEW_CHAT_BG, "");
         map.put(VIEW_USER_CONTACT, false);
