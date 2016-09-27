@@ -700,40 +700,40 @@ final class MessageList extends FlyweightListView<KonMessage> {
             pre = date + " - " + from + " : " + as;
         }
 
-        GroupCommand com = message.getContent().getGroupCommand().orElse(null);
         String text = "";
+        GroupCommand com = message.getContent().getGroupCommand().orElse(null);
         if (com != null) {
             InMessage inMessage = message instanceof InMessage ?
                     (InMessage) message : null;
             String somebody = inMessage != null ?
                     getFromString(inMessage) : Tr.tr("You");
-            String cs = "";
             switch (com.getOperation()) {
                 case CREATE:
-                    cs = String.format(Tr.tr("%1$s created this group"), somebody);
+                    text = String.format(Tr.tr("%1$s created this group"), somebody);
                     break;
                 case LEAVE:
-                    cs = String.format(Tr.tr("%1$s left this group"), somebody);
+                    text = String.format(Tr.tr("%1$s left this group"), somebody);
                     break;
                 case SET:
                     String subject = com.getSubject();
                     if (!subject.isEmpty()) {
-                        cs = String.format(Tr.tr("%1$s set the subject to \"%2$s\""), somebody, subject);
+                        text = String.format(Tr.tr("%1$s set the subject to \"%2$s\""), somebody, subject);
                     }
                     List<JID> added = com.getAdded();
                     if (!added.isEmpty()) {
-                        cs = String.format(Tr.tr("%1$s added %2$s"), somebody, view.names(added));
+                        text = String.format(Tr.tr("%1$s added %2$s"), somebody, view.names(added));
                     }
                     List<JID> removed = com.getRemoved();
                     if (!removed.isEmpty()) {
-                        cs = String.format(Tr.tr("%1$s removed %2$s"), somebody, view.names(removed));
+                        text = String.format(Tr.tr("%1$s removed %2$s"), somebody, view.names(removed));
                     }
-                    if (cs.isEmpty()) {
-                        cs = "did something wrong";
+                    if (text.isEmpty()) {
+                        text = "did something wrong";
                     }
                     break;
             }
-            text = "[" + cs + "]";
+            if (copy)
+                text = "[" + text + "]";
         } else {
             text = message.isEncrypted() ?
                     Tr.tr("[encrypted]") :
