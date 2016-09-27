@@ -18,8 +18,6 @@
 
 package org.kontalk.view;
 
-import static org.kontalk.view.View.MARGIN_SMALL;
-
 import javax.swing.Box;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
@@ -107,6 +105,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebScrollPane mScrollPane;
     private final FileDropHandler mDropHandler;
     private final WebTextArea mSendTextArea;
+    private final WebOverlay mOverlay;
     private final WebLabel mOverlayLabel;
     private final WebLabel mEncryptionStatus;
     private final WebButton mSendButton;
@@ -122,9 +121,10 @@ final class ChatView extends WebPanel implements Observer {
     ChatView(View view) {
         mView = view;
 
-        WebPanel titlePanel = new WebPanel(false,
-                new BorderLayout(View.GAP_DEFAULT, 0));
-        titlePanel.setMargin(View.MARGIN_DEFAULT);
+        this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
+
+        WebPanel titlePanel = new WebPanel(new BorderLayout(View.GAP_DEFAULT, 0));
+        titlePanel.setMargin(View.MARGIN_SMALL, View.MARGIN_SMALL, 0, View.MARGIN_SMALL);
 
         mAvatar = new ComponentUtils.AvatarImage(View.AVATAR_CHAT_SIZE);
         titlePanel.add(mAvatar, BorderLayout.WEST);
@@ -135,7 +135,8 @@ final class ChatView extends WebPanel implements Observer {
         mSubTitleLabel = new WebLabel();
         mSubTitleLabel.setFontSize(View.FONT_SIZE_TINY);
         mSubTitleLabel.setForeground(Color.GRAY);
-        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubTitleLabel),
+        titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubTitleLabel)
+                        .setMargin(View.MARGIN_SMALL, 0, 0, 0),
                 BorderLayout.CENTER);
 
         WebToggleButton editButton = new ComponentUtils.ToggleButton(
@@ -180,11 +181,59 @@ final class ChatView extends WebPanel implements Observer {
         this.add(mScrollPane, BorderLayout.CENTER);
 
         // bottom panel...
-        WebPanel bottomPanel = new WebPanel();
+        WebPanel bottomPanel = new WebPanel(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
+
+        // file chooser button
+        mFileChooser = new WebFileChooser();
+        mFileChooser.setMultiSelectionEnabled(false);
+        mFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        mFileChooser.setFileFilter(new CustomFileFilter(AllFilesFilter.ICON,
+                Tr.tr("Supported files")) {
+            @Override
+            public boolean accept(File file) {
+                return isAllowed(file);
+            }
+        });
+        mFileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
+                .setBottomBgColor(titlePanel.getBackground());
+
+        mFileButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ChatView.this.showFileDialog();
+            }
+        });
+        // encryption status label
+        mEncryptionStatus = new WebLabel();
+
+        // send button
+        mSendButton = new WebButton(Tr.tr("Send"))
+                .setBottomBgColor(titlePanel.getBackground())
+                .setFontStyle(true, false);
+        TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
+        mSendButton.setEnabled(false);
+        mSendButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Component focusOwner = SwingUtilities.getWindowAncestor(ChatView.this).getFocusOwner();
+                if (focusOwner != mSendTextArea && focusOwner != mSendButton)
+                    return;
+
+                ChatView.this.sendMsg();
+                mSendTextArea.requestFocusInWindow();
+            }
+        });
+
+        bottomPanel.add(new GroupPanel(GroupingType.fillMiddle, View.GAP_DEFAULT,
+                mFileButton,
+                Box.createGlue(),
+                new GroupPanel(View.GAP_DEFAULT, mEncryptionStatus, mSendButton)),
+                BorderLayout.NORTH);
 
         // text area
         mSendTextArea = new WebTextArea();
         mSendTextArea.setMargin(View.MARGIN_SMALL);
+        mSendTextArea.setBorder(null);
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
         mSendTextArea.setFontSize(View.FONT_SIZE_NORMAL);
@@ -200,72 +249,18 @@ final class ChatView extends WebPanel implements Observer {
 
         // text area scroll pane
         WebScrollPane textScrollPane = new ComponentUtils.GrowingScrollPane(mSendTextArea, this);
+        textScrollPane.setBorder(null);
 
         // text area overlay
-        WebOverlay textAreaOverlay = new WebOverlay();
-        textAreaOverlay.setComponent(textScrollPane);
         mOverlayLabel = new WebLabel().setBoldFont();
-        textAreaOverlay.addOverlay(mOverlayLabel, SwingConstants.CENTER, SwingConstants.CENTER);
+        mOverlay = new WebOverlay(textScrollPane,
+                mOverlayLabel, SwingConstants.CENTER, SwingConstants.CENTER);
+        mOverlay.setUndecorated(false)
+                .setMargin(View.MARGIN_SMALL)
+                .setWebColoredBackground(false);
+        bottomPanel.add(mOverlay, BorderLayout.CENTER);
 
-        // send button
-        mSendButton = new WebButton(Tr.tr("Send"))
-                .setRound(0)
-                //.setShadeWidth(0)
-                .setBottomBgColor(titlePanel.getBackground())
-                .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL)
-                .setFontStyle(true, false);
-        TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
-        mSendButton.setEnabled(false);
-        mSendButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Component focusOwner = SwingUtilities.getWindowAncestor(ChatView.this).getFocusOwner();
-                if (focusOwner != mSendTextArea && focusOwner != mSendButton)
-                    return;
-
-                ChatView.this.sendMsg();
-                mSendTextArea.requestFocusInWindow();
-            }
-        });
-        // file chooser button
-        mFileChooser = new WebFileChooser();
-        mFileChooser.setMultiSelectionEnabled(false);
-        mFileChooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        mFileChooser.setFileFilter(new CustomFileFilter(AllFilesFilter.ICON,
-                Tr.tr("Supported files")) {
-            @Override
-            public boolean accept(File file) {
-                return isAllowed(file);
-            }
-        });
-//        mAttField.setPreferredWidth(150);
-        mFileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
-                .setRound(0)
-                .setBottomBgColor(titlePanel.getBackground())
-                .setMargin(1, MARGIN_SMALL, 1, MARGIN_SMALL);
-
-        mFileButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                ChatView.this.showFileDialog();
-            }
-        });
-        // encryption status label
-        mEncryptionStatus = new WebLabel();
-
-        WebPanel textBarPanel = new GroupPanel(GroupingType.fillMiddle, 0,
-                mFileButton, Box.createGlue(), new GroupPanel(View.GAP_DEFAULT,
-                        mEncryptionStatus, mSendButton))
-                .setUndecorated(false)
-                .setWebColoredBackground(false)
-                .setShadeWidth(0);
-        textBarPanel.setPaintBottom(false);
-        bottomPanel.add(textBarPanel, BorderLayout.NORTH);
-
-        bottomPanel.add(textAreaOverlay.setShadeWidth(0).setRound(0),
-                BorderLayout.CENTER);
-
-        // old transfer handler of text area is fallback for text area
+        // old transfer handler of text area is fallback for bottom panel
         mDropHandler = new FileDropHandler(mSendTextArea.getTransferHandler());
         bottomPanel.setTransferHandler(mDropHandler);
         mSendTextArea.setTransferHandler(mDropHandler);
@@ -471,7 +466,9 @@ final class ChatView extends WebPanel implements Observer {
         // text area
         boolean enabled = chat.isValid();
         mSendTextArea.setEnabled(enabled);
-        mSendTextArea.setBackground(enabled ? Color.WHITE : Color.LIGHT_GRAY);
+        Color textBG = enabled ? Color.WHITE : Color.LIGHT_GRAY;
+        mSendTextArea.setBackground(textBG);
+        mOverlay.setBackground(textBG);
         mOverlayLabel.setText(chat instanceof GroupChat && !((GroupChat) chat).containsMe()
                 ? Tr.tr("You are not member of this group") : "");
 
