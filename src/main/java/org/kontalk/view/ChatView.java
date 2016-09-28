@@ -573,8 +573,7 @@ final class ChatView extends WebPanel implements Observer {
 
         /** Default, no chat specific settings. */
         Background(Component parent) {
-            //mOrigin = View.getImage("chat_bg.png");
-            this(parent, null, new Color(255, 255, 255, 255));
+            this(parent, Utils.getImage("chat_bg.png"), new Color(255, 255, 255, 255));
         }
 
         /** Image set by user (global or only for chat). */
