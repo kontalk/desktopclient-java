@@ -267,9 +267,9 @@ public final class Client implements StanzaListener, Runnable {
 //            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 
-        this.sendBlocklistRequest();
-
         this.newStatus(Control.Status.CONNECTED);
+
+        this.sendBlocklistRequest();
     }
 
     public void disconnect() {
