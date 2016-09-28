@@ -28,17 +28,19 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.kontalk.client.BitsOfBinary;
 import org.kontalk.client.E2EEncryption;
 import org.kontalk.client.GroupExtension;
-import org.kontalk.client.GroupExtension.Type;
 import org.kontalk.client.GroupExtension.Member;
+import org.kontalk.client.GroupExtension.Type;
 import org.kontalk.client.OutOfBandData;
-import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Contact;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.MessageContent;
@@ -93,6 +95,33 @@ public final class ClientUtils {
         @Override
         public String toString() {
             return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID;
+        }
+    }
+
+    public static class KonRosterEntry {
+        public final JID jid;
+        public final String name;
+        public final Contact.Subscription subscription;
+
+        public KonRosterEntry(JID jid, String name,
+                              RosterPacket.ItemType type, RosterPacket.ItemStatus status) {
+            this.jid = jid;
+            this.name = name;
+            this.subscription = rosterToModelSubscription(status, type);
+        }
+
+
+        private static Contact.Subscription rosterToModelSubscription(
+                RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
+            if (type == RosterPacket.ItemType.both ||
+                    type == RosterPacket.ItemType.to ||
+                    type == RosterPacket.ItemType.remove)
+                return Contact.Subscription.SUBSCRIBED;
+
+            if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
+                return Contact.Subscription.PENDING;
+
+            return Contact.Subscription.UNSUBSCRIBED;
         }
     }
 

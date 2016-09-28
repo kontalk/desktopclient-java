@@ -43,7 +43,6 @@ import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
-import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -151,8 +150,9 @@ public final class Client implements StanzaListener, Runnable {
 
         // packet listeners
         RosterHandler rosterHandler = mControl.getRosterHandler();
-        RosterListener rl = new KonRosterListener(roster, rosterHandler);
+        KonRosterListener rl = new KonRosterListener(roster, rosterHandler);
         roster.addRosterListener(rl);
+        roster.addRosterLoadedListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
         mConn.addAsyncStanzaListener(
@@ -435,7 +435,7 @@ public final class Client implements StanzaListener, Runnable {
         Roster roster = Roster.getInstanceFor(mConn);
         RosterEntry entry = roster.getEntry(jid.string());
         if (entry == null) {
-            LOGGER.warning("can't find roster entry for jid: "+jid);
+            LOGGER.info("can't find roster entry for jid: "+jid);
             return true;
         }
         try {

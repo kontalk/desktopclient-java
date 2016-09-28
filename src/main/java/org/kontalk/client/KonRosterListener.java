@@ -19,37 +19,54 @@
 package org.kontalk.client;
 
 import java.util.Collection;
+import java.util.Set;
 import java.util.logging.Logger;
-import org.apache.commons.lang.StringUtils;
+import java.util.stream.Collectors;
 
+import org.apache.commons.lang.StringUtils;
+import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smack.roster.RosterListener;
-import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.roster.RosterLoadedListener;
 import org.kontalk.misc.JID;
 import org.kontalk.system.RosterHandler;
+import org.kontalk.util.ClientUtils;
 
 /**
  * Listener for events in the roster (a server-side contact list in XMPP).
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class KonRosterListener implements RosterListener {
+final class KonRosterListener implements RosterLoadedListener, RosterListener {
     private static final Logger LOGGER = Logger.getLogger(KonRosterListener.class.getName());
 
     private final Roster mRoster;
     private final RosterHandler mHandler;
+    private boolean mLoaded = false;
 
     KonRosterListener(Roster roster, RosterHandler handler) {
         mRoster = roster;
         mHandler = handler;
     }
 
+    @Override
+    public void onRosterLoaded(Roster roster) {
+        Set<RosterEntry> entries = roster.getEntries();
+        LOGGER.info("loading "+entries.size()+" entries");
+
+        mHandler.onLoaded(entries.stream()
+                .map(e -> clientToModel(e))
+                .collect(Collectors.toList()));
+        mLoaded = true;
+    }
+
     /**
-     * Note: on every (re-)connect all entries are added again
+     * NOTE: on every (re-)connect all entries are added again (loaded),
+     * one method call for all contacts.
      */
     @Override
     public void entriesAdded(Collection<String> addresses) {
-        if (mRoster == null)
+        if (mRoster == null || !mLoaded)
             return;
 
         for (String jid: addresses) {
@@ -60,10 +77,7 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.config("entry: "+entry.toString());
-            mHandler.onEntryAdded(JID.bare(entry.getUser()),
-                    StringUtils.defaultString(entry.getName()),
-                    entry.getType(),
-                    entry.getStatus());
+            mHandler.onEntryAdded(clientToModel(entry));
         }
     }
 
@@ -78,10 +92,7 @@ final class KonRosterListener implements RosterListener {
             }
 
             LOGGER.info("entry: "+entry.toString());
-            mHandler.onEntryUpdate(JID.bare(entry.getUser()),
-                    StringUtils.defaultString(entry.getName()),
-                    entry.getType(),
-                    entry.getStatus());
+            mHandler.onEntryUpdate(clientToModel(entry));
         }
     }
 
@@ -89,6 +100,7 @@ final class KonRosterListener implements RosterListener {
     public void entriesDeleted(Collection<String> addresses) {
         for (String jid: addresses) {
             LOGGER.info("address: "+jid);
+
             mHandler.onEntryDeleted(JID.bare(jid));
         }
     }
@@ -96,5 +108,12 @@ final class KonRosterListener implements RosterListener {
     @Override
     public void presenceChanged(Presence presence) {
         // handled by PresenceListener
+    }
+
+    private static ClientUtils.KonRosterEntry clientToModel(RosterEntry entry) {
+        return new ClientUtils.KonRosterEntry(JID.bare(entry.getUser()),
+                StringUtils.defaultString(entry.getName()),
+                entry.getType(),
+                entry.getStatus());
     }
 }
