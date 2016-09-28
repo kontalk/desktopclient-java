@@ -18,8 +18,6 @@
 
 package org.kontalk.view;
 
-import static org.kontalk.view.View.GAP_DEFAULT;
-
 import javax.swing.Icon;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -169,8 +167,10 @@ final class Notifier {
                 mView.tr_remove_contact;
         panel.add(textArea(expl));
 
+        panel.add(textArea(Tr.tr("The reset option will recreate the server entry.")));
+
         WebNotificationPopup popup = NotificationManager.showNotification(panel,
-                NotificationOption.yes, NotificationOption.no,
+                NotificationOption.yes, NotificationOption.reset,
                 NotificationOption.cancel);
         popup.setClickToClose(false);
         popup.addNotificationListener(new NotificationListener() {
@@ -179,6 +179,8 @@ final class Notifier {
                 switch (option) {
                     case yes :
                         mView.getControl().deleteContact(contact);
+                    case reset:
+                        mView.getControl().createRosterEntry(contact);
                 }
             }
             @Override
@@ -280,7 +282,7 @@ final class Notifier {
     }
 
     private static WebPanel panel(String title, Contact contact) {
-        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
+        WebPanel panel = new GroupPanel(View.GAP_DEFAULT, false);
         panel.setOpaque(false);
 
         panel.add(new WebLabel(title).setBoldFont());

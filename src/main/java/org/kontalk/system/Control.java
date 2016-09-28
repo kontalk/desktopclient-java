@@ -776,6 +776,10 @@ public final class Control {
                     Client.PresenceCommand.REQUEST);
         }
 
+        public void createRosterEntry(Contact contact) {
+            Control.this.addToRoster(contact);
+        }
+
         /* chats */
 
         public Chat getOrCreateSingleChat(Contact contact) {
