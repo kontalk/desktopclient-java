@@ -18,6 +18,24 @@
 
 package org.kontalk.view;
 
+import javax.swing.JDialog;
+import javax.swing.SwingUtilities;
+import javax.swing.ToolTipManager;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
@@ -27,29 +45,13 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.text.WebPasswordField;
 import com.alee.managers.notification.NotificationManager;
-import java.awt.Color;
-import java.awt.event.*;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.FutureTask;
-import java.util.logging.Logger;
-import javax.swing.JDialog;
-import javax.swing.SwingUtilities;
-import javax.swing.ToolTipManager;
-import java.awt.BorderLayout;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.misc.JID;
-import org.kontalk.persistence.Config;
 import org.kontalk.misc.ViewEvent;
-import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.EncodingUtils;
@@ -63,7 +65,7 @@ import org.kontalk.util.Tr;
 public final class View implements Observer {
     private static final Logger LOGGER = Logger.getLogger(View.class.getName());
 
-    static final int LISTS_WIDTH = 270;
+    static final int LISTS_WIDTH = 280;
 
     static final int GAP_DEFAULT = 10;
     static final int GAP_BIG = 15;
@@ -295,7 +297,6 @@ public final class View implements Observer {
                 break;
             case SHUTTING_DOWN:
                 mMainFrame.save();
-                mChatView.save();
                 mChatListView.save();
                 mTrayManager.removeTray();
                 mMainFrame.setVisible(false);

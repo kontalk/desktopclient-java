@@ -18,35 +18,27 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.drag.FileDragAndDropHandler;
-import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
-import com.alee.extended.panel.WebOverlay;
-import com.alee.laf.button.WebButton;
-import com.alee.laf.button.WebToggleButton;
-import com.alee.laf.filechooser.WebFileChooser;
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.scroll.WebScrollPane;
-import com.alee.laf.splitpane.WebSplitPane;
-import com.alee.laf.text.WebTextArea;
-import com.alee.laf.viewport.WebViewport;
-import com.alee.managers.hotkey.Hotkey;
-import com.alee.managers.hotkey.HotkeyData;
-import com.alee.managers.language.data.TooltipWay;
-import com.alee.managers.tooltip.TooltipManager;
-import com.alee.utils.filefilter.AllFilesFilter;
-import com.alee.utils.filefilter.CustomFileFilter;
-import com.alee.utils.swing.DocumentChangeListener;
+import static org.kontalk.view.View.MARGIN_SMALL;
+
+import javax.swing.Box;
+import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.JViewport;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
+import javax.swing.event.DocumentEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.AdjustmentEvent;
@@ -58,6 +50,7 @@ import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
 import java.io.File;
+import java.io.IOException;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.List;
@@ -65,26 +58,37 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import javax.swing.Box;
-import javax.swing.JFileChooser;
-import static javax.swing.JSplitPane.VERTICAL_SPLIT;
-import javax.swing.JViewport;
-import javax.swing.SwingConstants;
-import javax.swing.SwingUtilities;
-import javax.swing.event.DocumentEvent;
+
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
+import com.alee.extended.panel.WebOverlay;
+import com.alee.laf.button.WebButton;
+import com.alee.laf.button.WebToggleButton;
+import com.alee.laf.filechooser.WebFileChooser;
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.scroll.WebScrollPane;
+import com.alee.laf.text.WebTextArea;
+import com.alee.laf.viewport.WebViewport;
+import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.hotkey.HotkeyData;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.filefilter.AllFilesFilter;
+import com.alee.utils.filefilter.CustomFileFilter;
+import com.alee.utils.swing.DocumentChangeListener;
 import org.apache.commons.io.FileUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.FeatureDiscovery;
-import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
-import org.kontalk.system.AttachmentManager;
 import org.kontalk.persistence.Config;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Control;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
-import static org.kontalk.view.View.MARGIN_SMALL;
 
 /**
  * Panel showing the currently selected chat.
@@ -101,18 +105,16 @@ final class ChatView extends WebPanel implements Observer {
     private final WebLabel mTitleLabel;
     private final WebLabel mSubTitleLabel;
     private final WebScrollPane mScrollPane;
-    private final FileDragAndDropHandler mDropHandler;
+    private final FileDropHandler mDropHandler;
     private final WebTextArea mSendTextArea;
     private final WebLabel mOverlayLabel;
     private final WebLabel mEncryptionStatus;
-    private final WebSplitPane mSplitPane;
     private final WebButton mSendButton;
     private final WebFileChooser mFileChooser;
     private final WebButton mFileButton;
 
     private final Map<Chat, MessageList> mMessageListCache = new HashMap<>();
 
-    private ComponentUtils.ModalPopup mPopup = null;
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
@@ -136,17 +138,17 @@ final class ChatView extends WebPanel implements Observer {
         titlePanel.add(new GroupPanel(View.GAP_SMALL, false, mTitleLabel, mSubTitleLabel),
                 BorderLayout.CENTER);
 
-        final WebToggleButton editButton = new WebToggleButton(
-                Utils.getIcon("ic_ui_menu.png"));
-        //editButton.setToolTipText(Tr.tr("Edit this chat"));
+        WebToggleButton editButton = new ComponentUtils.ToggleButton(
+                Utils.getIcon("ic_ui_menu.png"),
+                Tr.tr("Edit this chat")) {
+            @Override
+            Optional<ComponentUtils.PopupPanel> getPanel() {
+                return ChatView.this.getPopupPanel();
+            }
+        };
         editButton.setTopBgColor(titlePanel.getBackground());
         editButton.setBottomBgColor(titlePanel.getBackground());
-        editButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                    ChatView.this.showPopup(editButton);
-            }
-        });
+
         titlePanel.add(editButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
@@ -175,6 +177,10 @@ final class ChatView extends WebPanel implements Observer {
                     g.drawImage(bg, 0, 0, this.getWidth(), this.getHeight(), null);
             }
         });
+        this.add(mScrollPane, BorderLayout.CENTER);
+
+        // bottom panel...
+        WebPanel bottomPanel = new WebPanel();
 
         // text area
         mSendTextArea = new WebTextArea();
@@ -182,6 +188,8 @@ final class ChatView extends WebPanel implements Observer {
         mSendTextArea.setLineWrap(true);
         mSendTextArea.setWrapStyleWord(true);
         mSendTextArea.setFontSize(View.FONT_SIZE_NORMAL);
+        mSendTextArea.setInputPrompt(Tr.tr("Type to compose"));
+        mSendTextArea.setInputPromptHorizontalPosition(SwingConstants.LEFT);
         mSendTextArea.setComponentPopupMenu(Utils.createCopyMenu(true));
         mSendTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
             @Override
@@ -190,15 +198,14 @@ final class ChatView extends WebPanel implements Observer {
             }
         });
 
+        // text area scroll pane
+        WebScrollPane textScrollPane = new ComponentUtils.GrowingScrollPane(mSendTextArea, this);
+
+        // text area overlay
         WebOverlay textAreaOverlay = new WebOverlay();
-        textAreaOverlay.setComponent(new ComponentUtils.ScrollPane(mSendTextArea));
+        textAreaOverlay.setComponent(textScrollPane);
         mOverlayLabel = new WebLabel().setBoldFont();
         textAreaOverlay.addOverlay(mOverlayLabel, SwingConstants.CENTER, SwingConstants.CENTER);
-
-        // bottom panel...
-
-        WebPanel bottomPanel = new WebPanel();
-        bottomPanel.setMinimumSize(new Dimension(0, 64));
 
         // send button
         mSendButton = new WebButton(Tr.tr("Send"))
@@ -255,19 +262,15 @@ final class ChatView extends WebPanel implements Observer {
         textBarPanel.setPaintBottom(false);
         bottomPanel.add(textBarPanel, BorderLayout.NORTH);
 
-        bottomPanel.add(textAreaOverlay
-                .setShadeWidth(0)
-                .setRound(0),
+        bottomPanel.add(textAreaOverlay.setShadeWidth(0).setRound(0),
                 BorderLayout.CENTER);
 
-        mDropHandler = new FileDropHandler();
+        // old transfer handler of text area is fallback for text area
+        mDropHandler = new FileDropHandler(mSendTextArea.getTransferHandler());
         bottomPanel.setTransferHandler(mDropHandler);
+        mSendTextArea.setTransferHandler(mDropHandler);
 
-        mSplitPane = new WebSplitPane(VERTICAL_SPLIT, mScrollPane, bottomPanel);
-        mSplitPane.setResizeWeight(1.0);
-        mSplitPane.setDividerLocation(Config.getInstance()
-                .getInt(Config.VIEW_CHAT_SPLITTER_POS));
-        this.add(mSplitPane, BorderLayout.CENTER);
+        this.add(bottomPanel, BorderLayout.SOUTH);
 
         this.addFocusListener(new FocusAdapter() {
             @Override
@@ -277,11 +280,6 @@ final class ChatView extends WebPanel implements Observer {
         });
 
         this.loadDefaultBG();
-    }
-
-    void save() {
-        Config.getInstance().setProperty(Config.VIEW_CHAT_SPLITTER_POS,
-                mSplitPane.getDividerLocation());
     }
 
     private MessageList currentMessageListOrNull() {
@@ -357,6 +355,14 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void setScrollDown() {
+        // does still not work
+//        SwingUtilities.invokeLater(new Runnable() {
+//            @Override
+//            public void run() {
+//                WebScrollBar verticalBar = mScrollPane.getWebVerticalScrollBar();
+//                verticalBar.setValue(verticalBar.getMaximum());
+//            }
+//        });
         mScrollDown = true;
     }
 
@@ -484,16 +490,9 @@ final class ChatView extends WebPanel implements Observer {
                 Color.BLACK);
     }
 
-    private void showPopup(final WebToggleButton invoker) {
+    private Optional<ComponentUtils.PopupPanel> getPopupPanel() {
         Chat chat = ChatView.this.getCurrentChat().orElse(null);
-        if (chat == null)
-            return;
-        if (mPopup == null)
-            mPopup = new ComponentUtils.ModalPopup(invoker);
-
-        mPopup.removeAll();
-        mPopup.add(new ChatDetails(mView, mPopup, chat));
-        mPopup.showPopup();
+        return chat == null ? Optional.empty() : Optional.of(new ChatDetails(mView, chat));
     }
 
     private void onKeyTypeEvent(boolean empty) {
@@ -683,15 +682,70 @@ final class ChatView extends WebPanel implements Observer {
         }
     }
 
-    final class FileDropHandler extends FileDragAndDropHandler {
+    private final class FileDropHandler extends TransferHandler {
+
+        private final TransferHandler mTextHandler;
+
+        private boolean mDropEnabled = true;
+
+        public FileDropHandler(TransferHandler textHandler) {
+            mTextHandler = textHandler;
+        }
+
+        void setDropEnabled(boolean enabled) {
+            mDropEnabled = enabled;
+        }
+
         @Override
-        public boolean filesDropped(List<File> files) {
+        public boolean canImport(TransferSupport support) {
+            if (support.isDrop() && !mDropEnabled)
+                return false;
+
+            if (support.getComponent() == mSendTextArea
+                    && mTextHandler.canImport(support))
+                return true;
+
+            for (DataFlavor flavor : support.getDataFlavors()) {
+                if (flavor.isFlavorJavaFileListType()) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public boolean importData(TransferHandler.TransferSupport support) {
+            if (!this.canImport(support))
+                return false;
+
+            if (support.getComponent() == mSendTextArea &&
+                    mTextHandler.importData(support)) {
+                // dropping text on text area was handled
+                return true;
+            }
+
+            List<File> files;
+            try {
+                files = (List<File>) support.getTransferable()
+                        .getTransferData(DataFlavor.javaFileListFlavor);
+            } catch (UnsupportedFlavorException | IOException ex) {
+                // should never happen (or JDK is buggy)
+                return false;
+            }
+
             for (File file: files) {
                 if (isAllowed(file)) {
                     ChatView.this.sendFile(file);
                 }
             }
-            return true;
+            return !files.isEmpty();
+        }
+
+        @Override
+        public void exportToClipboard(JComponent comp, Clipboard clip, int action) throws IllegalStateException {
+            mTextHandler.exportToClipboard(comp, clip, action);
         }
     }
 

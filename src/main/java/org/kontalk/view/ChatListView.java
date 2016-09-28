@@ -18,26 +18,27 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
+import javax.swing.Box;
+import javax.swing.ListSelectionModel;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.Optional;
-import javax.swing.Box;
-import javax.swing.ListSelectionModel;
-import org.kontalk.persistence.Config;
-import org.kontalk.model.message.KonMessage;
+
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
+import org.kontalk.model.Contact;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.ChatList;
-import org.kontalk.model.Contact;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.chat.SingleChat;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatListView.ChatItem;
 
@@ -195,7 +196,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
         @Override
         protected String getTooltipText() {
             return "<html><body>" +
-                    Tr.tr("Last activity")+": " + lastActivity(mValue, false) + "<br>"
+                    Tr.tr("Last message:")+" " + lastActivity(mValue, false) + "<br>"
                     + "";
         }
 

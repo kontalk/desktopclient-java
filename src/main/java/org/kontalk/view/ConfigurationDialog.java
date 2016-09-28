@@ -88,10 +88,12 @@ final class ConfigurationDialog extends WebDialog {
         final NetworkPanel networkPanel = new NetworkPanel();
         final AccountPanel accountPanel = new AccountPanel();
         final PrivacyPanel privacyPanel = new PrivacyPanel();
+        final ViewPanel viewPanel = new ViewPanel();
         tabbedPane.addTab(Tr.tr("Main"), mainPanel);
         tabbedPane.addTab(Tr.tr("Network"), networkPanel);
         tabbedPane.addTab(Tr.tr("Account"), accountPanel);
         tabbedPane.addTab(Tr.tr("Privacy"), privacyPanel);
+        tabbedPane.addTab(Tr.tr("View"), viewPanel);
 
         this.add(tabbedPane, BorderLayout.CENTER);
 
@@ -111,6 +113,7 @@ final class ConfigurationDialog extends WebDialog {
                 accountPanel.saveConfiguration();
                 privacyPanel.saveConfiguration();
                 networkPanel.saveConfiguration();
+                viewPanel.saveConfiguration();
 
                 // better save twice than never
                 mConf.saveToFile();
@@ -130,8 +133,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebCheckBox mEnterSendsBox;
         private final WebCheckBox mShowUserBox;
         private final WebCheckBox mHideBlockedBox;
-        private final WebCheckBox mBGBox;
-        private final WebFileChooserField mBGChooser;
+
 
         MainPanel() {
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
@@ -170,22 +172,6 @@ final class ConfigurationDialog extends WebDialog {
                     mConf.getBoolean(Config.VIEW_HIDE_BLOCKED));
             groupPanel.add(new GroupPanel(mHideBlockedBox, new WebSeparator()));
 
-            String bgPath = mConf.getString(Config.VIEW_CHAT_BG);
-            mBGBox = createCheckBox(Tr.tr("Custom background:")+" ",
-                    "",
-                    !bgPath.isEmpty());
-            mBGBox.addItemListener(new ItemListener() {
-                @Override
-                public void itemStateChanged(ItemEvent e) {
-                    mBGChooser.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
-                    mBGChooser.getChooseButton().setEnabled(e.getStateChange() == ItemEvent.SELECTED);
-                }
-            });
-
-            mBGChooser = Utils.createImageChooser(mBGBox.isSelected(), bgPath);
-
-            groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
-
             this.add(groupPanel);
         }
 
@@ -200,18 +186,6 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(Config.VIEW_USER_CONTACT, mShowUserBox.isSelected());
             mConf.setProperty(Config.VIEW_HIDE_BLOCKED, mHideBlockedBox.isSelected());
             mView.updateContactList();
-
-            String bgPath;
-            if (mBGBox.isSelected() && !mBGChooser.getSelectedFiles().isEmpty()) {
-                bgPath = mBGChooser.getSelectedFiles().get(0).getAbsolutePath();
-            } else {
-                bgPath = "";
-            }
-            String oldBGPath = mConf.getString(Config.VIEW_CHAT_BG);
-            if (!bgPath.equals(oldBGPath)) {
-                mConf.setProperty(Config.VIEW_CHAT_BG, bgPath);
-                mView.reloadChatBG();
-            }
         }
     }
 
@@ -422,6 +396,52 @@ final class ConfigurationDialog extends WebDialog {
             mConf.setProperty(Config.NET_SEND_CHAT_STATE, mChatStateBox.isSelected());
             mConf.setProperty(Config.NET_SEND_ROSTER_NAME, mRosterNameBox.isSelected());
             mConf.setProperty(Config.NET_AUTO_SUBSCRIPTION, mSubscriptionBox.isSelected());
+        }
+    }
+
+    private class ViewPanel extends WebPanel {
+
+        private final WebCheckBox mBGBox;
+        private final WebFileChooserField mBGChooser;
+
+        ViewPanel() {
+            GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
+            groupPanel.setMargin(View.MARGIN_BIG);
+
+            groupPanel.add(new WebLabel(Tr.tr("View Settings")).setBoldFont());
+            groupPanel.add(new WebSeparator(true, true));
+
+            String bgPath = mConf.getString(Config.VIEW_CHAT_BG);
+            mBGBox = createCheckBox(Tr.tr("Custom background:")+" ",
+                    "",
+                    !bgPath.isEmpty());
+            mBGBox.addItemListener(new ItemListener() {
+                @Override
+                public void itemStateChanged(ItemEvent e) {
+                    mBGChooser.setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                    mBGChooser.getChooseButton().setEnabled(e.getStateChange() == ItemEvent.SELECTED);
+                }
+            });
+
+            mBGChooser = Utils.createImageChooser(mBGBox.isSelected(), bgPath);
+
+            groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
+
+            this.add(groupPanel);
+        }
+
+        private void saveConfiguration() {
+            String bgPath;
+            if (mBGBox.isSelected() && !mBGChooser.getSelectedFiles().isEmpty()) {
+                bgPath = mBGChooser.getSelectedFiles().get(0).getAbsolutePath();
+            } else {
+                bgPath = "";
+            }
+            String oldBGPath = mConf.getString(Config.VIEW_CHAT_BG);
+            if (!bgPath.equals(oldBGPath)) {
+                mConf.setProperty(Config.VIEW_CHAT_BG, bgPath);
+                mView.reloadChatBG();
+            }
         }
     }
 

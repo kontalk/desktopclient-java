@@ -147,4 +147,8 @@ public final class Model {
     public static JID getUserJID() {
         return JID.bare(Config.getInstance().getString(Config.ACC_JID));
     }
+
+    public void onShutDown() {
+        mContactList.onShutDown();
+    }
 }

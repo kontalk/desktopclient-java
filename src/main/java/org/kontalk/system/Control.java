@@ -18,12 +18,11 @@
 
 package org.kontalk.system;
 
-import org.kontalk.persistence.Config;
-import org.kontalk.persistence.Database;
-import org.kontalk.model.Account;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
@@ -35,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
@@ -44,24 +44,27 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.misc.ViewEvent;
-import org.kontalk.model.message.InMessage;
-import org.kontalk.model.message.KonMessage;
-import org.kontalk.model.chat.Chat;
-import org.kontalk.model.message.MessageContent;
-import org.kontalk.model.message.OutMessage;
-import org.kontalk.model.Contact;
-import org.kontalk.misc.JID;
+import org.kontalk.model.Account;
 import org.kontalk.model.Avatar;
+import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.chat.ProtoMember;
+import org.kontalk.model.chat.SingleChat;
+import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
+import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.ProtoMessage;
-import org.kontalk.model.chat.SingleChat;
+import org.kontalk.persistence.Config;
+import org.kontalk.persistence.Database;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
 import org.kontalk.view.View;
@@ -157,6 +160,8 @@ public final class Control {
 
         mViewControl.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
                 EnumSet.noneOf(FeatureDiscovery.Feature.class)));
+
+        mModel.onShutDown();
         try {
             mDB.close();
         } catch (RuntimeException ex) {
@@ -384,6 +389,32 @@ public final class Control {
 
         LOGGER.info("set contact blocking: "+contact+" "+blocking);
         contact.setBlocked(blocking);
+    }
+
+    public void onLastActivity(JID jid, long lastSecondsAgo, String status) {
+        Contact contact = mModel.contacts().get(jid).orElse(null);
+        if (contact == null) {
+            LOGGER.info("can't find contact with jid: "+jid);
+            return;
+        }
+
+        if (contact.getOnline() == Contact.Online.YES) {
+            // mobile clients connect only for a short time, last seen is some minutes ago but they
+            // are actually online
+            return;
+        }
+
+        if (lastSecondsAgo == 0) {
+            // contact is online
+            contact.setOnlineStatus(Contact.Online.YES);
+            return;
+        }
+
+        // 'last seen' seconds to date
+        LocalDateTime ldt = LocalDateTime.now().minusSeconds(lastSecondsAgo);
+        Date lastSeen = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+
+        contact.setLastSeen(lastSeen, status);
     }
 
     /* package */
