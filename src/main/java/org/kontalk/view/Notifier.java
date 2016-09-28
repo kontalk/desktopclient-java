@@ -18,6 +18,16 @@
 
 package org.kontalk.view;
 
+import static org.kontalk.view.View.GAP_DEFAULT;
+
+import javax.swing.Icon;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
+
 import com.alee.extended.panel.GroupPanel;
 import com.alee.global.StyleConstants;
 import com.alee.laf.label.WebLabel;
@@ -31,13 +41,6 @@ import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.notification.NotificationOption;
 import com.alee.managers.notification.WebNotificationPopup;
 import com.alee.managers.popup.PopupStyle;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.GraphicsConfiguration;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
-import java.awt.Rectangle;
-import javax.swing.Icon;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.KonException;
@@ -48,7 +51,6 @@ import org.kontalk.model.message.KonMessage;
 import org.kontalk.system.RosterHandler;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
-import static org.kontalk.view.View.GAP_DEFAULT;
 
 /**
  * Inform user about events.
@@ -271,6 +273,10 @@ final class Notifier {
 
         dialog.setVisible(true);
         NotificationManager.showNotification(dialog, popup);
+    }
+
+    void hideNotifications() {
+        NotificationManager.hideAllNotifications();
     }
 
     private static WebPanel panel(String title, Contact contact) {

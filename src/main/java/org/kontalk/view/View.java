@@ -44,7 +44,6 @@ import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.text.WebPasswordField;
-import com.alee.managers.notification.NotificationManager;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.ViewEvent;
@@ -282,10 +281,10 @@ public final class View implements Observer {
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Connecting…"));
+                mNotifier.hideNotifications();
                 break;
             case CONNECTED:
                 mStatusBarLabel.setText(Tr.tr("Connected"));
-                NotificationManager.hideAllNotifications();
                 break;
             case DISCONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Disconnecting…"));
