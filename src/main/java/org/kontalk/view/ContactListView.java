@@ -189,6 +189,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
 
             mNameLabel = new WebLabel();
             mNameLabel.setFontSize(View.FONT_SIZE_BIG);
+            mNameLabel.setDrawShade(true);
 
             mStatusLabel = new WebLabel();
             mStatusLabel.setForeground(Color.GRAY);
