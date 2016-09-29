@@ -890,6 +890,36 @@ final class ComponentUtils {
         }
     }
 
+    static class EncryptionPanel extends WebPanel {
+
+        private static final Icon ICON_SECURE = Utils.getIcon("ic_ui_secure.png");
+        private static final Icon ICON_INSECURE = Utils.getIcon("ic_ui_insecure.png");
+
+        private final WebLabel mEncryptionIcon;
+        private final WebLabel mEncryptionWarningIcon;
+
+        EncryptionPanel() {
+            mEncryptionIcon = new WebLabel();
+            mEncryptionWarningIcon = new WebLabel(Utils.getIcon("ic_ui_warning.png"));
+
+            this.add(mEncryptionIcon, BorderLayout.WEST);
+            this.add(mEncryptionWarningIcon, BorderLayout.EAST);
+        }
+
+        void setStatus(boolean isEncrypted, boolean canEncrypt) {
+            mEncryptionIcon.setIcon(isEncrypted ? ICON_SECURE : ICON_INSECURE);
+            mEncryptionWarningIcon.setVisible(isEncrypted != canEncrypt);
+
+            String text = "<html>" + (isEncrypted ? Tr.tr("Encrypted") : Tr.tr("Not encrypted"));
+            if (isEncrypted && !canEncrypt) {
+                text += "<br>" + Tr.tr("Contact key is missing");
+            } else if (!isEncrypted && canEncrypt) {
+                text += "<br>" + Tr.tr("Encryption can be activated");
+            }
+            TooltipManager.setTooltip(this, text + "</html>");
+        }
+    }
+
     // Source: http://www.rgagnon.com/javadetails/java-0198.html
     static class TextLimitDocument extends PlainDocument {
         private final int mLimit;

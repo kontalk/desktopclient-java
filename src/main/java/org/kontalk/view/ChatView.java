@@ -25,6 +25,8 @@ import javax.swing.JViewport;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -106,7 +108,7 @@ final class ChatView extends WebPanel implements Observer {
     private final WebTextArea mSendTextArea;
     private final WebOverlay mOverlay;
     private final WebLabel mOverlayLabel;
-    private final WebLabel mEncryptionStatus;
+    private final ComponentUtils.EncryptionPanel mEncryptionStatus;
     private final WebButton mSendButton;
     private final WebFileChooser mFileChooser;
     private final WebButton mFileButton;
@@ -138,6 +140,9 @@ final class ChatView extends WebPanel implements Observer {
                         .setMargin(View.MARGIN_SMALL, 0, 0, 0),
                 BorderLayout.CENTER);
 
+        // encryption status
+        mEncryptionStatus = new ComponentUtils.EncryptionPanel();
+
         WebToggleButton editButton = new ComponentUtils.ToggleButton(
                 Utils.getIcon("ic_ui_menu.png"),
                 Tr.tr("Edit this chat")) {
@@ -146,10 +151,21 @@ final class ChatView extends WebPanel implements Observer {
                 return ChatView.this.getPopupPanel();
             }
         };
+        //editButton.setBorderPainted(false);
+        //editButton.setDrawLines(false, false, false, false);
+        editButton.setDrawSides(false, false, false, false);
         editButton.setTopBgColor(titlePanel.getBackground());
         editButton.setBottomBgColor(titlePanel.getBackground());
+        editButton.addChangeListener(new ChangeListener() {
+            @Override
+            public void stateChanged(ChangeEvent e) {
+                boolean pressed = editButton.isSelected();
+                editButton.setDrawSides(pressed, pressed, pressed, pressed);
+            }
+        });
+        titlePanel.add(new GroupPanel(View.GAP_SMALL, mEncryptionStatus, editButton),
+                BorderLayout.EAST);
 
-        titlePanel.add(editButton, BorderLayout.EAST);
         this.add(titlePanel, BorderLayout.NORTH);
 
         mScrollPane = new ComponentUtils.ScrollPane(this).setShadeWidth(0);
@@ -202,8 +218,6 @@ final class ChatView extends WebPanel implements Observer {
                 ChatView.this.showFileDialog();
             }
         });
-        // encryption status label
-        mEncryptionStatus = new WebLabel();
 
         // send button
         mSendButton = new WebButton(Tr.tr("Send"))
@@ -224,9 +238,7 @@ final class ChatView extends WebPanel implements Observer {
         });
 
         bottomPanel.add(new GroupPanel(GroupingType.fillMiddle, View.GAP_DEFAULT,
-                mFileButton,
-                Box.createGlue(),
-                new GroupPanel(View.GAP_DEFAULT, mEncryptionStatus, mSendButton)),
+                mFileButton, Box.createGlue(), mSendButton),
                 BorderLayout.NORTH);
 
         // text area
@@ -476,15 +488,7 @@ final class ChatView extends WebPanel implements Observer {
         this.updateEnabledButtons();
 
         // encryption status
-        boolean isEncrypted = chat.isSendEncrypted();
-        String encryption = isEncrypted ?
-                Tr.tr("Encrypted") :
-                Tr.tr("Not encrypted");
-
-        mEncryptionStatus.setText(encryption);
-        mEncryptionStatus.setForeground(isEncrypted != chat.canSendEncrypted() ?
-                Color.RED :
-                Color.BLACK);
+        mEncryptionStatus.setStatus(chat.isSendEncrypted(), chat.canSendEncrypted());
     }
 
     private Optional<ComponentUtils.PopupPanel> getPopupPanel() {
