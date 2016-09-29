@@ -29,7 +29,6 @@ import javax.swing.event.DocumentEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.GradientPaint;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
@@ -341,7 +340,8 @@ final class ChatView extends WebPanel implements Observer {
         JViewport p = mScrollPane.getViewport();
         if (s.getBGColor().isPresent()) {
             Color c = s.getBGColor().get();
-            return Optional.of(new Background(p, c));
+            // TODO color not used
+            return Optional.empty();
         } else if (!s.getImagePath().isEmpty()) {
             return Optional.of(new Background(p, s.getImagePath()));
         } else {
@@ -560,31 +560,23 @@ final class ChatView extends WebPanel implements Observer {
         private final Component mParent;
         // background image from resource or user selected
         private final Image mOrigin;
-        // background color, can be set by user
-        private final Color mCustomColor;
         // cached background with size of viewport
         private BufferedImage mCached = null;
 
-        private Background(Component parent, Image origin, Color color) {
+        private Background(Component parent, Image origin) {
             mParent = parent;
             mOrigin = origin;
-            mCustomColor = color;
         }
 
         /** Default, no chat specific settings. */
         Background(Component parent) {
-            this(parent, Utils.getImage("chat_bg.png"), new Color(255, 255, 255, 255));
+            this(parent, Utils.getImage("chat_bg.png"));
         }
 
         /** Image set by user (global or only for chat). */
         Background(Component parent, String imagePath) {
             // image loaded async!
-            this(parent, Toolkit.getDefaultToolkit().createImage(imagePath), null);
-        }
-
-        /** Chat specific color. */
-        Background(Component parent, Color bottomColor) {
-            this(parent, null, bottomColor);
+            this(parent, Toolkit.getDefaultToolkit().createImage(imagePath));
         }
 
         /**
@@ -636,14 +628,6 @@ final class ChatView extends WebPanel implements Observer {
             int height = mParent.getHeight();
             mCached = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
             Graphics2D cachedG = mCached.createGraphics();
-            // gradient background of background
-            if (mCustomColor != null) {
-                GradientPaint p2 = new GradientPaint(
-                        0, 0, mCustomColor,
-                        width, 0, new Color(0, 0, 0, 0));
-                cachedG.setPaint(p2);
-                cachedG.fillRect(0, 0, width, ChatView.this.getHeight());
-            }
             if (scaledImage == null)
                 return;
             // tiling
