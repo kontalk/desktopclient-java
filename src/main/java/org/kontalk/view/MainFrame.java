@@ -171,16 +171,29 @@ final class MainFrame extends WebFrame {
         WebMenu optionsMenu = new WebMenu(Tr.tr("Options"));
         optionsMenu.setMnemonic(KeyEvent.VK_O);
 
-        WebMenuItem conConfMenuItem = new WebMenuItem(Tr.tr("Preferences"));
-        conConfMenuItem.setAccelerator(Hotkey.ALT_P);
-        conConfMenuItem.setToolTipText(Tr.tr("Set application preferences"));
-        conConfMenuItem.addActionListener(new ActionListener() {
+        WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Attachments"));
+        attMenuItem.setAccelerator(Hotkey.ALT_A);
+        attMenuItem.setToolTipText(Tr.tr("Open Attachment directory"));
+        attMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println(mView.getControl().getAttachmentDir());
+                Utils.createLinkRunnable(mView.getControl().getAttachmentDir()).run();
+            }
+        });
+        optionsMenu.add(attMenuItem);
+        optionsMenu.addSeparator();
+
+        WebMenuItem confMenuItem = new WebMenuItem(Tr.tr("Preferences"));
+        confMenuItem.setAccelerator(Hotkey.ALT_P);
+        confMenuItem.setToolTipText(Tr.tr("Set application preferences"));
+        confMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 mView.showConfig();
             }
         });
-        optionsMenu.add(conConfMenuItem);
+        optionsMenu.add(confMenuItem);
 
         menubar.add(optionsMenu);
 

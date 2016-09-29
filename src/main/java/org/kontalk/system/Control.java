@@ -705,6 +705,10 @@ public final class Control {
             mModel.account().setPassword(oldPass, newPass);
         }
 
+        public Path getAttachmentDir() {
+            return mAttachmentManager.getAttachmentDir();
+        }
+
         public Path getFilePath(Attachment attachment) {
             return mAttachmentManager.absoluteFilePath(attachment);
         }

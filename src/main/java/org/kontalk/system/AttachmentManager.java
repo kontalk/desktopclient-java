@@ -18,7 +18,6 @@
 
 package org.kontalk.system;
 
-import org.kontalk.persistence.Config;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -31,6 +30,7 @@ import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.client.Client;
@@ -45,6 +45,7 @@ import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.model.message.OutMessage;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.MediaUtils;
 
 /**
@@ -340,6 +341,10 @@ public class AttachmentManager implements Runnable {
         message.setPreview(preview);
 
         return true;
+    }
+
+    Path getAttachmentDir() {
+        return mAttachmentDir;
     }
 
     Path absoluteFilePath(Attachment attachment) {

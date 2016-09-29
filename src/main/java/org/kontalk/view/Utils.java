@@ -131,7 +131,7 @@ final class Utils {
                 try {
                     dt.open(path.toFile());
                 } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
+                    LOGGER.log(Level.WARNING, "can't open path", ex);
                 }
             }
         };
