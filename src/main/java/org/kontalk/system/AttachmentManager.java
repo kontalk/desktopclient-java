@@ -23,7 +23,9 @@ import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
@@ -160,6 +162,13 @@ public class AttachmentManager implements Runnable {
 
         File original;
         File file = original = attachment.getFilePath().toFile();
+        String uploadName;
+        try {
+            uploadName = URLEncoder.encode(file.getName(), "UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            LOGGER.log(Level.WARNING, "can't encode file name", ex);
+            return;
+        }
         String mime = attachment.getMimeType();
 
         // maybe resize image for smaller payload
@@ -211,8 +220,7 @@ public class AttachmentManager implements Runnable {
             return;
 
         long length = file.length();
-        Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
-
+        Slot uploadSlot = mClient.getUploadSlot(uploadName, length, mime);
         if (uploadSlot.uploadURL.toString().isEmpty() ||
                 uploadSlot.downloadURL.toString().isEmpty()) {
             LOGGER.warning("empty slot: "+attachment);
