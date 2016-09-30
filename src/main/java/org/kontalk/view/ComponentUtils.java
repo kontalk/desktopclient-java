@@ -925,8 +925,13 @@ final class ComponentUtils {
                     if (mFile == null)
                         return; // should never happen
 
-                    mFileChooser.setSelectedFile(
-                            new File(mFileChooser.getCurrentDirectory(), mFile.getName()));
+                    File suggestedFile = new File(
+                            mFileChooser.getCurrentDirectory(), mFile.getName());
+
+                    mFileChooser.setSelectedFile(suggestedFile);
+                    // fix WebLaf bug
+                    mFileChooser.getFileChooserPanel().setSelectedFiles(new File[]{suggestedFile});
+
                     int option = mFileChooser.showSaveDialog(AttachmentPanel.this);
                     if (option == JFileChooser.APPROVE_OPTION) {
                         try {
