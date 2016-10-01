@@ -18,6 +18,17 @@
 
 package org.kontalk.view;
 
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import com.alee.extended.panel.GroupPanel;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
@@ -27,22 +38,12 @@ import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
+import org.kontalk.client.FeatureDiscovery;
+import org.kontalk.model.Avatar;
 import org.kontalk.model.Model;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
-
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import org.kontalk.client.FeatureDiscovery;
-import org.kontalk.model.Avatar;
 import org.kontalk.view.AvatarLoader.AvatarImg;
 
 /**
@@ -89,7 +90,7 @@ final class ProfileDialog extends WebDialog {
                 return supported ? super.tooltipText() :
                         mView.currentStatus() != Control.Status.CONNECTED ?
                         Tr.tr("Not connected") :
-                        mView.tr_not_supported;
+                        Tr.tr("Not supported by server");
             }
         };
 

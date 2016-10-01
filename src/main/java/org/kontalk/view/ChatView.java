@@ -18,15 +18,13 @@
 
 package org.kontalk.view;
 
-import javax.swing.Box;
+import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JViewport;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -59,7 +57,6 @@ import java.util.Observer;
 import java.util.Optional;
 
 import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
 import com.alee.extended.panel.WebOverlay;
 import com.alee.laf.button.WebButton;
 import com.alee.laf.button.WebToggleButton;
@@ -98,26 +95,33 @@ import org.kontalk.util.Tr;
  */
 final class ChatView extends WebPanel implements Observer {
 
+    private static final Icon ATT_ICON = Utils.getIcon("ic_ui_attach.png");
+    private static final Icon SEND_ICON = Utils.getIcon("ic_ui_send.png");
+
+    private enum ButtonStatus {Attachment, AttDisabled, Send, Disabled}
+
     private final View mView;
 
     private final ComponentUtils.AvatarImage mAvatar;
     private final WebLabel mTitleLabel;
     private final WebLabel mSubTitleLabel;
+    private final ComponentUtils.EncryptionPanel mEncryptionStatus;
+
+    private final WebFileChooser mFileChooser;
+    private final WebButton mSendButton;
+
     private final WebScrollPane mScrollPane;
     private final FileDropHandler mDropHandler;
     private final WebTextArea mSendTextArea;
     private final WebOverlay mOverlay;
     private final WebLabel mOverlayLabel;
-    private final ComponentUtils.EncryptionPanel mEncryptionStatus;
-    private final WebButton mSendButton;
-    private final WebFileChooser mFileChooser;
-    private final WebButton mFileButton;
 
     private final Map<Chat, MessageList> mMessageListCache = new HashMap<>();
 
     private Background mDefaultBG;
 
     private boolean mScrollDown = false;
+    private boolean mAttSupported = false;
 
     ChatView(View view) {
         mView = view;
@@ -202,37 +206,6 @@ final class ChatView extends WebPanel implements Observer {
                 return isAllowed(file);
             }
         });
-        mFileButton = new WebButton(Tr.tr("File"), Utils.getIcon("ic_ui_attach.png"))
-                .setBottomBgColor(titlePanel.getBackground());
-
-        mFileButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                ChatView.this.showFileDialog();
-            }
-        });
-
-        // send button
-        mSendButton = new WebButton(Tr.tr("Send"))
-                .setBottomBgColor(titlePanel.getBackground())
-                .setFontStyle(true, false);
-        TooltipManager.addTooltip(mSendButton, Tr.tr("Send Message"));
-        mSendButton.setEnabled(false);
-        mSendButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                Component focusOwner = SwingUtilities.getWindowAncestor(ChatView.this).getFocusOwner();
-                if (focusOwner != mSendTextArea && focusOwner != mSendButton)
-                    return;
-
-                ChatView.this.sendMsg();
-                mSendTextArea.requestFocusInWindow();
-            }
-        });
-
-        bottomPanel.add(new GroupPanel(GroupingType.fillMiddle, View.GAP_DEFAULT,
-                mFileButton, Box.createGlue(), mSendButton),
-                BorderLayout.NORTH);
 
         // text area
         mSendTextArea = new WebTextArea();
@@ -263,6 +236,19 @@ final class ChatView extends WebPanel implements Observer {
                 .setMargin(View.MARGIN_SMALL)
                 .setWebColoredBackground(false);
         bottomPanel.add(mOverlay, BorderLayout.CENTER);
+
+        // send button
+        mSendButton = new WebButton()
+                .setTopBgColor(titlePanel.getBackground())
+                .setBottomBgColor(titlePanel.getBackground())
+                .setDrawSides(false, false, false, false);
+        mSendButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ChatView.this.sendButtonAction();
+            }
+        });
+        bottomPanel.add(mSendButton, BorderLayout.EAST);
 
         // old transfer handler of text area is fallback for bottom panel
         mDropHandler = new FileDropHandler(mSendTextArea.getTransferHandler());
@@ -398,26 +384,17 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     void onStatusChange(Control.Status status, EnumSet<FeatureDiscovery.Feature> serverFeature) {
-        Boolean supported = null;
         switch(status) {
             case CONNECTED:
                 this.setColor(Color.WHITE);
-                supported = serverFeature.contains(
-                        FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
+                mAttSupported = serverFeature.contains(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
                 break;
             case DISCONNECTED:
             case ERROR:
                 this.setColor(Color.LIGHT_GRAY);
                 // don't know, but assume it
-                supported = true;
+                mAttSupported = true;
                 break;
-        }
-        if (supported != null) {
-            TooltipManager.setTooltip(mFileButton, Tr.tr("Send File") + " - " + (supported ?
-                            Tr.tr("max. size:") + " " +
-                            FileUtils.byteCountToDisplaySize(AttachmentManager.MAX_ATT_SIZE) :
-                            mView.tr_not_supported));
-            mFileButton.setForeground(supported ? Color.BLACK : Color.RED);
         }
     }
 
@@ -502,20 +479,61 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     private void updateEnabledButtons() {
-        Chat chat = this.getCurrentChat().orElse(null);
-        if (chat == null)
+
+        ButtonStatus status = this.currentButtonStatus();
+
+        boolean enabled = !(status == ButtonStatus.AttDisabled || status == ButtonStatus.Disabled);
+        mSendButton.setEnabled(enabled);
+        mDropHandler.setDropEnabled(enabled);
+
+        String tooltipText;
+        switch (status) {
+            case Attachment:
+                mSendButton.setIcon(ATT_ICON);
+                tooltipText = Tr.tr("Send File") + " - " + Tr.tr("max. size:") + " "
+                        + FileUtils.byteCountToDisplaySize(AttachmentManager.MAX_ATT_SIZE);
+                break;
+            case AttDisabled:
+                mSendButton.setIcon(ATT_ICON);
+                tooltipText = Tr.tr("Sending files not supported by server");
+                break;
+            default:
+                mSendButton.setIcon(SEND_ICON);
+                tooltipText = Tr.tr("Send Message");
+        }
+
+        TooltipManager.setTooltip(mSendButton, tooltipText);
+    }
+
+    private void sendButtonAction() {
+        Component focusOwner = SwingUtilities.getWindowAncestor(ChatView.this).getFocusOwner();
+        if (focusOwner != mSendTextArea && focusOwner != mSendButton)
             return;
 
-        // enable if chat is valid...
-        boolean canSendMessage = chat.isValid() &&
-                // ...and encrypted messages can be send
-                (!chat.isSendEncrypted() || chat.canSendEncrypted());
+        if (this.currentButtonStatus() == ButtonStatus.Attachment) {
+            this.showFileDialog();
+        } else {
+            this.sendMsg();
+            mSendTextArea.requestFocusInWindow();
+        }
+    }
 
-        mFileButton.setEnabled(canSendMessage);
-        mSendButton.setEnabled(canSendMessage &&
-                // + there is text to send...
-                !mSendTextArea.getText().trim().isEmpty());
-        mDropHandler.setDropEnabled(canSendMessage);
+    private ButtonStatus currentButtonStatus() {
+        Chat chat = this.getCurrentChat().orElse(null);
+        if (chat == null)
+            return ButtonStatus.Disabled;
+
+        // disable if chat is not valid...
+        if (!chat.isValid() ||
+                // or encrypted messages can not be send
+                (chat.isSendEncrypted() && !chat.canSendEncrypted())) {
+            return ButtonStatus.Disabled;
+        }
+
+        // if there is text to send
+        return mSendTextArea.getText().trim().isEmpty() ?
+                mAttSupported ? ButtonStatus.Attachment : ButtonStatus.AttDisabled :
+                ButtonStatus.Send;
     }
 
     private void sendMsg() {

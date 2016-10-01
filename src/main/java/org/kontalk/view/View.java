@@ -119,7 +119,6 @@ public final class View implements Observer {
     private final MainFrame mMainFrame;
 
     final String tr_remove_contact = Tr.tr("Chats and messages will not be deleted.");
-    final String tr_not_supported = Tr.tr("Not supported by server");
 
     private Control.Status mCurrentStatus;
     private EnumSet<FeatureDiscovery.Feature> mServerFeatures;
