@@ -177,7 +177,6 @@ final class MainFrame extends WebFrame {
         attMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                System.out.println(mView.getControl().getAttachmentDir());
                 Utils.createLinkRunnable(mView.getControl().getAttachmentDir()).run();
             }
         });
