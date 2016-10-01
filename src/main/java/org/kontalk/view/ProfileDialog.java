@@ -34,7 +34,6 @@ import com.alee.laf.button.WebButton;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.list.WebList;
 import com.alee.laf.rootpane.WebDialog;
-import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
@@ -67,11 +66,11 @@ final class ProfileDialog extends WebDialog {
         GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
         groupPanel.setMargin(View.MARGIN_BIG);
 
-        groupPanel.add(new WebLabel(Tr.tr("Edit your profile")).setBoldFont());
+        groupPanel.add(new WebLabel(Tr.tr("Edit Your Profile")).setBoldFont());
         groupPanel.add(new WebSeparator(true, true));
 
         // avatar
-        groupPanel.add(new WebLabel(Tr.tr("Your profile picture:")));
+        groupPanel.add(new WebLabel(Tr.tr("Profile Picture")).setBoldFont());
 
         // permanent, user has to re-open the dialog on change
         final boolean supported = mView.serverFeatures().contains(FeatureDiscovery.Feature.USER_AVATAR);
@@ -109,7 +108,7 @@ final class ProfileDialog extends WebDialog {
         List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
         String currentStatus = !stats.isEmpty() ? stats.remove(0) : "";
 
-        groupPanel.add(new WebLabel(Tr.tr("Your current status:")));
+        groupPanel.add(new WebLabel(Tr.tr("Status Message")).setBoldFont());
         mStatusField = new WebTextField(currentStatus, 30);
         TooltipManager.addTooltip(mStatusField,
                 Tr.tr("Set status text send to other user"));
@@ -118,6 +117,7 @@ final class ProfileDialog extends WebDialog {
         groupPanel.add(new WebLabel(Tr.tr("Previously used:")));
         mStatusList = new WebList(stats);
         mStatusList.setMultiplySelectionAllowed(false);
+        mStatusList.setVisibleRowCount(5);
         mStatusList.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
@@ -126,8 +126,8 @@ final class ProfileDialog extends WebDialog {
                 mStatusField.setText(mStatusList.getSelectedValue().toString());
             }
         });
-        WebScrollPane listScrollPane = new ComponentUtils.ScrollPane(mStatusList);
-        groupPanel.add(listScrollPane);
+        groupPanel.add(new ComponentUtils.ScrollPane(mStatusList));
+
         this.add(groupPanel, BorderLayout.CENTER);
 
         // buttons
