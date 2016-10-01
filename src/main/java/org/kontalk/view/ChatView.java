@@ -143,6 +143,7 @@ final class ChatView extends WebPanel implements Observer {
         // encryption status
         mEncryptionStatus = new ComponentUtils.EncryptionPanel();
 
+        // edit button
         WebToggleButton editButton = new ComponentUtils.ToggleButton(
                 Utils.getIcon("ic_ui_menu.png"),
                 Tr.tr("Edit this chat")) {
@@ -150,20 +151,12 @@ final class ChatView extends WebPanel implements Observer {
             Optional<ComponentUtils.PopupPanel> getPanel() {
                 return ChatView.this.getPopupPanel();
             }
-        };
-        //editButton.setBorderPainted(false);
-        //editButton.setDrawLines(false, false, false, false);
-        editButton.setDrawSides(false, false, false, false);
-        editButton.setTopBgColor(titlePanel.getBackground());
-        editButton.setBottomBgColor(titlePanel.getBackground());
-        editButton.addChangeListener(new ChangeListener() {
-            @Override
-            public void stateChanged(ChangeEvent e) {
-                boolean pressed = editButton.isSelected();
-                editButton.setDrawSides(pressed, pressed, pressed, pressed);
-            }
-        });
-        titlePanel.add(new GroupPanel(View.GAP_SMALL, mEncryptionStatus, editButton),
+        }
+        .setDrawSides(false, false, false, false)
+        .setTopBgColor(titlePanel.getBackground())
+        .setBottomBgColor(titlePanel.getBackground());
+
+        titlePanel.add(new GroupPanel(View.GAP_DEFAULT, mEncryptionStatus, editButton),
                 BorderLayout.EAST);
 
         this.add(titlePanel, BorderLayout.NORTH);
