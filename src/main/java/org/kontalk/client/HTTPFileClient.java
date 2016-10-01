@@ -18,13 +18,12 @@
 
 package org.kontalk.client;
 
-import java.util.logging.Logger;
+import javax.net.ssl.SSLContext;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyManagementException;
@@ -36,10 +35,10 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.net.ssl.SSLContext;
-import org.apache.commons.io.FilenameUtils;
+
 import org.apache.commons.io.output.CountingOutputStream;
 import org.apache.commons.lang.StringUtils;
 import org.apache.http.Header;
@@ -57,6 +56,7 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.kontalk.misc.KonException;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.TrustUtils;
@@ -109,9 +109,10 @@ public class HTTPFileClient {
      * Download file to directory.
      * @param url URL of file
      * @param base base directory in which the download is saved
+     * @param encrypted indicate if file is encrypted
      * @return absolute path of downloaded file, empty if download failed
      */
-    public synchronized Path download(URI url, Path base, ProgressListener listener)
+    public synchronized Path download(URI url, Path base, ProgressListener listener, boolean encrypted)
             throws KonException {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
@@ -179,18 +180,10 @@ public class HTTPFileClient {
             final long fileSize = s;
             mCurrentListener.updateProgress(s < 0 ? -2 : 0);
 
-            Path destination = Paths.get(base.toString(), filename);
-            if (Files.exists(destination)) {
-                destination = Paths.get(base.toString(),
-                        FilenameUtils.getBaseName(filename) +
-                                "_" + EncodingUtils.randomString(4) +
-                                "." + FilenameUtils.getExtension(filename));
-                if (Files.exists(destination)) {
-                    LOGGER.warning("not possible");
-                    return Paths.get("");
-                }
-            }
-            try (FileOutputStream out = new FileOutputStream(destination.toFile())){
+            File outFile = MediaUtils.nonExistingFileForPath(
+                    Paths.get(base.toString(),
+                            (encrypted ? AttachmentManager.ENCRYPT_PREFIX : "") + filename));
+            try (FileOutputStream out = new FileOutputStream(outFile)){
                 CountingOutputStream cOut = new CountingOutputStream(out) {
                     @Override
                     protected synchronized void afterWrite(int n) {
@@ -211,7 +204,7 @@ public class HTTPFileClient {
             // release http connection resource
             EntityUtils.consumeQuietly(entity);
 
-            return destination.toAbsolutePath();
+            return outFile.toPath();
         } finally {
             HttpClientUtils.closeQuietly(response);
             mCurrentRequest = null;

@@ -61,10 +61,12 @@ public class AttachmentManager implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(AttachmentManager.class.getName());
 
     private static final String ATT_DIRNAME = "attachments";
+
     private static final String PREVIEW_DIRNAME = "preview";
     private static final String RESIZED_IMG_MIME = "image/jpeg";
 
     public static final Dimension THUMBNAIL_DIM = new Dimension(300, 200);
+    public static final String ENCRYPT_PREFIX = "encrypted_";
     public static final String THUMBNAIL_MIME = "image/jpeg";
     public static final int MAX_ATT_SIZE = 20 * 1024 * 1024;
 
@@ -267,8 +269,9 @@ public class AttachmentManager implements Runnable {
         };
 
         Path path;
+        boolean encrypted = attachment.getCoderStatus().isEncrypted();
         try {
-            path = client.download(attachment.getURL(), mAttachmentDir, listener);
+            path = client.download(attachment.getURL(), mAttachmentDir, listener, encrypted);
         } catch (KonException ex) {
             LOGGER.warning("download failed, URL="+attachment.getURL());
             mControl.onException(ex);
@@ -285,7 +288,7 @@ public class AttachmentManager implements Runnable {
         message.setAttachmentFileName(path.getFileName().toString());
 
         // decrypt file
-        if (attachment.getCoderStatus().isEncrypted()) {
+        if (encrypted) {
             mControl.myKey().ifPresent(mk ->
                     Coder.decryptAttachment(mk, message, mAttachmentDir));
         }
