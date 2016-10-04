@@ -24,6 +24,7 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.TableModelEvent;
 import javax.swing.event.TableModelListener;
+import java.awt.Adjustable;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -55,6 +56,7 @@ import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.rootpane.WebFrame;
+import com.alee.laf.scroll.WebScrollBar;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebTextArea;
@@ -73,6 +75,9 @@ import org.kontalk.util.Tr;
 final class MainFrame extends WebFrame {
 
     enum Tab {CHATS, CONTACT};
+
+    private static final int SCROLL_BAR_WIDTH =
+            (int) new WebScrollBar(Adjustable.VERTICAL).getPreferredSize().getWidth();
 
     private final View mView;
     private final WebMenuItem mConnectMenuItem;
@@ -227,43 +232,36 @@ final class MainFrame extends WebFrame {
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
         String chatOverlayText =
                 Tr.tr("No chats to display. You can create a new chat from the contact list.");
-        WebScrollPane chatPane = createTablePane(chatList, chatOverlayText);
         ComponentUtils.PopupPanel addGroupChatPanel = new ComponentUtils.AddGroupChatPanel(mView, model);
         mAddGroupButton = new ComponentUtils.ToggleButton(
-                // TODO different button
-                Utils.getIcon("ic_ui_add.png"),
+                Utils.getIcon("ic_ui_add_group.png"),
                 Tr.tr("Create a new group chat")) {
             @Override
             Optional<ComponentUtils.PopupPanel> getPanel() {
                 return Optional.of(addGroupChatPanel);
             }
         };
-        mAddGroupButton.setShadeWidth(0).setRound(0);
-        WebPanel chatPanel = new GroupPanel(GroupingType.fillFirst, false,
-                chatPane, mAddGroupButton);
-        chatPanel.setPaintSides(false, false, false, false);
-        mTabbedPane.addTab("", chatPanel);
+        WebPanel chatListPanel = createListPanel(chatList, chatOverlayText, mAddGroupButton);
+        mTabbedPane.addTab("", chatListPanel);
         mTabbedPane.setTabComponentAt(Tab.CHATS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
         String contactOverlayText = Tr.tr("No contacts to display.");
-        WebScrollPane contactPane = createTablePane(contactList, contactOverlayText);
         ComponentUtils.PopupPanel addContactPanel = new ComponentUtils.AddContactPanel(mView);
         mAddContactButton = new ComponentUtils.ToggleButton(
-                Utils.getIcon("ic_ui_add.png"),
+                Utils.getIcon("ic_ui_add_contact.png"),
                 Tr.tr("Add a new contact")) {
             @Override
             Optional<ComponentUtils.PopupPanel> getPanel() {
                 return Optional.of(addContactPanel);
             }
         };
-        mAddContactButton.setShadeWidth(0).setRound(0);
-        WebPanel contactPanel = new GroupPanel(GroupingType.fillFirst, false,
-                contactPane, mAddContactButton);
-        contactPanel.setPaintSides(false, false, false, false);
-        mTabbedPane.addTab("", contactPanel);
+        WebPanel contactListPanel = createListPanel(contactList, contactOverlayText, mAddContactButton);
+        //contactListPanel.setPaintSides(false, false, false, false);
+        mTabbedPane.addTab("", contactListPanel);
         mTabbedPane.setTabComponentAt(Tab.CONTACT.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
+
         // setSize() does not work, whatever
         mTabbedPane.setPreferredSize(new Dimension(View.LISTS_WIDTH, -1));
         mTabbedPane.addChangeListener(new ChangeListener() {
@@ -357,8 +355,9 @@ final class MainFrame extends WebFrame {
                 icon);
     }
 
-    private static WebScrollPane createTablePane(final ListView<?, ?> list,
-            String overlayText) {
+    private static WebPanel createListPanel(final ListView<?, ?> list,
+                                            String overlayText,
+                                            WebToggleButton button) {
         // overlay for empty list
         WebOverlay listOverlay = new WebOverlay(list);
         listOverlay.setOverlayMargin(20);
@@ -383,6 +382,14 @@ final class MainFrame extends WebFrame {
 
         WebScrollPane scrollPane = new ComponentUtils.ScrollPane(listOverlay);
         scrollPane.setDrawBorder(false);
-        return scrollPane;
+
+        // button as overlay
+        button.setOpaque(false);
+        button.setUndecorated(true);
+        WebOverlay chatListOverlay = new WebOverlay(scrollPane,
+                button, SwingConstants.TRAILING, SwingConstants.BOTTOM);
+        chatListOverlay.setOverlayMargin(0, 0, View.GAP_BIG, View.GAP_BIG + SCROLL_BAR_WIDTH);
+
+        return chatListOverlay;
     }
 }
