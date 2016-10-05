@@ -224,7 +224,12 @@ abstract class FlyweightListView<V extends Observable & Searchable>
                 // click), see https://stackoverflow.com/a/17636224
                 CellEditor cellEditor = FlyweightListView.this.getCellEditor();
                 if (cellEditor != null)
-                    cellEditor.stopCellEditing();
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            cellEditor.stopCellEditing();
+                        }
+                    });
             }
         });
     }
@@ -235,17 +240,13 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         if (!ArrayUtils.contains(this.getSelectedRows(), row))
             this.setSelectedItem(row);
 
-        this.showPopupMenu(e, this.getSelectedItems());
-    }
-
-    private void showPopupMenu(MouseEvent e, List<V> items) {
-        WebPopupMenu menu = this.rightClickMenu(items);
+        WebPopupMenu menu = this.rightClickMenu(this.getSelectedItems());
         menu.show(this, e.getX(), e.getY());
     }
 
     protected void selectionChanged(Optional<V> value){};
 
-    protected abstract WebPopupMenu rightClickMenu(List<V> items);
+    protected abstract WebPopupMenu rightClickMenu(List<V> selectedItems);
 
     @SuppressWarnings("unchecked")
     protected boolean sync(Set<V> values) {
