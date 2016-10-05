@@ -121,16 +121,14 @@ final class MessageList extends FlyweightListView<KonMessage> {
         // hide grid
         this.setShowGrid(false);
 
-        this.setVisible(false);
-        this.updateOnEDT(null);
-        this.setVisible(true);
-
         // static menu, cannot use this
         //this.setComponentPopupMenu(...);
 
         // copy items to clipboard using the in-build 'copy' action, invoked by custom right-click
         // menu or default ctrl+c shortcut
         this.setTransferHandler(new CopyTransferHandler(mView));
+
+        this.updateOnEDT(null);
     }
 
     Chat getChat() {
@@ -177,7 +175,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(List<KonMessage> items) {
+    protected WebPopupMenu rightClickMenu(List<KonMessage> selectedItems) {
         WebPopupMenu menu = new WebPopupMenu();
 
         Action copyAction = new AbstractAction(Tr.tr("Copy")) {
@@ -191,15 +189,15 @@ final class MessageList extends FlyweightListView<KonMessage> {
         copyAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
         menu.add(copyAction);
 
-        if (items.isEmpty()) {
+        if (selectedItems.isEmpty()) {
             LOGGER.warning("no items");
             return menu;
         }
 
-        if (items.size() > 1)
+        if (selectedItems.size() > 1)
             return menu;
 
-        final KonMessage m = items.get(0);
+        final KonMessage m = selectedItems.get(0);
         if (m instanceof InMessage) {
             InMessage im = (InMessage) m;
             if (m.isEncrypted()) {
@@ -673,7 +671,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
 
             StringBuffer plainBuf = new StringBuffer();
             for (int row = 0; row < rows.length; row++) {
-                KonMessage m = table.getItemAtModelIndex(rows[row]);
+                KonMessage m = table.getDisplayedItemAt(rows[row]);
                 String val = messageToString(m, mView, true);
                 plainBuf.append(val + "\n"); // NOTE: newline after last line
             }
