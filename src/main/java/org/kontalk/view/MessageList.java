@@ -662,16 +662,13 @@ final class MessageList extends FlyweightListView<KonMessage> {
                 return null;
             }
 
-            MessageList table = (MessageList) c;
-            int[] rows = table.getSelectedRows();
-
-            if (rows.length == 0) {
-                return null; // nothing selected
+            List<KonMessage> messages = ((MessageList) c).getSelectedItems();
+            if (messages.isEmpty()) {
+                return null;
             }
 
             StringBuffer plainBuf = new StringBuffer();
-            for (int row = 0; row < rows.length; row++) {
-                KonMessage m = table.getDisplayedItemAt(rows[row]);
+            for (KonMessage m : messages) {
                 String val = messageToString(m, mView, true);
                 plainBuf.append(val + "\n"); // NOTE: newline after last line
             }
