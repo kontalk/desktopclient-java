@@ -173,7 +173,7 @@ final class ChatListView extends ListView<ChatItem, Chat> {
             this.add(mStatusLabel, BorderLayout.EAST);
 
             mChatStateLabel = new WebLabel();
-            mChatStateLabel.setForeground(View.GREEN);
+            mChatStateLabel.setForeground(View.DARK_RED);
             mChatStateLabel.setFontSize(View.FONT_SIZE_NORMAL);
             mChatStateLabel.setBoldFont();
             //mChatStateLabel.setMargin(0, 5, 0, 5);
