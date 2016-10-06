@@ -127,11 +127,17 @@ final class Utils {
         return new Runnable () {
             @Override
             public void run () {
+                File file = path.toFile();
+                if (!file.exists()) {
+                    LOGGER.info("file does not exist: " + file);
+                    return;
+                }
+
                 Desktop dt = Desktop.getDesktop();
                 try {
-                    dt.open(path.toFile());
+                    dt.open(file);
                 } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
+                    LOGGER.log(Level.WARNING, "can't open path", ex);
                 }
             }
         };

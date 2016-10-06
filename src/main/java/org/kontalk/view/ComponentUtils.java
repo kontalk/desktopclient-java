@@ -24,8 +24,11 @@ import javax.swing.Box;
 import javax.swing.DefaultListModel;
 import javax.swing.DefaultListSelectionModel;
 import javax.swing.Icon;
+import javax.swing.JFileChooser;
 import javax.swing.JLayeredPane;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
 import javax.swing.JRootPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
@@ -61,13 +64,18 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.alee.extended.image.WebDecoratedImage;
 import com.alee.extended.image.WebImage;
@@ -115,6 +123,7 @@ import org.kontalk.view.AvatarLoader.AvatarImg;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ComponentUtils {
+    private static final Logger LOGGER = Logger.getLogger(ComponentUtils.class.getName());
 
     private ComponentUtils() {}
 
@@ -850,20 +859,35 @@ final class ComponentUtils {
     }
 
     static class AttachmentPanel extends GroupPanel {
-
         private final WebLabel mStatus;
         private final WebLinkLabel mAttLabel;
+        private final WebFileChooser mFileChooser;
 
-        private Path mFilePath = null;
+        private File mFile = null;
 
         AttachmentPanel() {
-           super(View.GAP_SMALL, false);
+            super(View.GAP_SMALL, false);
 
-           mStatus = new WebLabel().setItalicFont();
-           this.add(mStatus);
+            this.add(mStatus = new WebLabel().setItalicFont());
+            this.add(mAttLabel = new WebLinkLabel());
 
-           mAttLabel = new WebLinkLabel();
-           this.add(mAttLabel);
+            mFileChooser = new WebFileChooser() {
+                @Override
+                public void approveSelection(){
+                    File f = getSelectedFile();
+                    if (f.exists()) {
+                        int option = JOptionPane.showConfirmDialog(this,
+                                String.format(
+                                        Tr.tr("The file \"%s\" already exists, overwrite?"),
+                                        f.getName()),
+                                Tr.tr("Overwrite File?"),
+                                JOptionPane.OK_CANCEL_OPTION);
+                        if (option != JOptionPane.YES_OPTION)
+                            return; // doing nothing means not approve
+                    }
+                    super.approveSelection();
+                }
+            };
         }
 
         /** Set image preview. */
@@ -877,16 +901,89 @@ final class ComponentUtils {
         }
 
         private void setAttachment(String text, Path imagePath, Path linkPath) {
-            mFilePath = linkPath;
+            mFile = linkPath.toFile();
+
             mAttLabel.setIcon(imagePath == null ?
                     null :
                     // file should be present and should be an image, show it
                     ImageLoader.imageIcon(imagePath));
+
             mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
+        }
+
+        @Override
+        public JPopupMenu getComponentPopupMenu() {
+            WebPopupMenu menu = new WebPopupMenu();
+
+            if (mFile == null)
+                return null; // should never happen
+
+            WebMenuItem saveMenuItem = new WebMenuItem(Tr.tr("Save File As…"));
+            saveMenuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    if (mFile == null)
+                        return; // should never happen
+
+                    File suggestedFile = new File(
+                            mFileChooser.getCurrentDirectory(), mFile.getName());
+
+                    mFileChooser.setSelectedFile(suggestedFile);
+                    // fix WebLaf bug
+                    mFileChooser.getFileChooserPanel().setSelectedFiles(new File[]{suggestedFile});
+
+                    int option = mFileChooser.showSaveDialog(AttachmentPanel.this);
+                    if (option == JFileChooser.APPROVE_OPTION) {
+                        try {
+                            Files.copy(mFile.toPath(), mFileChooser.getSelectedFile().toPath(),
+                                    StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException ex) {
+                            LOGGER.log(Level.WARNING, "can't copy file", ex);
+                        }
+                    }
+                }
+            });
+            if (!mFile.exists()) {
+                saveMenuItem.setEnabled(false);
+                saveMenuItem.setToolTipText(Tr.tr("File does not exist"));
+            }
+            menu.add(saveMenuItem);
+
+            return menu;
         }
 
         void setStatus(String text) {
             mStatus.setText(text);
+        }
+    }
+
+    static class EncryptionPanel extends WebPanel {
+
+        private static final Icon ICON_SECURE = Utils.getIcon("ic_ui_secure.png");
+        private static final Icon ICON_INSECURE = Utils.getIcon("ic_ui_insecure.png");
+
+        private final WebLabel mEncryptionIcon;
+        private final WebLabel mEncryptionWarningIcon;
+
+        EncryptionPanel() {
+            mEncryptionIcon = new WebLabel();
+            mEncryptionWarningIcon = new WebLabel(Utils.getIcon("ic_ui_warning.png"));
+
+            this.add(mEncryptionIcon, BorderLayout.WEST);
+            this.add(mEncryptionWarningIcon, BorderLayout.EAST);
+        }
+
+        void setStatus(boolean isEncrypted, boolean canEncrypt) {
+            mEncryptionIcon.setIcon(isEncrypted ? ICON_SECURE : ICON_INSECURE);
+            mEncryptionWarningIcon.setVisible(isEncrypted != canEncrypt);
+
+            String text = "<html>" + (isEncrypted ? Tr.tr("Encrypted") : Tr.tr("Not encrypted"));
+            if (isEncrypted && !canEncrypt) {
+                text += "<br>" + Tr.tr("Contact key is missing");
+            } else if (!isEncrypted && canEncrypt) {
+                text += "<br>" + Tr.tr("Encryption can be activated");
+            }
+            TooltipManager.setTooltip(this, text + "</html>");
         }
     }
 

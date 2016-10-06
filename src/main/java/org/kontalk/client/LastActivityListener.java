@@ -43,7 +43,7 @@ public class LastActivityListener implements StanzaListener {
 
     @Override
     public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
-       LOGGER.config("last activity: " + packet);
+        LOGGER.config("last activity: " + packet);
 
         LastActivity lastActivity = (LastActivity) packet;
 

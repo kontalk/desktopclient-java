@@ -121,16 +121,14 @@ final class MessageList extends FlyweightListView<KonMessage> {
         // hide grid
         this.setShowGrid(false);
 
-        this.setVisible(false);
-        this.updateOnEDT(null);
-        this.setVisible(true);
-
         // static menu, cannot use this
         //this.setComponentPopupMenu(...);
 
         // copy items to clipboard using the in-build 'copy' action, invoked by custom right-click
         // menu or default ctrl+c shortcut
         this.setTransferHandler(new CopyTransferHandler(mView));
+
+        this.updateOnEDT(null);
     }
 
     Chat getChat() {
@@ -177,7 +175,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(List<KonMessage> items) {
+    protected WebPopupMenu rightClickMenu(List<KonMessage> selectedItems) {
         WebPopupMenu menu = new WebPopupMenu();
 
         Action copyAction = new AbstractAction(Tr.tr("Copy")) {
@@ -191,15 +189,15 @@ final class MessageList extends FlyweightListView<KonMessage> {
         copyAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
         menu.add(copyAction);
 
-        if (items.isEmpty()) {
+        if (selectedItems.isEmpty()) {
             LOGGER.warning("no items");
             return menu;
         }
 
-        if (items.size() > 1)
+        if (selectedItems.size() > 1)
             return menu;
 
-        final KonMessage m = items.get(0);
+        final KonMessage m = selectedItems.get(0);
         if (m instanceof InMessage) {
             InMessage im = (InMessage) m;
             if (m.isEncrypted()) {
@@ -664,16 +662,13 @@ final class MessageList extends FlyweightListView<KonMessage> {
                 return null;
             }
 
-            MessageList table = (MessageList) c;
-            int[] rows = table.getSelectedRows();
-
-            if (rows.length == 0) {
-                return null; // nothing selected
+            List<KonMessage> messages = ((MessageList) c).getSelectedItems();
+            if (messages.isEmpty()) {
+                return null;
             }
 
             StringBuffer plainBuf = new StringBuffer();
-            for (int row = 0; row < rows.length; row++) {
-                KonMessage m = table.getItemAtModelIndex(rows[row]);
+            for (KonMessage m : messages) {
                 String val = messageToString(m, mView, true);
                 plainBuf.append(val + "\n"); // NOTE: newline after last line
             }
@@ -700,40 +695,40 @@ final class MessageList extends FlyweightListView<KonMessage> {
             pre = date + " - " + from + " : " + as;
         }
 
-        GroupCommand com = message.getContent().getGroupCommand().orElse(null);
         String text = "";
+        GroupCommand com = message.getContent().getGroupCommand().orElse(null);
         if (com != null) {
             InMessage inMessage = message instanceof InMessage ?
                     (InMessage) message : null;
             String somebody = inMessage != null ?
                     getFromString(inMessage) : Tr.tr("You");
-            String cs = "";
             switch (com.getOperation()) {
                 case CREATE:
-                    cs = String.format(Tr.tr("%1$s created this group"), somebody);
+                    text = String.format(Tr.tr("%1$s created this group"), somebody);
                     break;
                 case LEAVE:
-                    cs = String.format(Tr.tr("%1$s left this group"), somebody);
+                    text = String.format(Tr.tr("%1$s left this group"), somebody);
                     break;
                 case SET:
                     String subject = com.getSubject();
                     if (!subject.isEmpty()) {
-                        cs = String.format(Tr.tr("%1$s set the subject to \"%2$s\""), somebody, subject);
+                        text = String.format(Tr.tr("%1$s set the subject to \"%2$s\""), somebody, subject);
                     }
                     List<JID> added = com.getAdded();
                     if (!added.isEmpty()) {
-                        cs = String.format(Tr.tr("%1$s added %2$s"), somebody, view.names(added));
+                        text = String.format(Tr.tr("%1$s added %2$s"), somebody, view.names(added));
                     }
                     List<JID> removed = com.getRemoved();
                     if (!removed.isEmpty()) {
-                        cs = String.format(Tr.tr("%1$s removed %2$s"), somebody, view.names(removed));
+                        text = String.format(Tr.tr("%1$s removed %2$s"), somebody, view.names(removed));
                     }
-                    if (cs.isEmpty()) {
-                        cs = "did something wrong";
+                    if (text.isEmpty()) {
+                        text = "did something wrong";
                     }
                     break;
             }
-            text = "[" + cs + "]";
+            if (copy)
+                text = "[" + text + "]";
         } else {
             text = message.isEncrypted() ?
                     Tr.tr("[encrypted]") :

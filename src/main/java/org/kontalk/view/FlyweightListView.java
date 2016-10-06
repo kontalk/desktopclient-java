@@ -146,7 +146,6 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
         // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
-
             @Override
             public void valueChanged(ListSelectionEvent e) {
                 if (e.getValueIsAdjusting())
@@ -224,7 +223,12 @@ abstract class FlyweightListView<V extends Observable & Searchable>
                 // click), see https://stackoverflow.com/a/17636224
                 CellEditor cellEditor = FlyweightListView.this.getCellEditor();
                 if (cellEditor != null)
-                    cellEditor.stopCellEditing();
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            cellEditor.stopCellEditing();
+                        }
+                    });
             }
         });
     }
@@ -235,17 +239,14 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         if (!ArrayUtils.contains(this.getSelectedRows(), row))
             this.setSelectedItem(row);
 
-        this.showPopupMenu(e, this.getSelectedItems());
-    }
-
-    private void showPopupMenu(MouseEvent e, List<V> items) {
-        WebPopupMenu menu = this.rightClickMenu(items);
+        WebPopupMenu menu = this.rightClickMenu(this.getSelectedItems());
         menu.show(this, e.getX(), e.getY());
     }
 
+    // TODO not used
     protected void selectionChanged(Optional<V> value){};
 
-    protected abstract WebPopupMenu rightClickMenu(List<V> items);
+    protected abstract WebPopupMenu rightClickMenu(List<V> selectedItems);
 
     @SuppressWarnings("unchecked")
     protected boolean sync(Set<V> values) {
@@ -287,12 +288,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         return (V) mModel.getValueAt(row, 0);
     }
 
-    @SuppressWarnings("unchecked")
-    protected V getSelectedItem() {
-        return this.getDisplayedItemAt(this.getSelectedRow());
-    }
-
-    private List<V> getSelectedItems() {
+    protected List<V> getSelectedItems() {
         List<V> items = new ArrayList<>();
         for (int i : this.getSelectedRows()) {
             items.add(this.getDisplayedItemAt(i));
@@ -301,12 +297,14 @@ abstract class FlyweightListView<V extends Observable & Searchable>
     }
 
     protected Optional<V> getSelectedValue() {
-        if (this.getSelectedRow() == -1)
-            return Optional.empty();
-        return Optional.of(this.getSelectedItem());
+        int row = this.getSelectedRow();
+        return row == -1 ?
+                Optional.empty() :
+                Optional.of(this.getDisplayedItemAt(row));
     }
 
     /** Resets filtering and selects the item containing the value specified. */
+    // TODO
     void setSelectedItem(V value) {
         this.filterItems("");
         for (int i=0; i< mModel.getRowCount(); i++) {

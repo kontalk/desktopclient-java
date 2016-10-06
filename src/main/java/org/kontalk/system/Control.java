@@ -202,12 +202,13 @@ public final class Control {
                         .forEach(m -> this.sendMessage(m));
 
             // send public key requests for Kontalk contacts with missing key
-            for (Contact contact : mModel.contacts())
+            for (Contact contact : mModel.contacts().getAll(false, false))
                 this.maySendKeyRequest(contact);
 
             // TODO check current user avatar on server and upload if necessary
+
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
-            for (Contact contact : mModel.contacts())
+            for (Contact contact : mModel.contacts().getAll(false, false))
                 contact.setOnlineStatus(Contact.Online.UNKNOWN);
         }
     }
@@ -641,7 +642,9 @@ public final class Control {
             }
         }
 
-        // fallback: search everywhere
+        // TODO group chats
+
+        // fallback: search in every chat
         LOGGER.info("fallback search, IDs: "+ids);
         for (Chat chat: mModel.chats()) {
             Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
@@ -700,6 +703,10 @@ public final class Control {
 
         public void setAccountPassword(char[] oldPass, char[] newPass) throws KonException {
             mModel.account().setPassword(oldPass, newPass);
+        }
+
+        public Path getAttachmentDir() {
+            return mAttachmentManager.getAttachmentDir();
         }
 
         public Path getFilePath(Attachment attachment) {
@@ -771,6 +778,10 @@ public final class Control {
         public void sendSubscriptionRequest(Contact contact) {
             Control.this.sendPresenceSubscription(contact.getJID(),
                     Client.PresenceCommand.REQUEST);
+        }
+
+        public void createRosterEntry(Contact contact) {
+            Control.this.addToRoster(contact);
         }
 
         /* chats */

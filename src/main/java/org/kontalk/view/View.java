@@ -44,7 +44,6 @@ import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.text.WebPasswordField;
-import com.alee.managers.notification.NotificationManager;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.ViewEvent;
@@ -94,11 +93,12 @@ public final class View implements Observer {
     static final int PRETTY_JID_LENGTH = 28;
 
     static final Color BLUE = new Color(130, 170, 240);
-    static final Color LIGHT_BLUE = new Color(220, 220, 250);
+    static final Color LIGHT_BLUE = new Color(220, 230, 250);
     static final Color LIGHT_GREY = new Color(240, 240, 240);
-    static final Color GREEN = new Color(83, 196, 46);
+    //static final Color GREEN = new Color(83, 196, 46);
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
+    static final Color DARK_RED = new Color(196, 46, 46);
 
     static final int AVATAR_LIST_SIZE = 30;
     static final int AVATAR_CHAT_SIZE = 40;
@@ -120,7 +120,6 @@ public final class View implements Observer {
     private final MainFrame mMainFrame;
 
     final String tr_remove_contact = Tr.tr("Chats and messages will not be deleted.");
-    final String tr_not_supported = Tr.tr("Not supported by server");
 
     private Control.Status mCurrentStatus;
     private EnumSet<FeatureDiscovery.Feature> mServerFeatures;
@@ -282,10 +281,10 @@ public final class View implements Observer {
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Connecting…"));
+                mNotifier.hideNotifications();
                 break;
             case CONNECTED:
                 mStatusBarLabel.setText(Tr.tr("Connected"));
-                NotificationManager.hideAllNotifications();
                 break;
             case DISCONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Disconnecting…"));
