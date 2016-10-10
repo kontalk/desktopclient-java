@@ -32,6 +32,8 @@ import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableRowSorter;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
@@ -54,6 +56,9 @@ import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.table.WebTable;
 import com.alee.laf.table.renderers.WebTableCellRenderer;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.WebCustomTooltip;
 import org.apache.commons.lang.ArrayUtils;
 import org.kontalk.misc.Searchable;
 
@@ -81,6 +86,8 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
     /** The current search string. */
     private String mSearch = "";
+
+    private WebCustomTooltip mTip = null;
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
@@ -170,6 +177,11 @@ abstract class FlyweightListView<V extends Observable & Searchable>
                 if (e.isPopupTrigger()) {
                     FlyweightListView.this.onPopupClick(e);
                 }
+            }
+            @Override
+            public void mouseExited(MouseEvent e) {
+                if (mTip != null)
+                    mTip.closeTooltip();
             }
         });
 
@@ -325,12 +337,6 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         mRowSorter.sort();
     }
 
-    // JTabel uses this to determine the renderer/editor
-    @Override
-    public Class<?> getColumnClass(int column) {
-        return mVClass;
-    }
-
     @Override
     public void update(Observable o, Object arg) {
         if (SwingUtilities.isEventDispatchThread()) {
@@ -356,6 +362,47 @@ abstract class FlyweightListView<V extends Observable & Searchable>
     }
 
     abstract protected void updateOnEDT(Object arg);
+
+    // WebLaf's tooltipmanager blocks mouse events, we need to invoke the tooltip manually.
+    // Catch the event when a tooltip should be shown and create a own one.
+    @Override
+    public String getToolTipText(MouseEvent event) {
+        int row = this.rowAtPoint(event.getPoint());
+        if (row >= 0)
+            FlyweightListView.this.showTooltip(this.getDisplayedItemAt(row));
+
+        return null;
+    }
+
+    protected String getTooltipText(V item) {
+        return "";
+    };
+
+    private void showTooltip(V item) {
+        String text = this.getTooltipText(item);
+        if (text.isEmpty())
+            return;
+
+        Point p = this.getMousePosition();
+        if (p == null)
+            return;
+        Rectangle rec = this.getCellRect(this.rowAtPoint(p), 0, false);
+        Point pos = new Point(rec.x + rec.width, rec.y + rec.height / 2);
+
+        if (mTip != null && pos.equals(mTip.getDisplayLocation()) && mTip.isShowing())
+            return;
+
+        if (mTip != null)
+            mTip.closeTooltip();
+
+        mTip = TooltipManager.showOneTimeTooltip(this, pos, text, TooltipWay.right);
+    }
+
+    // JTabel uses this to determine the renderer/editor
+    @Override
+    public Class<?> getColumnClass(int column) {
+        return mVClass;
+    }
 
     protected void onRenameEvent() {}
 
@@ -399,7 +446,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
     // NOTE: table and value can be NULL
     @SuppressWarnings("unchecked")
-    private FlyweightItem updateFlyweight(FlyweightItem item,
+    private static <V> FlyweightItem updateFlyweight(FlyweightItem item,
             JTable table, Object value, int row, boolean isSelected) {
         V valueItem = (V) value;
         // hopefully return value is not used
