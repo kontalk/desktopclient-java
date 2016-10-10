@@ -92,20 +92,20 @@ final class ContactListView extends FlyweightListView<Contact> {
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(List<Contact> selectedItems) {
+    protected WebPopupMenu rightClickMenu(List<Contact> selectedValues) {
         WebPopupMenu menu = new WebPopupMenu();
 
-        if (selectedItems.isEmpty())
+        if (selectedValues.isEmpty())
             return menu;
 
-        Contact item = selectedItems.get(0);
+        Contact value = selectedValues.get(0);
 
         WebMenuItem newItem = new WebMenuItem(Tr.tr("New Chat"));
         newItem.setToolTipText(Tr.tr("Creates a new chat for this contact"));
         newItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                Chat chat = mView.getControl().getOrCreateSingleChat(item);
+                Chat chat = mView.getControl().getOrCreateSingleChat(value);
                 mView.showChat(chat);
             }
         });
@@ -116,7 +116,7 @@ final class ContactListView extends FlyweightListView<Contact> {
         blockItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.getControl().sendContactBlocking(item, true);
+                mView.getControl().sendContactBlocking(value, true);
             }
         });
         menu.add(blockItem);
@@ -126,7 +126,7 @@ final class ContactListView extends FlyweightListView<Contact> {
         unblockItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.getControl().sendContactBlocking(item, false);
+                mView.getControl().sendContactBlocking(value, false);
             }
         });
         menu.add(unblockItem);
@@ -140,15 +140,15 @@ final class ContactListView extends FlyweightListView<Contact> {
                         mView.tr_remove_contact;
                 if (!Utils.confirmDeletion(ContactListView.this, text))
                     return;
-                mView.getControl().deleteContact(item);
+                mView.getControl().deleteContact(value);
             }
         });
         menu.add(deleteItem);
 
         // dont allow creation of more than one chat for a contact
-        newItem.setVisible(!mModel.chats().contains(item));
+        newItem.setVisible(!mModel.chats().contains(value));
 
-        if (item.isBlocked()) {
+        if (value.isBlocked()) {
             blockItem.setVisible(false);
             unblockItem.setVisible(true);
         } else {
@@ -166,19 +166,19 @@ final class ContactListView extends FlyweightListView<Contact> {
     }
 
     @Override
-    protected String getTooltipText(Contact item) {
+    protected String getTooltipText(Contact value) {
         String html = "<html><body>";
         //"<h3>Header</h3>" +
-        if (item.getOnline() == Contact.Online.YES)
+        if (value.getOnline() == Contact.Online.YES)
             html += Tr.tr("Online") + "<br>";
-        if (!item.getStatus().isEmpty()) {
-            String status = StringEscapeUtils.escapeHtml(item.getStatus());
+        if (!value.getStatus().isEmpty()) {
+            String status = StringEscapeUtils.escapeHtml(value.getStatus());
             html += Tr.tr("Status") + ": " + status + "<br>";
         }
-        if (item.getOnline() != Contact.Online.YES) {
-            html += Utils.lastSeen(item, false, true) + "<br>";
+        if (value.getOnline() != Contact.Online.YES) {
+            html += Utils.lastSeen(value, false, true) + "<br>";
         }
-        if (item.isBlocked()) {
+        if (value.isBlocked()) {
             html += Tr.tr("Contact is blocked!") + "<br>";
         }
         html += "</body></html>" ;

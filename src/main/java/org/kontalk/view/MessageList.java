@@ -118,7 +118,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
         // hide grid
         this.setShowGrid(false);
 
-        // copy items to clipboard using the in-build 'copy' action, invoked by custom right-click
+        // copy values to clipboard using the in-build 'copy' action, invoked by custom right-click
         // menu or default ctrl+c shortcut
         this.setTransferHandler(new CopyTransferHandler(mView));
 
@@ -169,7 +169,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(List<KonMessage> selectedItems) {
+    protected WebPopupMenu rightClickMenu(List<KonMessage> selectedValues) {
         WebPopupMenu menu = new WebPopupMenu();
 
         Action copyAction = new AbstractAction(Tr.tr("Copy")) {
@@ -183,15 +183,15 @@ final class MessageList extends FlyweightListView<KonMessage> {
         copyAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
         menu.add(copyAction);
 
-        if (selectedItems.isEmpty()) {
-            LOGGER.warning("no items");
+        if (selectedValues.isEmpty()) {
+            LOGGER.warning("no values");
             return menu;
         }
 
-        if (selectedItems.size() > 1)
+        if (selectedValues.size() > 1)
             return menu;
 
-        final KonMessage m = selectedItems.get(0);
+        final KonMessage m = selectedValues.get(0);
         if (m instanceof InMessage) {
             InMessage im = (InMessage) m;
             if (m.isEncrypted()) {
@@ -651,7 +651,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
                 return null;
             }
 
-            List<KonMessage> messages = ((MessageList) c).getSelectedItems();
+            List<KonMessage> messages = ((MessageList) c).getSelectedValues();
             if (messages.isEmpty()) {
                 return null;
             }

@@ -66,10 +66,10 @@ import org.kontalk.misc.Searchable;
  * A generic list view for subclassing.
  * Implemented as table with one column.
  *
- * Flyweight pattern: One object is re-used for drawing all model items in the list.
+ * Flyweight pattern: One object is re-used for drawing all model values in the list.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
- * @param <V> the (model) item type in the list
+ * @param <V> the (model) value type in the list
  */
 abstract class FlyweightListView<V extends Observable & Searchable>
         extends WebTable implements Observer, Comparator<V> {
@@ -197,7 +197,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
         if (activateTimer) {
             mTimer = new Timer();
-            // update periodically items to be up-to-date with 'last seen' text
+            // update periodically values to be up-to-date with 'last seen' text
             TimerTask statusTask = new TimerTask() {
                 @Override
                 public void run() {
@@ -239,33 +239,33 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         if (!ArrayUtils.contains(this.getSelectedRows(), row))
             this.setSelectedItem(row);
 
-        WebPopupMenu menu = this.rightClickMenu(this.getSelectedItems());
+        WebPopupMenu menu = this.rightClickMenu(this.getSelectedValues());
         menu.show(this, e.getX(), e.getY());
     }
 
     protected void selectionChanged(Optional<V> value){};
 
-    protected abstract WebPopupMenu rightClickMenu(List<V> selectedItems);
+    protected abstract WebPopupMenu rightClickMenu(List<V> selectedValues);
 
     @SuppressWarnings("unchecked")
     protected boolean sync(Set<V> values) {
-        Set<V> items = new HashSet<>();
+        Set<V> oldValues = new HashSet<>();
         // remove old
         for (int i=0; i < mModel.getRowCount(); i++) {
-            V item = (V) mModel.getValueAt(i, 0);
-            if (!values.contains(item)) {
-                item.deleteObserver(this);
+            V value = (V) mModel.getValueAt(i, 0);
+            if (!values.contains(value)) {
+                value.deleteObserver(this);
                 mModel.removeRow(i);
                 i--;
             } else {
-                items.add(item);
+                oldValues.add(value);
             }
         }
 
         // add new
         boolean added = false;
         for (V v: values) {
-            if (!items.contains(v)) {
+            if (!oldValues.contains(v)) {
                 mModel.addRow(new Object[]{v});
                 v.addObserver(this);
                 added = true;
@@ -278,36 +278,35 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         mModel.setRowCount(0);
     }
 
-    protected V getDisplayedItemAt(int row) {
-        return this.getItemAtModelIndex(mRowSorter.convertRowIndexToModel(row));
+    protected V getDisplayedValueAt(int row) {
+        return this.getValueAtModelIndex(mRowSorter.convertRowIndexToModel(row));
     }
 
     @SuppressWarnings("unchecked")
-    protected V getItemAtModelIndex(int row) {
+    protected V getValueAtModelIndex(int row) {
         return (V) mModel.getValueAt(row, 0);
     }
 
-    protected List<V> getSelectedItems() {
-        List<V> items = new ArrayList<>();
+    protected List<V> getSelectedValues() {
+        List<V> values = new ArrayList<>();
         for (int i : this.getSelectedRows()) {
-            items.add(this.getDisplayedItemAt(i));
+            values.add(this.getDisplayedValueAt(i));
         }
-        return items;
+        return values;
     }
 
     protected Optional<V> getSelectedValue() {
         int row = this.getSelectedRow();
         return row == -1 ?
                 Optional.empty() :
-                Optional.of(this.getDisplayedItemAt(row));
+                Optional.of(this.getDisplayedValueAt(row));
     }
 
     /** Resets filtering and selects the item containing the value specified. */
-    // TODO
     void setSelectedItem(V value) {
         this.filterItems("");
         for (int i=0; i< mModel.getRowCount(); i++) {
-            if (this.getDisplayedItemAt(i) == value) {
+            if (this.getDisplayedValueAt(i) == value) {
                 this.setSelectedItem(i);
                 break;
             }
@@ -368,17 +367,17 @@ abstract class FlyweightListView<V extends Observable & Searchable>
     public String getToolTipText(MouseEvent event) {
         int row = this.rowAtPoint(event.getPoint());
         if (row >= 0)
-            FlyweightListView.this.showTooltip(this.getDisplayedItemAt(row));
+            FlyweightListView.this.showTooltip(this.getDisplayedValueAt(row));
 
         return null;
     }
 
-    protected String getTooltipText(V item) {
+    protected String getTooltipText(V value) {
         return "";
     };
 
-    private void showTooltip(V item) {
-        String text = this.getTooltipText(item);
+    private void showTooltip(V value) {
+        String text = this.getTooltipText(value);
         if (text.isEmpty())
             return;
 

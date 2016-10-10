@@ -94,12 +94,12 @@ final class ChatListView extends FlyweightListView<Chat> {
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(List<Chat> selectedItems) {
+    protected WebPopupMenu rightClickMenu(List<Chat> selectedValues) {
         WebPopupMenu menu = new WebPopupMenu();
-        if (selectedItems.isEmpty())
+        if (selectedValues.isEmpty())
             return menu;
 
-        Chat chat = selectedItems.get(0);
+        Chat chat = selectedValues.get(0);
         if (chat instanceof SingleChat) {
             final Contact contact = ((SingleChat) chat).getMember().getContact();
             if (!contact.isDeleted()) {
@@ -141,9 +141,9 @@ final class ChatListView extends FlyweightListView<Chat> {
     }
 
     @Override
-    protected String getTooltipText(Chat item) {
+    protected String getTooltipText(Chat value) {
         return "<html><body>" +
-                Tr.tr("Last message:")+" " + lastActivity(item, false) + "<br>"
+                Tr.tr("Last message:")+" " + lastActivity(value, false) + "<br>"
                 + "</body></html>";
     }
 
