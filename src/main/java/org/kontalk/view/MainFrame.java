@@ -89,8 +89,8 @@ final class MainFrame extends WebFrame {
 
     MainFrame(View view,
             Model model,
-            FlyweightListView contactList,
-            FlyweightListView chatList,
+            ListView contactList,
+            ListView chatList,
             Component content,
             WebPanel searchPanel,
             Component statusBar) {

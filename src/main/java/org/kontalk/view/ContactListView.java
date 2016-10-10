@@ -46,7 +46,7 @@ import org.kontalk.util.Tr;
  * Display all contacts in a brief list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ContactListView extends FlyweightListView<Contact> {
+final class ContactListView extends ListView<Contact> {
 
     private final Model mModel;
 
@@ -195,7 +195,7 @@ final class ContactListView extends FlyweightListView<Contact> {
         mView.requestRenameFocus(contact);
     }
 
-    private static class FlyweightContactItem extends FlyweightListView.FlyweightItem<Contact> {
+    private static class FlyweightContactItem extends ListView.FlyweightItem<Contact> {
 
         private final ComponentUtils.AvatarImage mAvatar;
         private final WebLabel mNameLabel;

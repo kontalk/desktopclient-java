@@ -46,7 +46,7 @@ import org.kontalk.util.Tr;
  * Show a brief list of all chats.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ChatListView extends FlyweightListView<Chat> {
+final class ChatListView extends ListView<Chat> {
 
     private final ChatList mChatList;
 

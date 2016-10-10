@@ -79,7 +79,7 @@ import org.kontalk.view.ComponentUtils.AttachmentPanel;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class MessageList extends FlyweightListView<KonMessage> {
+final class MessageList extends ListView<KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
