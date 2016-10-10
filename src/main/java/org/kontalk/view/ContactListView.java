@@ -19,13 +19,14 @@
 package org.kontalk.view;
 
 import javax.swing.Box;
+import javax.swing.ListSelectionModel;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.util.Observer;
+import java.util.List;
 import java.util.Optional;
 
 import com.alee.extended.panel.GroupPanel;
@@ -40,18 +41,21 @@ import org.kontalk.model.chat.Chat;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
-import org.kontalk.view.ContactListView.ContactItem;
 
 /**
  * Display all contacts in a brief list.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ContactListView extends ListView<ContactItem, Contact> implements Observer {
+final class ContactListView extends FlyweightListView<Contact> {
 
     private final Model mModel;
 
     ContactListView(final View view, Model model) {
-        super(view, true);
+        super(view,
+                new FlyweightContactItem(),
+                new FlyweightContactItem(),
+                ListSelectionModel.SINGLE_SELECTION,
+                true);
 
         mModel = model;
 
@@ -71,15 +75,15 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     }
 
     @Override
+    public int compare(Contact o1, Contact o2) {
+        return Utils.compareContacts(o1, o2);
+    }
+
+    @Override
     protected void updateOnEDT(Object arg) {
         boolean hideBlocked = Config.getInstance()
                 .getBoolean(Config.VIEW_HIDE_BLOCKED);
         this.sync(Utils.allContacts(mModel.contacts(), !hideBlocked));
-    }
-
-    @Override
-    protected ContactItem newItem(Contact value) {
-        return new ContactItem(value);
     }
 
     @Override
@@ -88,16 +92,20 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(ContactItem item) {
+    protected WebPopupMenu rightClickMenu(List<Contact> selectedItems) {
         WebPopupMenu menu = new WebPopupMenu();
+
+        if (selectedItems.isEmpty())
+            return menu;
+
+        Contact item = selectedItems.get(0);
 
         WebMenuItem newItem = new WebMenuItem(Tr.tr("New Chat"));
         newItem.setToolTipText(Tr.tr("Creates a new chat for this contact"));
         newItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                Chat chat = mView.getControl().getOrCreateSingleChat(
-                        ContactListView.this.getSelectedItem().mValue);
+                Chat chat = mView.getControl().getOrCreateSingleChat(item);
                 mView.showChat(chat);
             }
         });
@@ -108,8 +116,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         blockItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.getControl().sendContactBlocking(
-                        ContactListView.this.getSelectedItem().mValue, true);
+                mView.getControl().sendContactBlocking(item, true);
             }
         });
         menu.add(blockItem);
@@ -119,8 +126,7 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         unblockItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                mView.getControl().sendContactBlocking(
-                        ContactListView.this.getSelectedItem().mValue, false);
+                mView.getControl().sendContactBlocking(item, false);
             }
         });
         menu.add(unblockItem);
@@ -134,16 +140,15 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
                         mView.tr_remove_contact;
                 if (!Utils.confirmDeletion(ContactListView.this, text))
                     return;
-                mView.getControl().deleteContact(
-                        ContactListView.this.getSelectedItem().mValue);
+                mView.getControl().deleteContact(item);
             }
         });
         menu.add(deleteItem);
 
         // dont allow creation of more than one chat for a contact
-        newItem.setVisible(!mModel.chats().contains(item.mValue));
+        newItem.setVisible(!mModel.chats().contains(item));
 
-        if (item.mValue.isBlocked()) {
+        if (item.isBlocked()) {
             blockItem.setVisible(false);
             unblockItem.setVisible(true);
         } else {
@@ -161,6 +166,27 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
     }
 
     @Override
+    protected String getTooltipText(Contact item) {
+        String html = "<html><body>";
+        //"<h3>Header</h3>" +
+        if (item.getOnline() == Contact.Online.YES)
+            html += Tr.tr("Online") + "<br>";
+        if (!item.getStatus().isEmpty()) {
+            String status = StringEscapeUtils.escapeHtml(item.getStatus());
+            html += Tr.tr("Status") + ": " + status + "<br>";
+        }
+        if (item.getOnline() != Contact.Online.YES) {
+            html += Utils.lastSeen(item, false, true) + "<br>";
+        }
+        if (item.isBlocked()) {
+            html += Tr.tr("Contact is blocked!") + "<br>";
+        }
+        html += "</body></html>" ;
+
+        return html;
+    }
+
+    @Override
     protected void onRenameEvent() {
         Contact contact = this.getSelectedValue().orElse(null);
         if (contact == null)
@@ -169,17 +195,13 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
         mView.requestRenameFocus(contact);
     }
 
-    /** One item in the contact list representing a contact. */
-    final class ContactItem extends ListView<ContactItem, Contact>.TableItem {
+    private static class FlyweightContactItem extends FlyweightListView.FlyweightItem<Contact> {
 
         private final ComponentUtils.AvatarImage mAvatar;
         private final WebLabel mNameLabel;
         private final WebLabel mStatusLabel;
-        private Color mBackground;
 
-        ContactItem(Contact contact) {
-            super(contact);
-
+        FlyweightContactItem() {
             //this.setPaintFocus(true);
             this.setLayout(new BorderLayout(View.GAP_DEFAULT, 0));
             this.setMargin(View.MARGIN_SMALL);
@@ -200,95 +222,51 @@ final class ContactListView extends ListView<ContactItem, Contact> implements Ob
                             new GroupPanel(GroupingType.fillFirst,
                                     Box.createGlue(), mStatusLabel)
                     ), BorderLayout.CENTER);
-
-            this.updateOnEDT(null);
         }
 
         @Override
-        public String getTooltipText() {
-            String html = "<html><body>";
-                    //"<h3>Header</h3>" +
-
-            if (mValue.getOnline() == Contact.Online.YES)
-                html += Tr.tr("Online") + "<br>";
-            if (!mValue.getStatus().isEmpty()) {
-                String status = StringEscapeUtils.escapeHtml(mValue.getStatus());
-                html += Tr.tr("Status") + ": " + status + "<br>";
-            }
-            if (mValue.getOnline() != Contact.Online.YES) {
-                html += Utils.lastSeen(mValue, false, true) + "<br>";
-            }
-            if (mValue.isBlocked()) {
-                html += Tr.tr("Contact is blocked!") + "<br>";
-            }
-
-            return html+"</body></html>" ;
-        }
-
-        @Override
-        protected void render(int tableWidth, boolean isSelected) {
-            if (isSelected)
-                this.setBackground(View.BLUE);
-            else
-                this.setBackground(mBackground);
-        }
-
-        @Override
-        protected boolean contains(String search) {
-            return mValue.getName().toLowerCase().contains(search) ||
-                    mValue.getJID().string().toLowerCase().contains(search);
-        }
-
-        @Override
-        protected void updateOnEDT(Object arg) {
+        protected void render(Contact value, int listWidth, boolean isSelected) {
             // avatar
-            if (arg == null || arg == Contact.ViewChange.NAME ||
-                    arg == Contact.ViewChange.AVATAR) {
-                mAvatar.setAvatarImage(mValue);
-            }
+            mAvatar.setAvatarImage(value);
 
             // name
-            if (arg == null || arg == Contact.ViewChange.NAME) {
-                String name = Utils.displayName(mValue);
-                if (!name.equals(mNameLabel.getText())) {
-                    mNameLabel.setText(name);
-                    ContactListView.this.updateSorting();
-                }
+            String name = Utils.displayName(value);
+            if (!name.equals(mNameLabel.getText())) {
+                mNameLabel.setText(name);
             }
 
             // status
-            if (arg == null || arg == Contact.ViewChange.SUBSCRIPTION ||
-                    arg == Contact.ViewChange.ONLINE_STATUS ||
-                    arg == Contact.ViewChange.BLOCKING ||
-                    arg == Contact.ViewChange.LAST_SEEN ||
-                    arg == Change.TIMER) {
-                mStatusLabel.setText(Utils.mainStatus(mValue, false));
+            mStatusLabel.setText(Utils.mainStatus(value, false));
+
+            // online status / background
+            Contact.Subscription subStatus = value.getSubScription();
+            this.setBackground(isSelected ? View.BLUE :
+                    value.getOnline() == Contact.Online.YES ? View.LIGHT_BLUE:
+                    subStatus == Contact.Subscription.UNSUBSCRIBED ||
+                            subStatus == Contact.Subscription.PENDING ||
+                            value.isBlocked() ? View.LIGHT_GREY :
+                            Color.WHITE);
+
+            // tooltip
+            String html = "<html><body>";
+                    //"<h3>Header</h3>" +
+
+            if (value.getOnline() == Contact.Online.YES)
+                html += Tr.tr("Online") + "<br>";
+            if (!value.getStatus().isEmpty()) {
+                String status = StringEscapeUtils.escapeHtml(value.getStatus());
+                html += Tr.tr("Status") + ": " + status + "<br>";
+            }
+            if (value.getOnline() != Contact.Online.YES) {
+                html += Utils.lastSeen(value, false, true) + "<br>";
+            }
+            if (value.isBlocked()) {
+                html += Tr.tr("Contact is blocked!") + "<br>";
             }
 
-            // online status
-            if (arg == null || arg == Contact.ViewChange.ONLINE_STATUS ||
-                    arg == Contact.ViewChange.SUBSCRIPTION ||
-                    arg == Contact.ViewChange.BLOCKING) {
-                Contact.Subscription subStatus = mValue.getSubScription();
-                mBackground = mValue.getOnline() ==
-                        Contact.Online.YES ? View.LIGHT_BLUE:
-                        subStatus == Contact.Subscription.UNSUBSCRIBED ||
-                        subStatus == Contact.Subscription.PENDING ||
-                        mValue.isBlocked() ? View.LIGHT_GREY :
-                        Color.WHITE;
-                this.setBackground(mBackground);
-            }
-
-            if (arg == Contact.ViewChange.BLOCKING &&
-                    Config.getInstance().getBoolean(Config.VIEW_HIDE_BLOCKED)) {
-                // "blocked" status changed, hide/show this item
-                ContactListView.this.updateOnEDT(null);
-            }
-        }
-
-        @Override
-        public int compareTo(TableItem o) {
-            return Utils.compareContacts(mValue, o.mValue);
+            html += "</body></html>" ;
+            // TODO blocks mouse clicks interaction
+            //TooltipManager.setTooltip(this, html, TooltipWay.right);
         }
     }
 }

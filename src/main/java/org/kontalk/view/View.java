@@ -141,7 +141,7 @@ public final class View implements Observer {
 
         // search panel
         mSearchPanel = new SearchPanel(
-                new ListView[]{mContactListView, mChatListView},
+                new FlyweightListView[]{mContactListView, mChatListView},
                 mChatView);
         // status bar
         WebStatusBar statusBar = new WebStatusBar();

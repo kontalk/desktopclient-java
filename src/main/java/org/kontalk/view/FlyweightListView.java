@@ -243,7 +243,6 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         menu.show(this, e.getX(), e.getY());
     }
 
-    // TODO not used
     protected void selectionChanged(Optional<V> value){};
 
     protected abstract WebPopupMenu rightClickMenu(List<V> selectedItems);
