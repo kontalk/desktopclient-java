@@ -36,7 +36,7 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseMotionAdapter;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -54,7 +54,6 @@ import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.table.WebTable;
 import com.alee.laf.table.renderers.WebTableCellRenderer;
-import com.alee.managers.tooltip.WebCustomTooltip;
 import org.apache.commons.lang.ArrayUtils;
 import org.kontalk.misc.Searchable;
 
@@ -62,15 +61,13 @@ import org.kontalk.misc.Searchable;
  * A generic list view for subclassing.
  * Implemented as table with one column.
  *
+ * Flyweight pattern: One object is re-used for drawing all model items in the list.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
- * @param <V> the (model) value of one item in the list
+ * @param <V> the (model) item type in the list
  */
 abstract class FlyweightListView<V extends Observable & Searchable>
-        extends WebTable implements Observer {
-
-    protected enum Change {
-        TIMER
-    };
+        extends WebTable implements Observer, Comparator<V> {
 
     private final Class mVClass;
     protected final View mView;
@@ -85,19 +82,23 @@ abstract class FlyweightListView<V extends Observable & Searchable>
     /** The current search string. */
     private String mSearch = "";
 
-    private WebCustomTooltip mTip = null;
-
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
     FlyweightListView(View view,
             FlyweightItem renderItem, FlyweightItem editorItem,
-            Comparator<V> comparator,
+            int selectionMode,
             boolean activateTimer) {
+
         // damn Java
         mVClass = (Class<V>) ((ParameterizedType) getClass()
                 .getGenericSuperclass()).getActualTypeArguments()[0];
 
         mView = view;
+
+        mRenderItem = renderItem;
+        mEditorItem = editorItem;
+
+        this.setSelectionMode(selectionMode);
 
         // model
         mModel = new DefaultTableModel(0, 1) {
@@ -111,7 +112,7 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
         // sorter
         mRowSorter = new TableRowSorter<>(mModel);
-        mRowSorter.setComparator(0, comparator);
+        mRowSorter.setComparator(0, this);
         List<RowSorter.SortKey> sortKeys = new ArrayList<>();
         sortKeys.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
         mRowSorter.setSortKeys(sortKeys);
@@ -119,17 +120,14 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         mRowSorter.sort();
         // filter
         RowFilter<DefaultTableModel, Integer> rowFilter = new RowFilter<DefaultTableModel, Integer>() {
-        @Override
-        public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
                 V v = (V) entry.getValue(0);
                 return v.contains(mSearch);
             }
         };
         mRowSorter.setRowFilter(rowFilter);
         this.setRowSorter(mRowSorter);
-
-        mRenderItem = renderItem;
-        mEditorItem = editorItem;
 
         // hide header
         this.setTableHeader(null);
@@ -144,30 +142,19 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         // use custom editor (for mouse interaction)
         this.setDefaultEditor(mVClass, new TableEditor());
 
-        // actions triggered by selection
-        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+        // trigger editing to forward mouse events
+        this.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
-            public void valueChanged(ListSelectionEvent e) {
-                if (e.getValueIsAdjusting())
-                    return;
-
-                FlyweightListView.this.selectionChanged(FlyweightListView.this.getSelectedValue());
+            public void mouseMoved(MouseEvent e) {
+                int row = FlyweightListView.this.rowAtPoint(e.getPoint());
+                if (row >= 0) {
+                    FlyweightListView.this.editCellAt(row, 0);
+                }
             }
         });
 
-        // trigger editing to forward mouse events
-        this.addMouseMotionListener(new MouseMotionListener() {
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                }
-                @Override
-                public void mouseMoved(MouseEvent e) {
-                    int row = FlyweightListView.this.rowAtPoint(e.getPoint());
-                    if (row >= 0) {
-                        FlyweightListView.this.editCellAt(row, 0);
-                    }
-                }
-        });
+        // non-static menu, cannot use this
+        //this.setComponentPopupMenu(...);
 
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
@@ -183,11 +170,6 @@ abstract class FlyweightListView<V extends Observable & Searchable>
                 if (e.isPopupTrigger()) {
                     FlyweightListView.this.onPopupClick(e);
                 }
-            }
-            @Override
-            public void mouseExited(MouseEvent e) {
-                if (mTip != null)
-                    mTip.closeTooltip();
             }
         });
 
@@ -205,30 +187,36 @@ abstract class FlyweightListView<V extends Observable & Searchable>
             mTimer = new Timer();
             // update periodically items to be up-to-date with 'last seen' text
             TimerTask statusTask = new TimerTask() {
-                        @Override
-                        public void run() {
-                            FlyweightListView.this.timerUpdate();
-                        }
-                    };
+                @Override
+                public void run() {
+                    FlyweightListView.this.update(null, null);
+                }
+            };
             long timerInterval = TimeUnit.SECONDS.toMillis(60);
             mTimer.schedule(statusTask, timerInterval, timerInterval);
         } else {
             mTimer = null;
         }
 
+        // actions triggered by selection
         this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent e) {
-                // HACK, cell editing blocks item selection (item is not instantly selected on
-                // click), see https://stackoverflow.com/a/17636224
-                CellEditor cellEditor = FlyweightListView.this.getCellEditor();
-                if (cellEditor != null)
+                // on selection two events are fired: first adjusting, second not.
+                if (e.getValueIsAdjusting()) {
+                    // HACK, cell editing blocks item selection (item is not instantly selected on
+                    // click), see https://stackoverflow.com/a/17636224
+                    CellEditor cellEditor = FlyweightListView.this.getCellEditor();
                     SwingUtilities.invokeLater(new Runnable() {
                         @Override
                         public void run() {
-                            cellEditor.stopCellEditing();
+                            if (cellEditor != null)
+                                cellEditor.stopCellEditing();
                         }
                     });
+                } else {
+                    FlyweightListView.this.selectionChanged(FlyweightListView.this.getSelectedValue());
+                }
             }
         });
     }
@@ -337,24 +325,6 @@ abstract class FlyweightListView<V extends Observable & Searchable>
         mRowSorter.sort();
     }
 
-    @SuppressWarnings("unchecked")
-    private void timerUpdate() {
-        for (int i = 0; i < mModel.getRowCount(); i++) {
-            V item = (V) mModel.getValueAt(i, 0);
-            // TODO
-            //item.update(null, Change.TIMER);
-        }
-    }
-
-    protected void updateSorting(){
-        if (mModel.getRowCount() == 0)
-            return;
-
-        // do no change selection
-        //mModel.fireTableDataChanged();
-        mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
-    }
-
     // JTabel uses this to determine the renderer/editor
     @Override
     public Class<?> getColumnClass(int column) {
@@ -377,8 +347,8 @@ abstract class FlyweightListView<V extends Observable & Searchable>
 
     @SuppressWarnings("unchecked")
     private void updateOnEDT(Observable o, Object arg) {
-        if (mVClass.isAssignableFrom(o.getClass())) {
-            // a message changed, render everything again
+        if (o == null || mVClass.isAssignableFrom(o.getClass())) {
+            // render everything again (and update sorting)
             mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
             return;
         }

@@ -46,7 +46,6 @@ import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -74,7 +73,6 @@ import org.kontalk.model.message.Transmission;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
 import org.kontalk.view.ComponentUtils.AttachmentPanel;
-
 
 /**
  * View all messages of one chat in a left/right MIM style list.
@@ -106,13 +104,12 @@ final class MessageList extends FlyweightListView<KonMessage> {
         super(view,
                 new MessageListFlyWeightItem(view),
                 new MessageListFlyWeightItem(view),
-                comparator(),
+                // allow multiple selections for "copy" action
+                ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
                 false);
+
         mChatView = chatView;
         mChat = chat;
-
-        // allow multiple selections for "copy" action
-        this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         //this.setEditable(false);
         //this.setAutoscrolls(true);
@@ -120,9 +117,6 @@ final class MessageList extends FlyweightListView<KonMessage> {
 
         // hide grid
         this.setShowGrid(false);
-
-        // static menu, cannot use this
-        //this.setComponentPopupMenu(...);
 
         // copy items to clipboard using the in-build 'copy' action, invoked by custom right-click
         // menu or default ctrl+c shortcut
@@ -241,12 +235,18 @@ final class MessageList extends FlyweightListView<KonMessage> {
         return menu;
     }
 
+    @Override
+    public int compare(KonMessage o1, KonMessage o2) {
+        int idComp = Integer.compare(o1.getID(), o2.getID());
+        int dateComp = o1.getDate().compareTo(o2.getDate());
+        return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
+    }
+
     /**
      * Flyweight render item for message items.
      * The content is added to a panel inside this panel.
      */
-    private static class MessageListFlyWeightItem
-            extends FlyweightListView.FlyweightItem<KonMessage> {
+    private static class MessageListFlyWeightItem extends FlyweightItem<KonMessage> {
 
         private final View mView;
         private final WebPanel mPanel;
@@ -362,7 +362,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
             // title
             mFromLabel.setText(!value.getContent().getGroupCommand().isPresent() &&
                     value instanceof InMessage ?
-                    " "+getFromString((InMessage) value) :
+                    " " + getFromString((InMessage) value) :
                     "");
 
             // text in text area
@@ -579,17 +579,6 @@ final class MessageList extends FlyweightListView<KonMessage> {
                     ComponentOrientation.LEFT_TO_RIGHT:
                     ComponentOrientation.RIGHT_TO_LEFT);
         }
-    }
-
-    private static Comparator<KonMessage> comparator() {
-        return new Comparator<KonMessage>() {
-            @Override
-            public int compare(KonMessage o1, KonMessage o2) {
-                int idComp = Integer.compare(o1.getID(), o2.getID());
-                int dateComp = o1.getDate().compareTo(o2.getDate());
-                return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
-            }
-        };
     }
 
     private static String getFromString(InMessage message) {
