@@ -150,7 +150,7 @@ final class MessageList extends ListView<KonMessage> {
         }
 
         if ((arg == null || arg == Chat.ViewChange.READ) &&
-                !mChat.isRead() && mChatView.getCurrentChat().orElse(null) == mChat) {
+                !mChat.isRead() && mView.chatIsVisible(mChat)) {
             mChat.setRead();
         }
     }

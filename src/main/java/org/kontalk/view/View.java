@@ -153,6 +153,13 @@ public final class View implements Observer {
         // main frame
         mMainFrame = new MainFrame(this, mModel, mContactListView, mChatListView,
                 mContent, mSearchPanel, statusBar);
+        mMainFrame.addWindowFocusListener(new WindowAdapter() {
+            @Override
+            public void windowGainedFocus(WindowEvent e) {
+                mChatView.getCurrentChat().ifPresent(chat -> chat.setRead());
+            }
+        });
+
         // tray
         mTrayManager = new TrayManager(this, mModel, mMainFrame);
         // notifier
@@ -428,12 +435,8 @@ public final class View implements Observer {
         mContent.showNothing();
     }
 
-    Optional<Chat> getCurrentShownChat() {
-        return mContent.getCurrentChat();
-    }
-
-    boolean mainFrameIsFocused() {
-        return mMainFrame.isFocused();
+    boolean chatIsVisible(Chat chat) {
+        return mChatView.getCurrentChat().orElse(null) == chat && mMainFrame.isFocused();
     }
 
     void reloadChatBG() {
