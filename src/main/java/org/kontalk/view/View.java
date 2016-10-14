@@ -72,6 +72,9 @@ public final class View implements Observer {
     static final int MARGIN_DEFAULT = 10;
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
+    static final int MARGIN_TINY = 2;
+
+    static final int ROUND = 5;
 
     static final int FONT_SIZE_TINY = 11;
     static final int FONT_SIZE_SMALL = 12;

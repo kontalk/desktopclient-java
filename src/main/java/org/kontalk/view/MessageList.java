@@ -268,8 +268,9 @@ final class MessageList extends ListView<KonMessage> {
             this.setBackground(View.BLUE); // seen when selected
 
             mPanel = new WebPanel(true);
+            mPanel.setRound(View.ROUND);
             mPanel.setWebColoredBackground(false);
-            mPanel.setMargin(2);
+            mPanel.setMargin(View.MARGIN_TINY);
 
             mFromLabel = new WebLabel();
             mFromLabel.setFontSize(View.FONT_SIZE_SMALL);
@@ -339,10 +340,11 @@ final class MessageList extends ListView<KonMessage> {
 
             // background (message panel)
             boolean hasGroupCommand = value.getContent().getGroupCommand().isPresent();
-            mPanel.setBackground(hasGroupCommand ? View.LIGHT_GREEN :
-                    value.isInMessage() ?
-                    Color.WHITE :
-                    View.LIGHT_BLUE);
+            Color color =
+                    hasGroupCommand ? View.LIGHT_GREEN :
+                    value.isInMessage() ? Color.WHITE : View.LIGHT_BLUE;
+            mPanel.setBackground(color);
+            mPanel.setBorderColor(color);
 
             // from label
             mFromLabel.setVisible(value.isInMessage() && value.getChat().isGroupChat());
