@@ -612,6 +612,11 @@ public final class Control {
         if (contact.isMe())
             return;
 
+        if (contact.isDeleted()) {
+            LOGGER.warning("you don't want to add a deleted contact: " + contact);
+            return;
+        }
+
         String contactName = contact.getName();
         String rosterName =
                 Config.getInstance().getBoolean(Config.NET_SEND_ROSTER_NAME) &&

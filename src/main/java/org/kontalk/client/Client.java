@@ -413,6 +413,11 @@ public final class Client implements StanzaListener, Runnable {
             return false;
         }
 
+        if (!jid.isValid()) {
+            LOGGER.warning("invalid JID: " + jid);
+            return false;
+        }
+
         try {
             // also sends presence subscription request
             Roster.getInstanceFor(mConn).createEntry(jid.string(), name,

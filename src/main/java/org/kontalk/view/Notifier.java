@@ -179,8 +179,10 @@ final class Notifier {
                 switch (option) {
                     case yes :
                         mView.getControl().deleteContact(contact);
+                        break;
                     case reset:
                         mView.getControl().createRosterEntry(contact);
+                        break;
                 }
             }
             @Override
