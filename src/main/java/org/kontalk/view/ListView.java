@@ -18,13 +18,18 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.table.WebTable;
-import com.alee.laf.table.renderers.WebTableCellRenderer;
-import com.alee.managers.language.data.TooltipWay;
-import com.alee.managers.tooltip.TooltipManager;
-import com.alee.managers.tooltip.WebCustomTooltip;
+import javax.swing.AbstractCellEditor;
+import javax.swing.CellEditor;
+import javax.swing.JTable;
+import javax.swing.RowFilter;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellEditor;
+import javax.swing.table.TableRowSorter;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Point;
@@ -33,11 +38,12 @@ import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionListener;
+import java.awt.event.MouseMotionAdapter;
+import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
@@ -45,41 +51,37 @@ import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.swing.JTable;
-import javax.swing.RowFilter;
-import javax.swing.RowFilter.Entry;
-import javax.swing.RowSorter;
-import javax.swing.SortOrder;
-import javax.swing.SwingUtilities;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableRowSorter;
+
+import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.table.WebTable;
+import com.alee.laf.table.renderers.WebTableCellRenderer;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.managers.tooltip.WebCustomTooltip;
+import org.apache.commons.lang.ArrayUtils;
+import org.kontalk.misc.Searchable;
 
 /**
  * A generic list view for subclassing.
  * Implemented as table with one column.
  *
+ * Flyweight pattern: One object is re-used for drawing all model values in the list.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
- * @param <I> the view item in this list
- * @param <V> the value of one view item
+ * @param <V> the (model) value type in the list
  */
-abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable> extends WebTable implements Observer {
-    private static final Logger LOGGER = Logger.getLogger(ListView.class.getName());
+abstract class ListView<V extends Observable & Searchable>
+        extends WebTable implements Observer, Comparator<V> {
 
+    private final Class mVClass;
     protected final View mView;
-
-    protected enum Change{
-        TIMER
-    };
-
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
-    /** Map synced with model for faster access. */
-    private final Map<V, I> mItems = new HashMap<>();
-
+    /** Flyweight item that is used by cell renderer. */
+    private final FlyweightItem mRenderItem;
+    /** Flyweight item that is used by cell editor. */
+    private final FlyweightItem mEditorItem;
     private final Timer mTimer;
 
     /** The current search string. */
@@ -89,8 +91,21 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
 
     // using legacy lib, raw types extend Object
     @SuppressWarnings("unchecked")
-    ListView(View view, boolean activateTimer) {
+    ListView(View view,
+             FlyweightItem renderItem, FlyweightItem editorItem,
+             int selectionMode,
+             boolean activateTimer) {
+
+        // damn Java
+        mVClass = (Class<V>) ((ParameterizedType) getClass()
+                .getGenericSuperclass()).getActualTypeArguments()[0];
+
         mView = view;
+
+        mRenderItem = renderItem;
+        mEditorItem = editorItem;
+
+        this.setSelectionMode(selectionMode);
 
         // model
         mModel = new DefaultTableModel(0, 1) {
@@ -104,6 +119,7 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
 
         // sorter
         mRowSorter = new TableRowSorter<>(mModel);
+        mRowSorter.setComparator(0, this);
         List<RowSorter.SortKey> sortKeys = new ArrayList<>();
         sortKeys.add(new RowSorter.SortKey(0, SortOrder.ASCENDING));
         mRowSorter.setSortKeys(sortKeys);
@@ -111,10 +127,10 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         mRowSorter.sort();
         // filter
         RowFilter<DefaultTableModel, Integer> rowFilter = new RowFilter<DefaultTableModel, Integer>() {
-        @Override
-        public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
-                I i = (I) entry.getValue(0);
-                return i.contains(mSearch);
+            @Override
+            public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
+                V v = (V) entry.getValue(0);
+                return v.contains(mSearch);
             }
         };
         mRowSorter.setRowFilter(rowFilter);
@@ -128,33 +144,24 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         this.setShowVerticalLines(false);
 
         // use custom renderer
-        this.setDefaultRenderer(TableItem.class, new TableRenderer());
+        this.setDefaultRenderer(mVClass, new TableRenderer());
 
-        // actions triggered by selection
-        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+        // use custom editor (for mouse interaction)
+        this.setDefaultEditor(mVClass, new TableEditor());
 
+        // trigger editing to forward mouse events
+        this.addMouseMotionListener(new MouseMotionAdapter() {
             @Override
-            public void valueChanged(ListSelectionEvent e) {
-                if (e.getValueIsAdjusting())
-                    return;
-
-                ListView.this.selectionChanged(ListView.this.getSelectedValue());
+            public void mouseMoved(MouseEvent e) {
+                int row = ListView.this.rowAtPoint(e.getPoint());
+                if (row >= 0) {
+                    ListView.this.editCellAt(row, 0);
+                }
             }
         });
 
-        // trigger editing to forward mouse events
-        this.addMouseMotionListener(new MouseMotionListener() {
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                }
-                @Override
-                public void mouseMoved(MouseEvent e) {
-                    int row = ListView.this.rowAtPoint(e.getPoint());
-                    if (row >= 0) {
-                        ListView.this.editCellAt(row, 0);
-                    }
-                }
-        });
+        // non-static menu, cannot use this
+        //this.setComponentPopupMenu(...);
 
         // actions triggered by mouse events
         this.addMouseListener(new MouseAdapter() {
@@ -168,9 +175,7 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
             }
             private void check(MouseEvent e) {
                 if (e.isPopupTrigger()) {
-                    int row = ListView.this.rowAtPoint(e.getPoint());
-                    ListView.this.setSelectedItem(row);
-                    ListView.this.showPopupMenu(e, ListView.this.getSelectedItem());
+                    ListView.this.onPopupClick(e);
                 }
             }
             @Override
@@ -192,87 +197,116 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
 
         if (activateTimer) {
             mTimer = new Timer();
-            // update periodically items to be up-to-date with 'last seen' text
+            // update periodically values to be up-to-date with 'last seen' text
             TimerTask statusTask = new TimerTask() {
-                        @Override
-                        public void run() {
-                            ListView.this.timerUpdate();
-                        }
-                    };
+                @Override
+                public void run() {
+                    ListView.this.update(null, null);
+                }
+            };
             long timerInterval = TimeUnit.SECONDS.toMillis(60);
             mTimer.schedule(statusTask, timerInterval, timerInterval);
         } else {
             mTimer = null;
         }
+
+        // actions triggered by selection
+        this.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
+            @Override
+            public void valueChanged(ListSelectionEvent e) {
+                // on selection two events are fired: first adjusting, second not.
+                if (e.getValueIsAdjusting()) {
+                    // HACK, cell editing blocks item selection (item is not instantly selected on
+                    // click), see https://stackoverflow.com/a/17636224
+                    CellEditor cellEditor = ListView.this.getCellEditor();
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (cellEditor != null)
+                                cellEditor.stopCellEditing();
+                        }
+                    });
+                } else {
+                    ListView.this.selectionChanged(ListView.this.getSelectedValue());
+                }
+            }
+        });
     }
 
-    private void showPopupMenu(MouseEvent e, I item) {
-        WebPopupMenu menu = this.rightClickMenu(item);
+    private void onPopupClick(MouseEvent e) {
+        int row = this.rowAtPoint(e.getPoint());
+
+        if (!ArrayUtils.contains(this.getSelectedRows(), row))
+            this.setSelectedItem(row);
+
+        WebPopupMenu menu = this.rightClickMenu(this.getSelectedValues());
         menu.show(this, e.getX(), e.getY());
     }
 
     protected void selectionChanged(Optional<V> value){};
 
-    protected abstract WebPopupMenu rightClickMenu(I item);
+    protected abstract WebPopupMenu rightClickMenu(List<V> selectedValues);
 
     @SuppressWarnings("unchecked")
     protected boolean sync(Set<V> values) {
+        Set<V> oldValues = new HashSet<>();
         // remove old
         for (int i=0; i < mModel.getRowCount(); i++) {
-            I item = (I) mModel.getValueAt(i, 0);
-            if (!values.contains(item.mValue)) {
-                item.onRemove();
-                item.mValue.deleteObserver(item);
+            V value = (V) mModel.getValueAt(i, 0);
+            if (!values.contains(value)) {
+                value.deleteObserver(this);
                 mModel.removeRow(i);
                 i--;
-                mItems.remove(item.mValue);
+            } else {
+                oldValues.add(value);
             }
         }
+
         // add new
         boolean added = false;
         for (V v: values) {
-            if (!mItems.containsKey(v)) {
-                I item = this.newItem(v);
-                item.mValue.addObserver(item);
-                mItems.put(item.mValue, item);
-                mModel.addRow(new Object[]{item});
+            if (!oldValues.contains(v)) {
+                mModel.addRow(new Object[]{v});
+                v.addObserver(this);
                 added = true;
             }
         }
         return added;
     }
 
-    protected abstract I newItem(V value);
-
-    @SuppressWarnings("unchecked")
-    protected I getDisplayedItemAt(int i) {
-        return (I) mModel.getValueAt(mRowSorter.convertRowIndexToModel(i), 0);
-    }
-
     protected void clearItems() {
-        for (TableItem i : mItems.values()) {
-            i.mValue.deleteObserver(i);
-        }
         mModel.setRowCount(0);
-        mItems.clear();
+    }
+
+    protected V getDisplayedValueAt(int row) {
+        return this.getValueAtModelIndex(mRowSorter.convertRowIndexToModel(row));
     }
 
     @SuppressWarnings("unchecked")
-    protected I getSelectedItem() {
-        return (I) mModel.getValueAt(mRowSorter.convertRowIndexToModel(this.getSelectedRow()), 0);
+    protected V getValueAtModelIndex(int row) {
+        return (V) mModel.getValueAt(row, 0);
+    }
+
+    protected List<V> getSelectedValues() {
+        List<V> values = new ArrayList<>();
+        for (int i : this.getSelectedRows()) {
+            values.add(this.getDisplayedValueAt(i));
+        }
+        return values;
     }
 
     protected Optional<V> getSelectedValue() {
-        if (this.getSelectedRow() == -1)
-            return Optional.empty();
-        return Optional.of(this.getSelectedItem().mValue);
+        int row = this.getSelectedRow();
+        return row == -1 ?
+                Optional.empty() :
+                Optional.of(this.getDisplayedValueAt(row));
     }
 
     /** Resets filtering and selects the item containing the value specified. */
     void setSelectedItem(V value) {
         this.filterItems("");
         for (int i=0; i< mModel.getRowCount(); i++) {
-            if (this.getDisplayedItemAt(i).mValue == value) {
+            if (this.getDisplayedValueAt(i) == value) {
                 this.setSelectedItem(i);
                 break;
             }
@@ -301,30 +335,52 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         mRowSorter.sort();
     }
 
-    @SuppressWarnings("unchecked")
-    private void timerUpdate() {
-        for (int i = 0; i < mModel.getRowCount(); i++) {
-            I item = (I) mModel.getValueAt(i, 0);
-            item.update(null, Change.TIMER);
-        }
-    }
-
-    protected void updateSorting(){
-        if (mModel.getRowCount() == 0)
+    @Override
+    public void update(Observable o, Object arg) {
+        if (SwingUtilities.isEventDispatchThread()) {
+            this.updateOnEDT(o, arg);
             return;
-
-        // do no change selection
-        //mModel.fireTableDataChanged();
-        mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
+        }
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                ListView.this.updateOnEDT(o, arg);
+            }
+        });
     }
 
-    private void showTooltip(TableItem item) {
-        String text = item.getTooltipText();
+    @SuppressWarnings("unchecked")
+    private void updateOnEDT(Observable o, Object arg) {
+        if (o == null || mVClass.isAssignableFrom(o.getClass())) {
+            // render everything again (and update sorting)
+            mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
+            return;
+        }
+        this.updateOnEDT(arg);
+    }
+
+    abstract protected void updateOnEDT(Object arg);
+
+    // WebLaf's tooltipmanager blocks mouse events, we need to invoke the tooltip manually.
+    // Catch the event when a tooltip should be shown and create a own one.
+    @Override
+    public String getToolTipText(MouseEvent event) {
+        int row = this.rowAtPoint(event.getPoint());
+        if (row >= 0)
+            ListView.this.showTooltip(this.getDisplayedValueAt(row));
+
+        return null;
+    }
+
+    protected String getTooltipText(V value) {
+        return "";
+    };
+
+    private void showTooltip(V value) {
+        String text = this.getTooltipText(value);
         if (text.isEmpty())
             return;
 
-        // weblaf currently cant show tooltips for comps with table/list/...
-        // renderer, we need to set the position ourself
         Point p = this.getMousePosition();
         if (p == null)
             return;
@@ -337,122 +393,75 @@ abstract class ListView<I extends ListView<I, V>.TableItem, V extends Observable
         if (mTip != null)
             mTip.closeTooltip();
 
-        // TODO temporary catching for tracing bug
-        try {
-            mTip = TooltipManager.showOneTimeTooltip(this, pos, text, TooltipWay.right);
-        } catch (ArrayIndexOutOfBoundsException ex) {
-            LOGGER.log(Level.WARNING, "can't show tooltip", ex);
-            LOGGER.warning("this="+this+",pos="+pos+",text="+text);
-        }
+        mTip = TooltipManager.showOneTimeTooltip(this, pos, text, TooltipWay.right);
     }
 
-    // JTabel uses this to determine the renderer
+    // JTabel uses this to determine the renderer/editor
     @Override
     public Class<?> getColumnClass(int column) {
-        return TableItem.class;
+        return mVClass;
     }
-
-    @Override
-    public void update(Observable o, final Object arg) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            this.updateOnEDT(arg);
-            return;
-        }
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                ListView.this.updateOnEDT(arg);
-            }
-        });
-    }
-
-    abstract protected void updateOnEDT(Object arg);
 
     protected void onRenameEvent() {}
 
-    abstract class TableItem extends WebPanel implements Observer, Comparable<TableItem> {
-
-        protected final V mValue;
-
-        protected TableItem(V value) {
-            mValue = value;
-        }
-
-        /** Set internal properties before rendering this item. */
-        abstract protected void render(int tableWidth, boolean isSelected);
-
-        protected String getTooltipText() {
-            return "";
-        };
-
-        /**
-         * Return if the content of the item contains the search string.
-         * Used for filtering.
-         */
-        protected abstract boolean contains(String search);
-
-        @Override
-        public void update(Observable o, final Object arg) {
-            if (SwingUtilities.isEventDispatchThread()) {
-                this.update(arg);
-                return;
-            }
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    TableItem.this.update(arg);
-                }
-            });
-        }
-
-        private void update(Object arg) {
-            this.updateOnEDT(arg);
-
-            //mModel.fireTableCellUpdated(?, 0);
-            ListView.this.repaint();
-        }
-
-        protected abstract void updateOnEDT(Object arg);
-
-        // catch the event, when a tooltip should be shown for this item and
-        // create a own one
-        // note: together with the cell renderer the tooltip can be added
-        // directly to the item, but the behaviour is buggy so we keep this
-        @Override
-        public String getToolTipText(MouseEvent event) {
-            ListView.this.showTooltip(this);
-            return null;
-        }
-
-        protected void onRemove() {};
+    /** View item used as flyweight object. */
+    abstract static class FlyweightItem<V> extends WebPanel {
+        /** Update before painting. */
+        protected abstract void render(V value, int listWidth, boolean isSelected);
     }
 
     private class TableRenderer extends WebTableCellRenderer {
         // return for each item (value) in the list/table the component to
-        // render - which is the item itself here
-        // NOTE: table and value can be NULL
+        // render - which is the updated render item
         @Override
-        @SuppressWarnings("unchecked")
         public Component getTableCellRendererComponent(JTable table,
+                Object value, boolean isSelected, boolean hasFocus,
+                int row, int column) {
+            return updateFlyweight(mRenderItem, table, value, row, isSelected);
+        }
+    }
+
+    // needed for correct mouse behaviour for components in items
+    // (and breaks selection behaviour somehow)
+    @SuppressWarnings("unchecked")
+    private class TableEditor extends AbstractCellEditor implements TableCellEditor {
+        private V mValue;
+        @Override
+        public Component getTableCellEditorComponent(JTable table,
                 Object value,
                 boolean isSelected,
-                boolean hasFocus,
                 int row,
                 int column) {
-            TableItem item = (TableItem) value;
-            // hopefully return value is not used
-            if (table == null || item == null)
-                return item;
+            mValue = (V) value;
+            return updateFlyweight(mEditorItem, table, value, row, isSelected);
+        }
+        @Override
+        public Object getCellEditorValue() {
+            // no idea what this is used for
+            return mValue;
+        }
+    }
 
-            item.render(table.getWidth(), isSelected);
-
-            int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
-            // view item needs a little more then it preferres
-            height += 1;
-            if (height != table.getRowHeight(row))
-                // NOTE: this calls resizeAndRepaint()
-                table.setRowHeight(row, height);
+    // NOTE: table and value can be NULL
+    @SuppressWarnings("unchecked")
+    private static <V> FlyweightItem updateFlyweight(FlyweightItem item,
+            JTable table, Object value, int row, boolean isSelected) {
+        V valueItem = (V) value;
+        // hopefully return value is not used
+        if (table == null || valueItem == null) {
             return item;
         }
+
+        item.render(valueItem, table.getWidth(), isSelected);
+
+        int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
+        // view item needs a little more then it preferres
+        height += 1;
+        if (height != table.getRowHeight(row)) {
+            // NOTE: this calls resizeAndRepaint()
+            table.setRowHeight(row, height);
+        }
+
+        return item;
     }
 }

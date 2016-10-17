@@ -46,7 +46,6 @@ import java.awt.datatransfer.Transferable;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.nio.file.Path;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
@@ -75,13 +74,12 @@ import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
 import org.kontalk.view.ComponentUtils.AttachmentPanel;
 
-
 /**
  * View all messages of one chat in a left/right MIM style list.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class MessageList extends FlyweightListView<KonMessage> {
+final class MessageList extends ListView<KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
@@ -106,13 +104,12 @@ final class MessageList extends FlyweightListView<KonMessage> {
         super(view,
                 new MessageListFlyWeightItem(view),
                 new MessageListFlyWeightItem(view),
-                comparator(),
+                // allow multiple selections for "copy" action
+                ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
                 false);
+
         mChatView = chatView;
         mChat = chat;
-
-        // allow multiple selections for "copy" action
-        this.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
 
         //this.setEditable(false);
         //this.setAutoscrolls(true);
@@ -121,10 +118,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
         // hide grid
         this.setShowGrid(false);
 
-        // static menu, cannot use this
-        //this.setComponentPopupMenu(...);
-
-        // copy items to clipboard using the in-build 'copy' action, invoked by custom right-click
+        // copy values to clipboard using the in-build 'copy' action, invoked by custom right-click
         // menu or default ctrl+c shortcut
         this.setTransferHandler(new CopyTransferHandler(mView));
 
@@ -156,7 +150,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
         }
 
         if ((arg == null || arg == Chat.ViewChange.READ) &&
-                !mChat.isRead() && mChatView.getCurrentChat().orElse(null) == mChat) {
+                !mChat.isRead() && mView.chatIsVisible(mChat)) {
             mChat.setRead();
         }
     }
@@ -175,7 +169,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(List<KonMessage> selectedItems) {
+    protected WebPopupMenu rightClickMenu(List<KonMessage> selectedValues) {
         WebPopupMenu menu = new WebPopupMenu();
 
         Action copyAction = new AbstractAction(Tr.tr("Copy")) {
@@ -189,15 +183,15 @@ final class MessageList extends FlyweightListView<KonMessage> {
         copyAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
         menu.add(copyAction);
 
-        if (selectedItems.isEmpty()) {
-            LOGGER.warning("no items");
+        if (selectedValues.isEmpty()) {
+            LOGGER.warning("no values");
             return menu;
         }
 
-        if (selectedItems.size() > 1)
+        if (selectedValues.size() > 1)
             return menu;
 
-        final KonMessage m = selectedItems.get(0);
+        final KonMessage m = selectedValues.get(0);
         if (m instanceof InMessage) {
             InMessage im = (InMessage) m;
             if (m.isEncrypted()) {
@@ -241,12 +235,18 @@ final class MessageList extends FlyweightListView<KonMessage> {
         return menu;
     }
 
+    @Override
+    public int compare(KonMessage o1, KonMessage o2) {
+        int idComp = Integer.compare(o1.getID(), o2.getID());
+        int dateComp = o1.getDate().compareTo(o2.getDate());
+        return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
+    }
+
     /**
      * Flyweight render item for message items.
      * The content is added to a panel inside this panel.
      */
-    private static class MessageListFlyWeightItem
-            extends FlyweightListView.FlyweightItem<KonMessage> {
+    private static class MessageListFlyWeightItem extends FlyweightItem<KonMessage> {
 
         private final View mView;
         private final WebPanel mPanel;
@@ -268,8 +268,9 @@ final class MessageList extends FlyweightListView<KonMessage> {
             this.setBackground(View.BLUE); // seen when selected
 
             mPanel = new WebPanel(true);
+            mPanel.setRound(View.ROUND);
             mPanel.setWebColoredBackground(false);
-            mPanel.setMargin(2);
+            mPanel.setMargin(View.MARGIN_TINY);
 
             mFromLabel = new WebLabel();
             mFromLabel.setFontSize(View.FONT_SIZE_SMALL);
@@ -339,10 +340,11 @@ final class MessageList extends FlyweightListView<KonMessage> {
 
             // background (message panel)
             boolean hasGroupCommand = value.getContent().getGroupCommand().isPresent();
-            mPanel.setBackground(hasGroupCommand ? View.LIGHT_GREEN :
-                    value.isInMessage() ?
-                    Color.WHITE :
-                    View.LIGHT_BLUE);
+            Color color =
+                    hasGroupCommand ? View.LIGHT_GREEN :
+                    value.isInMessage() ? Color.WHITE : View.LIGHT_BLUE;
+            mPanel.setBackground(color);
+            mPanel.setBorderColor(color);
 
             // from label
             mFromLabel.setVisible(value.isInMessage() && value.getChat().isGroupChat());
@@ -362,7 +364,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
             // title
             mFromLabel.setText(!value.getContent().getGroupCommand().isPresent() &&
                     value instanceof InMessage ?
-                    " "+getFromString((InMessage) value) :
+                    " " + getFromString((InMessage) value) :
                     "");
 
             // text in text area
@@ -581,17 +583,6 @@ final class MessageList extends FlyweightListView<KonMessage> {
         }
     }
 
-    private static Comparator<KonMessage> comparator() {
-        return new Comparator<KonMessage>() {
-            @Override
-            public int compare(KonMessage o1, KonMessage o2) {
-                int idComp = Integer.compare(o1.getID(), o2.getID());
-                int dateComp = o1.getDate().compareTo(o2.getDate());
-                return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
-            }
-        };
-    }
-
     private static String getFromString(InMessage message) {
         return Utils.displayName(message.getContact(), message.getJID(), View.MAX_NAME_IN_FROM_LABEL);
     }
@@ -662,7 +653,7 @@ final class MessageList extends FlyweightListView<KonMessage> {
                 return null;
             }
 
-            List<KonMessage> messages = ((MessageList) c).getSelectedItems();
+            List<KonMessage> messages = ((MessageList) c).getSelectedValues();
             if (messages.isEmpty()) {
                 return null;
             }

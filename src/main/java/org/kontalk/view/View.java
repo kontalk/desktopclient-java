@@ -72,6 +72,9 @@ public final class View implements Observer {
     static final int MARGIN_DEFAULT = 10;
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
+    static final int MARGIN_TINY = 2;
+
+    static final int ROUND = 5;
 
     static final int FONT_SIZE_TINY = 11;
     static final int FONT_SIZE_SMALL = 12;
@@ -150,6 +153,13 @@ public final class View implements Observer {
         // main frame
         mMainFrame = new MainFrame(this, mModel, mContactListView, mChatListView,
                 mContent, mSearchPanel, statusBar);
+        mMainFrame.addWindowFocusListener(new WindowAdapter() {
+            @Override
+            public void windowGainedFocus(WindowEvent e) {
+                mChatView.getCurrentChat().ifPresent(chat -> chat.setRead());
+            }
+        });
+
         // tray
         mTrayManager = new TrayManager(this, mModel, mMainFrame);
         // notifier
@@ -425,12 +435,8 @@ public final class View implements Observer {
         mContent.showNothing();
     }
 
-    Optional<Chat> getCurrentShownChat() {
-        return mContent.getCurrentChat();
-    }
-
-    boolean mainFrameIsFocused() {
-        return mMainFrame.isFocused();
+    boolean chatIsVisible(Chat chat) {
+        return mChatView.getCurrentChat().orElse(null) == chat && mMainFrame.isFocused();
     }
 
     void reloadChatBG() {

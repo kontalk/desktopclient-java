@@ -35,6 +35,7 @@ import org.apache.commons.lang.ObjectUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.kontalk.misc.Searchable;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.message.KonMessage;
@@ -47,7 +48,7 @@ import org.kontalk.persistence.Database;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public abstract class Chat extends Observable implements Observer {
+public abstract class Chat extends Observable implements Observer, Searchable {
     private static final Logger LOGGER = Logger.getLogger(Chat.class.getName());
 
     public enum ViewChange {
@@ -246,6 +247,15 @@ public abstract class Chat extends Observable implements Observer {
     @Override
     public void update(Observable o, Object arg) {
         this.changed(ViewChange.CONTACT);
+    }
+
+    @Override
+    public boolean contains(String search) {
+            for (Contact contact: this.getAllContacts()) {
+                if (contact.contains(search))
+                    return true;
+            }
+            return this.getSubject().toLowerCase().contains(search);
     }
 
     static Optional<Chat> load(Database db, ResultSet rs, Map<Integer, Contact> contactMap)

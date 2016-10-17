@@ -31,6 +31,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.kontalk.misc.JID;
+import org.kontalk.misc.Searchable;
 import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -46,7 +47,7 @@ import org.kontalk.util.XMPPUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Contact extends Observable {
+public final class Contact extends Observable implements Searchable {
     private static final Logger LOGGER = Logger.getLogger(Contact.class.getName());
 
     /**
@@ -399,6 +400,12 @@ public final class Contact extends Observable {
     private void changed(ViewChange change) {
         this.setChanged();
         this.notifyObservers(change);
+    }
+
+    @Override
+    public boolean contains(String search) {
+        return this.getName().toLowerCase().contains(search) ||
+                this.getJID().string().toLowerCase().contains(search);
     }
 
     @Override

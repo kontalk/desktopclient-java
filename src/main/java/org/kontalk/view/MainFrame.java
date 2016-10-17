@@ -59,6 +59,7 @@ import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.scroll.WebScrollBar;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
+import com.alee.laf.table.WebTable;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.utils.WebUtils;
@@ -88,8 +89,8 @@ final class MainFrame extends WebFrame {
 
     MainFrame(View view,
             Model model,
-            ListView<?, ?> contactList,
-            ListView<?, ?> chatList,
+            ListView contactList,
+            ListView chatList,
             Component content,
             WebPanel searchPanel,
             Component statusBar) {
@@ -355,7 +356,7 @@ final class MainFrame extends WebFrame {
                 icon);
     }
 
-    private static WebPanel createListPanel(final ListView<?, ?> list,
+    private static WebPanel createListPanel(final WebTable list,
                                             String overlayText,
                                             WebToggleButton button) {
         // overlay for empty list
