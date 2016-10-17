@@ -21,7 +21,6 @@ package org.kontalk.model;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
-import org.kontalk.misc.JID;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -30,6 +29,9 @@ import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.kontalk.misc.JID;
+import org.kontalk.misc.Searchable;
 import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.XMPPUtils;
@@ -40,12 +42,12 @@ import org.kontalk.util.XMPPUtils;
  * TODO group chats need some weaker entity here: not deletable,
  * not shown in ui contact list(?), but with public key
  *
- * idea: "deletable" or / "weak" field: contact gets deleted
+ * idea: "deletable"/"weak" field: contact gets deleted
  * when no group chat exists anymore
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class Contact extends Observable {
+public final class Contact extends Observable implements Searchable {
     private static final Logger LOGGER = Logger.getLogger(Contact.class.getName());
 
     /**
@@ -61,7 +63,7 @@ public final class Contact extends Observable {
     }
 
     public enum ViewChange {
-        JID, NAME, ONLINE_STATUS, KEY, BLOCKING, SUBSCRIPTION, AVATAR, DELETED
+        JID, NAME, LAST_SEEN, ONLINE_STATUS, KEY, BLOCKING, SUBSCRIPTION, AVATAR, DELETED
     }
 
     public static final String TABLE = "user";
@@ -91,17 +93,16 @@ public final class Contact extends Observable {
     private String mName;
     private String mStatus = "";
     private Date mLastSeen = null;
-    // not in database
-    private Online mOnline = Online.UNKNOWN;
+    private Online mOnline = Online.UNKNOWN; // not in database
     private boolean mEncrypted = true;
     private String mKey = "";
     private String mFingerprint = "";
     private boolean mBlocked = false;
-    // not in database
-    private Subscription mSubStatus = Subscription.UNKNOWN;
+    private Subscription mSubStatus = Subscription.UNKNOWN; // not in database
     //private ItemType mType;
     private Avatar.DefaultAvatar mAvatar = null;
     private Avatar.CustomAvatar mCustomAvatar = null;
+    private boolean mSaveOnShutdown = false;
 
     // new contact (eg from roster)
     Contact(JID jid, String name) {
@@ -192,6 +193,19 @@ public final class Contact extends Observable {
         return Optional.ofNullable(mLastSeen);
     }
 
+    public void setLastSeen(Date lastSeen, String status) {
+        if (!lastSeen.equals(mLastSeen)) {
+            mLastSeen = lastSeen;
+            mSaveOnShutdown = true;
+            this.changed(ViewChange.LAST_SEEN);
+        }
+        if (!status.isEmpty() && !status.equals(mStatus)) {
+            mStatus = status;
+            mSaveOnShutdown = true;
+            // notify on status change not required
+        }
+    }
+
     public boolean getEncrypted() {
         return mEncrypted;
     }
@@ -213,7 +227,8 @@ public final class Contact extends Observable {
             return;
 
         mStatus = status;
-        this.save();
+        mSaveOnShutdown = true;
+        // notify on status change not required
     }
 
     public void setOnlineStatus(Online onlineStatus) {
@@ -223,11 +238,11 @@ public final class Contact extends Observable {
         if (onlineStatus == Online.YES ||
                 (onlineStatus == Online.NO && mOnline == Online.YES)) {
             mLastSeen = new Date();
-            this.save();
+            mSaveOnShutdown = true;
+            // notify on last_seen change not required here
         }
 
         mOnline = onlineStatus;
-
         this.changed(ViewChange.ONLINE_STATUS);
     }
 
@@ -362,6 +377,11 @@ public final class Contact extends Observable {
         return mJID.string().equals(Integer.toString(mID));
     }
 
+    void onShutDown() {
+        if (!this.isDeleted() && mSaveOnShutdown)
+            this.save();
+    }
+
     private void save() {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_JID, mJID);
@@ -373,6 +393,8 @@ public final class Contact extends Observable {
         set.put(COL_KEY_FP, Database.setString(mFingerprint));
         set.put(COL_AVATAR_ID, Database.setString(mAvatar != null ? mAvatar.getID() : ""));
         Model.database().execUpdate(TABLE, set, mID);
+
+        mSaveOnShutdown = false;
     }
 
     private void changed(ViewChange change) {
@@ -381,7 +403,13 @@ public final class Contact extends Observable {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean contains(String search) {
+        return this.getName().toLowerCase().contains(search) ||
+                this.getJID().string().toLowerCase().contains(search);
+    }
+
+    @Override
+    public final boolean equals(Object o) {
         if (o == this)
             return true;
 

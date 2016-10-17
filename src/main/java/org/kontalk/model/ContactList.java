@@ -19,10 +19,8 @@ package org.kontalk.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import org.kontalk.misc.JID;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Observable;
 import java.util.Optional;
@@ -30,6 +28,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
+import org.kontalk.misc.JID;
 import org.kontalk.persistence.Database;
 
 /**
@@ -39,7 +39,7 @@ import org.kontalk.persistence.Database;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class ContactList extends Observable implements Iterable<Contact> {
+public final class ContactList extends Observable {
     private static final Logger LOGGER = Logger.getLogger(ContactList.class.getName());
 
     private enum ViewChange { MODIFIED }
@@ -135,6 +135,10 @@ public final class ContactList extends Observable implements Iterable<Contact> {
         this.changed(ViewChange.MODIFIED);
     }
 
+    void onShutDown() {
+        mJIDMap.values().stream().forEach(c -> c.onShutDown());
+    }    
+
     /**
      * Return whether a contact with a specified JID exists.
      */
@@ -171,10 +175,5 @@ public final class ContactList extends Observable implements Iterable<Contact> {
     private void changed(ViewChange change) {
         this.setChanged();
         this.notifyObservers(change);
-    }
-
-    @Override
-    public Iterator<Contact> iterator() {
-        return mJIDMap.values().iterator();
     }
 }

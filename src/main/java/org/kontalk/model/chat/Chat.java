@@ -21,7 +21,6 @@ package org.kontalk.model.chat;
 import java.awt.Color;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +35,7 @@ import org.apache.commons.lang.ObjectUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.kontalk.misc.Searchable;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.message.KonMessage;
@@ -48,7 +48,7 @@ import org.kontalk.persistence.Database;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public abstract class Chat extends Observable implements Observer {
+public abstract class Chat extends Observable implements Observer, Searchable {
     private static final Logger LOGGER = Logger.getLogger(Chat.class.getName());
 
     public enum ViewChange {
@@ -83,7 +83,7 @@ public abstract class Chat extends Observable implements Observer {
 
     private ViewSettings mViewSettings;
 
-    protected Chat(List<Member> members, String xmppID, String subject, GroupMetaData gData) {
+    protected Chat(String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages();
         mRead = true;
         mViewSettings = new ViewSettings();
@@ -97,11 +97,8 @@ public abstract class Chat extends Observable implements Observer {
                 Database.setString(gData == null ? "" : gData.toJSON()));
         mID = Model.database().execInsert(TABLE, values);
         if (mID < 1) {
-            LOGGER.warning("couldn't insert chat");
-            return;
+            LOGGER.warning("could not insert chat");
         }
-
-        members.stream().forEach(member -> member.insert(Model.database(), mID));
     }
 
     // used when loading from database
@@ -204,7 +201,8 @@ public abstract class Chat extends Observable implements Observer {
 
     abstract void save();
 
-    protected void save(List<Member> members, String subject) {
+    // not saving members here
+    protected void save(String subject) {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(subject));
         set.put(COL_READ, mRead);
@@ -212,18 +210,6 @@ public abstract class Chat extends Observable implements Observer {
 
         Database db = Model.database();
         db.execUpdate(TABLE, set, mID);
-
-        // get receiver for this chat
-        List<Member> oldMembers = new ArrayList<>(this.getAllMembers());
-
-        // save new members
-        members.stream()
-                .filter(m -> !oldMembers.contains(m))
-                .forEach(m -> m.insert(db, mID));
-
-        oldMembers.removeAll(members);
-        // whats left is too much and can be deleted
-        oldMembers.stream().forEach(m -> m.delete(db));
     }
 
     void delete() {
@@ -233,12 +219,12 @@ public abstract class Chat extends Observable implements Observer {
             return;
 
         // members
-        succ = this.getAllMembers().stream().allMatch(m -> m.delete(Model.database()));
+        Database db = Model.database();
+        succ = this.getAllMembers().stream().allMatch(m -> m.delete(db));
         if (!succ)
             return;
 
         // chat itself
-        Database db = Model.database();
         db.execDelete(TABLE, mID);
 
         // all done, commit deletions
@@ -261,6 +247,15 @@ public abstract class Chat extends Observable implements Observer {
     @Override
     public void update(Observable o, Object arg) {
         this.changed(ViewChange.CONTACT);
+    }
+
+    @Override
+    public boolean contains(String search) {
+            for (Contact contact: this.getAllContacts()) {
+                if (contact.contains(search))
+                    return true;
+            }
+            return this.getSubject().toLowerCase().contains(search);
     }
 
     static Optional<Chat> load(Database db, ResultSet rs, Map<Integer, Contact> contactMap)
@@ -364,7 +359,7 @@ public abstract class Chat extends Observable implements Observer {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public final boolean equals(Object o) {
             if (o == this)
                 return true;
 

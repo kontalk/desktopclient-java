@@ -18,23 +18,25 @@
 
 package org.kontalk.system;
 
-import org.kontalk.persistence.Config;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.XMPPError;
-import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.kontalk.client.Client;
 import org.kontalk.client.HKPClient;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.ViewEvent;
 import org.kontalk.model.Contact;
-import org.kontalk.misc.JID;
 import org.kontalk.model.Contact.Subscription;
 import org.kontalk.model.Model;
+import org.kontalk.persistence.Config;
+import org.kontalk.util.ClientUtils;
 
 /**
  * Process incoming roster and presence changes.
@@ -64,64 +66,76 @@ public final class RosterHandler {
         mModel = model;
     }
 
-    public void onEntryAdded(JID jid,
-            String name,
-            RosterPacket.ItemType type,
-            RosterPacket.ItemStatus itemStatus) {
-        if (mModel.contacts().contains(jid)) {
-            this.onEntryUpdate(jid, name, type, itemStatus);
+    public void onLoaded(List<ClientUtils.KonRosterEntry> entries) {
+        for (ClientUtils.KonRosterEntry entry: entries)
+            this.onEntryAdded(entry);
+
+        // check for deleted entries
+        List<JID> rosterJIDs = entries.stream().map(e -> e.jid).collect(Collectors.toList());
+        for (Contact contact : mModel.contacts().getAll(false, true))
+            if (!rosterJIDs.contains(contact.getJID()))
+                this.onEntryDeleted(contact.getJID());
+    }
+
+    public void onEntryAdded(ClientUtils.KonRosterEntry entry) {
+        if (mModel.contacts().contains(entry.jid)) {
+            this.onEntryUpdate(entry);
             return;
         }
 
-        LOGGER.info("adding contact from roster, jid: "+jid);
+        LOGGER.info("adding contact from roster, jid: "+entry.jid);
 
-        if (name.equals(jid.local()) && jid.isHash()) {
-            // this must be the hash string, don't use it as name
-            name = "";
-        }
+        String name = entry.name.equals(entry.jid.local()) && entry.jid.isHash() ?
+                // this must be the hash string, don't use it as name
+                "" :
+                entry.name;
 
-        Contact newContact = mControl.createContact(jid, name).orElse(null);
+        Contact newContact = mControl.createContact(entry.jid, name).orElse(null);
         if (newContact == null)
             return;
 
-        Contact.Subscription status = rosterToModelSubscription(itemStatus, type);
-        newContact.setSubscriptionStatus(status);
+        newContact.setSubscriptionStatus(entry.subscription);
 
         mControl.maySendKeyRequest(newContact);
 
-        if (status == Contact.Subscription.UNSUBSCRIBED)
-            mControl.sendPresenceSubscription(jid, Client.PresenceCommand.REQUEST);
+        if (entry.subscription == Contact.Subscription.UNSUBSCRIBED)
+            mControl.sendPresenceSubscription(entry.jid, Client.PresenceCommand.REQUEST);
     }
 
     public void onEntryDeleted(JID jid) {
-        // note: also called on rename
+        // NOTE: also called on rename
         Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact == null) {
             LOGGER.info("can't find contact with jid: "+jid);
             return;
         }
+
+        // TODO detect if contact account still exists
 
         mControl.getViewControl().changed(new ViewEvent.ContactDeleted(contact));
     }
 
-    public void onEntryUpdate(JID jid,
-            String name,
-            RosterPacket.ItemType type,
-            RosterPacket.ItemStatus itemStatus) {
-        Contact contact = mModel.contacts().get(jid).orElse(null);
+    // NOTE: also called for every contact in roster on every (re-)connect
+    public void onEntryUpdate(ClientUtils.KonRosterEntry entry) {
+        Contact contact = mModel.contacts().get(entry.jid).orElse(null);
         if (contact == null) {
-            LOGGER.info("can't find contact with jid: "+jid);
+            LOGGER.info("can't find contact with jid: "+entry.jid);
             return;
         }
-        // subcription may have changed
-        contact.setSubscriptionStatus(rosterToModelSubscription(itemStatus, type));
+        // subscription may have changed
+        contact.setSubscriptionStatus(entry.subscription);
 
         // maybe subscribed now
         mControl.maySendKeyRequest(contact);
 
         // name may have changed
-        if (contact.getName().isEmpty() && !name.equals(jid.local()))
-            contact.setName(name);
+        if (contact.getName().isEmpty() && !entry.name.equals(entry.jid.local()))
+            contact.setName(entry.name);
+
+        if (contact.getSubScription() == Subscription.SUBSCRIBED &&
+                (contact.getOnline() == Contact.Online.UNKNOWN ||
+                        contact.getOnline() == Contact.Online.NO))
+            mClient.sendLastActivityRequest(contact.getJID());
     }
 
     public void onSubscriptionRequest(JID jid, byte[] rawKey) {
@@ -154,8 +168,7 @@ public final class RosterHandler {
 
         if (type == Presence.Type.available) {
             contact.setOnlineStatus(Contact.Online.YES);
-        }
-        if (type == Presence.Type.unavailable) {
+        } else if (type == Presence.Type.unavailable) {
             contact.setOnlineStatus(Contact.Online.NO);
         }
 
@@ -247,20 +260,5 @@ public final class RosterHandler {
         contact.setOnlineStatus(Contact.Online.ERROR);
 
         mControl.getViewControl().changed(new ViewEvent.PresenceError(contact, error));
-    }
-
-    /* private */
-
-    private static Subscription rosterToModelSubscription(
-            RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
-        if (type == RosterPacket.ItemType.both ||
-                type == RosterPacket.ItemType.to ||
-                type == RosterPacket.ItemType.remove)
-            return Subscription.SUBSCRIBED;
-
-        if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
-            return Subscription.PENDING;
-
-        return Subscription.UNSUBSCRIBED;
     }
 }

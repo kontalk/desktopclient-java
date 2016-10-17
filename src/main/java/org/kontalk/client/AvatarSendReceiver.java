@@ -196,6 +196,7 @@ final class AvatarSendReceiver {
                 ItemsExtension items = (ItemsExtension) itemsExt;
                 List<? extends ExtensionElement> itemsList = items.getItems();
                 if (itemsList.isEmpty()) {
+                    // TODO why this happens?
                     LOGGER.warning("no items in itemlist");
                     return;
                 }

@@ -18,13 +18,11 @@
 
 package org.kontalk.system;
 
-import org.kontalk.persistence.Config;
-import org.kontalk.persistence.Database;
-import org.kontalk.model.Account;
 import java.awt.image.BufferedImage;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.EnumSet;
@@ -36,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.jivesoftware.smack.packet.XMPPError.Condition;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
@@ -45,23 +44,27 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.crypto.PersonalKey;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
 import org.kontalk.misc.ViewEvent;
-import org.kontalk.model.message.InMessage;
-import org.kontalk.model.message.KonMessage;
-import org.kontalk.model.chat.Chat;
-import org.kontalk.model.message.MessageContent;
-import org.kontalk.model.message.OutMessage;
-import org.kontalk.model.Contact;
-import org.kontalk.misc.JID;
+import org.kontalk.model.Account;
 import org.kontalk.model.Avatar;
+import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
+import org.kontalk.model.chat.ProtoMember;
+import org.kontalk.model.chat.SingleChat;
+import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.KonMessage;
+import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
+import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.ProtoMessage;
-import org.kontalk.model.chat.SingleChat;
+import org.kontalk.persistence.Config;
+import org.kontalk.persistence.Database;
 import org.kontalk.util.ClientUtils.MessageIDs;
 import org.kontalk.util.XMPPUtils;
 import org.kontalk.view.View;
@@ -157,6 +160,8 @@ public final class Control {
 
         mViewControl.changed(new ViewEvent.StatusChange(Status.SHUTTING_DOWN,
                 EnumSet.noneOf(FeatureDiscovery.Feature.class)));
+
+        mModel.onShutDown();
         try {
             mDB.close();
         } catch (RuntimeException ex) {
@@ -197,12 +202,13 @@ public final class Control {
                         .forEach(m -> this.sendMessage(m));
 
             // send public key requests for Kontalk contacts with missing key
-            for (Contact contact : mModel.contacts())
+            for (Contact contact : mModel.contacts().getAll(false, false))
                 this.maySendKeyRequest(contact);
 
             // TODO check current user avatar on server and upload if necessary
+
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
-            for (Contact contact : mModel.contacts())
+            for (Contact contact : mModel.contacts().getAll(false, false))
                 contact.setOnlineStatus(Contact.Online.UNKNOWN);
         }
     }
@@ -386,6 +392,32 @@ public final class Control {
         contact.setBlocked(blocking);
     }
 
+    public void onLastActivity(JID jid, long lastSecondsAgo, String status) {
+        Contact contact = mModel.contacts().get(jid).orElse(null);
+        if (contact == null) {
+            LOGGER.info("can't find contact with jid: "+jid);
+            return;
+        }
+
+        if (contact.getOnline() == Contact.Online.YES) {
+            // mobile clients connect only for a short time, last seen is some minutes ago but they
+            // are actually online
+            return;
+        }
+
+        if (lastSecondsAgo == 0) {
+            // contact is online
+            contact.setOnlineStatus(Contact.Online.YES);
+            return;
+        }
+
+        // 'last seen' seconds to date
+        LocalDateTime ldt = LocalDateTime.now().minusSeconds(lastSecondsAgo);
+        Date lastSeen = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+
+        contact.setLastSeen(lastSeen, status);
+    }
+
     /* package */
 
     /**
@@ -475,6 +507,7 @@ public final class Control {
 
         mClient.sendPublicKeyRequest(contact.getJID());
     }
+
     Optional<Contact> getOrCreateContact(JID jid) {
         Contact contact = mModel.contacts().get(jid).orElse(null);
         if (contact != null)
@@ -504,6 +537,8 @@ public final class Control {
     private Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
         if (!mClient.isConnected()) {
             // workaround: create only if contact can be added to roster
+            // this is a general problem with XMPPs roster: no real sync possible
+            LOGGER.warning("can't create contact, not connected: "+jid);
             return Optional.empty();
         }
 
@@ -607,7 +642,9 @@ public final class Control {
             }
         }
 
-        // fallback: search everywhere
+        // TODO group chats
+
+        // fallback: search in every chat
         LOGGER.info("fallback search, IDs: "+ids);
         for (Chat chat: mModel.chats()) {
             Optional<OutMessage> optM = chat.getMessages().getLast(ids.xmppID);
@@ -666,6 +703,10 @@ public final class Control {
 
         public void setAccountPassword(char[] oldPass, char[] newPass) throws KonException {
             mModel.account().setPassword(oldPass, newPass);
+        }
+
+        public Path getAttachmentDir() {
+            return mAttachmentManager.getAttachmentDir();
         }
 
         public Path getFilePath(Attachment attachment) {
@@ -739,6 +780,10 @@ public final class Control {
                     Client.PresenceCommand.REQUEST);
         }
 
+        public void createRosterEntry(Contact contact) {
+            Control.this.addToRoster(contact);
+        }
+
         /* chats */
 
         public Chat getOrCreateSingleChat(Contact contact) {
@@ -747,15 +792,15 @@ public final class Control {
 
         public Optional<GroupChat> createGroupChat(List<Contact> contacts, String subject) {
             // user is part of the group
-            List<Member> members = contacts.stream()
-                    .map(c -> new Member(c))
-                    .collect(Collectors.toCollection(ArrayList::new));
+            List<ProtoMember> members = contacts.stream()
+                    .map(c -> new ProtoMember(c))
+                    .collect(Collectors.toList());
             Contact me = mModel.contacts().getMe().orElse(null);
             if (me == null) {
                 LOGGER.warning("can't find myself");
                 return Optional.empty();
             }
-            members.add(new Member(me, Member.Role.OWNER));
+            members.add(new ProtoMember(me, Member.Role.OWNER));
 
             GroupChat chat = mModel.chats().createNew(members,
                     GroupControl.newKonGroupData(me.getJID()),
@@ -773,6 +818,10 @@ public final class Control {
             }
 
             mModel.chats().delete(chat);
+        }
+
+        public void leaveGroupChat(GroupChat chat) {
+            mGroupControl.getInstanceFor(chat).onLeave();
         }
 
         public void setChatSubject(GroupChat chat, String subject) {

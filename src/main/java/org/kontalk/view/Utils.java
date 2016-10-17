@@ -18,13 +18,12 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.optionpane.WebOptionPane;
-import com.alee.laf.text.WebTextArea;
-import com.alee.laf.text.WebTextField;
-import com.alee.utils.filefilter.ImageFilesFilter;
+import javax.net.ssl.SSLHandshakeException;
+import javax.swing.Action;
+import javax.swing.Icon;
+import javax.swing.ImageIcon;
+import javax.swing.KeyStroke;
+import javax.swing.text.DefaultEditorKit;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Font;
@@ -34,8 +33,6 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -49,18 +46,22 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.ssl.SSLHandshakeException;
-import javax.swing.Icon;
-import javax.swing.ImageIcon;
+
+import com.alee.extended.filechooser.WebFileChooserField;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.optionpane.WebOptionPane;
+import com.alee.laf.text.WebTextArea;
+import com.alee.utils.filefilter.ImageFilesFilter;
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.sasl.SASLErrorException;
 import org.jxmpp.util.XmppStringUtils;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.persistence.Config;
 import org.kontalk.util.EncodingUtils;
@@ -99,30 +100,6 @@ final class Utils {
         return chooser;
     }
 
-    static WebTextField createTextField(final String text) {
-        final WebTextField field = new WebTextField(text, false);
-        field.setEditable(false);
-        field.setBackground(null);
-        field.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                check(e);
-            }
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                check(e);
-            }
-            private void check(MouseEvent e) {
-                if (e.isPopupTrigger()) {
-                    WebPopupMenu popupMenu = new WebPopupMenu();
-                    popupMenu.add(createCopyMenuItem(field.getText(), ""));
-                    popupMenu.show(field, e.getX(), e.getY());
-                }
-            }
-        });
-        return field;
-    }
-
     static WebMenuItem createCopyMenuItem(final String copyText, String toolTipText) {
         WebMenuItem item = new WebMenuItem(Tr.tr("Copy"));
         if (!toolTipText.isEmpty())
@@ -150,14 +127,45 @@ final class Utils {
         return new Runnable () {
             @Override
             public void run () {
+                File file = path.toFile();
+                if (!file.exists()) {
+                    LOGGER.info("file does not exist: " + file);
+                    return;
+                }
+
                 Desktop dt = Desktop.getDesktop();
                 try {
-                    dt.open(path.toFile());
+                    dt.open(file);
                 } catch (IOException ex) {
-                    LOGGER.log(Level.WARNING, "can't open attachment", ex);
+                    LOGGER.log(Level.WARNING, "can't open path", ex);
                 }
             }
         };
+    }
+
+    // NOTE: use only with text components
+    static WebPopupMenu createCopyMenu(boolean modifiable) {
+        WebPopupMenu menu = new WebPopupMenu();
+        if (modifiable) {
+            Action cut = new DefaultEditorKit.CutAction();
+            cut.putValue(Action.NAME, Tr.tr("Cut"));
+            cut.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control X"));
+            menu.add(cut);
+        }
+
+        Action copy = new DefaultEditorKit.CopyAction();
+        copy.putValue(Action.NAME, Tr.tr("Copy"));
+        copy.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
+        menu.add(copy);
+
+        if (modifiable) {
+            Action paste = new DefaultEditorKit.PasteAction();
+            paste.putValue(Action.NAME, Tr.tr("Paste"));
+            paste.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control V"));
+            menu.add(paste);
+        }
+
+        return menu;
     }
 
     /* images */
@@ -194,6 +202,17 @@ final class Utils {
     static String displayName(Contact contact, JID jid, int maxLength) {
         String name = name_(contact, maxLength);
         return !name.isEmpty() ? name : jid(jid, maxLength);
+    }
+
+    static String displayNames(List<JID> jids, ContactList contactList, int maxJIDLength) {
+        List<String> nameList = new ArrayList<>(jids.size());
+        for (JID jid : jids) {
+            Contact contact = contactList.get(jid).orElse(null);
+            return contact != null ?
+                    displayName(contact, jid, Integer.MAX_VALUE) :
+                    jid(jid, maxJIDLength);
+        }
+        return StringUtils.join(nameList, ", ");
     }
 
     private static String displayNames(List<Contact> contacts) {

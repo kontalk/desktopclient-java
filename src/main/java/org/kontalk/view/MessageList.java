@@ -18,33 +18,14 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.list.UnselectableListModel;
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.text.WebEditorPane;
-import com.alee.laf.text.WebTextPane;
-import com.alee.managers.tooltip.TooltipManager;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Date;
-import java.util.Optional;
-import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.swing.AbstractCellEditor;
+import javax.swing.AbstractAction;
+import javax.swing.Action;
 import javax.swing.Icon;
-import javax.swing.JTable;
+import javax.swing.JComponent;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
-import javax.swing.table.TableCellEditor;
+import javax.swing.TransferHandler;
 import javax.swing.text.AbstractDocument;
 import javax.swing.text.BoxView;
 import javax.swing.text.ComponentView;
@@ -55,10 +36,36 @@ import javax.swing.text.ParagraphView;
 import javax.swing.text.StyleConstants;
 import javax.swing.text.StyledEditorKit;
 import javax.swing.text.ViewFactory;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.ComponentOrientation;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.datatransfer.StringSelection;
+import java.awt.datatransfer.Transferable;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.nio.file.Path;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.text.WebEditorPane;
+import com.alee.laf.text.WebTextPane;
+import com.alee.managers.tooltip.TooltipManager;
 import org.kontalk.crypto.Coder;
+import org.kontalk.misc.JID;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
-import org.kontalk.model.chat.Chat;
+import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
@@ -67,13 +74,12 @@ import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
 import org.kontalk.view.ComponentUtils.AttachmentPanel;
 
-
 /**
  * View all messages of one chat in a left/right MIM style list.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
+final class MessageList extends ListView<KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
     private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
@@ -85,20 +91,25 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
     private static final Icon UNENCRYPT_ICON = Utils.getIcon("ic_msg_unencrypt.png");
     private static final Icon CRYPT_WARNING_ICON = Utils.getIcon("ic_msg_crypt_warning.png");
 
+    private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();
+    private static final WebPopupMenu TEXT_COPY_MENU = Utils.createCopyMenu(false);
+
     private final ChatView mChatView;
     private final Chat mChat;
+
     private Optional<Background> mBackground = Optional.empty();
 
     MessageList(View view, ChatView chatView, Chat chat) {
-        super(view, false);
+        // render and editor item are equal (but not the same!)
+        super(view,
+                new MessageListFlyWeightItem(view),
+                new MessageListFlyWeightItem(view),
+                // allow multiple selections for "copy" action
+                ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
+                false);
+
         mChatView = chatView;
         mChat = chat;
-
-        // disable selection
-        this.setSelectionModel(new UnselectableListModel());
-
-        // use custom editor (for mouse events)
-        this.setDefaultEditor(ListView.TableItem.class, new TableEditor());
 
         //this.setEditable(false);
         //this.setAutoscrolls(true);
@@ -107,9 +118,11 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         // hide grid
         this.setShowGrid(false);
 
-        this.setVisible(false);
+        // copy values to clipboard using the in-build 'copy' action, invoked by custom right-click
+        // menu or default ctrl+c shortcut
+        this.setTransferHandler(new CopyTransferHandler(mView));
+
         this.updateOnEDT(null);
-        this.setVisible(true);
     }
 
     Chat getChat() {
@@ -137,21 +150,17 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
         }
 
         if ((arg == null || arg == Chat.ViewChange.READ) &&
-                !mChat.isRead() && mChatView.getCurrentChat().orElse(null) == mChat) {
+                !mChat.isRead() && mView.chatIsVisible(mChat)) {
             mChat.setRead();
         }
     }
 
     private void insertMessages() {
         boolean newAdded = this.sync(mChat.getMessages().getAll());
-        if (newAdded)
-            // trigger scrolling
-            mChatView.setScrolling();
-    }
-
-    @Override
-    protected MessageItem newItem(KonMessage value) {
-        return new MessageItem(value);
+        if (newAdded) {
+            //this.scrollToRow(this.getRowCount() -1);
+            mChatView.setScrollDown();
+        }
     }
 
     private void setBackground(Chat.ViewSettings s) {
@@ -160,10 +169,29 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
     }
 
     @Override
-    protected WebPopupMenu rightClickMenu(MessageItem item) {
+    protected WebPopupMenu rightClickMenu(List<KonMessage> selectedValues) {
         WebPopupMenu menu = new WebPopupMenu();
 
-        final KonMessage m = item.mValue;
+        Action copyAction = new AbstractAction(Tr.tr("Copy")) {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Action copy = MessageList.this.getActionMap().get("copy");
+                ActionEvent ae = new ActionEvent(MessageList.this, ActionEvent.ACTION_PERFORMED, "");
+                copy.actionPerformed(ae);
+            }
+        };
+        copyAction.putValue(Action.ACCELERATOR_KEY, KeyStroke.getKeyStroke("control C"));
+        menu.add(copyAction);
+
+        if (selectedValues.isEmpty()) {
+            LOGGER.warning("no values");
+            return menu;
+        }
+
+        if (selectedValues.size() > 1)
+            return menu;
+
+        final KonMessage m = selectedValues.get(0);
         if (m instanceof InMessage) {
             InMessage im = (InMessage) m;
             if (m.isEncrypted()) {
@@ -204,64 +232,51 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             }
         }
 
-        WebMenuItem cItem = Utils.createCopyMenuItem(
-                toCopyString(m),
-                Tr.tr("Copy message content"));
-        menu.add(cItem);
-
         return menu;
     }
 
+    @Override
+    public int compare(KonMessage o1, KonMessage o2) {
+        int idComp = Integer.compare(o1.getID(), o2.getID());
+        int dateComp = o1.getDate().compareTo(o2.getDate());
+        return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
+    }
+
     /**
-     * View for one message.
-     * The content is added to a panel inside this panel. For performance
-     * reasons the content is created when the item is rendered in the table
+     * Flyweight render item for message items.
+     * The content is added to a panel inside this panel.
      */
-    final class MessageItem extends ListView<MessageItem, KonMessage>.TableItem {
+    private static class MessageListFlyWeightItem extends FlyweightItem<KonMessage> {
 
-        private WebPanel mPanel;
-        private WebLabel mFromLabel = null;
-        private WebPanel mContentPanel;
-        private WebTextPane mTextPane;
-        private WebPanel mStatusPanel;
-        private WebLabel mStatusIconLabel;
-        private WebLabel mEncryptIconLabel;
-        private AttachmentPanel mAttPanel = null;
-        private int mPreferredTextWidth;
-        private boolean mCreated = false;
+        private final View mView;
+        private final WebPanel mPanel;
+        private final WebLabel mFromLabel;
+        private final WebTextPane mTextPane;
+        // container for status icons and date, with own tooltip
+        private final WebPanel mStatusPanel;
+        // TODO use WebImages
+        private final WebLabel mStatusIconLabel;
+        private final WebLabel mEncryptIconLabel;
+        private final WebLabel dateLabel;
 
-        MessageItem(KonMessage message) {
-            super(message);
+        private final AttachmentPanel mAttPanel;
 
-            this.setOpaque(false);
+        MessageListFlyWeightItem(View view) {
+            mView = view;
+
             //this.setBorder(new EmptyBorder(10, 10, 10, 10));
-        }
-
-        private void createContent() {
-            if (mCreated)
-                return;
-            mCreated = true;
+            this.setBackground(View.BLUE); // seen when selected
 
             mPanel = new WebPanel(true);
+            mPanel.setRound(View.ROUND);
             mPanel.setWebColoredBackground(false);
-            mPanel.setMargin(2);
-            if (mValue.isInMessage())
-                mPanel.setBackground(Color.WHITE);
-            else
-                mPanel.setBackground(View.LIGHT_BLUE);
+            mPanel.setMargin(View.MARGIN_TINY);
 
-            // from label
-            if (mValue.isInMessage() && mValue.getChat().isGroupChat()) {
-                mFromLabel = new WebLabel();
-                mFromLabel.setFontSize(View.FONT_SIZE_SMALL);
-                mFromLabel.setForeground(Color.BLUE);
-                mFromLabel.setItalicFont();
-                mPanel.add(mFromLabel, BorderLayout.NORTH);
-            }
+            mFromLabel = new WebLabel();
+            mFromLabel.setFontSize(View.FONT_SIZE_SMALL);
+            mFromLabel.setForeground(Color.BLUE);
+            mFromLabel.setItalicFont();
 
-            mContentPanel = new WebPanel();
-            mContentPanel.setOpaque(false);
-            mContentPanel.setMargin(View.MARGIN_SMALL);
             // text area
             mTextPane = new WebTextPane();
             mTextPane.setEditable(false);
@@ -269,178 +284,143 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             //mTextPane.setFontSize(View.FONT_SIZE_SMALL);
             // sets default font
             mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
-            //for detecting clicks
+            // for detecting link clicks
             mTextPane.addMouseListener(LinkUtils.CLICK_LISTENER);
-            //for detecting motion
+            // for detecting motion
             mTextPane.addMouseMotionListener(LinkUtils.MOTION_LISTENER);
             // fix word wrap for long words
             mTextPane.setEditorKit(FIX_WRAP_KIT);
-            mContentPanel.add(mTextPane, BorderLayout.CENTER);
-            mPanel.add(mContentPanel, BorderLayout.CENTER);
+            // right click menu
+            mTextPane.setComponentPopupMenu(TEXT_COPY_MENU);
 
-            mStatusPanel = new WebPanel();
-            mStatusPanel.setOpaque(false);
-            mStatusPanel.setLayout(new FlowLayout());
             // icons
             mStatusIconLabel = new WebLabel();
             mEncryptIconLabel = new WebLabel();
 
-            this.updateOnEDT(null);
-
-            // save the width that is requied to show the text in one line;
-            // before line wrap and only once!
-            mPreferredTextWidth = mTextPane.getPreferredSize().width;
-
-            mStatusPanel.add(mStatusIconLabel);
-            mStatusPanel.add(mEncryptIconLabel);
-
             // date label
-            Date statusDate = mValue.isInMessage() ?
-                    mValue.getServerDate().orElse(mValue.getDate()) :
-                    mValue.getDate();
-            WebLabel dateLabel = new WebLabel(
-                    Utils.SHORT_DATE_FORMAT.format(statusDate));
+            dateLabel = new WebLabel();
             dateLabel.setForeground(Color.GRAY);
             dateLabel.setFontSize(View.FONT_SIZE_TINY);
-            mStatusPanel.add(dateLabel);
+
+            // attachment
+            mAttPanel = new AttachmentPanel();
+
+            // layout...
+
+            mPanel.add(mFromLabel, BorderLayout.NORTH);
+
+            WebPanel mContentPanel = new WebPanel();
+            mContentPanel.setOpaque(false);
+            mContentPanel.setMargin(View.MARGIN_SMALL);
+            mContentPanel.add(mTextPane, BorderLayout.CENTER);
+            mContentPanel.add(mAttPanel, BorderLayout.SOUTH);
+            mPanel.add(mContentPanel, BorderLayout.CENTER);
 
             WebPanel southPanel = new WebPanel();
             southPanel.setOpaque(false);
+            mStatusPanel = new WebPanel();
+            mStatusPanel.setOpaque(false);
+            TooltipManager.addTooltip(mStatusPanel, "???");
+            mStatusPanel.setLayout(new FlowLayout());
+            mStatusPanel.add(mStatusIconLabel);
+            mStatusPanel.add(mEncryptIconLabel);
+            mStatusPanel.add(dateLabel);
             southPanel.add(mStatusPanel, BorderLayout.EAST);
             mPanel.add(southPanel, BorderLayout.SOUTH);
 
-            if (mValue.isInMessage()) {
-                this.add(mPanel, BorderLayout.WEST);
+            // FlowLayout to toggle left/right position of panel (see below)
+            this.setLayout(new FlowLayout(FlowLayout.TRAILING, 0, 0));
+            this.add(mPanel);
+        }
+
+        @Override
+        protected void render(KonMessage value, int listWidth, boolean isSelected) {
+            // background (item panel)
+            this.setOpaque(isSelected);
+
+            // background (message panel)
+            boolean hasGroupCommand = value.getContent().getGroupCommand().isPresent();
+            Color color =
+                    hasGroupCommand ? View.LIGHT_GREEN :
+                    value.isInMessage() ? Color.WHITE : View.LIGHT_BLUE;
+            mPanel.setBackground(color);
+            mPanel.setBorderColor(color);
+
+            // from label
+            mFromLabel.setVisible(value.isInMessage() && value.getChat().isGroupChat());
+
+            // icon
+            if (value.getCoderStatus().isSecure()) {
+                mEncryptIconLabel.setIcon(CRYPT_ICON);
             } else {
-                this.add(mPanel, BorderLayout.EAST);
+                mEncryptIconLabel.setIcon(UNENCRYPT_ICON);
             }
 
-            for (Transmission t: mValue.getTransmissions()) {
-                t.getContact().addObserver(this);
-            }
-        }
+            // date label
+            dateLabel.setText(Utils.SHORT_DATE_FORMAT.format(value.isInMessage() ?
+                            value.getServerDate().orElse(value.getDate()) :
+                            value.getDate()));
 
-        @Override
-        protected void render(int listWidth, boolean isSelected) {
-            this.createContent();
-
-            // note: on the very first call the list width is zero
-            int maxWidth = (int)(listWidth * 0.8);
-            int width = Math.min(mPreferredTextWidth, maxWidth);
-            // height is reset later
-            mTextPane.setSize(width, -1);
-            // textArea does not need this but textPane does, and editorPane
-            // is again totally different; I love Swing
-            mTextPane.setPreferredSize(new Dimension(width, mTextPane.getMinimumSize().height));
-        }
-
-        @Override
-        protected void updateOnEDT(Object arg) {
-            if (!mCreated)
-                return;
-
-            // TODO "From" title not updated if contact name changes
-            if (arg == null || arg == KonMessage.ViewChange.CONTENT)
-                this.updateTitle();
-
-            if (arg == null || arg == KonMessage.ViewChange.CONTENT)
-                this.updateText();
-
-            if (arg == null || arg == KonMessage.ViewChange.STATUS)
-                this.updateStatus();
-
-            if (arg == null || arg == KonMessage.ViewChange.ATTACHMENT)
-                this.updateAttachment();
-
-            // TODO height problem for new messages again
-        }
-
-        private void updateTitle() {
-            if (mFromLabel == null)
-                return;
-
-            mFromLabel.setText(!mValue.getContent().getGroupCommand().isPresent() &&
-                    mValue instanceof InMessage ?
-                    " "+getFromString((InMessage) mValue) :
+            // title
+            mFromLabel.setText(!value.getContent().getGroupCommand().isPresent() &&
+                    value instanceof InMessage ?
+                    " " + getFromString((InMessage) value) :
                     "");
-        }
 
-        // text in text area, before/after encryption
-        private void updateText() {
-            boolean encrypted = mValue.isEncrypted();
-            String text;
-            if (mValue.getContent().getGroupCommand().isPresent()) {
-                GroupCommand com = mValue.getContent().getGroupCommand().get();
-                text = mValue instanceof InMessage ?
-                        getFromString((InMessage) mValue)+" " :
-                        Tr.tr("You")+" ";
-                switch(com.getOperation()) {
-                    case CREATE:
-                        text += Tr.tr("created this group");
-                        break;
-                    case LEAVE:
-                        text += Tr.tr("left this group");
-                        break;
-                    case SET:
-                        text += Tr.tr("changed the group");
-                        break;
-                }
+            // text in text area
+            String text = messageToString(value, mView, false);
+            if (value.getContent().getGroupCommand().isPresent()) {
                 mTextPane.setText(text);
                 mTextPane.setFontStyle(false, true);
-                mPanel.setBackground(View.LIGHT_GREEN);
             } else {
-                text = encrypted ?
-                        Tr.tr("[encrypted]") :
-                        // removing whitespace (Pidgin adds weird tab characters)
-                        mValue.getContent().getText().trim();
-                mTextPane.setFontStyle(false, encrypted);
+                mTextPane.setFontStyle(false, value.isEncrypted());
                 LinkUtils.linkify(mTextPane.getStyledDocument(), text);
             }
 
             // hide area if there is no text
             mTextPane.setVisible(!text.isEmpty());
-        }
 
-        private void updateStatus() {
-            boolean isOut = !mValue.isInMessage();
-
+            // status
             Date deliveredDate = null;
-            Set<Transmission> transmissions = mValue.getTransmissions();
+            Set<Transmission> transmissions = value.getTransmissions();
             if (transmissions.size() == 1)
                 deliveredDate = transmissions.stream().findFirst().get().getReceivedDate().orElse(null);
 
             // status icon
+            Icon statusIcon = null;
+            boolean isOut = !value.isInMessage();
             if (isOut) {
                 if (deliveredDate != null) {
-                    mStatusIconLabel.setIcon(DELIVERED_ICON);
+                    statusIcon = DELIVERED_ICON;
                 } else {
-                    switch (mValue.getStatus()) {
+                    switch (value.getStatus()) {
                         case PENDING :
-                            mStatusIconLabel.setIcon(PENDING_ICON);
+                            statusIcon = PENDING_ICON;
                             break;
                         case SENT :
-                            mStatusIconLabel.setIcon(SENT_ICON);
+                            statusIcon = SENT_ICON;
                             break;
                         case RECEIVED:
                             // legacy
-                            mStatusIconLabel.setIcon(DELIVERED_ICON);
+                            statusIcon = DELIVERED_ICON;
                             break;
                         case ERROR:
-                            mStatusIconLabel.setIcon(ERROR_ICON);
+                            statusIcon = ERROR_ICON;
                             break;
                         default:
                             LOGGER.warning("unknown message receipt status!?");
                     }
                 }
             } else { // IN message
-                if (!mValue.getCoderStatus().getErrors().isEmpty()) {
-                    mStatusIconLabel.setIcon(WARNING_ICON);
+                if (!value.getCoderStatus().getErrors().isEmpty()) {
+                    statusIcon = WARNING_ICON;
                 }
             }
+            mStatusIconLabel.setIcon(statusIcon);
 
-            //encryption icon
-            Coder.Encryption enc = mValue.getCoderStatus().getEncryption();
-            Coder.Signing sign = mValue.getCoderStatus().getSigning();
+            // encryption icon
+            Coder.Encryption enc = value.getCoderStatus().getEncryption();
+            Coder.Signing sign = value.getCoderStatus().getSigning();
             boolean noSecurity = enc == Coder.Encryption.NOT && sign == Coder.Signing.NOT;
             boolean fullSecurity = enc == Coder.Encryption.DECRYPTED &&
                     ((isOut && sign == Coder.Signing.SIGNED) ||
@@ -461,8 +441,8 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                     secStat = Tr.tr("Delivered:");
                     statusDate = deliveredDate;
                 } else {
-                    statusDate = mValue.getServerDate().orElse(null);
-                    switch (mValue.getStatus()) {
+                    statusDate = value.getServerDate().orElse(null);
+                    switch (value.getStatus()) {
                         case PENDING:
                             break;
                         case SENT:
@@ -476,7 +456,7 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                             secStat = Tr.tr("Error report:");
                             break;
                         default:
-                            LOGGER.warning("unexpected msg status: "+mValue.getStatus());
+                            LOGGER.warning("unexpected msg status: "+value.getStatus());
                     }
                 }
 
@@ -484,16 +464,16 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                         Utils.MID_DATE_FORMAT.format(statusDate) :
                         null;
 
-                String create = Utils.MID_DATE_FORMAT.format(mValue.getDate());
+                String create = Utils.MID_DATE_FORMAT.format(value.getDate());
                 if (!create.equals(status))
                     html += Tr.tr("Created:")+ " " + create + "<br>";
 
                 if (status != null && secStat != null)
                     html += secStat + " " + status + "<br>";
             } else { // IN message
-                Date receivedDate = mValue.getDate();
+                Date receivedDate = value.getDate();
                 String rec = Utils.MID_DATE_FORMAT.format(receivedDate);
-                Date sentDate = mValue.getServerDate().orElse(null);
+                Date sentDate = value.getServerDate().orElse(null);
                 if (sentDate != null) {
                     String sent = Utils.MID_DATE_FORMAT.format(sentDate);
                     if (!sent.equals(rec))
@@ -525,13 +505,13 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
             html += Tr.tr("Encryption")+": " + sec + "<br>";
 
             String errors = "";
-            for (Coder.Error error: mValue.getCoderStatus().getErrors()) {
+            for (Coder.Error error: value.getCoderStatus().getErrors()) {
                 errors += error.toString() + " <br> ";
             }
             if (!errors.isEmpty())
                 html += Tr.tr("Security errors")+": " + errors;
 
-            String serverErrText = mValue.getServerError().text;
+            String serverErrText = value.getServerError().text;
             if (!serverErrText.isEmpty())
                 html += Tr.tr("Server error")+": " + serverErrText + " <br> ";
 
@@ -543,103 +523,69 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 LOGGER.warning("statusPanel="+mStatusPanel+",html="+html);
                 LOGGER.warning("edt: "+SwingUtilities.isEventDispatchThread());
             }
-        }
 
-        // attachment / image, note: loading many images is very slow
-        private void updateAttachment() {
-            Attachment att = mValue.getContent().getAttachment().orElse(null);
-            if (att == null)
-                return;
+            // attachment / image; NOTE: loading many (big) images is very slow
+            Attachment att = value.getContent().getAttachment().orElse(null);
+            mAttPanel.setVisible(att != null);
+            if (att != null) {
+                Path imagePath = mView.getControl().getImagePath(value).orElse(null);
+                Path linkPath = mView.getControl().getFilePath(att);
+                if (imagePath != null)
+                    mAttPanel.setAttachment(imagePath, linkPath);
+                else
+                    mAttPanel.setAttachment(linkPath.getFileName().toString(), linkPath);
 
-            if (mAttPanel == null) {
-                mAttPanel = new AttachmentPanel();
-                mContentPanel.add(mAttPanel, BorderLayout.SOUTH);
-            }
-
-            // image thumbnail preview
-            Path imagePath = mView.getControl().getImagePath(mValue).orElse(Paths.get(""));
-            mAttPanel.setImage(imagePath);
-
-            // link to the file
-            Path linkPath = mView.getControl().getFilePath(att);
-            if (!linkPath.toString().isEmpty()) {
-                mAttPanel.setLink(imagePath.toString().isEmpty() ?
-                        linkPath.getFileName().toString() :
-                        "",
-                        linkPath);
-            } else {
                 // status text
-                String statusText = Tr.tr("loading…");
-                switch (att.getDownloadProgress()) {
-                    case -1: statusText = Tr.tr("stalled"); break;
-                    case 0:
-                    case -2: statusText = Tr.tr("downloading…"); break;
-                    case -3: statusText = Tr.tr("download failed"); break;
+                String statusText;
+                if (!linkPath.toString().isEmpty()) {
+                    // file should exist, no status needed
+                    statusText = "";
+                } else {
+                    statusText = Tr.tr("Attachment:") + " ";
+                    switch (att.getDownloadProgress()) {
+                        case -1: statusText += Tr.tr("stalled"); break;
+                        case 0:
+                        case -2: statusText += Tr.tr("downloading…"); break;
+                        case -3: statusText += Tr.tr("download failed"); break;
+                        default: statusText += Tr.tr("loading…");
+                    }
                 }
                 mAttPanel.setStatus(statusText);
             }
-        }
 
-        @Override
-        protected boolean contains(String search) {
-            if (mValue.getContent().getText().toLowerCase().contains(search))
-                return true;
-            for (Transmission t: mValue.getTransmissions()) {
-                if (t.getContact().getName().toLowerCase().contains(search) ||
-                        t.getContact().getJID().string().toLowerCase().contains(search))
-                    return true;
-            }
+            // resetting size
+            mTextPane.setSize(Short.MAX_VALUE, Short.MAX_VALUE);
+            mTextPane.setPreferredSize(null);
 
-            return false;
-        }
+            // calculate preferred width
+            // NOTE: on the very first call the list width is zero (?)
+            int maxWidth = (int)(listWidth * 0.8);
+            mTextPane.setSize(Short.MAX_VALUE, Short.MAX_VALUE);
+            //mTextPane.setText(content); // already done
+            int prefWidth = mTextPane.getPreferredSize().width;
 
-        @Override
-        protected void onRemove() {
-            for (Transmission t: mValue.getTransmissions()) {
-                t.getContact().deleteObserver(this);
-            }
-        }
+            // calculate preferred height now with fixed width
+            int width = Math.min(prefWidth, maxWidth);
+            mTextPane.setSize(width, Short.MAX_VALUE);
+            int height = mTextPane.getPreferredSize().height;
 
-        @Override
-        public int compareTo(TableItem o) {
-            int idComp = Integer.compare(mValue.getID(), o.mValue.getID());
-            int dateComp = mValue.getDate().compareTo(mValue.getDate());
-            return (idComp == 0 || dateComp == 0) ? idComp : dateComp;
-        }
-    }
+            Dimension prefSize = new Dimension(width, height);
 
-    // needed for correct mouse behaviour for components in items
-    // (and breaks selection behaviour somehow)
-    private class TableEditor extends AbstractCellEditor implements TableCellEditor {
-        private ListView<?, ?>.TableItem mValue;
-        @Override
-        public Component getTableCellEditorComponent(JTable table,
-                Object value,
-                boolean isSelected,
-                int row,
-                int column) {
-            mValue = (ListView.TableItem) value;
-            return mValue;
-        }
-        @Override
-        public Object getCellEditorValue() {
-            return mValue;
+            mTextPane.setSize(prefSize);
+            // textArea does not need this but textPane does, and editorPane
+            // is again totally different; I love Swing
+            mTextPane.setPreferredSize(prefSize);
+
+            // toggle left/right position
+            this.setComponentOrientation(isOut ?
+                    ComponentOrientation.LEFT_TO_RIGHT:
+                    ComponentOrientation.RIGHT_TO_LEFT);
         }
     }
 
     private static String getFromString(InMessage message) {
-        return Utils.displayName(message.getContact(), message.getJID(), 40);
+        return Utils.displayName(message.getContact(), message.getJID(), View.MAX_NAME_IN_FROM_LABEL);
     }
-
-    private static String toCopyString(KonMessage m) {
-        String date = Utils.LONG_DATE_FORMAT.format(m.getDate());
-        String from = m instanceof InMessage ?
-                getFromString((InMessage) m) :
-                Tr.tr("me");
-        return date + " - " + from + " : " + m.getContent().getText();
-    }
-
-    private static final WrapEditorKit FIX_WRAP_KIT = new WrapEditorKit();
 
     /**
      * Fix for the infamous "Wrap long words" problem in Java 7+.
@@ -691,5 +637,95 @@ final class MessageList extends ListView<MessageList.MessageItem, KonMessage> {
                 }
             }
         }
+    }
+
+    // overwriting non-public BasicTableUI.TableTransferHandler for copy action
+    private static class CopyTransferHandler extends TransferHandler {
+
+        private final View mView;
+
+        private CopyTransferHandler(View view) {
+            mView = view;
+        }
+
+        protected Transferable createTransferable(JComponent c) {
+            if (!(c instanceof MessageList)) {
+                return null;
+            }
+
+            List<KonMessage> messages = ((MessageList) c).getSelectedValues();
+            if (messages.isEmpty()) {
+                return null;
+            }
+
+            StringBuffer plainBuf = new StringBuffer();
+            for (KonMessage m : messages) {
+                String val = messageToString(m, mView, true);
+                plainBuf.append(val + "\n"); // NOTE: newline after last line
+            }
+
+            //return new BasicTransferable(plainBuf.toString(), htmlBuf.toString());
+            return new StringSelection(plainBuf.toString());
+        }
+
+        public int getSourceActions(JComponent c) {
+            return COPY;
+        }
+    }
+
+    private static String messageToString(KonMessage message, View view, boolean copy) {
+        String pre = "";
+        if (copy) {
+            String date = Utils.LONG_DATE_FORMAT.format(message.getDate());
+            String from = message instanceof InMessage ?
+                    getFromString((InMessage) message) :
+                    Tr.tr("me"); // TODO get my name
+            MessageContent c = message.getContent();
+            Attachment att = c.getAttachment().orElse(null);
+            String as = att == null ? "" : "[" + att.getFilePath().getFileName() + "] ";
+            pre = date + " - " + from + " : " + as;
+        }
+
+        String text = "";
+        GroupCommand com = message.getContent().getGroupCommand().orElse(null);
+        if (com != null) {
+            InMessage inMessage = message instanceof InMessage ?
+                    (InMessage) message : null;
+            String somebody = inMessage != null ?
+                    getFromString(inMessage) : Tr.tr("You");
+            switch (com.getOperation()) {
+                case CREATE:
+                    text = String.format(Tr.tr("%1$s created this group"), somebody);
+                    break;
+                case LEAVE:
+                    text = String.format(Tr.tr("%1$s left this group"), somebody);
+                    break;
+                case SET:
+                    String subject = com.getSubject();
+                    if (!subject.isEmpty()) {
+                        text = String.format(Tr.tr("%1$s set the subject to \"%2$s\""), somebody, subject);
+                    }
+                    List<JID> added = com.getAdded();
+                    if (!added.isEmpty()) {
+                        text = String.format(Tr.tr("%1$s added %2$s"), somebody, view.names(added));
+                    }
+                    List<JID> removed = com.getRemoved();
+                    if (!removed.isEmpty()) {
+                        text = String.format(Tr.tr("%1$s removed %2$s"), somebody, view.names(removed));
+                    }
+                    if (text.isEmpty()) {
+                        text = "did something wrong";
+                    }
+                    break;
+            }
+            if (copy)
+                text = "[" + text + "]";
+        } else {
+            text = message.isEncrypted() ?
+                    Tr.tr("[encrypted]") :
+                    // removing whitespace (Pidgin adds weird tab characters)
+                    message.getContent().getText().trim();
+        }
+        return pre + text;
     }
 }

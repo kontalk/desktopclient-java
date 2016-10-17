@@ -23,6 +23,8 @@ import com.alee.laf.panel.WebPanel;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.GridBagLayout;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
 import java.util.Optional;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
@@ -40,6 +42,15 @@ public class Content extends WebPanel {
     Content(View view, ChatView chatView) {
         mView = view;
         mChatView = chatView;
+
+        this.addFocusListener(new FocusAdapter() {
+            @Override
+            public void focusGained(FocusEvent e) {
+                // maybe not visible, i don't care
+                mChatView.requestFocusInWindow();
+            }
+        });
+
         this.show(mChatView);
     }
 

@@ -18,19 +18,21 @@
 
 package org.kontalk.system;
 
-import org.kontalk.persistence.Config;
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang.StringUtils;
 import org.kontalk.client.Client;
@@ -45,6 +47,7 @@ import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.model.message.OutMessage;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.MediaUtils;
 
 /**
@@ -58,10 +61,12 @@ public class AttachmentManager implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(AttachmentManager.class.getName());
 
     private static final String ATT_DIRNAME = "attachments";
+
     private static final String PREVIEW_DIRNAME = "preview";
     private static final String RESIZED_IMG_MIME = "image/jpeg";
 
     public static final Dimension THUMBNAIL_DIM = new Dimension(300, 200);
+    public static final String ENCRYPT_PREFIX = "encrypted_";
     public static final String THUMBNAIL_MIME = "image/jpeg";
     public static final int MAX_ATT_SIZE = 20 * 1024 * 1024;
 
@@ -159,6 +164,13 @@ public class AttachmentManager implements Runnable {
 
         File original;
         File file = original = attachment.getFilePath().toFile();
+        String uploadName;
+        try {
+            uploadName = URLEncoder.encode(file.getName(), "UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            LOGGER.log(Level.WARNING, "can't encode file name", ex);
+            return;
+        }
         String mime = attachment.getMimeType();
 
         // maybe resize image for smaller payload
@@ -210,8 +222,7 @@ public class AttachmentManager implements Runnable {
             return;
 
         long length = file.length();
-        Slot uploadSlot = mClient.getUploadSlot(file.getName(), length, mime);
-
+        Slot uploadSlot = mClient.getUploadSlot(uploadName, length, mime);
         if (uploadSlot.uploadURL.toString().isEmpty() ||
                 uploadSlot.downloadURL.toString().isEmpty()) {
             LOGGER.warning("empty slot: "+attachment);
@@ -258,8 +269,9 @@ public class AttachmentManager implements Runnable {
         };
 
         Path path;
+        boolean encrypted = attachment.getCoderStatus().isEncrypted();
         try {
-            path = client.download(attachment.getURL(), mAttachmentDir, listener);
+            path = client.download(attachment.getURL(), mAttachmentDir, listener, encrypted);
         } catch (KonException ex) {
             LOGGER.warning("download failed, URL="+attachment.getURL());
             mControl.onException(ex);
@@ -276,7 +288,7 @@ public class AttachmentManager implements Runnable {
         message.setAttachmentFileName(path.getFileName().toString());
 
         // decrypt file
-        if (attachment.getCoderStatus().isEncrypted()) {
+        if (encrypted) {
             mControl.myKey().ifPresent(mk ->
                     Coder.decryptAttachment(mk, message, mAttachmentDir));
         }
@@ -340,6 +352,10 @@ public class AttachmentManager implements Runnable {
         message.setPreview(preview);
 
         return true;
+    }
+
+    Path getAttachmentDir() {
+        return mAttachmentDir;
     }
 
     Path absoluteFilePath(Attachment attachment) {

@@ -18,6 +18,29 @@
 
 package org.kontalk.view;
 
+import javax.swing.Icon;
+import javax.swing.SwingConstants;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.TableModelEvent;
+import javax.swing.event.TableModelListener;
+import java.awt.Adjustable;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.DefaultFocusTraversalPolicy;
+import java.awt.Dimension;
+import java.awt.Frame;
+import java.awt.GridLayout;
+import java.awt.SystemTray;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.Optional;
+
 import com.alee.extended.label.WebLinkLabel;
 import com.alee.extended.label.WebVerticalLabel;
 import com.alee.extended.painter.BorderPainter;
@@ -33,30 +56,16 @@ import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.rootpane.WebFrame;
+import com.alee.laf.scroll.WebScrollBar;
 import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.tabbedpane.WebTabbedPane;
+import com.alee.laf.table.WebTable;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
 import com.alee.utils.WebUtils;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.Frame;
-import java.awt.GridLayout;
-import java.awt.SystemTray;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import javax.swing.Icon;
-import static javax.swing.WindowConstants.DO_NOTHING_ON_CLOSE;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import org.kontalk.persistence.Config;
 import org.kontalk.Kontalk;
 import org.kontalk.model.Model;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
 
@@ -68,6 +77,9 @@ final class MainFrame extends WebFrame {
 
     enum Tab {CHATS, CONTACT};
 
+    private static final int SCROLL_BAR_WIDTH =
+            (int) new WebScrollBar(Adjustable.VERTICAL).getPreferredSize().getWidth();
+
     private final View mView;
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
@@ -77,8 +89,8 @@ final class MainFrame extends WebFrame {
 
     MainFrame(View view,
             Model model,
-            ListView<?, ?> contactList,
-            ListView<?, ?> chatList,
+            ListView contactList,
+            ListView chatList,
             Component content,
             WebPanel searchPanel,
             Component statusBar) {
@@ -165,16 +177,28 @@ final class MainFrame extends WebFrame {
         WebMenu optionsMenu = new WebMenu(Tr.tr("Options"));
         optionsMenu.setMnemonic(KeyEvent.VK_O);
 
-        WebMenuItem conConfMenuItem = new WebMenuItem(Tr.tr("Preferences"));
-        conConfMenuItem.setAccelerator(Hotkey.ALT_P);
-        conConfMenuItem.setToolTipText(Tr.tr("Set application preferences"));
-        conConfMenuItem.addActionListener(new ActionListener() {
+        WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Attachments"));
+        attMenuItem.setAccelerator(Hotkey.ALT_A);
+        attMenuItem.setToolTipText(Tr.tr("Open Attachment directory"));
+        attMenuItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Utils.createLinkRunnable(mView.getControl().getAttachmentDir()).run();
+            }
+        });
+        optionsMenu.add(attMenuItem);
+        optionsMenu.addSeparator();
+
+        WebMenuItem confMenuItem = new WebMenuItem(Tr.tr("Preferences"));
+        confMenuItem.setAccelerator(Hotkey.ALT_P);
+        confMenuItem.setToolTipText(Tr.tr("Set application preferences"));
+        confMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
                 mView.showConfig();
             }
         });
-        optionsMenu.add(conConfMenuItem);
+        optionsMenu.add(confMenuItem);
 
         menubar.add(optionsMenu);
 
@@ -207,34 +231,39 @@ final class MainFrame extends WebFrame {
 
         // ...left...
         mTabbedPane = new WebTabbedPane(WebTabbedPane.LEFT);
-        //String chatOverlayText =
-        //        Tr.t/r("No chats to display. You can create a new chat from your contacts");
-        WebScrollPane chatPane = createTablePane(chatList, "chatOverlayText");
+        String chatOverlayText =
+                Tr.tr("No chats to display. You can create a new chat from the contact list.");
+        ComponentUtils.PopupPanel addGroupChatPanel = new ComponentUtils.AddGroupChatPanel(mView, model);
         mAddGroupButton = new ComponentUtils.ToggleButton(
-                // TODO different button
-                Utils.getIcon("ic_ui_add.png"),
-                Tr.tr("Create a new group chat"),
-                new ComponentUtils.AddGroupChatPanel(mView, model, this));
-        WebPanel chatPanel = new GroupPanel(GroupingType.fillFirst, false,
-                // temporarily disabling group creation
-                chatPane/*, mAddGroupButton*/);
-        chatPanel.setPaintSides(false, false, false, false);
-        mTabbedPane.addTab("", chatPanel);
+                Utils.getIcon("ic_ui_add_group.png"),
+                Tr.tr("Create a new group chat")) {
+            @Override
+            Optional<ComponentUtils.PopupPanel> getPanel() {
+                return Optional.of(addGroupChatPanel);
+            }
+        };
+        // temporarily disabling group creation
+        WebPanel chatListPanel = createListPanel(chatList, chatOverlayText, new WebToggleButton());
+        mTabbedPane.addTab("", chatListPanel);
         mTabbedPane.setTabComponentAt(Tab.CHATS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));
 
-        //String contactOverlayText = T/r.tr("No contacts to display. You have no friends ;(");
-        WebScrollPane contactPane = createTablePane(contactList, "contactOverlayText");
+        String contactOverlayText = Tr.tr("No contacts to display.");
+        ComponentUtils.PopupPanel addContactPanel = new ComponentUtils.AddContactPanel(mView);
         mAddContactButton = new ComponentUtils.ToggleButton(
-                Utils.getIcon("ic_ui_add.png"),
-                Tr.tr("Add a new contact"),
-                new ComponentUtils.AddContactPanel(mView, this));
-        WebPanel contactPanel = new GroupPanel(GroupingType.fillFirst, false,
-                contactPane, mAddContactButton);
-        contactPanel.setPaintSides(false, false, false, false);
-        mTabbedPane.addTab("", contactPanel);
+                Utils.getIcon("ic_ui_add_contact.png"),
+                Tr.tr("Add a new contact")) {
+            @Override
+            Optional<ComponentUtils.PopupPanel> getPanel() {
+                return Optional.of(addContactPanel);
+            }
+        };
+        WebPanel contactListPanel = createListPanel(contactList, contactOverlayText, mAddContactButton);
+        //contactListPanel.setPaintSides(false, false, false, false);
+        mTabbedPane.addTab("", contactListPanel);
         mTabbedPane.setTabComponentAt(Tab.CONTACT.ordinal(),
                 new WebVerticalLabel(Tr.tr("Contacts")));
+
         // setSize() does not work, whatever
         mTabbedPane.setPreferredSize(new Dimension(View.LISTS_WIDTH, -1));
         mTabbedPane.addChangeListener(new ChangeListener() {
@@ -249,6 +278,13 @@ final class MainFrame extends WebFrame {
 
         // ...right...
         this.add(content, BorderLayout.CENTER);
+
+        this.setFocusTraversalPolicy(new DefaultFocusTraversalPolicy() {
+            @Override
+            public Component getDefaultComponent(Container aContainer) {
+                return content;
+            }
+        });
 
         // ...bottom
         this.add(statusBar, BorderLayout.SOUTH);
@@ -299,6 +335,7 @@ final class MainFrame extends WebFrame {
             case ERROR:
                 mConnectMenuItem.setEnabled(true);
                 mDisconnectMenuItem.setEnabled(false);
+                mAddContactButton.setEnabled(false);
             break;
         }
     }
@@ -320,43 +357,41 @@ final class MainFrame extends WebFrame {
                 icon);
     }
 
-    private static WebScrollPane createTablePane(final ListView<?, ?> list,
-            String overlayText) {
-
-        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(list);
-        scrollPane.setDrawBorder(false);
+    private static WebPanel createListPanel(final WebTable list,
+                                            String overlayText,
+                                            WebToggleButton button) {
         // overlay for empty list
-        WebOverlay listOverlayPanel = new WebOverlay(scrollPane);
-        listOverlayPanel.setOverlayMargin(20);
+        WebOverlay listOverlay = new WebOverlay(list);
+        listOverlay.setOverlayMargin(20);
         final WebTextArea overlayArea = new WebTextArea();
         overlayArea.setText(overlayText);
         overlayArea.setLineWrap(true);
         overlayArea.setWrapStyleWord(true);
         overlayArea.setMargin(View.MARGIN_DEFAULT);
-        overlayArea.setFontSize(15);
+        overlayArea.setFontSize(View.FONT_SIZE_BIG);
         overlayArea.setEditable(false);
         BorderPainter<WebTextArea> borderPainter = new BorderPainter<>(Color.LIGHT_GRAY);
         borderPainter.setRound(15);
         overlayArea.setPainter(borderPainter);
-        // TODO
-//        table.addListDataListener(new ListDataListener() {
-//            @Override
-//            public void intervalAdded(ListDataEvent e) {
-//                this.setOverlay();
-//            }
-//            @Override
-//            public void intervalRemoved(ListDataEvent e) {
-//                this.setOverlay();
-//            }
-//            @Override
-//            public void contentsChanged(ListDataEvent e) {
-//            }
-//            private void setOverlay() {
-//                overlayArea.setVisible(table.getModelSize() == 0);
-//            }
-//        });
-        //listOverlayPanel.addOverlay(new GroupPanel(false, overlayArea));
-        //listPanel.add(listOverlayPanel, BorderLayout.CENTER);
-        return scrollPane;
+        list.getModel().addTableModelListener(new TableModelListener() {
+            @Override
+            public void tableChanged(TableModelEvent e) {
+                overlayArea.setVisible(list.getModel().getRowCount() == 0);
+            }
+        });
+        overlayArea.setVisible(list.getModel().getRowCount() == 0);
+        listOverlay.addOverlay(overlayArea, SwingConstants.CENTER, SwingConstants.CENTER);
+
+        WebScrollPane scrollPane = new ComponentUtils.ScrollPane(listOverlay);
+        scrollPane.setDrawBorder(false);
+
+        // button as overlay
+        button.setOpaque(false);
+        button.setUndecorated(true);
+        WebOverlay chatListOverlay = new WebOverlay(scrollPane,
+                button, SwingConstants.TRAILING, SwingConstants.BOTTOM);
+        chatListOverlay.setOverlayMargin(0, 0, View.GAP_BIG, View.GAP_BIG + SCROLL_BAR_WIDTH);
+
+        return chatListOverlay;
     }
 }

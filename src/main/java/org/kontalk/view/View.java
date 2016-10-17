@@ -18,6 +18,24 @@
 
 package org.kontalk.view;
 
+import javax.swing.JDialog;
+import javax.swing.SwingUtilities;
+import javax.swing.ToolTipManager;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Observable;
+import java.util.Observer;
+import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.alee.extended.statusbar.WebStatusBar;
 import com.alee.extended.statusbar.WebStatusLabel;
 import com.alee.laf.WebLookAndFeel;
@@ -26,28 +44,13 @@ import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
 import com.alee.laf.text.WebPasswordField;
-import com.alee.managers.notification.NotificationManager;
-import java.awt.Color;
-import java.awt.event.*;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.FutureTask;
-import java.util.logging.Logger;
-import javax.swing.JDialog;
-import javax.swing.SwingUtilities;
-import javax.swing.ToolTipManager;
-import java.awt.BorderLayout;
-import java.util.EnumSet;
-import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
 import org.kontalk.client.FeatureDiscovery;
-import org.kontalk.persistence.Config;
+import org.kontalk.misc.JID;
 import org.kontalk.misc.ViewEvent;
-import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.EncodingUtils;
@@ -61,7 +64,7 @@ import org.kontalk.util.Tr;
 public final class View implements Observer {
     private static final Logger LOGGER = Logger.getLogger(View.class.getName());
 
-    static final int LISTS_WIDTH = 270;
+    static final int LISTS_WIDTH = 280;
 
     static final int GAP_DEFAULT = 10;
     static final int GAP_BIG = 15;
@@ -69,6 +72,9 @@ public final class View implements Observer {
     static final int MARGIN_DEFAULT = 10;
     static final int MARGIN_BIG = 15;
     static final int MARGIN_SMALL = 5;
+    static final int MARGIN_TINY = 2;
+
+    static final int ROUND = 5;
 
     static final int FONT_SIZE_TINY = 11;
     static final int FONT_SIZE_SMALL = 12;
@@ -78,18 +84,29 @@ public final class View implements Observer {
 
     static final int MAX_SUBJ_LENGTH = 30;
     static final int MAX_NAME_LENGTH = 60;
+    static final int MAX_NAME_IN_LIST_LENGTH = 18;
+    static final int MAX_NAME_IN_GROUP_LENGTH = 25;
+    static final int MAX_NAME_IN_FROM_LABEL = 40;
+    static final int MAX_NAME_IN_NOTIER = 20;
     static final int MAX_JID_LENGTH = 100;
+    static final int MAX_JID_IN_NOTIFIER = 30;
+    static final int MAX_USER_ID_LENGTH = 30;
+    static final int MAX_XMPP_ID_LENGTH = 30;
+
+    static final int PRETTY_JID_LENGTH = 28;
 
     static final Color BLUE = new Color(130, 170, 240);
-    static final Color LIGHT_BLUE = new Color(220, 220, 250);
+    static final Color LIGHT_BLUE = new Color(220, 230, 250);
     static final Color LIGHT_GREY = new Color(240, 240, 240);
-    static final Color GREEN = new Color(83, 196, 46);
+    //static final Color GREEN = new Color(83, 196, 46);
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
+    static final Color DARK_RED = new Color(196, 46, 46);
 
     static final int AVATAR_LIST_SIZE = 30;
     static final int AVATAR_CHAT_SIZE = 40;
     static final int AVATAR_DETAIL_SIZE = 60;
+    static final int AVATAR_PROFILE_SIZE = 150;
 
     private final ViewControl mControl;
     private final Model mModel;
@@ -106,7 +123,6 @@ public final class View implements Observer {
     private final MainFrame mMainFrame;
 
     final String tr_remove_contact = Tr.tr("Chats and messages will not be deleted.");
-    final String tr_not_supported = Tr.tr("Not supported by server");
 
     private Control.Status mCurrentStatus;
     private EnumSet<FeatureDiscovery.Feature> mServerFeatures;
@@ -137,6 +153,13 @@ public final class View implements Observer {
         // main frame
         mMainFrame = new MainFrame(this, mModel, mContactListView, mChatListView,
                 mContent, mSearchPanel, statusBar);
+        mMainFrame.addWindowFocusListener(new WindowAdapter() {
+            @Override
+            public void windowGainedFocus(WindowEvent e) {
+                mChatView.getCurrentChat().ifPresent(chat -> chat.setRead());
+            }
+        });
+
         // tray
         mTrayManager = new TrayManager(this, mModel, mMainFrame);
         // notifier
@@ -263,13 +286,15 @@ public final class View implements Observer {
         mServerFeatures = features;
 
         mChatView.onStatusChange(status, features);
+        mMainFrame.onStatusChanged(status);
+
         switch (status) {
             case CONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Connecting…"));
+                mNotifier.hideNotifications();
                 break;
             case CONNECTED:
                 mStatusBarLabel.setText(Tr.tr("Connected"));
-                NotificationManager.hideAllNotifications();
                 break;
             case DISCONNECTING:
                 mStatusBarLabel.setText(Tr.tr("Disconnecting…"));
@@ -292,9 +317,7 @@ public final class View implements Observer {
             case ERROR:
                 mStatusBarLabel.setText(Tr.tr("Connection error"));
                 break;
-            }
-
-        mMainFrame.onStatusChanged(status);
+        }
     }
 
     void showPasswordDialog(boolean wasWrong) {
@@ -412,12 +435,8 @@ public final class View implements Observer {
         mContent.showNothing();
     }
 
-    Optional<Chat> getCurrentShownChat() {
-        return mContent.getCurrentChat();
-    }
-
-    boolean mainFrameIsFocused() {
-        return mMainFrame.isFocused();
+    boolean chatIsVisible(Chat chat) {
+        return mChatView.getCurrentChat().orElse(null) == chat && mMainFrame.isFocused();
     }
 
     void reloadChatBG() {
@@ -430,6 +449,11 @@ public final class View implements Observer {
 
     void updateTray() {
         mTrayManager.setTray();
+    }
+
+    // TODO is this good?
+    String names(List<JID> jids) {
+        return Utils.displayNames(jids, mModel.contacts(), View.PRETTY_JID_LENGTH);
     }
 
     /* static */

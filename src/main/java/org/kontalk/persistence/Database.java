@@ -274,7 +274,7 @@ public final class Database {
 
         List<String> vList = keyList.stream()
                 .map(key -> key + " = ?")
-                .collect(Collectors.toCollection(ArrayList::new));
+                .collect(Collectors.toList());
 
         update += StringUtils.join(vList, ", ") + " WHERE _id == " + id ;
         // note: looks like driver doesn't support "LIMIT"

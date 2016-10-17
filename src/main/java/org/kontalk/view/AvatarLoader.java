@@ -46,27 +46,38 @@ final class AvatarLoader {
     private static final Color FALLBACK_COLOR = new Color(220, 220, 220);
     private static final Color GROUP_COLOR = new Color(160, 160, 160);
 
-    private static final Map<Item, BufferedImage> CACHE = new HashMap<>();
+    private static final Map<Item, AvatarImg> CACHE = new HashMap<>();
 
-    static BufferedImage load(Chat chat, int size) {
+    static AvatarImg load(Chat chat, int size) {
         return load(new Item(chat, size));
     }
 
-    static BufferedImage load(Contact contact, int size) {
+    static AvatarImg load(Contact contact, int size) {
         return load(new Item(contact, size));
     }
 
-    static BufferedImage loadFallback(int size) {
+    static AvatarImg loadFallback(int size) {
         return load(new Item(size));
     }
 
     private AvatarLoader() {};
 
-    private static BufferedImage load(Item item) {
+    private static AvatarImg load(Item item) {
         if (!CACHE.containsKey(item)) {
             CACHE.put(item, item.createImage());
         }
         return CACHE.get(item);
+    }
+
+    static class AvatarImg {
+
+        final BufferedImage image;
+        final boolean isFallback;
+
+        AvatarImg(BufferedImage img, boolean fallback) {
+            this.image = img;
+            this.isFallback = fallback;
+        }
     }
 
     private static class Item {
@@ -131,11 +142,13 @@ final class AvatarLoader {
                     fallbackLetter();
         }
 
-        private BufferedImage createImage() {
+        private AvatarImg createImage() {
             if (mAvatar != null) {
                 BufferedImage img = mAvatar.loadImage().orElse(null);
                 if (img != null) {
-                    return MediaUtils.scale(img, mSize, mSize);
+                    return new AvatarImg(
+                            MediaUtils.scale(img, mSize, mSize),
+                            false);
                 }
             }
 
@@ -143,7 +156,7 @@ final class AvatarLoader {
         }
 
         @Override
-        public boolean equals(Object o) {
+        public final boolean equals(Object o) {
             if (o == this)
                 return true;
 
@@ -181,7 +194,7 @@ final class AvatarLoader {
         return x;
     }
 
-    private static BufferedImage fallback(String letter, Color color, int size) {
+    private static AvatarImg fallback(String letter, Color color, int size) {
         BufferedImage img = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
 
         Graphics2D graphics = img.createGraphics();
@@ -203,6 +216,6 @@ final class AvatarLoader {
                 // the baseline), dont know how to get that
                 (size - (int) r.getHeight()) / 2.0f + fm.getAscent());
 
-        return img;
+        return new AvatarImg(img, true);
     }
 }

@@ -18,6 +18,7 @@
 
 package org.kontalk.util;
 
+import javax.imageio.ImageIO;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -35,7 +36,8 @@ import java.nio.file.Path;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.ImageIO;
+
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.tika.mime.MimeType;
 import org.apache.tika.mime.MimeTypeException;
@@ -50,6 +52,24 @@ public class MediaUtils {
     private static final Logger LOGGER = Logger.getLogger(MediaUtils.class.getName());
 
     private MediaUtils() {}
+
+    public static File nonExistingFileForPath(Path path) {
+        File file = path.toFile();
+        if (!file.exists())
+            return file;
+
+        String filename = file.getName();
+        file = new File(file.getParent(),
+                FilenameUtils.getBaseName(filename)
+                        + "_" + EncodingUtils.randomString(4)
+                        + "." + FilenameUtils.getExtension(filename));
+
+        if (!file.exists())
+            return file;
+
+        LOGGER.warning("not possible");
+        return new File("");
+    }
 
     public static String extensionForMIME(String mimeType) {
         if (mimeType.isEmpty())
@@ -110,12 +130,10 @@ public class MediaUtils {
 
         try {
             // path must be relative to classpath for some reason
-            mAudioClip = new OggClip(fileName);
+            mAudioClip = OggClip.play(fileName);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't create clip", ex);
-            return;
         }
-        mAudioClip.play();
     }
 
     public static BufferedImage readImage(Path path) {
@@ -148,6 +166,7 @@ public class MediaUtils {
         return Optional.empty();
     }
 
+    // TODO maybe overwriting
     public static boolean writeImage(BufferedImage img, String format, File output) {
         boolean succ;
         try {

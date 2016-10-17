@@ -18,6 +18,14 @@
 
 package org.kontalk.view;
 
+import javax.swing.Icon;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsDevice;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
+
 import com.alee.extended.panel.GroupPanel;
 import com.alee.global.StyleConstants;
 import com.alee.laf.label.WebLabel;
@@ -31,13 +39,6 @@ import com.alee.managers.notification.NotificationManager;
 import com.alee.managers.notification.NotificationOption;
 import com.alee.managers.notification.WebNotificationPopup;
 import com.alee.managers.popup.PopupStyle;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.GraphicsConfiguration;
-import java.awt.GraphicsDevice;
-import java.awt.GraphicsEnvironment;
-import java.awt.Rectangle;
-import javax.swing.Icon;
 import org.kontalk.crypto.Coder;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.KonException;
@@ -48,7 +49,6 @@ import org.kontalk.model.message.KonMessage;
 import org.kontalk.system.RosterHandler;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
-import static org.kontalk.view.View.GAP_DEFAULT;
 
 /**
  * Inform user about events.
@@ -65,9 +65,9 @@ final class Notifier {
     }
 
     void onNewMessage(InMessage newMessage) {
-        if (newMessage.getChat() == mView.getCurrentShownChat().orElse(null) &&
-                mView.mainFrameIsFocused())
+        if (mView.chatIsVisible(newMessage.getChat()))
             return;
+
         MediaUtils.playSound(MediaUtils.Sound.NOTIFICATION);
     }
 
@@ -167,8 +167,10 @@ final class Notifier {
                 mView.tr_remove_contact;
         panel.add(textArea(expl));
 
+        panel.add(textArea(Tr.tr("The reset option will recreate the server entry.")));
+
         WebNotificationPopup popup = NotificationManager.showNotification(panel,
-                NotificationOption.yes, NotificationOption.no,
+                NotificationOption.yes, NotificationOption.reset,
                 NotificationOption.cancel);
         popup.setClickToClose(false);
         popup.addNotificationListener(new NotificationListener() {
@@ -177,6 +179,8 @@ final class Notifier {
                 switch (option) {
                     case yes :
                         mView.getControl().deleteContact(contact);
+                    case reset:
+                        mView.getControl().createRosterEntry(contact);
                 }
             }
             @Override
@@ -273,8 +277,12 @@ final class Notifier {
         NotificationManager.showNotification(dialog, popup);
     }
 
+    void hideNotifications() {
+        NotificationManager.hideAllNotifications();
+    }
+
     private static WebPanel panel(String title, Contact contact) {
-        WebPanel panel = new GroupPanel(GAP_DEFAULT, false);
+        WebPanel panel = new GroupPanel(View.GAP_DEFAULT, false);
         panel.setOpaque(false);
 
         panel.add(new WebLabel(title).setBoldFont());
@@ -287,7 +295,8 @@ final class Notifier {
     }
 
     private static String contactText(Contact contact){
-        return Utils.name(contact, 20) + " < " + Utils.jid(contact.getJID(), 30)+" >";
+        return Utils.name(contact, View.MAX_NAME_IN_NOTIER)
+                + " < " + Utils.jid(contact.getJID(), View.MAX_JID_IN_NOTIFIER)+" >";
     }
 
     private static WebTextArea textArea(String text) {

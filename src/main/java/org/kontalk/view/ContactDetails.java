@@ -51,6 +51,7 @@ import javax.swing.event.ChangeListener;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
+import org.kontalk.view.AvatarLoader.AvatarImg;
 
 /**
  * Show and edit contact details.
@@ -86,20 +87,16 @@ final class ContactDetails extends WebPanel implements Observer {
         WebPanel mainPanel = new WebPanel(new FormLayout(View.GAP_DEFAULT, View.GAP_DEFAULT));
 
         // editable components
-        mAvatarImage = new ComponentUtils.EditableAvatarImage(
-                View.AVATAR_DETAIL_SIZE, true,
-                Optional.of(AvatarLoader.load(contact, View.AVATAR_DETAIL_SIZE))) {
+        mAvatarImage = new ComponentUtils.EditableAvatarImage(View.AVATAR_DETAIL_SIZE) {
             @Override
             void onImageChange(Optional<BufferedImage> optImage) {
                 if (optImage.isPresent())
                     mView.getControl().setCustomContactAvatar(mContact, optImage.get());
                 else
                     mView.getControl().unsetCustomContactAvatar(mContact);
-
-
             }
             @Override
-            BufferedImage defaultImage() {
+            AvatarImg defaultImage() {
                 return AvatarLoader.load(mContact, View.AVATAR_DETAIL_SIZE);
             }
             @Override
@@ -143,7 +140,7 @@ final class ContactDetails extends WebPanel implements Observer {
                 new ComponentUtils.EditableTextField(View.MAX_JID_LENGTH, 20, this) {
             @Override
             protected String labelText() {
-                return Utils.jid(mContact.getJID(), 28);
+                return Utils.jid(mContact.getJID(), View.PRETTY_JID_LENGTH);
             }
             @Override
             protected String editText() {

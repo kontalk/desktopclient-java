@@ -18,6 +18,65 @@
 
 package org.kontalk.view;
 
+import javax.swing.AbstractButton;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.DefaultListModel;
+import javax.swing.DefaultListSelectionModel;
+import javax.swing.Icon;
+import javax.swing.JFileChooser;
+import javax.swing.JLayeredPane;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
+import javax.swing.JRootPane;
+import javax.swing.ListCellRenderer;
+import javax.swing.ListSelectionModel;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.PlainDocument;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Window;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowStateListener;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.alee.extended.image.WebDecoratedImage;
 import com.alee.extended.image.WebImage;
 import com.alee.extended.label.WebLinkLabel;
@@ -37,8 +96,8 @@ import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebPasswordField;
+import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
-import com.alee.managers.popup.PopupAdapter;
 import com.alee.managers.popup.WebPopup;
 import com.alee.managers.tooltip.TooltipManager;
 import com.alee.utils.ImageUtils;
@@ -46,54 +105,6 @@ import com.alee.utils.SwingUtils;
 import com.alee.utils.filefilter.ImageFilesFilter;
 import com.alee.utils.swing.DocumentChangeListener;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.FlowLayout;
-import java.awt.Window;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ComponentAdapter;
-import java.awt.event.ComponentEvent;
-import java.awt.event.FocusEvent;
-import java.awt.event.FocusListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowStateListener;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Locale;
-import java.util.Optional;
-import javax.swing.AbstractButton;
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.DefaultListModel;
-import javax.swing.DefaultListSelectionModel;
-import javax.swing.Icon;
-import javax.swing.JLayeredPane;
-import javax.swing.JList;
-import javax.swing.JRootPane;
-import javax.swing.ListCellRenderer;
-import javax.swing.ListSelectionModel;
-import javax.swing.ScrollPaneConstants;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-import javax.swing.event.ListSelectionEvent;
-import javax.swing.event.ListSelectionListener;
-import javax.swing.text.AttributeSet;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.PlainDocument;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
@@ -104,6 +115,7 @@ import org.kontalk.persistence.Config;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.Tr;
 import org.kontalk.util.XMPPUtils;
+import org.kontalk.view.AvatarLoader.AvatarImg;
 
 /**
  * Some own component classes used in view.
@@ -111,6 +123,7 @@ import org.kontalk.util.XMPPUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final class ComponentUtils {
+    private static final Logger LOGGER = Logger.getLogger(ComponentUtils.class.getName());
 
     private ComponentUtils() {}
 
@@ -132,45 +145,173 @@ final class ComponentUtils {
         }
     }
 
-    static abstract class PopupPanel extends WebPanel {
+    static class GrowingScrollPane extends ScrollPane {
 
-        abstract void onShow();
+        private final WebTextArea mTextArea;
+        private final Component mRelativeComponent;
 
+        GrowingScrollPane(WebTextArea textArea, Component relativeComponent) {
+            super(textArea, false);
+
+            mTextArea = textArea;
+            mRelativeComponent = relativeComponent;
+
+            // when text changed...
+            mTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
+                @Override
+                public void documentChanged(DocumentEvent e) {
+                    // these are strange times
+                    SwingUtilities.invokeLater(new Runnable() {
+                        public void run() {
+                            GrowingScrollPane.this.adjustSize();
+                       }
+                    });
+                }
+            });
+
+            // or window is resized...
+            mRelativeComponent.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(ComponentEvent e) {
+                    GrowingScrollPane.this.adjustSize();
+                }
+            });
+        }
+
+        private void adjustSize() {
+            int newHeight = mTextArea.getPreferredSize().height;
+            int maxHeight = mRelativeComponent.getHeight() / 3;
+
+            this.setPreferredSize(new Dimension(this.getWidth(),
+                    newHeight < maxHeight ?
+                            // grow
+                            newHeight +1 : // +1 for border
+                            // fixed height
+                            maxHeight));
+
+            // swing does not figure this out itself
+            mRelativeComponent.revalidate();
+        }
     }
 
-    static class ToggleButton extends WebToggleButton {
+    /** A button that toggles showing a panel on click. */
+    static abstract class ToggleButton extends WebToggleButton {
 
-        private final PopupPanel mPanel;
-        private WebPopup mPopup = new WebPopup();
+        private ModalPopup mPopup;
 
-        ToggleButton(Icon icon, String tooltip, PopupPanel panel) {
+        ToggleButton(Icon icon, String tooltip) {
             super(icon);
-            mPanel = panel;
-            this.setShadeWidth(0).setRound(0);
             TooltipManager.addTooltip(this, tooltip);
             this.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
-                    if (!mPopup.isShowing())
-                        ToggleButton.this.showAddContactPopup();
+                    //if (mPopup == null || !mPopup.isShowing())
+                        ToggleButton.this.showPopupPanel();
                 }
             });
         }
 
-        private void showAddContactPopup() {
-            mPopup = new WebPopup();
-            mPopup.setCloseOnFocusLoss(true);
-            mPopup.addPopupListener(new PopupAdapter() {
+        private void showPopupPanel() {
+            if (mPopup == null)
+                mPopup = new ComponentUtils.ModalPopup(this);
+
+            PopupPanel panel = this.getPanel().orElse(null);
+            if (panel == null)
+                return;
+
+            mPopup.removeAll();
+            panel.onShow();
+
+            for (ComponentListener cl : panel.getComponentListeners())
+                panel.removeComponentListener(cl);
+
+            panel.addComponentListener(new ComponentAdapter() {
                 @Override
-                public void popupWillBeClosed() {
-                    ToggleButton.this.doClick();
+                public void componentHidden(ComponentEvent e) {
+                    mPopup.close();
                 }
             });
-            mPanel.onShow();
-            mPopup.add(mPanel);
-            //mPopup.packPopup();
-            mPopup.showAsPopupMenu(this);
+            mPopup.add(panel);
+            mPopup.showPopup();
         }
+
+        abstract Optional<PopupPanel> getPanel();
+    }
+
+    /** A modal popup invoked by a toggle button.
+     *  Cannot be instantiated on UI start!
+     */
+    private static class ModalPopup extends WebPopup {
+
+        private final AbstractButton mInvoker;
+        private final WebPanel layerPanel;
+
+        ModalPopup(AbstractButton invokerButton) {
+            mInvoker = invokerButton;
+
+            layerPanel = new WebPanel();
+            layerPanel.setOpaque(false);
+
+            JRootPane rootPane = SwingUtils.getRootPane(mInvoker);
+            if (rootPane == null) {
+                throw new IllegalStateException("not on UI start, dummkopf!");
+            }
+            installPopupLayer(layerPanel, rootPane);
+            layerPanel.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    ModalPopup.this.close();
+                }
+            });
+
+            this.setRequestFocusOnShow(false);
+        }
+
+        void showPopup() {
+            layerPanel.setVisible(true);
+            this.showAsPopupMenu(mInvoker);
+        }
+
+        void close() {
+            this.hidePopup();
+            mInvoker.setSelected(false);
+            layerPanel.setVisible(false);
+        }
+
+        // taken from com.alee.managers.popup.PopupManager
+        private static void installPopupLayer(final WebPanel popupLayer,
+                                              JRootPane rootPane) {
+            final JLayeredPane layeredPane = rootPane.getLayeredPane();
+            popupLayer.setBounds(0, 0, layeredPane.getWidth(), layeredPane.getHeight());
+            layeredPane.add(popupLayer, JLayeredPane.DEFAULT_LAYER);
+            layeredPane.revalidate();
+
+            layeredPane.addComponentListener(new ComponentAdapter() {
+                @Override
+                public void componentResized(final ComponentEvent e) {
+                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
+                            layeredPane.getHeight());
+                    popupLayer.revalidate();
+                }
+            });
+
+            final Window window = SwingUtils.getWindowAncestor(rootPane);
+            window.addWindowStateListener(new WindowStateListener() {
+                @Override
+                public void windowStateChanged(final WindowEvent e) {
+                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
+                            layeredPane.getHeight());
+                    popupLayer.revalidate();
+                }
+            });
+        }
+    }
+
+    /** Base class for panels shown in a modal popup invoked by a toggle button.
+     *  Popup is closed if panel visibility is set to false.
+     */
+    static class PopupPanel extends WebPanel {
+        protected void onShow() {};
     }
 
     static class AddContactPanel extends PopupPanel {
@@ -189,7 +330,7 @@ final class ComponentUtils {
         private final WebCheckBox mEncryptionBox;
         private final WebButton mSaveButton;
 
-        AddContactPanel(View view, final Component focusGainer) {
+        AddContactPanel(View view) {
             mView = view;
 
             GroupPanel groupPanel = new GroupPanel(View.GAP_BIG, false);
@@ -264,7 +405,7 @@ final class ComponentUtils {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     AddContactPanel.this.saveContact();
-                    focusGainer.requestFocus();
+                    AddContactPanel.this.setVisible(false);
                 }
             });
 
@@ -311,10 +452,6 @@ final class ComponentUtils {
                 }
             });
         }
-
-        @Override
-        void onShow() {
-        }
     }
 
     static class AddGroupChatPanel extends PopupPanel {
@@ -326,7 +463,7 @@ final class ComponentUtils {
 
         private final WebButton mCreateButton;
 
-        AddGroupChatPanel(View view, Model model, final Component focusGainer) {
+        AddGroupChatPanel(View view, Model model) {
             mView = view;
             mModel = model;
 
@@ -368,7 +505,7 @@ final class ComponentUtils {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                     AddGroupChatPanel.this.createGroup();
-                    focusGainer.requestFocus();
+                    AddGroupChatPanel.this.setVisible(false);
                 }
             });
 
@@ -394,7 +531,7 @@ final class ComponentUtils {
         }
 
         @Override
-        void onShow() {
+        protected void onShow() {
             List<Contact> contacts = new LinkedList<>();
             for (Contact c : Utils.allContacts(mModel.contacts(), false)) {
                 if (c.isKontalkUser() && !c.isMe())
@@ -529,7 +666,8 @@ final class ComponentUtils {
                     int index,
                     boolean isSelected,
                     boolean cellHasFocus) {
-                mNameLabel.setText(Utils.displayName(member.getContact(), 25));
+                mNameLabel.setText(
+                        Utils.displayName(member.getContact(), View.MAX_NAME_IN_GROUP_LENGTH));
                 mRoleLabel.setText(Utils.role(member.getRole()));
 
                 return this;
@@ -704,6 +842,7 @@ final class ComponentUtils {
 
         private void switchToLabelMode() {
             this.setText(this.labelText());
+            // layout problem here
             this.setDrawBorder(false);
             this.getTrailingComponent().setVisible(true);
         }
@@ -719,104 +858,132 @@ final class ComponentUtils {
         protected void onFocusLost() {};
     }
 
-    static class ModalPopup extends WebPopup {
-
-        private final AbstractButton mInvoker;
-        private final WebPanel layerPanel;
-
-        ModalPopup(AbstractButton invokerButton) {
-            mInvoker = invokerButton;
-
-            layerPanel = new WebPanel();
-            layerPanel.setOpaque(false);
-
-            JRootPane rootPane = SwingUtils.getRootPane(mInvoker);
-            if (rootPane == null) {
-                throw new IllegalStateException("not on UI start, dummkopf!");
-            }
-            installPopupLayer(layerPanel, rootPane);
-            layerPanel.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mouseClicked(MouseEvent e) {
-                    ModalPopup.this.close();
-                }
-            });
-
-            this.setRequestFocusOnShow(false);
-        }
-
-        void showPopup() {
-            layerPanel.setVisible(true);
-            this.showAsPopupMenu(mInvoker);
-        }
-
-        void close() {
-            this.hidePopup();
-            mInvoker.setSelected(false);
-            layerPanel.setVisible(false);
-        }
-
-        // taken from com.alee.managers.popup.PopupManager
-        private static void installPopupLayer(final WebPanel popupLayer,
-                JRootPane rootPane) {
-            final JLayeredPane layeredPane = rootPane.getLayeredPane();
-            popupLayer.setBounds(0, 0, layeredPane.getWidth(), layeredPane.getHeight());
-            layeredPane.add(popupLayer, JLayeredPane.DEFAULT_LAYER);
-            layeredPane.revalidate();
-
-            layeredPane.addComponentListener(new ComponentAdapter() {
-                @Override
-                public void componentResized(final ComponentEvent e) {
-                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
-                            layeredPane.getHeight());
-                    popupLayer.revalidate();
-                }
-            });
-
-            final Window window = SwingUtils.getWindowAncestor(rootPane);
-            window.addWindowStateListener(new WindowStateListener() {
-                @Override
-                public void windowStateChanged(final WindowEvent e) {
-                    popupLayer.setBounds(0, 0, layeredPane.getWidth(),
-                            layeredPane.getHeight());
-                    popupLayer.revalidate();
-                }
-            });
-        }
-    }
-
     static class AttachmentPanel extends GroupPanel {
-
         private final WebLabel mStatus;
         private final WebLinkLabel mAttLabel;
-        private Path mImagePath = Paths.get("");
+        private final WebFileChooser mFileChooser;
+
+        private File mFile = null;
 
         AttachmentPanel() {
-           super(View.GAP_SMALL, false);
+            super(View.GAP_SMALL, false);
 
-           mStatus = new WebLabel().setItalicFont();
-           this.add(mStatus);
+            this.add(mStatus = new WebLabel().setItalicFont());
+            this.add(mAttLabel = new WebLinkLabel());
 
-           mAttLabel = new WebLinkLabel();
-           this.add(mAttLabel);
+            mFileChooser = new WebFileChooser() {
+                @Override
+                public void approveSelection(){
+                    File f = getSelectedFile();
+                    if (f.exists()) {
+                        int option = JOptionPane.showConfirmDialog(this,
+                                String.format(
+                                        Tr.tr("The file \"%s\" already exists, overwrite?"),
+                                        f.getName()),
+                                Tr.tr("Overwrite File?"),
+                                JOptionPane.OK_CANCEL_OPTION);
+                        if (option != JOptionPane.YES_OPTION)
+                            return; // doing nothing means not approve
+                    }
+                    super.approveSelection();
+                }
+            };
         }
 
-        void setImage(Path path) {
-            if (path.equals(mImagePath))
-                return;
+        /** Set image preview. */
+        void setAttachment(Path imagePath, Path linkPath) {
+            this.setAttachment("", imagePath, linkPath);
+        }
 
-            mImagePath = path;
-            // file should be present and should be an image, show it
-            ImageLoader.setImageIconAsync(mAttLabel, mImagePath);
+        /** Set link text. */
+        void setAttachment(String text, Path linkPath) {
+            this.setAttachment(text, null, linkPath);
+        }
+
+        private void setAttachment(String text, Path imagePath, Path linkPath) {
+            mFile = linkPath.toFile();
+
+            mAttLabel.setIcon(imagePath == null ?
+                    null :
+                    // file should be present and should be an image, show it
+                    ImageLoader.imageIcon(imagePath));
+
+            mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
+        }
+
+        @Override
+        public JPopupMenu getComponentPopupMenu() {
+            WebPopupMenu menu = new WebPopupMenu();
+
+            if (mFile == null)
+                return null; // should never happen
+
+            WebMenuItem saveMenuItem = new WebMenuItem(Tr.tr("Save File As…"));
+            saveMenuItem.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent event) {
+                    if (mFile == null)
+                        return; // should never happen
+
+                    File suggestedFile = new File(
+                            mFileChooser.getCurrentDirectory(), mFile.getName());
+
+                    mFileChooser.setSelectedFile(suggestedFile);
+                    // fix WebLaf bug
+                    mFileChooser.getFileChooserPanel().setSelectedFiles(new File[]{suggestedFile});
+
+                    int option = mFileChooser.showSaveDialog(AttachmentPanel.this);
+                    if (option == JFileChooser.APPROVE_OPTION) {
+                        try {
+                            Files.copy(mFile.toPath(), mFileChooser.getSelectedFile().toPath(),
+                                    StandardCopyOption.REPLACE_EXISTING);
+                        } catch (IOException ex) {
+                            LOGGER.log(Level.WARNING, "can't copy file", ex);
+                        }
+                    }
+                }
+            });
+            if (!mFile.exists()) {
+                saveMenuItem.setEnabled(false);
+                saveMenuItem.setToolTipText(Tr.tr("File does not exist"));
+            }
+            menu.add(saveMenuItem);
+
+            return menu;
         }
 
         void setStatus(String text) {
-            mStatus.setText(Tr.tr("Attachment:") + " " + text);
+            mStatus.setText(text);
+        }
+    }
+
+    static class EncryptionPanel extends WebPanel {
+
+        private static final Icon ICON_SECURE = Utils.getIcon("ic_ui_secure.png");
+        private static final Icon ICON_INSECURE = Utils.getIcon("ic_ui_insecure.png");
+
+        private final WebLabel mEncryptionIcon;
+        private final WebLabel mEncryptionWarningIcon;
+
+        EncryptionPanel() {
+            mEncryptionIcon = new WebLabel();
+            mEncryptionWarningIcon = new WebLabel(Utils.getIcon("ic_ui_warning.png"));
+
+            this.add(mEncryptionIcon, BorderLayout.WEST);
+            this.add(mEncryptionWarningIcon, BorderLayout.EAST);
         }
 
-        void setLink(String text, Path linkPath) {
-            mAttLabel.setLink(text, Utils.createLinkRunnable(linkPath));
-            mStatus.setText("");
+        void setStatus(boolean isEncrypted, boolean canEncrypt) {
+            mEncryptionIcon.setIcon(isEncrypted ? ICON_SECURE : ICON_INSECURE);
+            mEncryptionWarningIcon.setVisible(isEncrypted != canEncrypt);
+
+            String text = "<html>" + (isEncrypted ? Tr.tr("Encrypted") : Tr.tr("Not encrypted"));
+            if (isEncrypted && !canEncrypt) {
+                text += "<br>" + Tr.tr("Contact key is missing");
+            } else if (!isEncrypted && canEncrypt) {
+                text += "<br>" + Tr.tr("Encryption can be activated");
+            }
+            TooltipManager.setTooltip(this, text + "</html>");
         }
     }
 
@@ -843,7 +1010,7 @@ final class ComponentUtils {
     // -> component size depends on image size
     static class AvatarImage extends WebDecoratedImage {
 
-        private final int mSize;
+        protected final int mSize;
 
         AvatarImage(int size) {
             mSize = size;
@@ -852,35 +1019,41 @@ final class ComponentUtils {
         }
 
         void setAvatarImage(Contact c) {
-            this.setImage(AvatarLoader.load(c, mSize));
+            this.setAvatarImg(AvatarLoader.load(c, mSize));
         }
 
         void setAvatarImage(Chat c) {
-            this.setImage(AvatarLoader.load(c, mSize));
+            this.setAvatarImg(AvatarLoader.load(c, mSize));
+        }
+
+        protected void setAvatarImg(AvatarImg avatarImg) {
+            this.setDrawGlassLayer(avatarImg.isFallback);
+            this.setImage(avatarImg.image);
         }
     }
 
-    static abstract class EditableAvatarImage extends WebDecoratedImage {
+    static abstract class EditableAvatarImage extends AvatarImage {
 
-        private final int mSize;
         private final WebFileChooser mImgChooser;
 
         private BufferedImage mImage = null;
         private boolean mImageChanged = false;
 
+        EditableAvatarImage(int size) {
+            this(size, true, Optional.empty());
+        }
+
         EditableAvatarImage(int size, boolean enabled, Optional<BufferedImage> image) {
-            mSize = size;
+            super(size);
 
             mImgChooser = new WebFileChooser();
             mImgChooser.setFileFilter(new ImageFilesFilter());
 
             mImage = image.orElse(null);
+            this.setImageOrDefault(mImage);
 
-            this.setRound(0);
             this.setGrayscale(!enabled);
             this.setEnabled(enabled);
-
-            this.setImage(mImage != null ? mImage : this.defaultImage());
 
             this.addMouseListener(new MouseAdapter() {
                 @Override
@@ -910,9 +1083,19 @@ final class ComponentUtils {
         private void changeImage(BufferedImage image) {
             mImage = image;
             mImageChanged = true;
-            this.setImage(image != null ? image : this.defaultImage());
+            this.setImageOrDefault(image);
             this.onImageChange(Optional.ofNullable(image));
             TooltipManager.setTooltip(this, this.tooltipText());
+        }
+
+        private void setImageOrDefault(BufferedImage image) {
+            if (image == null) {
+                this.setAvatarImg(this.defaultImage());
+                return;
+            }
+
+            this.setDrawGlassLayer(false);
+            this.setImage(image);
         }
 
         void onImageChange(Optional<BufferedImage> optImage) {}
@@ -925,7 +1108,7 @@ final class ComponentUtils {
             return Optional.ofNullable(mImage);
         }
 
-        abstract BufferedImage defaultImage();
+        abstract AvatarLoader.AvatarImg defaultImage();
 
         abstract boolean canRemove();
 
@@ -936,7 +1119,9 @@ final class ComponentUtils {
         }
 
         protected void update() {
-            mImage = this.defaultImage();
+            AvatarImg img = this.defaultImage();
+            mImage = img.image;
+            this.setDrawGlassLayer(img.isFallback);
             mImageChanged = false;
             this.setImage(mImage);
         }

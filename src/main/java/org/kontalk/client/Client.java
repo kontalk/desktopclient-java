@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -30,29 +31,29 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.jivesoftware.smack.StanzaListener;
-import org.jivesoftware.smack.roster.Roster;
-import org.jivesoftware.smack.roster.RosterListener;
 import org.jivesoftware.smack.SmackException;
+import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.filter.IQTypeFilter;
 import org.jivesoftware.smack.filter.StanzaFilter;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Message;
-import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.Presence;
+import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
 import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
-import org.kontalk.persistence.Config;
-import org.kontalk.misc.KonException;
+import org.jivesoftware.smackx.iqlast.packet.LastActivity;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.JID;
+import org.kontalk.misc.KonException;
 import org.kontalk.model.message.OutMessage;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
@@ -70,7 +71,8 @@ public final class Client implements StanzaListener, Runnable {
 
     public enum PresenceCommand {REQUEST, GRANT, DENY};
 
-    private enum Command {CONNECT, DISCONNECT};
+    // NOTE: disconnect is instantaneous, all resulting exceptions should be catched
+    private enum Command {CONNECT, LAST_ACTIVITY};
 
     private final Control mControl;
 
@@ -80,6 +82,7 @@ public final class Client implements StanzaListener, Runnable {
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
     private HTTPFileSlotRequester mSlotRequester = null;
+    private FeatureDiscovery mFeatureDiscovery = null;
 
     private Client(Control control, Path appDir) {
         mControl = control;
@@ -87,7 +90,7 @@ public final class Client implements StanzaListener, Runnable {
 
         mMessageSender = new KonMessageSender(this);
 
-        // enable Smack debugging (print raw XML packet)
+        // enable Smack debugging (print raw XML packets)
         //SmackConfiguration.DEBUG = true;
 
         mFeatures = new EnumMap<>(FeatureDiscovery.Feature.class);
@@ -147,8 +150,9 @@ public final class Client implements StanzaListener, Runnable {
 
         // packet listeners
         RosterHandler rosterHandler = mControl.getRosterHandler();
-        RosterListener rl = new KonRosterListener(roster, rosterHandler);
+        KonRosterListener rl = new KonRosterListener(roster, rosterHandler);
         roster.addRosterListener(rl);
+        roster.addRosterLoadedListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
         mConn.addAsyncStanzaListener(
@@ -167,21 +171,23 @@ public final class Client implements StanzaListener, Runnable {
         StanzaFilter presenceFilter = new StanzaTypeFilter(Presence.class);
         mConn.addAsyncStanzaListener(new PresenceListener(roster, rosterHandler), presenceFilter);
 
+        StanzaFilter lastActivityFilter = new StanzaTypeFilter(LastActivity.class);
+        mConn.addAsyncStanzaListener(new LastActivityListener(mControl), lastActivityFilter);
+
         if (config.getBoolean(Config.NET_REQUEST_AVATARS)) {
             // our service discovery: want avatar from other users
             ServiceDiscoveryManager.getInstanceFor(mConn).
                     addFeature(AvatarSendReceiver.NOTIFY_FEATURE);
         }
 
-        // listen to all acks
+        // listen to all ACKs
         mConn.addStanzaAcknowledgedListener(new AcknowledgedListener(mControl));
 
         // listen to all IQ errors
         mConn.addAsyncStanzaListener(this, IQTypeFilter.ERROR);
 
         // continue async
-        List<?> args = new ArrayList<>(0);
-        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.CONNECT, args));
+        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.CONNECT, new ArrayList<>(0)));
     }
 
     private void connectAsync() {
@@ -209,8 +215,10 @@ public final class Client implements StanzaListener, Runnable {
             }
         }
 
+        mFeatureDiscovery = new FeatureDiscovery(mConn);
+
         mFeatures.clear();
-        mFeatures.putAll(FeatureDiscovery.discover(mConn));
+        mFeatures.putAll(mFeatureDiscovery.getServerFeatures());
 
         mSlotRequester = mFeatures.containsKey(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD) ?
                 new HTTPFileSlotRequester(mConn,
@@ -259,18 +267,15 @@ public final class Client implements StanzaListener, Runnable {
 //            Logger.getLogger(Client.class.getName()).log(Level.SEVERE, null, ex);
 //        }
 
-        this.sendBlocklistRequest();
-
         this.newStatus(Control.Status.CONNECTED);
+
+        this.sendBlocklistRequest();
     }
 
-
     public void disconnect() {
-        synchronized (this) {
-            if (mConn != null && mConn.isConnected()) {
-                this.newStatus(Control.Status.DISCONNECTING);
-                mConn.disconnect();
-            }
+        if (mConn != null && mConn.isConnected()) {
+            this.newStatus(Control.Status.DISCONNECTING);
+            mConn.disconnect();
         }
     }
 
@@ -361,6 +366,26 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(message);
     }
 
+    public void sendLastActivityRequest(JID jid) {
+        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.LAST_ACTIVITY, Arrays.asList(jid)));
+    }
+
+    private void sendLastActivityRequestAsync(JID jid) {
+        if (mFeatureDiscovery == null) {
+            LOGGER.warning("no feature discovery");
+            return;
+        }
+
+        // blocking
+        if (!mFeatureDiscovery.getFeaturesFor(jid.domain())
+                .containsKey(FeatureDiscovery.Feature.LAST_ACTIVITY))
+            // not supported by server
+            return;
+
+        LastActivity request = new LastActivity(jid.string());
+        this.sendPacket(request);
+    }
+
     synchronized boolean sendPackets(Stanza[] stanzas) {
         boolean sent = true;
         for (Stanza s: stanzas)
@@ -410,7 +435,7 @@ public final class Client implements StanzaListener, Runnable {
         Roster roster = Roster.getInstanceFor(mConn);
         RosterEntry entry = roster.getEntry(jid.string());
         if (entry == null) {
-            LOGGER.warning("can't find roster entry for jid: "+jid);
+            LOGGER.info("can't find roster entry for jid: "+jid);
             return true;
         }
         try {
@@ -525,8 +550,8 @@ public final class Client implements StanzaListener, Runnable {
                 case CONNECT:
                     this.connectAsync();
                     break;
-                case DISCONNECT:
-                    this.disconnect();
+                case LAST_ACTIVITY:
+                    this.sendLastActivityRequestAsync((JID) t.args.get(0));
                     break;
             }
         }

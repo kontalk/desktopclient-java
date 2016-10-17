@@ -46,7 +46,7 @@ class OggClip {
     private SourceDataLine outputLine;
     private int rate;
     private int channels;
-    private BufferedInputStream bitStream = null;
+    private final BufferedInputStream bitStream;
     private byte[] buffer = null;
     private int bytes = 0;
     private Thread player = null;
@@ -56,6 +56,12 @@ class OggClip {
     private boolean paused;
     private float oldGain;
 
+    public static OggClip play(String ref) throws IOException {
+        OggClip clip = new OggClip(ref);
+        clip.play();
+        return clip;
+    }
+
     /**
      * Create a new clip based on a reference into the class path
      *
@@ -63,9 +69,9 @@ class OggClip {
      * from
      * @throws IOException Indicated a failure to find the resource
      */
-    public OggClip(String ref) throws IOException {
+    private OggClip(String ref) throws IOException {
         try {
-            init(Thread.currentThread().getContextClassLoader().getResourceAsStream(ref));
+            bitStream = init(Thread.currentThread().getContextClassLoader().getResourceAsStream(ref));
         } catch (IOException e) {
             throw new IOException("Couldn't find: " + ref);
         }
@@ -77,8 +83,23 @@ class OggClip {
      * @param in The stream from which the ogg can be read from
      * @throws IOException Indicated a failure to read from the stream
      */
-    public OggClip(InputStream in) throws IOException {
-        init(in);
+    private OggClip(InputStream in) throws IOException {
+        bitStream = init(in);
+    }
+
+    /**
+     * Initialise the ogg clip
+     *
+     * @param in The stream we're going to read from
+     * @throws IOException Indicates a failure to read from the stream
+     */
+    private BufferedInputStream init(InputStream in) throws IOException {
+        if (in == null) {
+            throw new IOException("Couldn't find input source");
+        }
+        BufferedInputStream stream = new BufferedInputStream(in);
+        stream.mark(Integer.MAX_VALUE);
+        return stream;
     }
 
     /**
@@ -189,7 +210,7 @@ class OggClip {
     /**
      * Resume the play back
      */
-    public void resume() {
+    private void resume() {
         if (!paused) {
             play();
             return;
@@ -215,23 +236,9 @@ class OggClip {
     }
 
     /**
-     * Initialise the ogg clip
-     *
-     * @param in The stream we're going to read from
-     * @throws IOException Indicates a failure to read from the stream
-     */
-    private void init(InputStream in) throws IOException {
-        if (in == null) {
-            throw new IOException("Couldn't find input source");
-        }
-        bitStream = new BufferedInputStream(in);
-        bitStream.mark(Integer.MAX_VALUE);
-    }
-
-    /**
      * Play the clip once
      */
-    public void play() {
+    private void play() {
         stop();
 
         try {
@@ -249,8 +256,12 @@ class OggClip {
                     e.printStackTrace();
                 }
 
+                outputLine.drain();
+                outputLine.stop();
+                outputLine.close();
+
                 try {
-                    bitStream.reset();
+                    bitStream.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -263,7 +274,7 @@ class OggClip {
     /**
      * Loop the clip - maybe for background music
      */
-    public void loop() {
+    private void loop() {
         stop();
 
         try {
@@ -297,7 +308,7 @@ class OggClip {
     /**
      * Stop the clip playing
      */
-    public void stop() {
+    private void stop() {
         if (stopped()) {
             return;
         }
@@ -345,23 +356,6 @@ class OggClip {
         } catch (Exception ex) {
             LOGGER.log(Level.WARNING, "can not init sound system", ex);
         }
-    }
-
-    /*
-     * Taken from the JOrbis Player
-     */
-    private SourceDataLine getOutputLine(int channels, int rate) {
-        if (outputLine == null || this.rate != rate
-                || this.channels != channels) {
-            if (outputLine != null) {
-                outputLine.drain();
-                outputLine.stop();
-                outputLine.close();
-            }
-            initJavaSound(channels, rate);
-            outputLine.start();
-        }
-        return outputLine;
     }
 
     /*
@@ -607,6 +601,23 @@ class OggClip {
         }
 
         oy.clear();
+    }
+
+    /*
+     * Taken from the JOrbis Player
+     */
+    private SourceDataLine getOutputLine(int channels, int rate) {
+        if (outputLine == null || this.rate != rate
+                || this.channels != channels) {
+            if (outputLine != null) {
+                outputLine.drain();
+                outputLine.stop();
+                outputLine.close();
+            }
+            initJavaSound(channels, rate);
+            outputLine.start();
+        }
+        return outputLine;
     }
 
     private class InternalException extends Exception {

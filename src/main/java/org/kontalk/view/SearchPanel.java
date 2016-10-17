@@ -18,15 +18,17 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.button.WebButton;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.text.WebTextField;
-import java.awt.BorderLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import javax.swing.Icon;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
+import java.awt.BorderLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+import com.alee.extended.image.WebImage;
+import com.alee.laf.button.WebButton;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.text.WebTextField;
 import org.kontalk.util.Tr;
 
 /**
@@ -59,6 +61,7 @@ final class SearchPanel extends WebPanel {
                 chatView.filterCurrentChat(searchText);
             }
         });
+        mSearchField.setLeadingComponent(new WebImage(Utils.getIcon("ic_ui_search.png")));
         Icon clearIcon = Utils.getIcon("ic_ui_clear.png");
         WebButton clearSearchButton = new WebButton(clearIcon);
         clearSearchButton.setUndecorated(true);

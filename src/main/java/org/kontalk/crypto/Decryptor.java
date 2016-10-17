@@ -35,6 +35,7 @@ import java.util.Iterator;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.apache.commons.io.FilenameUtils;
 import org.apache.http.util.EncodingUtils;
 import org.bouncycastle.openpgp.PGPCompressedData;
@@ -53,9 +54,10 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
-import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.DecryptMessage;
 import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.MessageContent;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.MediaUtils;
@@ -158,15 +160,12 @@ final class Decryptor {
             return;
         }
 
-        // in file
         File inFile = baseDir.resolve(attachment.getFilePath()).toFile();
-        // out file
-        String base = FilenameUtils.getBaseName(inFile.getName());
-        File outFile = baseDir.resolve(base + "_dec").toFile();
-        if (outFile.exists()) {
-            LOGGER.warning("decrypted file already exists: "+outFile.getAbsolutePath());
-            return;
+        String outName = inFile.getName();
+        if (outName.startsWith(AttachmentManager.ENCRYPT_PREFIX)) {
+            outName = outName.substring(AttachmentManager.ENCRYPT_PREFIX.length());
         }
+        File outFile = MediaUtils.nonExistingFileForPath(baseDir.resolve(outName));
 
         // decrypt
         DecryptionResult decResult;
@@ -185,14 +184,18 @@ final class Decryptor {
         inMessage.setAttachmentErrors(decResult.errors);
         inMessage.setAttachmentSigning(decResult.signing);
 
-        // set new filename
         Path outPath = outFile.toPath();
-        Path newPath = outPath.resolveSibling(outFile.getName() + "." +
-                MediaUtils.extensionForMIME(MediaUtils.mimeForFile(outPath)));
-        try {
-            outPath = Files.move(outPath, newPath);
-        } catch (IOException ex) {
-            LOGGER.log(Level.WARNING, "can't rename file", ex);
+
+        // security check for correct extension
+        String ext = MediaUtils.extensionForMIME(MediaUtils.mimeForFile(outPath));
+        if (!ext.equals(FilenameUtils.getExtension(outFile.getName()))) {
+            Path newPath = outPath.resolveSibling(outFile.getName() + "." + ext);
+            try {
+                outPath = Files.move(outPath, newPath);
+            } catch (IOException ex) {
+                LOGGER.log(Level.WARNING, "can't rename file", ex);
+            }
+            LOGGER.info("corrected extension: " + ext);
         }
 
         inMessage.setDecryptedAttachment(outPath.toFile().getName());

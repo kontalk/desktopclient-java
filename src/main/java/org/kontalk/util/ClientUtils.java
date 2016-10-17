@@ -21,24 +21,26 @@ package org.kontalk.util;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
+import org.jivesoftware.smack.roster.packet.RosterPacket;
 import org.kontalk.client.BitsOfBinary;
 import org.kontalk.client.E2EEncryption;
 import org.kontalk.client.GroupExtension;
-import org.kontalk.client.GroupExtension.Type;
 import org.kontalk.client.GroupExtension.Member;
+import org.kontalk.client.GroupExtension.Type;
 import org.kontalk.client.OutOfBandData;
-import org.kontalk.model.Contact;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Contact;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.MessageContent;
@@ -93,6 +95,33 @@ public final class ClientUtils {
         @Override
         public String toString() {
             return "IDs:jid="+jid+",xmpp="+xmppID+",thread="+xmppThreadID;
+        }
+    }
+
+    public static class KonRosterEntry {
+        public final JID jid;
+        public final String name;
+        public final Contact.Subscription subscription;
+
+        public KonRosterEntry(JID jid, String name,
+                              RosterPacket.ItemType type, RosterPacket.ItemStatus status) {
+            this.jid = jid;
+            this.name = name;
+            this.subscription = rosterToModelSubscription(status, type);
+        }
+
+
+        private static Contact.Subscription rosterToModelSubscription(
+                RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
+            if (type == RosterPacket.ItemType.both ||
+                    type == RosterPacket.ItemType.to ||
+                    type == RosterPacket.ItemType.remove)
+                return Contact.Subscription.SUBSCRIBED;
+
+            if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
+                return Contact.Subscription.PENDING;
+
+            return Contact.Subscription.UNSUBSCRIBED;
         }
     }
 
@@ -226,17 +255,43 @@ public final class ClientUtils {
             case NONE:
                 return Optional.empty();
             case CREATE:
-                List<JID> jids = new ArrayList<>(members.size());
-                for (Member m: members)
-                    jids.add(JID.bare(m.jid));
+                List<JID> jids = members.stream()
+                        .peek(m -> { if (m.operation != Member.Operation.NONE) {
+                            LOGGER.warning("unexpected member operation in "
+                                    + "create command: " + m.operation + " " + m.jid);
+                            }})
+                        .map(m -> JID.bare(m.jid))
+                        .collect(Collectors.toList());
                 return Optional.of(GroupCommand.create(jids, subject));
             case PART:
                 return Optional.of(GroupCommand.leave());
             case SET:
-                // TODO
+                // TODO we have to get the group chat here
+                // * to find out if we are already member
+                // * to find out if the subject is really new or only included
+                // for new members
+                // ignoring duplicate JIDs (no log output)
+                Set<JID> added = new HashSet<>();
+                Set<JID> removed = new HashSet<>();
+                for (Member m : members) {
+                   switch (m.operation) {
+                       case NONE: // treat unchanged members as if they are new
+                       // falltrough
+                       case ADD: added.add(JID.bare(m.jid)); break;
+                       case REMOVE: removed.add((JID.bare(m.jid))); break;
+                   }
+                }
+                // sanity check; prioritize 'removed' over 'added'
+                removed.stream()
+                        .filter(jid -> added.contains(jid))
+                        .peek(jid -> LOGGER.warning(
+                                "member added AND removed (removing) " + jid))
+                        .forEach(jid -> added.remove(jid));
                 return Optional.of(GroupCommand.set(
-                        Collections.emptyList(),
-                        Collections.emptyList(), subject));
+                        new ArrayList<>(added),
+                        new ArrayList<>(removed),
+                        // for now we assume the subject wasn't changed
+                        ""));
             case GET:
             case RESULT:
             default:
