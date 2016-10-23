@@ -18,14 +18,15 @@
 
 package org.kontalk.util;
 
+import javax.crypto.Cipher;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.security.NoSuchAlgorithmException;
 import java.security.Permission;
 import java.security.PermissionCollection;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.crypto.Cipher;
 
 /**
  *
@@ -37,6 +38,7 @@ public class CryptoUtils {
     /**
      * Ugly hack to get “unlimited strength” for the Java Encryption Extension.
      * Source: https://stackoverflow.com/a/22492582
+     * And even more evil: http://stackoverflow.com/a/3301720/6286694
      */
     public static boolean removeCryptographyRestrictions() {
         try {
@@ -61,6 +63,12 @@ public class CryptoUtils {
 
             Field isRestrictedField = jceSecurity.getDeclaredField("isRestricted");
             isRestrictedField.setAccessible(true);
+
+            // "isRestricted" field is final now, remove this
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+            modifiersField.setInt(isRestrictedField, isRestrictedField.getModifiers() & ~Modifier.FINAL);
+
             isRestrictedField.set(null, false);
 
             Field defaultPolicyField = jceSecurity.getDeclaredField("defaultPolicy");
