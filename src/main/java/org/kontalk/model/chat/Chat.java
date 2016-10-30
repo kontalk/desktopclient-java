@@ -330,7 +330,7 @@ public abstract class Chat extends Observable implements Observer, Searchable {
         }
 
         public ViewSettings(Color color) {
-            mColor = null;
+            mColor = color;
             mImagePath = "";
         }
 
@@ -378,6 +378,11 @@ public abstract class Chat extends Observable implements Observer, Searchable {
             hash = 37 * hash + Objects.hashCode(this.mColor);
             hash = 37 * hash + Objects.hashCode(this.mImagePath);
             return hash;
+        }
+
+        @Override
+        public String toString() {
+            return "VS:color="+mColor+",imgPath="+mImagePath;
         }
     }
 }
