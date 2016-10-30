@@ -190,6 +190,7 @@ final class ChatView extends WebPanel implements Observer {
                     g.drawImage(bg, 0, 0, this.getWidth(), this.getHeight(), null);
             }
         });
+
         this.add(mScrollPane, BorderLayout.CENTER);
 
         // bottom panel...
@@ -307,10 +308,6 @@ final class ChatView extends WebPanel implements Observer {
         chat.setRead();
     }
 
-    void setColor(Color color) {
-        mScrollPane.getViewport().setBackground(color);
-    }
-
     void loadDefaultBG() {
         String imagePath = Config.getInstance().getString(Config.VIEW_CHAT_BG);
         mDefaultBG = !imagePath.isEmpty() ?
@@ -385,12 +382,10 @@ final class ChatView extends WebPanel implements Observer {
     void onStatusChange(Control.Status status, EnumSet<FeatureDiscovery.Feature> serverFeature) {
         switch(status) {
             case CONNECTED:
-                this.setColor(Color.WHITE);
                 mAttSupported = serverFeature.contains(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD);
                 break;
             case DISCONNECTED:
             case ERROR:
-                this.setColor(Color.LIGHT_GRAY);
                 // don't know, but assume it
                 mAttSupported = true;
                 break;
