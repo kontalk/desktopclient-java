@@ -18,18 +18,10 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.layout.FormLayout;
-import com.alee.extended.panel.GroupPanel;
-import com.alee.extended.panel.GroupingType;
-import com.alee.laf.button.WebButton;
-import com.alee.laf.checkbox.WebCheckBox;
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.optionpane.WebOptionPane;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.text.WebTextArea;
-import com.alee.laf.text.WebTextField;
-import com.alee.managers.tooltip.TooltipManager;
+import javax.swing.Box;
+import javax.swing.SwingUtilities;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -44,10 +36,19 @@ import java.util.Map;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.Optional;
-import javax.swing.Box;
-import javax.swing.SwingUtilities;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
+
+import com.alee.extended.layout.FormLayout;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
+import com.alee.laf.button.WebButton;
+import com.alee.laf.checkbox.WebCheckBox;
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.optionpane.WebOptionPane;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.text.WebTextArea;
+import com.alee.laf.text.WebTextField;
+import com.alee.managers.tooltip.TooltipManager;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
@@ -180,7 +181,7 @@ final class ContactDetails extends WebPanel implements Observer {
 
         keyPanel.add(new WebLabel(Tr.tr("Public Key")+":"));
         mKeyStatus = new WebLabel();
-        mUpdateButton = new WebButton(Tr.tr("Update"));
+        mUpdateButton = new WebButton(Utils.getIcon("ic_ui_reload.png"));
         String updText = Tr.tr("Update key");
         TooltipManager.addTooltip(mUpdateButton, updText);
         mUpdateButton.addActionListener(new ActionListener() {

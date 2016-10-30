@@ -21,6 +21,7 @@ package org.kontalk.view;
 import javax.swing.AbstractCellEditor;
 import javax.swing.CellEditor;
 import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
 import javax.swing.RowFilter;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
@@ -174,9 +175,8 @@ abstract class ListView<V extends Observable & Searchable>
                 check(e);
             }
             private void check(MouseEvent e) {
-                if (e.isPopupTrigger()) {
+                if (e.isPopupTrigger())
                     ListView.this.onPopupClick(e);
-                }
             }
             @Override
             public void mouseExited(MouseEvent e) {
@@ -231,6 +231,17 @@ abstract class ListView<V extends Observable & Searchable>
                 }
             }
         });
+    }
+
+    @Override
+    public void changeSelection(int rowIndex, int columnIndex, boolean toggle, boolean extend) {
+        // toggle selection with normal click
+        boolean newToggle =
+                this.getSelectionModel().getSelectionMode() != ListSelectionModel.SINGLE_SELECTION
+                        && this.getSelectedRowCount() == 1
+                        && this.getSelectedRow() == rowIndex ?
+                        true : toggle;
+        super.changeSelection(rowIndex, columnIndex, newToggle, extend);
     }
 
     private void onPopupClick(MouseEvent e) {

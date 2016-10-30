@@ -18,6 +18,24 @@
 
 package org.kontalk.view;
 
+import javax.swing.Box;
+import javax.swing.JFrame;
+import javax.swing.text.NumberFormatter;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.alee.extended.filechooser.WebFileChooserField;
 import com.alee.extended.panel.GroupPanel;
 import com.alee.extended.panel.GroupingType;
@@ -33,29 +51,12 @@ import com.alee.laf.text.WebFormattedTextField;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
-import java.awt.BorderLayout;
-import java.awt.Component;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.ItemEvent;
-import java.awt.event.ItemListener;
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.swing.Box;
-import javax.swing.JFrame;
-import javax.swing.text.NumberFormatter;
 import org.apache.commons.lang.StringUtils;
-import org.kontalk.persistence.Config;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Account;
 import org.kontalk.model.Model;
+import org.kontalk.persistence.Config;
 import org.kontalk.system.Control.ViewControl;
 import org.kontalk.util.Tr;
 
@@ -299,6 +300,7 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT, fpLabelPanel, mFingerprintArea));
 
             final WebButton passButton = new WebButton(getPassTitle(mModel.account()));
+            passButton.setEnabled(mModel.account().isPresent());
             passButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
@@ -319,6 +321,7 @@ final class ConfigurationDialog extends WebDialog {
                     mView.showImportWizard(false);
                     AccountPanel.this.updateKey();
                     passButton.setText(getPassTitle(mModel.account()));
+                    passButton.setEnabled(mModel.account().isPresent());
                 }
             });
             groupPanel.add(importButton);

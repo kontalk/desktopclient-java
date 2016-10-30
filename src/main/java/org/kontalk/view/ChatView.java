@@ -331,8 +331,7 @@ final class ChatView extends WebPanel implements Observer {
         JViewport p = mScrollPane.getViewport();
         if (s.getBGColor().isPresent()) {
             Color c = s.getBGColor().get();
-            // TODO color not used
-            return Optional.empty();
+            return Optional.of(new Background(p, c));
         } else if (!s.getImagePath().isEmpty()) {
             return Optional.of(new Background(p, s.getImagePath()));
         } else {
@@ -575,23 +574,31 @@ final class ChatView extends WebPanel implements Observer {
         private final Component mParent;
         // background image from resource or user selected
         private final Image mOrigin;
+        // background color, set by user or null
+        private final Color mCustomColor;
         // cached background with size of viewport
         private BufferedImage mCached = null;
 
-        private Background(Component parent, Image origin) {
-            mParent = parent;
-            mOrigin = origin;
-        }
-
         /** Default, no chat specific settings. */
         Background(Component parent) {
-            this(parent, Utils.getImage("chat_bg.png"));
+            this(parent, (Color) null);
+        }
+
+        /** Chat specific color. */
+        Background(Component parent, Color bottomColor) {
+            this(parent, Utils.getImage("chat_bg.png"), bottomColor);
         }
 
         /** Image set by user (global or only for chat). */
         Background(Component parent, String imagePath) {
             // image loaded async!
-            this(parent, Toolkit.getDefaultToolkit().createImage(imagePath));
+            this(parent, Toolkit.getDefaultToolkit().createImage(imagePath), null);
+        }
+
+        private Background(Component parent, Image origin, Color color) {
+            mParent = parent;
+            mOrigin = origin;
+            mCustomColor = color;
         }
 
         /**
@@ -652,6 +659,17 @@ final class ChatView extends WebPanel implements Observer {
                 for (int y = 0; y < height; y += ih) {
                     cachedG.drawImage(scaledImage, x, y, iw, ih, null);
                 }
+            }
+
+            // gradient background of background
+            if (mCustomColor != null) {
+                Color overlayColor = new Color(
+                        mCustomColor.getRed(),
+                        mCustomColor.getGreen(),
+                        mCustomColor.getBlue(),
+                        View.CHAT_BG_ALPHA);
+                cachedG.setPaint(overlayColor);
+                cachedG.fillRect(0, 0, width, ChatView.this.getHeight());
             }
         }
 
