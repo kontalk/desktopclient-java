@@ -64,6 +64,9 @@ import org.kontalk.util.Tr;
 public final class View implements Observer {
     private static final Logger LOGGER = Logger.getLogger(View.class.getName());
 
+    static final String KONTALK_SITE = "https://www.kontalk.org";
+    static final String KONTALK_RELEASES = "https://github.com/kontalk/desktopclient-java/releases";
+
     static final int LISTS_WIDTH = 280;
 
     static final int GAP_DEFAULT = 10;

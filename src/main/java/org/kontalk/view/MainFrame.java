@@ -208,7 +208,7 @@ final class MainFrame extends WebFrame {
         WebMenu helpMenu = new WebMenu(Tr.tr("Help"));
         helpMenu.setMnemonic(KeyEvent.VK_H);
 
-        WebMenuItem wikiItem = new WebMenuItem(Tr.tr("Online wiki"));
+        WebMenuItem wikiItem = new WebMenuItem(Tr.tr("Online Wiki"));
         wikiItem.setToolTipText(Tr.tr("Visit the wiki"));
         wikiItem.addActionListener(new ActionListener() {
             @Override
@@ -217,6 +217,18 @@ final class MainFrame extends WebFrame {
             }
         });
         helpMenu.add(wikiItem);
+        WebMenuItem releaseItem = new WebMenuItem(Tr.tr("Release Website"));
+        releaseItem.setToolTipText(Tr.tr("Check out the release website"));
+        releaseItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                WebUtils.browseSiteSafely(View.KONTALK_RELEASES);
+            }
+        });
+        helpMenu.add(releaseItem);
+
+        helpMenu.addSeparator();
+
         WebMenuItem aboutMenuItem = new WebMenuItem(Tr.tr("About"));
         aboutMenuItem.setToolTipText(Tr.tr("About Kontalk"));
         aboutMenuItem.addActionListener(new ActionListener() {
@@ -346,7 +358,7 @@ final class MainFrame extends WebFrame {
         WebPanel aboutPanel = new WebPanel(new GridLayout(0, 1, View.GAP_SMALL, View.GAP_SMALL));
         aboutPanel.add(new WebLabel("Kontalk Java Client v" + Kontalk.VERSION));
         WebLinkLabel linkLabel = new WebLinkLabel();
-        linkLabel.setLink("http://www.kontalk.org");
+        linkLabel.setLink(View.KONTALK_SITE);
         linkLabel.setText(Tr.tr("Visit kontalk.org"));
         aboutPanel.add(linkLabel);
         WebLabel soundLabel = new WebLabel(Tr.tr("Notification sound by")+" FxProSound");
