@@ -227,9 +227,9 @@ final class ConfigurationDialog extends WebDialog {
             mImgResizeMap.put(800 * 1000, Tr.tr("Large (0.8MP)"));
 
             mMaxImgSizeBox = new WebComboBox(new ArrayList<>(mImgResizeMap.values()).toArray());
-            int maxImgSize = mConf.getInt(Config.NET_MAX_IMG_SIZE);
-            int maxImgIndex = new ArrayList<>(mImgResizeMap.keySet()).indexOf(maxImgSize);
-            if (maxImgSize >= 0)
+            int maxImgIndex = new ArrayList<>(mImgResizeMap.keySet()).indexOf(
+                    mConf.getInt(Config.NET_MAX_IMG_SIZE));
+            if (maxImgIndex >= 0)
                 mMaxImgSizeBox.setSelectedIndex(maxImgIndex);
             TooltipManager.addTooltip(mMaxImgSizeBox, Tr.tr("Reduce size of images before sending"));
 
@@ -415,6 +415,8 @@ final class ConfigurationDialog extends WebDialog {
 
         private final WebCheckBox mBGBox;
         private final WebFileChooserField mBGChooser;
+        private final WebComboBox mMessageFontSizeBox;
+        private final LinkedHashMap<String, Integer> mMessageFontSizeMap;
 
         ViewPanel() {
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
@@ -434,10 +436,28 @@ final class ConfigurationDialog extends WebDialog {
                     mBGChooser.getChooseButton().setEnabled(e.getStateChange() == ItemEvent.SELECTED);
                 }
             });
-
+            TooltipManager.addTooltip(mBGBox, Tr.tr("Background image for all chats"));
             mBGChooser = Utils.createImageChooser(bgPath);
-
+            mBGChooser.setEnabled(mBGBox.isSelected());
             groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
+
+            mMessageFontSizeMap = new LinkedHashMap<>();
+            mMessageFontSizeMap.put(Tr.tr("Small"), 1);
+            mMessageFontSizeMap.put(Tr.tr("Normal"), -1);
+            mMessageFontSizeMap.put(Tr.tr("Large"), 2);
+            mMessageFontSizeMap.put(Tr.tr("Huge"), 3);
+
+            mMessageFontSizeBox = new WebComboBox(new ArrayList<>(mMessageFontSizeMap.keySet()).toArray());
+            int fontSizeIndex = new ArrayList<>(mMessageFontSizeMap.values()).indexOf(
+                    mConf.getInt(Config.VIEW_MESSAGE_FONT_SIZE));
+            if (fontSizeIndex >= 0)
+                mMessageFontSizeBox.setSelectedIndex(fontSizeIndex);
+            TooltipManager.addTooltip(mMessageFontSizeBox, Tr.tr("Font size for message text and date"));
+
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    new WebLabel(Tr.tr("Font size for chat messages:")),
+                    mMessageFontSizeBox,
+                    new WebSeparator()));
 
             this.add(groupPanel);
         }
@@ -454,6 +474,13 @@ final class ConfigurationDialog extends WebDialog {
                 mConf.setProperty(Config.VIEW_CHAT_BG, bgPath);
                 mView.reloadChatBG();
             }
+
+            Integer value = mMessageFontSizeMap.get(mMessageFontSizeBox.getSelectedItem());
+            // first term should always be true
+            if (value != null && !value.equals(mConf.getInt(Config.VIEW_MESSAGE_FONT_SIZE))) {
+                mConf.setProperty(Config.VIEW_MESSAGE_FONT_SIZE, value);
+                mView.updateMessageLists();
+            }
         }
     }
 
@@ -461,9 +488,8 @@ final class ConfigurationDialog extends WebDialog {
         WebCheckBox checkBox = new WebCheckBox(Tr.tr(title));
         checkBox.setAnimated(false);
         checkBox.setSelected(selected);
-        String rosterNameText = Tr.tr(tooltip);
         if (!tooltip.isEmpty())
-            TooltipManager.addTooltip(checkBox, rosterNameText);
+            TooltipManager.addTooltip(checkBox, tooltip);
         return checkBox;
     }
 

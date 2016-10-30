@@ -356,6 +356,11 @@ final class ChatView extends WebPanel implements Observer {
         }
     }
 
+    void updateMessageLists() {
+        for (MessageList messageList : mMessageListCache.values())
+            messageList.updateMessageFontSize();
+    }
+
     private void onChatChange() {
         Chat chat = this.getCurrentChat().orElse(null);
         if (chat == null)

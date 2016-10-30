@@ -76,6 +76,7 @@ import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
 import org.kontalk.view.ComponentUtils.AttachmentPanel;
@@ -183,6 +184,12 @@ final class MessageList extends ListView<KonMessage> {
         mBackground = mChatView.createBGOrNull(s);
     }
 
+    void updateMessageFontSize() {
+        mRenderItem.configUpdate();
+        mEditorItem.configUpdate();
+        this.updateRowRendering(0, this.getRowCount() - 1);
+    }
+
     @Override
     protected WebPopupMenu rightClickMenu(List<KonMessage> selectedValues) {
         WebPopupMenu menu = new WebPopupMenu();
@@ -277,7 +284,7 @@ final class MessageList extends ListView<KonMessage> {
         // TODO use WebImages
         private final WebLabel mStatusIconLabel;
         private final WebLabel mEncryptIconLabel;
-        private final WebLabel dateLabel;
+        private final WebLabel mTimeLabel;
         private final WebPanel mWritingPanel;
         private final WebLabel mWritingLabel;
 
@@ -321,7 +328,6 @@ final class MessageList extends ListView<KonMessage> {
             mTextPane = new WebTextPane();
             mTextPane.setEditable(false);
             mTextPane.setOpaque(false);
-            //mTextPane.setFontSize(View.FONT_SIZE_SMALL);
             // sets default font
             mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
             // for detecting link clicks
@@ -338,9 +344,8 @@ final class MessageList extends ListView<KonMessage> {
             mEncryptIconLabel = new WebLabel();
 
             // date label
-            dateLabel = new WebLabel();
-            dateLabel.setForeground(Color.GRAY);
-            dateLabel.setFontSize(View.FONT_SIZE_TINY);
+            mTimeLabel = new WebLabel();
+            mTimeLabel.setForeground(Color.GRAY);
 
             // attachment
             mAttPanel = new AttachmentPanel();
@@ -364,7 +369,7 @@ final class MessageList extends ListView<KonMessage> {
             mStatusPanel.setLayout(new FlowLayout());
             mStatusPanel.add(mStatusIconLabel);
             mStatusPanel.add(mEncryptIconLabel);
-            mStatusPanel.add(dateLabel);
+            mStatusPanel.add(mTimeLabel);
             southPanel.add(mStatusPanel, BorderLayout.EAST);
             mPanel.add(southPanel, BorderLayout.SOUTH);
 
@@ -382,6 +387,31 @@ final class MessageList extends ListView<KonMessage> {
             this.add(new GroupPanel(GroupingType.fillLast, mWritingPanel, Box.createGlue())
                              .setMargin(0),
                     BorderLayout.SOUTH);
+
+            // set font size
+            this.configUpdate();
+        }
+
+        @Override
+        protected void configUpdate() {
+            int textFontSize;
+            int timeFontSize;
+            switch(Config.getInstance().getInt(Config.VIEW_MESSAGE_FONT_SIZE)) {
+                case 1:
+                    textFontSize = timeFontSize = View.FONT_SIZE_TINY; break;
+                case 2:
+                    textFontSize = View.FONT_SIZE_NORMAL;
+                    timeFontSize = View.FONT_SIZE_SMALL; break;
+                case 3:
+                    textFontSize = View.FONT_SIZE_BIG;
+                    timeFontSize = View.FONT_SIZE_NORMAL; break;
+                default:
+                    textFontSize = View.FONT_SIZE_SMALL;
+                    timeFontSize = View.FONT_SIZE_TINY;
+            }
+            mDateLabel.setFontSize(textFontSize);
+            mTextPane.setFontSize(textFontSize);
+            mTimeLabel.setFontSize(timeFontSize);
         }
 
         @Override
@@ -426,7 +456,7 @@ final class MessageList extends ListView<KonMessage> {
             }
 
             // date label
-            dateLabel.setText(Utils.SHORT_DATE_FORMAT.format(value.isInMessage() ?
+            mTimeLabel.setText(Utils.SHORT_DATE_FORMAT.format(value.isInMessage() ?
                             value.getServerDate().orElse(value.getDate()) :
                             value.getDate()));
 

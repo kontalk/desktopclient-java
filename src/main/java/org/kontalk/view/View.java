@@ -455,6 +455,10 @@ public final class View implements Observer {
         mTrayManager.setTray();
     }
 
+    void updateMessageLists() {
+        mChatView.updateMessageLists();
+    }
+
     // TODO is this good?
     String names(List<JID> jids) {
         return Utils.displayNames(jids, mModel.contacts(), View.PRETTY_JID_LENGTH);
