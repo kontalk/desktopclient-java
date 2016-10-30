@@ -33,6 +33,7 @@ import java.awt.DefaultFocusTraversalPolicy;
 import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.GridLayout;
+import java.awt.Point;
 import java.awt.SystemTray;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -62,6 +63,8 @@ import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.table.WebTable;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.hotkey.Hotkey;
+import com.alee.managers.tooltip.TooltipManager;
+import com.alee.utils.SwingUtils;
 import com.alee.utils.WebUtils;
 import org.kontalk.Kontalk;
 import org.kontalk.model.Model;
@@ -390,6 +393,13 @@ final class MainFrame extends WebFrame {
         WebOverlay chatListOverlay = new WebOverlay(scrollPane,
                 button, SwingConstants.TRAILING, SwingConstants.BOTTOM);
         chatListOverlay.setOverlayMargin(0, 0, View.GAP_BIG, View.GAP_BIG + SCROLL_BAR_WIDTH);
+        // fixing overlay button paint bug on startup, dont wanna know whats happening here
+        SwingUtils.delayInvokeLater(0, new Runnable() {
+            @Override
+            public void run() {
+                TooltipManager.showOneTimeTooltip(list, new Point(1,1), "");
+            }
+        });
 
         return chatListOverlay;
     }
