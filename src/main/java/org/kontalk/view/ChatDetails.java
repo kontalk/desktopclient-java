@@ -199,7 +199,7 @@ final class ChatDetails extends ComponentUtils.PopupPanel {
         this.add(buttonPanel, BorderLayout.SOUTH);
     }
 
-    boolean leave(GroupChat chat) {
+    private boolean leave(GroupChat chat) {
         String warningText =
                 Tr.tr("You won't be able to enter this group again after you leave.");
         int selectedOption = WebOptionPane.showConfirmDialog(this,

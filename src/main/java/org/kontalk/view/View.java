@@ -103,6 +103,8 @@ public final class View implements Observer {
     static final Color DARK_GREEN = new Color(0, 100, 0);
     static final Color DARK_RED = new Color(196, 46, 46);
 
+    static final int CHAT_BG_ALPHA = 30;
+
     static final int AVATAR_LIST_SIZE = 30;
     static final int AVATAR_CHAT_SIZE = 40;
     static final int AVATAR_DETAIL_SIZE = 60;
