@@ -166,9 +166,7 @@ public final class ClientUtils {
                 LOGGER.log(Level.WARNING, "can't parse URL", ex);
                 url = URI.create("");
             }
-            attachment = MessageContent.Attachment.incoming(url,
-                    oobData.getLength(),
-                    oobData.isEncrypted());
+            attachment = MessageContent.Attachment.incoming(url, oobData.isEncrypted());
 
             // body text is maybe URI, for clients that dont understand OOB,
             // but we do, don't save it twice
