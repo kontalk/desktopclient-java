@@ -168,7 +168,7 @@ public final class View implements Observer {
         // tray
         mTrayManager = new TrayManager(this, mModel, mMainFrame);
         // notifier
-        mNotifier = new Notifier(this);
+        mNotifier = new Notifier(this, mMainFrame);
 
         // register observer
         mModel.contacts().addObserver(mContactListView);
