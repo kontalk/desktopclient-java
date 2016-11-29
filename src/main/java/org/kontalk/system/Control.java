@@ -30,6 +30,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Observable;
 import java.util.Optional;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -89,6 +91,9 @@ public final class Control {
         ERROR
     }
 
+    /** Interval between retry connection attempts after failure. */
+    private static final int RETRY_TIMER_INTERVAL = 20; // seconds
+
     private final ViewControl mViewControl;
 
     private final Database mDB;
@@ -101,6 +106,7 @@ public final class Control {
     private final GroupControl mGroupControl;
 
     private boolean mShuttingDown = false;
+    private Timer mRetryTimer = null;
 
     public Control(Path appDir) throws KonException {
         mViewControl = new ViewControl();
@@ -193,8 +199,9 @@ public final class Control {
     public void onStatusChange(Status status, EnumSet<FeatureDiscovery.Feature> features) {
         mViewControl.changed(new ViewEvent.StatusChange(status, features));
 
+        Config config = Config.getInstance();
         if (status == Status.CONNECTED) {
-            String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
+            String[] strings = config.getStringArray(Config.NET_STATUS_LIST);
             mClient.sendUserPresence(strings.length > 0 ? strings[0] : "");
             // send all pending messages
             for (Chat chat: mModel.chats())
@@ -210,6 +217,24 @@ public final class Control {
         } else if (status == Status.DISCONNECTED || status == Status.FAILED) {
             for (Contact contact : mModel.contacts().getAll(false, false))
                 contact.setOnlineStatus(Contact.Online.UNKNOWN);
+        }
+
+        if ((status == Status.FAILED || status == Status.ERROR)
+                    && config.getBoolean(Config.NET_RETRY_CONNECT)) {
+            mRetryTimer = new Timer("Retry Timer", true);
+            TimerTask task = new TimerTask() {
+                private int mCountDown = RETRY_TIMER_INTERVAL;
+
+                @Override
+                public void run() {
+                    if (mCountDown > 0) {
+                        mViewControl.changed(new ViewEvent.RetryTimerMessage(mCountDown--));
+                    } else {
+                        mViewControl.connect();
+                    }
+                }
+            };
+            mRetryTimer.schedule(task, 0, 1000);
         }
     }
 
@@ -674,6 +699,9 @@ public final class Control {
         }
 
         public void connect(char[] password) {
+            if (mRetryTimer != null)
+                mRetryTimer.cancel();
+
             PersonalKey key = this.keyOrNull(password);
             if (key == null)
                 return;
@@ -682,6 +710,10 @@ public final class Control {
         }
 
         public void disconnect() {
+            // this should not be necessary
+            if (mRetryTimer != null)
+                mRetryTimer.cancel();
+
             mChatStateManager.imGone();
             mClient.disconnect();
         }

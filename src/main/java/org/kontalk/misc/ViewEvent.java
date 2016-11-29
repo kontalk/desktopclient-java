@@ -125,4 +125,13 @@ public class ViewEvent {
             this.contact = contact;
         }
     }
+
+    /** Notify view about connection retry in X seconds. */
+    public static class RetryTimerMessage extends ViewEvent {
+        public final int countdown;
+
+        public RetryTimerMessage(int countdown) {
+            this.countdown = countdown;
+        }
+    }
 }
