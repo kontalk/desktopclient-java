@@ -283,16 +283,18 @@ final class ConfigurationDialog extends WebDialog {
                     !mConf.getBoolean(Config.SERV_CERT_VALIDATION));
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
+            groupPanel.add(Box.createVerticalStrut(View.GAP_BIG));
+            groupPanel.add(new WebLabel(Tr.tr("Personal Key")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
             mUserIDArea = new WebTextArea().setBoldFont();
             mUserIDArea.setEditable(false);
             mUserIDArea.setOpaque(false);
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
-                    new WebLabel(Tr.tr("Key user ID:")),
+                    new WebLabel(Tr.tr("User ID:")),
                     mUserIDArea));
 
-            WebLabel fpLabel = new WebLabel(Tr.tr("Key fingerprint:")+" ");
+            WebLabel fpLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
             fpLabel.setAlignmentY(Component.TOP_ALIGNMENT);
             GroupPanel fpLabelPanel = new GroupPanel(false, fpLabel, Box.createGlue());
             mFingerprintArea = Utils.createFingerprintArea();

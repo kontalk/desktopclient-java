@@ -977,7 +977,9 @@ final class ComponentUtils {
             mEncryptionIcon.setIcon(isEncrypted ? ICON_SECURE : ICON_INSECURE);
             mEncryptionWarningIcon.setVisible(isEncrypted != canEncrypt);
 
-            String text = "<html>" + (isEncrypted ? Tr.tr("Encrypted") : Tr.tr("Not encrypted"));
+            String text = "<html>" + (isEncrypted ?
+                                              Tr.tr("Encryption Enabled") :
+                                              Tr.tr("Encryption Disabled"));
             if (isEncrypted && !canEncrypt) {
                 text += "<br>" + Tr.tr("Contact key is missing");
             } else if (!isEncrypted && canEncrypt) {
