@@ -193,6 +193,7 @@ final class ConfigurationDialog extends WebDialog {
     private class NetworkPanel extends WebPanel {
 
         private final WebCheckBox mConnectStartupBox;
+        private final WebCheckBox mConnectRetryBox;
         private final WebCheckBox mRequestAvatars;
         private final WebComboBox mMaxImgSizeBox;
         private final LinkedHashMap<Integer, String> mImgResizeMap;
@@ -208,6 +209,11 @@ final class ConfigurationDialog extends WebDialog {
                     "",
                     mConf.getBoolean(Config.MAIN_CONNECT_STARTUP));
             groupPanel.add(mConnectStartupBox);
+
+            mConnectRetryBox = createCheckBox(Tr.tr("Retry on connection failure"),
+                    Tr.tr("Try automatic (re-)connect after connection failure"),
+                    mConf.getBoolean(Config.NET_RETRY_CONNECT));
+            groupPanel.add(new GroupPanel(mConnectRetryBox, new WebSeparator()));
 
             mRequestAvatars = createCheckBox(Tr.tr("Download profile pictures"),
                     Tr.tr("Download contact profile pictures"),
@@ -237,6 +243,7 @@ final class ConfigurationDialog extends WebDialog {
 
         private void saveConfiguration() {
             mConf.setProperty(Config.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
+            mConf.setProperty(Config.NET_RETRY_CONNECT, mConnectRetryBox.isSelected());
             mConf.setProperty(Config.NET_REQUEST_AVATARS, mRequestAvatars.isSelected());
 
             mConf.setProperty(Config.NET_MAX_IMG_SIZE,

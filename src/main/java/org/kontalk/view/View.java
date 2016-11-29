@@ -281,6 +281,10 @@ public final class View implements Observer {
             mNotifier.showPresenceError(presenceError.contact, presenceError.error);
         } else if (arg instanceof ViewEvent.SubscriptionRequest) {
             mNotifier.confirmSubscription((ViewEvent.SubscriptionRequest) arg);
+        } else if (arg instanceof ViewEvent.RetryTimerMessage) {
+            mStatusBarLabel.setText(
+                    String.format(Tr.tr("Connection failure. Retry in %1$d seconds."),
+                    ((ViewEvent.RetryTimerMessage) arg).countdown));
         } else {
             LOGGER.warning("unexpected argument: "+arg);
         }
