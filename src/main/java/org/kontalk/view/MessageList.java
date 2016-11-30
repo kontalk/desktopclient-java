@@ -275,7 +275,7 @@ final class MessageList extends ListView<KonMessage> {
 
             this.setOpaque(false);
 
-            mDatePanel = new WebPanel(true);
+            mDatePanel = new WebPanel();
             mDatePanel.setRound(View.ROUND);
             mDatePanel.setWebColoredBackground(false);
             mDatePanel.setBackground(View.BLUE);
@@ -284,11 +284,12 @@ final class MessageList extends ListView<KonMessage> {
             mDateLabel.setForeground(Color.WHITE);
             mDatePanel.add(mDateLabel, BorderLayout.CENTER);
             this.add(new GroupPanel(GroupingType.fillFirstAndLast,
-                                           Box.createGlue(), mDatePanel, Box.createGlue()).setMargin(0),
+                                           Box.createGlue(), mDatePanel, Box.createGlue())
+                             .setMargin(0),
                     BorderLayout.NORTH);
 
             // FlowLayout to toggle left/right position of panel (see below)
-            mFlowPanel = new FlowPanel(0).setMargin(0);
+            mFlowPanel = new FlowPanel(0);
             //this.setBorder(new EmptyBorder(10, 10, 10, 10));
             mFlowPanel.setBackground(View.BLUE); // seen when selected
 
@@ -363,12 +364,21 @@ final class MessageList extends ListView<KonMessage> {
             boolean showDateSeparator = last != null &&
                     !DateUtils.isSameDay(last.getDate(), value.getDate());
             mDatePanel.setVisible(showDateSeparator);
-            mDatePanel.setMargin(showDateSeparator ? View.MARGIN_SMALL : 0);
+            boolean consecutive = last == null || last.getSender().equals(value.getSender());
+            mDatePanel.setMargin(showDateSeparator || !consecutive ? View.MARGIN_SMALL : 0);
+            // decoration consumes space, even if nothing is visible in panel
+            mDatePanel.setUndecorated(!showDateSeparator);
             mDateLabel.setText(showDateSeparator ?
                                        Utils.getDateSeparatorText(value.getDate()) : "");
 
             // background (flow item panel)
             mFlowPanel.setOpaque(isSelected);
+
+            boolean isOut = !value.isInMessage();
+
+            // toggle left/right position
+            mFlowPanel.setComponentOrientation(!isOut ?
+                   ComponentOrientation.LEFT_TO_RIGHT : ComponentOrientation.RIGHT_TO_LEFT);
 
             // background (message panel)
             boolean hasGroupCommand = value.getContent().getGroupCommand().isPresent();
@@ -420,7 +430,6 @@ final class MessageList extends ListView<KonMessage> {
 
             // status icon
             Icon statusIcon = null;
-            boolean isOut = !value.isInMessage();
             if (isOut) {
                 if (deliveredDate != null) {
                     statusIcon = DELIVERED_ICON;
@@ -607,11 +616,6 @@ final class MessageList extends ListView<KonMessage> {
             // textArea does not need this but textPane does, and editorPane
             // is again totally different; I love Swing
             mTextPane.setPreferredSize(prefSize);
-
-            // toggle left/right position
-            mFlowPanel.setComponentOrientation(isOut ?
-                    ComponentOrientation.RIGHT_TO_LEFT :
-                    ComponentOrientation.LEFT_TO_RIGHT);
         }
     }
 
