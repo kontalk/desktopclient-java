@@ -18,7 +18,6 @@
 
 package org.kontalk.model.message;
 
-import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -33,14 +32,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.kontalk.persistence.Database;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.Searchable;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.MessageContent.Preview;
+import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -109,13 +110,12 @@ public abstract class KonMessage extends Observable implements Searchable {
             COL_SERV_ERR + " TEXT, " +
             // unix time, transmission/delay timestamp
             COL_SERV_DATE + " INTEGER, " +
-            "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id) " +
+            "FOREIGN KEY (" + COL_CHAT_ID + ") REFERENCES " + Chat.TABLE + " (_id) " +
             ")";
 
     protected final int mID;
     private final Chat mChat;
     private final String mXMPPID;
-    // (local) creation time
     private final Date mDate;
     protected final MessageContent mContent;
 
@@ -196,6 +196,7 @@ public abstract class KonMessage extends Observable implements Searchable {
         return mXMPPID;
     }
 
+    /** Return (local) creation time of this message. */
     public Date getDate() {
         return mDate;
     }
@@ -252,6 +253,14 @@ public abstract class KonMessage extends Observable implements Searchable {
 
     public boolean isEncrypted() {
         return mCoderStatus.isEncrypted();
+    }
+
+    /**
+     * Return the message that is placed before this message (in or out) - if any -
+     * in the ordered chat message list of this message.
+     */
+    public Optional<KonMessage> getPredecessor() {
+        return mChat.getMessages().getPredecessor(this);
     }
 
     protected void save() {
@@ -313,7 +322,7 @@ public abstract class KonMessage extends Observable implements Searchable {
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
-    public static KonMessage load(Database db, ResultSet messageRS, Chat chat,
+    public static KonMessage load(ResultSet messageRS, Chat chat,
             Map<Integer, Contact> contactMap)
             throws SQLException {
         int id = messageRS.getInt("_id");

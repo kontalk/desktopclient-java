@@ -62,7 +62,7 @@ public final class ChatMessages {
         try (ResultSet messageRS = db.execSelectWhereInsecure(KonMessage.TABLE,
                 KonMessage.COL_CHAT_ID + " == " + chat.getID())) {
             while (messageRS.next()) {
-                KonMessage message = KonMessage.load(db, messageRS, chat, contactMap);
+                KonMessage message = KonMessage.load(messageRS, chat, contactMap);
                 if (message.getTransmissions().isEmpty())
                     // ignore broken message
                     continue;
@@ -105,7 +105,7 @@ public final class ChatMessages {
         }
     }
 
-    /** Get the newest (ie last received) outgoing message. */
+    /** Get the newest (i.e. last received) outgoing message. */
     public Optional<OutMessage> getLast(String xmppID) {
         synchronized(mSortedSet) {
             return mSortedSet.descendingSet().stream()
@@ -131,5 +131,10 @@ public final class ChatMessages {
 
     public boolean isEmpty() {
         return mSortedSet.isEmpty();
+    }
+
+    public Optional<KonMessage> getPredecessor(KonMessage message) {
+        SortedSet<KonMessage> headSet = mSortedSet.headSet(message);
+        return headSet.isEmpty() ? Optional.empty() : Optional.of(headSet.last());
     }
 }
