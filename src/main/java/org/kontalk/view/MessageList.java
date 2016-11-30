@@ -255,6 +255,7 @@ final class MessageList extends ListView<KonMessage> {
     private static class MessageListFlyWeightItem extends FlyweightItem<KonMessage> {
 
         private final View mView;
+        private final WebPanel mMarginDatePanel;
         private final WebPanel mDatePanel;
         private final WebLabel mDateLabel;
         private final WebPanel mFlowPanel;
@@ -283,8 +284,9 @@ final class MessageList extends ListView<KonMessage> {
             mDateLabel = new WebLabel();
             mDateLabel.setForeground(Color.WHITE);
             mDatePanel.add(mDateLabel, BorderLayout.CENTER);
+            mMarginDatePanel = new GroupPanel(mDatePanel);
             this.add(new GroupPanel(GroupingType.fillFirstAndLast,
-                                           Box.createGlue(), mDatePanel, Box.createGlue())
+                                           Box.createGlue(), mMarginDatePanel, Box.createGlue())
                              .setMargin(0),
                     BorderLayout.NORTH);
 
@@ -364,6 +366,7 @@ final class MessageList extends ListView<KonMessage> {
             boolean showDateSeparator = last != null &&
                     !DateUtils.isSameDay(last.getDate(), value.getDate());
             mDatePanel.setVisible(showDateSeparator);
+            mMarginDatePanel.setMargin(showDateSeparator ? View.MARGIN_SMALL : 0);
             boolean consecutive = last == null || last.getSender().equals(value.getSender());
             mDatePanel.setMargin(showDateSeparator || !consecutive ? View.MARGIN_SMALL : 0);
             // decoration consumes space, even if nothing is visible in panel
