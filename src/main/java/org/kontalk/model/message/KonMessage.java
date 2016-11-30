@@ -263,6 +263,12 @@ public abstract class KonMessage extends Observable implements Searchable {
         return mChat.getMessages().getPredecessor(this);
     }
 
+    /** Get the contact that send this message if this message wasn't send by user. */
+    public Optional<Contact> getSender() {
+        return this instanceof InMessage ?
+                       Optional.of(((InMessage) this).getContact()) : Optional.empty();
+    }
+
     protected void save() {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_STATUS, mStatus);
@@ -323,8 +329,7 @@ public abstract class KonMessage extends Observable implements Searchable {
     }
 
     public static KonMessage load(ResultSet messageRS, Chat chat,
-            Map<Integer, Contact> contactMap)
-            throws SQLException {
+            Map<Integer, Contact> contactMap) throws SQLException {
         int id = messageRS.getInt("_id");
 
         String xmppID = Database.getString(messageRS, KonMessage.COL_XMPP_ID);
