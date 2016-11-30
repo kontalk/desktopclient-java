@@ -41,7 +41,9 @@ import java.nio.file.Path;
 import java.security.cert.CertificateException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -79,6 +81,9 @@ final class Utils {
     static final SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
     static final SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
     static final PrettyTime PRETTY_TIME = new PrettyTime();
+
+    private static final SimpleDateFormat DAY_DATE_FORMAT = new SimpleDateFormat("EEE, d. MMMM");
+    private static final SimpleDateFormat DAY_YEAR_DATE_FORMAT = new SimpleDateFormat("EEE, d. MMMM yyyy");
 
     private Utils() {}
 
@@ -424,5 +429,13 @@ final class Utils {
         String s1 = StringUtils.defaultIfEmpty(c1.getName(), c1.getJID().string());
         String s2 = StringUtils.defaultIfEmpty(c2.getName(), c2.getJID().string());
         return s1.compareToIgnoreCase(s2);
+    }
+
+    static String getDateSeparatorText(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        boolean sameYear = cal.get(Calendar.YEAR) == Calendar.getInstance().get(Calendar.YEAR);
+        SimpleDateFormat format = sameYear ? DAY_DATE_FORMAT : DAY_YEAR_DATE_FORMAT;
+        return format.format(date);
     }
 }

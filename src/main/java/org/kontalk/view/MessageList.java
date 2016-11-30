@@ -20,6 +20,7 @@ package org.kontalk.view;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
+import javax.swing.Box;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -53,6 +54,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.alee.extended.panel.FlowPanel;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
@@ -60,6 +64,7 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.managers.tooltip.TooltipManager;
+import org.apache.commons.lang.time.DateUtils;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.chat.Chat;
@@ -245,10 +250,14 @@ final class MessageList extends ListView<KonMessage> {
     /**
      * Flyweight render item for message items.
      * The content is added to a panel inside this panel.
+     * Above the content panel a centered date panel is drawn (if appropriate).
      */
     private static class MessageListFlyWeightItem extends FlyweightItem<KonMessage> {
 
         private final View mView;
+        private final WebPanel mDatePanel;
+        private final WebLabel mDateLabel;
+        private final WebPanel mFlowPanel;
         private final WebPanel mPanel;
         private final WebLabel mFromLabel;
         private final WebTextPane mTextPane;
@@ -264,8 +273,24 @@ final class MessageList extends ListView<KonMessage> {
         MessageListFlyWeightItem(View view) {
             mView = view;
 
+            this.setOpaque(false);
+
+            mDatePanel = new WebPanel(true);
+            mDatePanel.setRound(View.ROUND);
+            mDatePanel.setWebColoredBackground(false);
+            mDatePanel.setBackground(View.BLUE);
+            mDatePanel.setBorderColor(View.BLUE);
+            mDateLabel = new WebLabel();
+            mDateLabel.setForeground(Color.WHITE);
+            mDatePanel.add(mDateLabel, BorderLayout.CENTER);
+            this.add(new GroupPanel(GroupingType.fillFirstAndLast,
+                                           Box.createGlue(), mDatePanel, Box.createGlue()).setMargin(0),
+                    BorderLayout.NORTH);
+
+            // FlowLayout to toggle left/right position of panel (see below)
+            mFlowPanel = new FlowPanel(0).setMargin(0);
             //this.setBorder(new EmptyBorder(10, 10, 10, 10));
-            this.setBackground(View.BLUE); // seen when selected
+            mFlowPanel.setBackground(View.BLUE); // seen when selected
 
             mPanel = new WebPanel(true);
             mPanel.setRound(View.ROUND);
@@ -328,15 +353,22 @@ final class MessageList extends ListView<KonMessage> {
             southPanel.add(mStatusPanel, BorderLayout.EAST);
             mPanel.add(southPanel, BorderLayout.SOUTH);
 
-            // FlowLayout to toggle left/right position of panel (see below)
-            this.setLayout(new FlowLayout(FlowLayout.TRAILING, 0, 0));
-            this.add(mPanel);
+            mFlowPanel.add(mPanel);
+            this.add(mFlowPanel, BorderLayout.CENTER);
         }
 
         @Override
         protected void render(KonMessage value, int listWidth, boolean isSelected) {
-            // background (item panel)
-            this.setOpaque(isSelected);
+            KonMessage last = value.getPredecessor().orElse(null);
+            boolean showDateSeparator = last != null &&
+                    !DateUtils.isSameDay(last.getDate(), value.getDate());
+            mDatePanel.setVisible(showDateSeparator);
+            mDatePanel.setMargin(showDateSeparator ? View.MARGIN_SMALL : 0);
+            mDateLabel.setText(showDateSeparator ?
+                                       Utils.getDateSeparatorText(value.getDate()) : "");
+
+            // background (flow item panel)
+            mFlowPanel.setOpaque(isSelected);
 
             // background (message panel)
             boolean hasGroupCommand = value.getContent().getGroupCommand().isPresent();
@@ -577,9 +609,9 @@ final class MessageList extends ListView<KonMessage> {
             mTextPane.setPreferredSize(prefSize);
 
             // toggle left/right position
-            this.setComponentOrientation(isOut ?
-                    ComponentOrientation.LEFT_TO_RIGHT:
-                    ComponentOrientation.RIGHT_TO_LEFT);
+            mFlowPanel.setComponentOrientation(isOut ?
+                    ComponentOrientation.RIGHT_TO_LEFT :
+                    ComponentOrientation.LEFT_TO_RIGHT);
         }
     }
 
