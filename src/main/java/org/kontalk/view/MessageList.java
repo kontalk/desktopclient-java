@@ -482,7 +482,7 @@ final class MessageList extends ListView<KonMessage> {
                 String secStat = null;
                 Date statusDate;
                 if (deliveredDate != null) {
-                    secStat = Tr.tr("Delivered:");
+                    secStat = Tr.tr("Received:");
                     statusDate = deliveredDate;
                 } else {
                     statusDate = value.getServerDate().orElse(null);
@@ -494,7 +494,7 @@ final class MessageList extends ListView<KonMessage> {
                             break;
                         // legacy
                         case RECEIVED:
-                            secStat = Tr.tr("Delivered:");
+                            secStat = Tr.tr("Received:");
                             break;
                         case ERROR:
                             secStat = Tr.tr("Error report:");
