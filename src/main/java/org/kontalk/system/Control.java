@@ -320,12 +320,12 @@ public final class Control {
         message.setStatus(KonMessage.Status.SENT);
     }
 
-    public void onMessageReceived(MessageIDs ids) {
+    public void onMessageReceived(MessageIDs ids, Date receivedDate) {
         OutMessage message = this.findMessage(ids).orElse(null);
         if (message == null)
             return;
 
-        message.setReceived(ids.jid);
+        message.setReceived(ids.jid, receivedDate);
     }
 
     public void onMessageError(MessageIDs ids, Condition condition, String errorText) {

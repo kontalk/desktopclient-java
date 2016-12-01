@@ -18,7 +18,6 @@
 
 package org.kontalk.model.message;
 
-import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -33,6 +32,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.persistence.Database;

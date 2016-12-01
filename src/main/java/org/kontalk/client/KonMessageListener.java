@@ -113,11 +113,16 @@ final public class KonMessageListener implements StanzaListener {
 
     private void processReceiptMessage(Message m, DeliveryReceipt receipt) {
         LOGGER.config("message: "+m);
+
+        Date delayDate = getDelay(m);
+        if (delayDate == null)
+            delayDate = new Date();
+
         String receiptID = receipt.getId();
         if (receiptID == null || receiptID.isEmpty()) {
             LOGGER.warning("message has invalid receipt ID: "+receiptID);
         } else {
-            mControl.onMessageReceived(MessageIDs.from(m, receiptID));
+            mControl.onMessageReceived(MessageIDs.from(m, receiptID), delayDate);
         }
         // we ignore anything else that might be in this message
     }
@@ -130,24 +135,9 @@ final public class KonMessageListener implements StanzaListener {
         // TODO a message can contain all sorts of extensions, we should loop
         // over all of them
 
-        // timestamp
-        // delayed deliver extension is the first the be processed
-        // because it's used also in delivery receipts
-        // first: new XEP-0203 specification
-        ExtensionElement delay = DelayInformation.from(m);
-        // fallback: obsolete XEP-0091 specification
-        if (delay == null) {
-            delay = m.getExtension("x", "jabber:x:delay");
-        }
-        Optional<Date> optServerDate = Optional.empty();
-        if (delay instanceof DelayInformation) {
-                Date date = ((DelayInformation) delay).getStamp();
-                if (date.after(new Date()))
-                    LOGGER.warning("delay time is in future: "+date);
-                optServerDate = Optional.of(date);
-        }
-
         MessageIDs ids = MessageIDs.from(m);
+
+        Date delayDate = getDelay(m);
 
         // process possible chat state notification (XEP-0085)
         ExtensionElement csExt = m.getExtension(ChatStateExtension.NAMESPACE);
@@ -155,7 +145,7 @@ final public class KonMessageListener implements StanzaListener {
         if (csExt != null) {
             chatState = ((ChatStateExtension) csExt).getChatState();
             mControl.onChatStateNotification(ids,
-                    optServerDate,
+                    Optional.ofNullable(delayDate),
                     chatState);
         }
 
@@ -175,7 +165,7 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         // add message
-        mControl.onNewInMessage(ids, optServerDate, content);
+        mControl.onNewInMessage(ids, Optional.ofNullable(delayDate), content);
 
         // send a 'received' for a receipt request (XEP-0184)
         DeliveryReceiptRequest request = DeliveryReceiptRequest.from(m);
@@ -208,5 +198,24 @@ final public class KonMessageListener implements StanzaListener {
         }
 
         LOGGER.warning("unhandled");
+    }
+
+    private static Date getDelay(Message m) {
+        // first: new XEP-0203 specification
+        ExtensionElement delay = DelayInformation.from(m);
+
+        // fallback: obsolete XEP-0091 specification
+        if (delay == null) {
+            delay = m.getExtension("x", "jabber:x:delay");
+        }
+
+        if (delay instanceof DelayInformation) {
+            Date date = ((DelayInformation) delay).getStamp();
+            if (date.after(new Date()))
+                LOGGER.warning("delay time is in future: "+date);
+            return date;
+        }
+
+        return null;
     }
 }

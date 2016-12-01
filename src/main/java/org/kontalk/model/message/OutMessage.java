@@ -18,8 +18,6 @@
 
 package org.kontalk.model.message;
 
-import org.kontalk.model.chat.Chat;
-import org.kontalk.misc.JID;
 import java.net.URI;
 import java.util.Collections;
 import java.util.Date;
@@ -28,8 +26,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
+
 import org.kontalk.crypto.Coder;
+import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -69,7 +70,7 @@ public final class OutMessage extends KonMessage {
         mTransmissions = Collections.unmodifiableSet(builder.mTransmissions);
     }
 
-    public void setReceived(JID jid) {
+    public void setReceived(JID jid, Date date) {
         Transmission transmission = mTransmissions.stream()
                 .filter(t -> t.getContact().getJID().equals(jid))
                 .findFirst().orElse(null);
@@ -79,10 +80,10 @@ public final class OutMessage extends KonMessage {
         }
 
         if (transmission.isReceived())
-            // probably by another client
+            // probably already received by another client
             return;
 
-        transmission.setReceived(new Date());
+        transmission.setReceived(date);
         this.changed(ViewChange.STATUS);
     }
 
