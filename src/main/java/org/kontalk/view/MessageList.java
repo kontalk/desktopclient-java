@@ -363,7 +363,7 @@ final class MessageList extends ListView<KonMessage> {
         @Override
         protected void render(KonMessage value, int listWidth, boolean isSelected) {
             KonMessage last = value.getPredecessor().orElse(null);
-            boolean showDateSeparator = last != null &&
+            boolean showDateSeparator = last == null ||
                     !DateUtils.isSameDay(last.getDate(), value.getDate());
             mDatePanel.setVisible(showDateSeparator);
             mMarginDatePanel.setMargin(showDateSeparator ? View.MARGIN_SMALL : 0);
