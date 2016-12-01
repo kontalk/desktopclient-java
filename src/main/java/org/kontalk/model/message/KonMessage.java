@@ -190,6 +190,9 @@ public abstract class KonMessage extends Observable implements Searchable {
         return mStatus == Status.IN;
     }
 
+    /** Get transmissions: Exactly one for incoming messages. For outgoing messages exactly one in
+     * a single chat and one or more in a group chat.
+     */
     public abstract Set<Transmission> getTransmissions();
 
     public String getXMPPID() {
