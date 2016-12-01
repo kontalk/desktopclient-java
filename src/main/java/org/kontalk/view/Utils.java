@@ -66,6 +66,7 @@ import org.kontalk.model.ContactList;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.persistence.Config;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
@@ -437,5 +438,9 @@ final class Utils {
         boolean sameYear = cal.get(Calendar.YEAR) == Calendar.getInstance().get(Calendar.YEAR);
         SimpleDateFormat format = sameYear ? DAY_DATE_FORMAT : DAY_YEAR_DATE_FORMAT;
         return format.format(date);
+    }
+
+    static boolean isAllowedAttachmentFile(File file) {
+        return file.length() <= AttachmentManager.MAX_ATT_SIZE;
     }
 }
