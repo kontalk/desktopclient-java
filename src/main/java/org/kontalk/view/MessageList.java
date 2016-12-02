@@ -111,6 +111,7 @@ final class MessageList extends ListView<KonMessage> {
                 new MessageListFlyWeightItem(view),
                 // allow multiple selections for "copy" action
                 ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
+                true,
                 false);
 
         mChatView = chatView;

@@ -55,6 +55,7 @@ final class ContactListView extends ListView<Contact> {
                 new FlyweightContactItem(),
                 new FlyweightContactItem(),
                 ListSelectionModel.SINGLE_SELECTION,
+                true,
                 true);
 
         mModel = model;

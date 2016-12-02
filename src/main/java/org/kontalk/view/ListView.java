@@ -95,6 +95,7 @@ abstract class ListView<V extends Observable & Searchable>
     ListView(View view,
              FlyweightItem renderItem, FlyweightItem editorItem,
              int selectionMode,
+             boolean filterSelected,
              boolean activateTimer) {
 
         // damn Java
@@ -131,7 +132,8 @@ abstract class ListView<V extends Observable & Searchable>
             @Override
             public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
                 V v = (V) entry.getValue(0);
-                return v.contains(mSearch);
+                return (!filterSelected && v.equals(ListView.this.getSelectedValue().orElse(null)))
+                               || v.contains(mSearch);
             }
         };
         mRowSorter.setRowFilter(rowFilter);

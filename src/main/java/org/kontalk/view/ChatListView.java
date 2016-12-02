@@ -55,6 +55,7 @@ final class ChatListView extends ListView<Chat> {
                 new FlyweightChatItem(),
                 new FlyweightChatItem(),
                 ListSelectionModel.SINGLE_SELECTION,
+                false,
                 true);
 
         mChatList = chatList;
