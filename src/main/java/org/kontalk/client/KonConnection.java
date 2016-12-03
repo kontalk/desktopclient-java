@@ -18,6 +18,10 @@
 
 package org.kontalk.client;
 
+import javax.net.ssl.SSLContext;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.UnsupportedCallbackException;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
@@ -29,11 +33,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import javax.net.ssl.SSLContext;
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.UnsupportedCallbackException;
 
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.ExceptionCallback;
@@ -52,7 +51,7 @@ import org.kontalk.util.TrustUtils;
  * XMPP Connection to a Kontalk Server.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class KonConnection extends XMPPTCPConnection {
+final class KonConnection extends XMPPTCPConnection {
     private static final Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
     private static final String RESSOURCE = "Kontalk_Desktop";

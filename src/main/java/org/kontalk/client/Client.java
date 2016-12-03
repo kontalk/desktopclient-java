@@ -69,10 +69,10 @@ public final class Client implements StanzaListener, Runnable {
     private static final String CAPS_CACHE_DIR = "caps_cache";
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
-    public enum PresenceCommand {REQUEST, GRANT, DENY};
+    public enum PresenceCommand {REQUEST, GRANT, DENY}
 
     // NOTE: disconnect is instantaneous, all resulting exceptions should be catched
-    private enum Command {CONNECT, LAST_ACTIVITY};
+    private enum Command {CONNECT, LAST_ACTIVITY}
 
     private final Control mControl;
 
@@ -293,7 +293,7 @@ public final class Client implements StanzaListener, Runnable {
         return Optional.of(JID.full(user));
     }
 
-    public EnumSet<FeatureDiscovery.Feature> getServerFeature() {
+    private EnumSet<FeatureDiscovery.Feature> getServerFeature() {
         EnumSet<FeatureDiscovery.Feature> e = EnumSet.noneOf(FeatureDiscovery.Feature.class);
         e.addAll(mFeatures.keySet());
         return e;
@@ -318,7 +318,7 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(publicKeyRequest);
     }
 
-    public void sendBlocklistRequest() {
+    private void sendBlocklistRequest() {
         this.sendPacket(BlockingCommand.blocklist());
     }
 

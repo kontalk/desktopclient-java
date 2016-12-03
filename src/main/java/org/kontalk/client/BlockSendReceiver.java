@@ -75,4 +75,4 @@ final class BlockSendReceiver implements StanzaListener {
 
         mControl.onContactBlocked(mJID, mBlocking);
     }
-};
+}

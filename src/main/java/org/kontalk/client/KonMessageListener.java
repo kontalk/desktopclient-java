@@ -49,7 +49,7 @@ import org.kontalk.util.ClientUtils.MessageIDs;
  * Listen and handle all incoming XMPP message packets.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final public class KonMessageListener implements StanzaListener {
+final class KonMessageListener implements StanzaListener {
     private static final Logger LOGGER = Logger.getLogger(KonMessageListener.class.getName());
 
     private final Client mClient;

@@ -31,7 +31,7 @@ import org.kontalk.system.Control;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class PublicKeyListener implements StanzaListener {
+class PublicKeyListener implements StanzaListener {
     private static final Logger LOGGER = Logger.getLogger(PublicKeyListener.class.getName());
 
     private final Control mControl;
