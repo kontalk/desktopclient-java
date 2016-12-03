@@ -215,9 +215,9 @@ final class Utils {
         List<String> nameList = new ArrayList<>(jids.size());
         for (JID jid : jids) {
             Contact contact = contactList.get(jid).orElse(null);
-            return contact != null ?
-                    displayName(contact, jid, Integer.MAX_VALUE) :
-                    jid(jid, maxJIDLength);
+            nameList.add(contact != null ?
+                                 displayName(contact, jid, Integer.MAX_VALUE) :
+                                 jid(jid, maxJIDLength));
         }
         return StringUtils.join(nameList, ", ");
     }
