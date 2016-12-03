@@ -226,7 +226,7 @@ final class ContactListView extends ListView<Contact> {
         }
 
         @Override
-        protected void render(Contact value, int listWidth, boolean isSelected) {
+        protected void render(Contact value, int listWidth, boolean isSelected, boolean isLast) {
             // avatar
             mAvatar.setAvatarImage(value);
 

@@ -366,10 +366,14 @@ abstract class ListView<V extends Observable & Searchable>
     private void updateOnEDT(Observable o, Object arg) {
         if (o == null || mVClass.isAssignableFrom(o.getClass())) {
             // render everything again (and update sorting)
-            mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
+            updateRowRendering(0, this.getRowCount() -1);
             return;
         }
         this.updateOnEDT(arg);
+    }
+
+    protected void updateRowRendering(int from, int to) {
+        mModel.fireTableRowsUpdated(from, to);
     }
 
     abstract protected void updateOnEDT(Object arg);
@@ -420,7 +424,7 @@ abstract class ListView<V extends Observable & Searchable>
     /** View item used as flyweight object. */
     abstract static class FlyweightItem<V> extends WebPanel {
         /** Update before painting. */
-        protected abstract void render(V value, int listWidth, boolean isSelected);
+        protected abstract void render(V value, int listWidth, boolean isSelected, boolean isLast);
     }
 
     private class TableRenderer extends WebTableCellRenderer {
@@ -465,7 +469,8 @@ abstract class ListView<V extends Observable & Searchable>
             return item;
         }
 
-        item.render(valueItem, table.getWidth(), isSelected);
+        boolean isLast = row == table.getRowCount() - 1;
+        item.render(valueItem, table.getWidth(), isSelected, isLast);
 
         int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
         // view item needs a little more then it preferres

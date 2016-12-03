@@ -65,6 +65,7 @@ import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.managers.tooltip.TooltipManager;
 import org.apache.commons.lang.time.DateUtils;
+import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.chat.Chat;
@@ -158,6 +159,13 @@ final class MessageList extends ListView<KonMessage> {
         if ((arg == null || arg == Chat.ViewChange.READ) &&
                 !mChat.isRead() && mView.chatIsVisible(mChat)) {
             mChat.setRead();
+        }
+
+        if (arg == Chat.ViewChange.MEMBER_STATE) {
+            // show/hide "is writing..." for last message
+            // or hide "is writing..." for -now- second to last message after new message was added
+            this.updateRowRendering(this.getRowCount() - 2, this.getRowCount() - 1);
+            this.scrollToRow(this.getRowCount() - 1);
         }
     }
 
@@ -256,7 +264,7 @@ final class MessageList extends ListView<KonMessage> {
     private static class MessageListFlyWeightItem extends FlyweightItem<KonMessage> {
 
         private final View mView;
-        private final WebPanel mMarginDatePanel;
+        private final WebPanel mDateMarginPanel;
         private final WebPanel mDatePanel;
         private final WebLabel mDateLabel;
         private final WebPanel mFlowPanel;
@@ -269,6 +277,8 @@ final class MessageList extends ListView<KonMessage> {
         private final WebLabel mStatusIconLabel;
         private final WebLabel mEncryptIconLabel;
         private final WebLabel dateLabel;
+        private final WebPanel mWritingPanel;
+        private final WebLabel mWritingLabel;
 
         private final AttachmentPanel mAttPanel;
 
@@ -285,9 +295,9 @@ final class MessageList extends ListView<KonMessage> {
             mDateLabel = new WebLabel();
             mDateLabel.setForeground(Color.WHITE);
             mDatePanel.add(mDateLabel, BorderLayout.CENTER);
-            mMarginDatePanel = new GroupPanel(mDatePanel);
+            mDateMarginPanel = new GroupPanel(mDatePanel);
             this.add(new GroupPanel(GroupingType.fillFirstAndLast,
-                                           Box.createGlue(), mMarginDatePanel, Box.createGlue())
+                                           Box.createGlue(), mDateMarginPanel, Box.createGlue())
                              .setMargin(0),
                     BorderLayout.NORTH);
 
@@ -359,15 +369,27 @@ final class MessageList extends ListView<KonMessage> {
 
             mFlowPanel.add(mPanel);
             this.add(mFlowPanel, BorderLayout.CENTER);
+
+            mWritingPanel = new WebPanel();
+            mWritingPanel.setRound(View.ROUND);
+            mWritingPanel.setWebColoredBackground(false);
+            mWritingPanel.setBackground(Color.WHITE);
+            mWritingPanel.setBorderColor(Color.WHITE);
+            mWritingLabel = new WebLabel();
+            mWritingLabel.setForeground(View.DARK_RED);
+            mWritingPanel.add(mWritingLabel, BorderLayout.CENTER);
+            this.add(new GroupPanel(GroupingType.fillLast, mWritingPanel, Box.createGlue())
+                             .setMargin(0),
+                    BorderLayout.SOUTH);
         }
 
         @Override
-        protected void render(KonMessage value, int listWidth, boolean isSelected) {
+        protected void render(KonMessage value, int listWidth, boolean isSelected, boolean isLast) {
             KonMessage last = value.getPredecessor().orElse(null);
             boolean showDateSeparator = last == null ||
                     !DateUtils.isSameDay(last.getDate(), value.getDate());
-            mDatePanel.setVisible(showDateSeparator);
-            mMarginDatePanel.setMargin(showDateSeparator ? View.MARGIN_SMALL : 0);
+            mDatePanel.setVisible(showDateSeparator); // otherwise visible on mouse over (?)
+            mDateMarginPanel.setMargin(showDateSeparator ? View.MARGIN_SMALL : 0);
             boolean consecutive = last == null || last.getSender().equals(value.getSender());
             mDatePanel.setMargin(showDateSeparator || !consecutive ? View.MARGIN_SMALL : 0);
             // decoration consumes space, even if nothing is visible in panel
@@ -620,6 +642,14 @@ final class MessageList extends ListView<KonMessage> {
             // textArea does not need this but textPane does, and editorPane
             // is again totally different; I love Swing
             mTextPane.setPreferredSize(prefSize);
+
+            boolean showWriting = isLast
+                    && value.getChat().getAllMembers().stream()
+                    .anyMatch(m -> m.getState() == ChatState.composing);
+            mWritingPanel.setMargin(showWriting ? View.MARGIN_SMALL : 0);
+            // decoration consumes space, even if nothing is visible in panel
+            mWritingPanel.setUndecorated(!showWriting);
+            mWritingLabel.setText(showWriting ? Tr.tr("is writing...") : "");
         }
     }
 

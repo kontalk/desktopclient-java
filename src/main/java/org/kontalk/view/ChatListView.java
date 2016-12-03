@@ -199,7 +199,7 @@ final class ChatListView extends ListView<Chat> {
         }
 
         @Override
-        protected void render(Chat value, int listWidth, boolean isSelected) {
+        protected void render(Chat value, int listWidth, boolean isSelected, boolean isLast) {
             // background
             this.setBackground(isSelected ? View.BLUE :
                     !value.isRead() ? View.LIGHT_BLUE :
