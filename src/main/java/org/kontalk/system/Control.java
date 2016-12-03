@@ -205,8 +205,7 @@ public final class Control {
             mClient.sendUserPresence(strings.length > 0 ? strings[0] : "");
             // send all pending messages
             for (Chat chat: mModel.chats())
-                chat.getMessages().getPending().stream()
-                        .forEach(m -> this.sendMessage(m));
+                chat.getMessages().getPending().forEach(m -> this.sendMessage(m));
 
             // send public key requests for Kontalk contacts with missing key
             for (Contact contact : mModel.contacts().getAll(false, false))
@@ -258,7 +257,7 @@ public final class Control {
         this.onSecurityErrors(message);
     }
 
-    public void onSecurityErrors(KonMessage message) {
+    private void onSecurityErrors(KonMessage message) {
         mViewControl.changed(new ViewEvent.SecurityError(message));
     }
 

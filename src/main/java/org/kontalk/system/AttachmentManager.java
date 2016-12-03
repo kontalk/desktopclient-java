@@ -64,10 +64,10 @@ public class AttachmentManager implements Runnable {
 
     private static final String PREVIEW_DIRNAME = "preview";
     private static final String RESIZED_IMG_MIME = "image/jpeg";
+    private static final String THUMBNAIL_MIME = "image/jpeg";
 
     public static final Dimension THUMBNAIL_DIM = new Dimension(300, 200);
     public static final String ENCRYPT_PREFIX = "encrypted_";
-    public static final String THUMBNAIL_MIME = "image/jpeg";
     public static final int MAX_ATT_SIZE = 20 * 1024 * 1024;
 
     public static class Slot {

@@ -18,17 +18,18 @@
 
 package org.kontalk.system;
 
-import org.kontalk.persistence.Config;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.WeakHashMap;
 import java.util.concurrent.TimeUnit;
+
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
-import org.kontalk.model.chat.Chat;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.SingleChat;
+import org.kontalk.persistence.Config;
 
 /**
  * Manager handling own chat status for all chats.
@@ -58,8 +59,7 @@ final class ChatStateManager {
     }
 
     void imGone() {
-        mChatStateCache.values().stream()
-                .forEach(chatState -> chatState.handleState(ChatState.gone));
+        mChatStateCache.values().forEach(chatState -> chatState.handleState(ChatState.gone));
     }
 
     private class MyChatState {

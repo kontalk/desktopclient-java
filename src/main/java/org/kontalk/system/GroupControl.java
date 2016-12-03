@@ -54,7 +54,7 @@ final class GroupControl {
 
     abstract class ChatControl<C extends GroupChat> {
 
-        protected final C mChat;
+        final C mChat;
 
         private ChatControl(C chat) {
             mChat = chat;
