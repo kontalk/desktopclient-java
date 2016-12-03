@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.security.cert.CertificateException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -78,13 +79,13 @@ import org.ocpsoft.prettytime.PrettyTime;
 final class Utils {
     private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
 
-    static final SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
-    static final SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
-    static final SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
+    static final DateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("HH:mm");
+    static final DateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM HH:mm");
+    static final DateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
     static final PrettyTime PRETTY_TIME = new PrettyTime();
 
-    private static final SimpleDateFormat DAY_DATE_FORMAT = new SimpleDateFormat("EEE, d. MMMM");
-    private static final SimpleDateFormat DAY_YEAR_DATE_FORMAT = new SimpleDateFormat("EEE, d. MMMM yyyy");
+    private static final DateFormat DAY_DATE_FORMAT = new SimpleDateFormat("EEE, d MMMM");
+    private static final DateFormat DAY_YEAR_DATE_FORMAT = new SimpleDateFormat("EEE, d MMMM yyyy");
 
     private Utils() {}
 
@@ -436,7 +437,7 @@ final class Utils {
         Calendar cal = Calendar.getInstance();
         cal.setTime(date);
         boolean sameYear = cal.get(Calendar.YEAR) == Calendar.getInstance().get(Calendar.YEAR);
-        SimpleDateFormat format = sameYear ? DAY_DATE_FORMAT : DAY_YEAR_DATE_FORMAT;
+        DateFormat format = sameYear ? DAY_DATE_FORMAT : DAY_YEAR_DATE_FORMAT;
         return format.format(date);
     }
 
