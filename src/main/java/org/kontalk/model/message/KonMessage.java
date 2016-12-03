@@ -69,7 +69,7 @@ public abstract class KonMessage extends Observable implements Searchable {
         RECEIVED,
         /** Outgoing message, an error occurred somewhere in the transmission. */
         ERROR
-    };
+    }
 
     public enum ViewChange {
         STATUS, CONTENT, ATTACHMENT
@@ -113,26 +113,25 @@ public abstract class KonMessage extends Observable implements Searchable {
             "FOREIGN KEY (" + COL_CHAT_ID + ") REFERENCES " + Chat.TABLE + " (_id) " +
             ")";
 
-    protected final int mID;
+    final int mID;
     private final Chat mChat;
     private final String mXMPPID;
     private final Date mDate;
-    protected final MessageContent mContent;
+    final MessageContent mContent;
 
     // last timestamp of server transmission packet
     // incoming: (delayed) sent; outgoing: sent or error
-    protected Date mServerDate;
-    protected Status mStatus;
-    protected CoderStatus mCoderStatus;
-    protected ServerError mServerError;
+    Date mServerDate;
+    Status mStatus;
+    final CoderStatus mCoderStatus;
+    ServerError mServerError;
 
-    protected KonMessage(
-            Chat chat,
-            String xmppID,
-            MessageContent content,
-            Optional<Date> serverDate,
-            Status status,
-            CoderStatus coderStatus) {
+    KonMessage(Chat chat,
+               String xmppID,
+               MessageContent content,
+               Optional<Date> serverDate,
+               Status status,
+               CoderStatus coderStatus) {
         mChat = chat;
         mXMPPID = xmppID;
         mDate = new Date();
@@ -165,7 +164,7 @@ public abstract class KonMessage extends Observable implements Searchable {
     }
 
     // used when loading from database
-    protected KonMessage(Builder builder) {
+    KonMessage(Builder builder) {
         mID = builder.mID;
         mChat = builder.mChat;
         mXMPPID = builder.mXMPPID;
@@ -225,7 +224,7 @@ public abstract class KonMessage extends Observable implements Searchable {
         this.save();
     }
 
-    protected MessageContent.Attachment getAttachment() {
+    MessageContent.Attachment getAttachment() {
         MessageContent.Attachment att = this.getContent().getAttachment().orElse(null);
         if (att == null) {
             LOGGER.warning("no attachment!?");
@@ -272,7 +271,7 @@ public abstract class KonMessage extends Observable implements Searchable {
                        Optional.of(((InMessage) this).getContact()) : Optional.empty();
     }
 
-    protected void save() {
+    void save() {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_STATUS, mStatus);
         set.put(COL_CONTENT, mContent.toJSON());
@@ -296,17 +295,17 @@ public abstract class KonMessage extends Observable implements Searchable {
         return Model.database().execDelete(TABLE, mID);
     }
 
-    protected void changed(ViewChange change) {
+    void changed(ViewChange change) {
         this.setChanged();
         this.notifyObservers(change);
     }
 
-    protected boolean abstractEquals(KonMessage oMessage) {
+    boolean abstractEquals(KonMessage oMessage) {
         return mChat.equals(oMessage.mChat)
                 && !mXMPPID.isEmpty() && mXMPPID.equals(oMessage.mXMPPID);
     }
 
-    protected int abstractHashCode() {
+    int abstractHashCode() {
         int hash = 7;
         hash = 17 * hash + Objects.hashCode(this.mChat);
         hash = 17 * hash + Objects.hashCode(this.mXMPPID);
@@ -414,14 +413,14 @@ public abstract class KonMessage extends Observable implements Searchable {
         }
     }
 
-    protected static class Builder {
+    static class Builder {
         private final int mID;
         private final Chat mChat;
         private final Status mStatus;
         private final Date mDate;
         private final MessageContent mContent;
 
-        protected Set<Transmission> mTransmissions = null;
+        Set<Transmission> mTransmissions = null;
 
         private String mXMPPID = null;
         private Date mServerDate = null;

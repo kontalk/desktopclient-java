@@ -18,6 +18,7 @@
 
 package org.kontalk.model;
 
+import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -27,7 +28,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.imageio.ImageIO;
+
 import org.apache.commons.codec.digest.DigestUtils;
 import org.kontalk.util.MediaUtils;
 
@@ -41,7 +42,7 @@ public abstract class Avatar {
     private static final Logger LOGGER = Logger.getLogger(Avatar.class.getName());
 
     private static final String DIR = "avatars";
-    protected static final String FORMAT = "png";
+    private static final String FORMAT = "png";
 
     static void createStorageDir(Path appDir) {
         boolean created = appDir.resolve(DIR).toFile().mkdir();
@@ -51,9 +52,9 @@ public abstract class Avatar {
 
     /** SHA1 hash of image data. */
     private final String mID;
-    protected final File mFile;
+    final File mFile;
 
-    protected BufferedImage mImage = null;
+    BufferedImage mImage = null;
 
     private Avatar(String id, File file, BufferedImage image) {
         mID = id;
@@ -91,11 +92,11 @@ public abstract class Avatar {
             LOGGER.warning("could not delete avatar file: "+mID);
     }
 
-    protected boolean abstractEquals(Avatar oAvatar) {
+    boolean abstractEquals(Avatar oAvatar) {
         return mID.equals(oAvatar.mID);
     }
 
-    protected int abstractHashCode() {
+    int abstractHashCode() {
         int hash = 7;
         hash = 59 * hash + Objects.hashCode(this.mID);
         return hash;

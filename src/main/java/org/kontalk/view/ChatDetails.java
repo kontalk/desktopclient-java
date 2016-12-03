@@ -231,11 +231,11 @@ final class ChatDetails extends ComponentUtils.PopupPanel {
 
         Chat.ViewSettings newSettings;
         if (mColorOpt.isSelected()) {
-            newSettings = new Chat.ViewSettings(mColor.getBottomBgColor());
+            newSettings = Chat.ViewSettings.fromColor(mColor.getBottomBgColor());
         } else if (mImgOpt.isSelected() && !mImgChooser.getSelectedFiles().isEmpty()) {
-            newSettings = new Chat.ViewSettings(mImgChooser.getSelectedFiles().get(0).getAbsolutePath());
+            newSettings = Chat.ViewSettings.fromImagePath(mImgChooser.getSelectedFiles().get(0).getAbsolutePath());
         } else {
-            newSettings = new Chat.ViewSettings();
+            newSettings = Chat.ViewSettings.createDefault();
         }
 
         if (!newSettings.equals(mChat.getViewSettings())) {

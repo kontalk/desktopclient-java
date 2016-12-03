@@ -33,10 +33,10 @@ public class ProtoMember {
      * Called 'Affiliation' in MUC
      * Do not modify, only add! Ordinal used in database
      */
-    public enum Role {DEFAULT, OWNER, ADMIN};
+    public enum Role {DEFAULT, OWNER, ADMIN}
 
-    protected final Contact mContact;
-    protected final Role mRole;
+    final Contact mContact;
+    final Role mRole;
 
     public ProtoMember(Contact contact){
         this(contact, Role.DEFAULT);

@@ -633,15 +633,19 @@ public class MessageContent {
         }
 
         public Builder attachment(Attachment attachment) {
-            mAttachment = attachment; return this; };
+            mAttachment = attachment; return this; }
+
         public Builder preview(Preview preview) {
-            mPreview = preview; return this; };
+            mPreview = preview; return this; }
+
         public Builder groupData(KonGroupData gData) {
-            mGroupData = gData; return this; };
+            mGroupData = gData; return this; }
+
         public Builder groupCommand(GroupCommand group) {
-            mGroup = group; return this; };
+            mGroup = group; return this; }
+
         private Builder decryptedContent(MessageContent decrypted) {
-            mDecrypted = decrypted; return this; };
+            mDecrypted = decrypted; return this; }
 
         public MessageContent build() {
             return new MessageContent(this);

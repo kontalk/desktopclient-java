@@ -55,16 +55,16 @@ public final class OutMessage extends KonMessage {
                         CoderStatus.createInsecure());
 
         Set<Transmission> ts = new HashSet<>();
-        contacts.stream().forEach(contact -> {
+        contacts.forEach(contact -> {
             boolean succ = ts.add(new Transmission(contact, contact.getJID(), mID));
             if (!succ)
-                LOGGER.warning("duplicate contact: "+contact);
+                LOGGER.warning("duplicate contact: " + contact);
         });
         mTransmissions = Collections.unmodifiableSet(ts);
     }
 
     // used when loading from database
-    protected OutMessage(KonMessage.Builder builder) {
+    OutMessage(KonMessage.Builder builder) {
         super(builder);
 
         mTransmissions = Collections.unmodifiableSet(builder.mTransmissions);

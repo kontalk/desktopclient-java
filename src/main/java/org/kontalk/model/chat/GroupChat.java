@@ -70,7 +70,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         mGroupData = gData;
         mSubject = subject;
 
-        members.stream().forEach(m -> this.addMemberSilent(m));
+        members.forEach(m -> this.addMemberSilent(m));
     }
 
     @Override
@@ -274,7 +274,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 new MUCChat(id, members, (MUCData) gData, subject, read, jsonViewSettings);
     }
 
-    static GroupChat create(Database db, List<ProtoMember> members, GroupMetaData gData, String subject) {
+    static GroupChat create(List<ProtoMember> members, GroupMetaData gData, String subject) {
         return (gData instanceof KonGroupData) ?
                 new KonGroupChat(members, (KonGroupData) gData, subject) :
                 new MUCChat(members, (MUCData) gData, subject);

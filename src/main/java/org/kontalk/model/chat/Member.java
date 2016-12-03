@@ -107,7 +107,7 @@ public final class Member extends ProtoMember {
         return db.execDelete(TABLE, mID);
     }
 
-    protected void setState(ChatState state) {
+    void setState(ChatState state) {
         mState = state;
         if (mState == ChatState.active || mState == ChatState.composing)
             mLastActive = new Date();

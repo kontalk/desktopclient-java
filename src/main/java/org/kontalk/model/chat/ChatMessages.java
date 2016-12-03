@@ -117,7 +117,7 @@ public final class ChatMessages {
     /** Get the last created message. */
     public Optional<KonMessage> getLast() {
         return mSortedSet.isEmpty() ?
-                Optional.<KonMessage>empty() :
+                Optional.empty() :
                 Optional.of(mSortedSet.last());
     }
 
