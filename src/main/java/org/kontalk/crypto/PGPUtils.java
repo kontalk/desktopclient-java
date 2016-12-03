@@ -200,9 +200,8 @@ public final class PGPUtils {
         while (sigs.hasNext()) {
             PGPSignature sig = sigs.next();
             PGPSignatureSubpacketVector subpackets = sig.getHashedSubPackets();
-            if (subpackets == null)
-                return 0;
-            return subpackets.getKeyFlags();
+            if (subpackets != null)
+                return subpackets.getKeyFlags();
         }
         return 0;
     }
