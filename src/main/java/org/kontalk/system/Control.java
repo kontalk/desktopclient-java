@@ -137,8 +137,8 @@ public final class Control {
         if (ui) {
             View view = View.create(mViewControl, mModel).orElse(null);
             if (view == null) {
-                this.shutDown(false);
-                return;
+                this.shutDown(true);
+                return; // never reached
             }
             view.init();
         }
