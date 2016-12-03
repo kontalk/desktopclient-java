@@ -91,7 +91,7 @@ final class Utils {
 
     /* fields */
 
-    static WebFileChooserField createImageChooser(boolean enabled, String path) {
+    static WebFileChooserField createImageChooser(String path) {
         WebFileChooserField chooser = new WebFileChooserField();
         if (!path.isEmpty())
             chooser.setSelectedFile(new File(path));

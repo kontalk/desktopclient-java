@@ -60,7 +60,7 @@ final class AvatarLoader {
         return load(new Item(size));
     }
 
-    private AvatarLoader() {};
+    private AvatarLoader() {}
 
     private static AvatarImg load(Item item) {
         if (!CACHE.containsKey(item)) {

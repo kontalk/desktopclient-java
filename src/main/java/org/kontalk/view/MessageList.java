@@ -88,7 +88,7 @@ import org.kontalk.view.ComponentUtils.AttachmentPanel;
 final class MessageList extends ListView<KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
-    private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
+    private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");
     private static final Icon SENT_ICON = Utils.getIcon("ic_msg_sent.png");
     private static final Icon DELIVERED_ICON = Utils.getIcon("ic_msg_delivered.png");
     private static final Icon ERROR_ICON = Utils.getIcon("ic_msg_error.png");
@@ -103,7 +103,7 @@ final class MessageList extends ListView<KonMessage> {
     private final ChatView mChatView;
     private final Chat mChat;
 
-    private Optional<Background> mBackground = Optional.empty();
+    private Background mBackground = null;
 
     MessageList(View view, ChatView chatView, Chat chat) {
         // render and editor item are equal (but not the same!)
@@ -137,7 +137,7 @@ final class MessageList extends ListView<KonMessage> {
     }
 
     Optional<Background> getBG() {
-        return mBackground;
+        return Optional.ofNullable(mBackground);
     }
 
     @Override
@@ -179,7 +179,7 @@ final class MessageList extends ListView<KonMessage> {
 
     private void setBackground(Chat.ViewSettings s) {
         // simply overwrite
-        mBackground = mChatView.createBG(s);
+        mBackground = mChatView.createBGOrNull(s);
     }
 
     @Override
@@ -662,7 +662,7 @@ final class MessageList extends ListView<KonMessage> {
      * Source: https://stackoverflow.com/a/13375811
      */
     private static class WrapEditorKit extends StyledEditorKit {
-        ViewFactory defaultFactory = new WrapColumnFactory();
+        final ViewFactory defaultFactory = new WrapColumnFactory();
         @Override
         public ViewFactory getViewFactory() {
             return defaultFactory;

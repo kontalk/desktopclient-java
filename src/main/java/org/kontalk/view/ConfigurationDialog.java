@@ -435,7 +435,7 @@ final class ConfigurationDialog extends WebDialog {
                 }
             });
 
-            mBGChooser = Utils.createImageChooser(mBGBox.isSelected(), bgPath);
+            mBGChooser = Utils.createImageChooser(bgPath);
 
             groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
 

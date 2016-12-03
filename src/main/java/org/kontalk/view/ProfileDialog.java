@@ -39,7 +39,6 @@ import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.model.Avatar;
-import org.kontalk.model.Model;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
@@ -56,7 +55,7 @@ final class ProfileDialog extends WebDialog {
     private final WebTextField mStatusField;
     private final WebList mStatusList;
 
-    ProfileDialog(View view, Model model) {
+    ProfileDialog(View view) {
         mView = view;
 
         this.setTitle(Tr.tr("User Profile"));

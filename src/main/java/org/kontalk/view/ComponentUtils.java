@@ -259,7 +259,7 @@ final class ComponentUtils {
      *  Popup is closed if panel visibility is set to false.
      */
     static class PopupPanel extends WebPanel {
-        protected void onShow() {};
+        void onShow() {}
     }
 
     static class AddContactPanel extends PopupPanel {
@@ -795,15 +795,15 @@ final class ComponentUtils {
             this.getTrailingComponent().setVisible(true);
         }
 
-        protected String labelText() {
+        String labelText() {
             return this.getText();
         }
 
-        protected String editText() {
+        String editText() {
             return this.getText();
         }
 
-        protected void onFocusLost() {};
+        void onFocusLost() {}
     }
 
     static class AttachmentPanel extends GroupPanel {
@@ -960,7 +960,7 @@ final class ComponentUtils {
     // -> component size depends on image size
     static class AvatarImage extends WebDecoratedImage {
 
-        protected final int mSize;
+        final int mSize;
 
         AvatarImage(int size) {
             mSize = size;
@@ -976,7 +976,7 @@ final class ComponentUtils {
             this.setAvatarImg(AvatarLoader.load(c, mSize));
         }
 
-        protected void setAvatarImg(AvatarImg avatarImg) {
+        void setAvatarImg(AvatarImg avatarImg) {
             this.setDrawGlassLayer(avatarImg.isFallback);
             this.setImage(avatarImg.image);
         }
@@ -1062,13 +1062,13 @@ final class ComponentUtils {
 
         abstract boolean canRemove();
 
-        protected String tooltipText() {
+        String tooltipText() {
             return this.canRemove() ?
                     Tr.tr("Right click to unset") :
                     Tr.tr("Click to choose image");
         }
 
-        protected void update() {
+        void update() {
             AvatarImg img = this.defaultImage();
             mImage = img.image;
             this.setDrawGlassLayer(img.isFallback);

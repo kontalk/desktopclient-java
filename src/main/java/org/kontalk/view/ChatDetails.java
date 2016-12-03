@@ -161,7 +161,7 @@ final class ChatDetails extends ComponentUtils.PopupPanel {
                 mImgChooser.getChooseButton().setEnabled(e.getStateChange() == ItemEvent.SELECTED);
             }
         });
-        mImgChooser = Utils.createImageChooser(!imgPath.isEmpty(), imgPath);
+        mImgChooser = Utils.createImageChooser(imgPath);
         mImgChooser.setPreferredWidth(1);
         groupPanel.add(new GroupPanel(GroupingType.fillLast,
                 mImgOpt,
