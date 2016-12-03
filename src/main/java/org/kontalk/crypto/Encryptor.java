@@ -176,7 +176,7 @@ final class Encryptor {
 
         // add public key recipients
         PGPEncryptedDataGenerator encGen = new PGPEncryptedDataGenerator(encryptor);
-        receiverKeys.stream().forEach(key ->
+        receiverKeys.forEach(key ->
             encGen.addMethod(new BcPublicKeyKeyEncryptionMethodGenerator(key.encryptKey)));
 
         OutputStream encryptedOut = encGen.open(encryptedOutput, new byte[BUFFER_SIZE]);

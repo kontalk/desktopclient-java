@@ -73,7 +73,7 @@ final class Decryptor {
     private static final Logger LOGGER = Logger.getLogger(Decryptor.class.getName());
 
     private static class DecryptionResult {
-        EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
+        final EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
         Coder.Signing signing = Coder.Signing.UNKNOWN;
     }
 
@@ -381,7 +381,7 @@ final class Decryptor {
 
         // check that the recipient matches the full UID of the personal key
 
-        if (!Arrays.asList(cpimMessage.getTo()).stream()
+        if (!Arrays.stream(cpimMessage.getTo())
                 .anyMatch(s -> s.contains(myUID))) {
             LOGGER.warning("receiver list does not include own UID");
             errors.add(Coder.Error.INVALID_RECIPIENT);

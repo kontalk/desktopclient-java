@@ -168,8 +168,8 @@ public class X509Bridge {
      * @param endDate
      *            date until which the certificate will be valid
      *            (defaults to start date and time if null)
-     * @param subjectAltName
-     *            URI to be placed in subjectAltName
+     * @param subjectAltNames
+     *            URIs to be placed in subjectAltName
      * @return self-signed certificate
      */
     private static X509Certificate createCertificate(PublicKey pubKey,
