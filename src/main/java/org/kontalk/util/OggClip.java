@@ -1,14 +1,15 @@
 package org.kontalk.util;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioSystem;
 import javax.sound.sampled.DataLine;
 import javax.sound.sampled.FloatControl;
 import javax.sound.sampled.SourceDataLine;
+import java.io.BufferedInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import com.jcraft.jogg.Packet;
 import com.jcraft.jogg.Page;
@@ -18,8 +19,6 @@ import com.jcraft.jorbis.Block;
 import com.jcraft.jorbis.Comment;
 import com.jcraft.jorbis.DspState;
 import com.jcraft.jorbis.Info;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Simple Clip like player for OGG's. Code is mostly taken from the example
@@ -34,7 +33,7 @@ class OggClip {
 
     private final int BUFSIZE = 4096 * 2;
     private int convsize = BUFSIZE * 2;
-    private byte[] convbuffer = new byte[convsize];
+    private final byte[] convbuffer = new byte[convsize];
     private SyncState oy;
     private StreamState os;
     private Page og;
@@ -116,7 +115,7 @@ class OggClip {
      *
      * @param gain The gain value
      */
-    public void setGain(float gain) {
+    private void setGain(float gain) {
         if (gain != -1) {
             if ((gain < 0) || (gain > 1)) {
                 throw new IllegalArgumentException("Volume must be between 0.0 and 1.0");
@@ -153,7 +152,7 @@ class OggClip {
      *
      * @param balance The balance value
      */
-    public void setBalance(float balance) {
+    private void setBalance(float balance) {
         this.balance = balance;
 
         if (outputLine == null) {
@@ -265,7 +264,7 @@ class OggClip {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-            };
+            }
         };
         player.setDaemon(true);
         player.start();
@@ -299,7 +298,7 @@ class OggClip {
                     } catch (IOException e) {
                     }
                 }
-            };
+            }
         };
         player.setDaemon(true);
         player.start();

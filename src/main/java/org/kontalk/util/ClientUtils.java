@@ -212,8 +212,7 @@ public final class ClientUtils {
                 String subject = groupCommand.getSubject();
                 if (op == OP.CREATE) {
                     command = Type.CREATE;
-                    groupCommand.getAdded().stream().forEach(added ->
-                        members.add(new Member(added.string())));
+                    groupCommand.getAdded().forEach(added -> members.add(new Member(added.string())));
                 } else {
                     command = Type.SET;
                     Set<JID> incl = new HashSet<>();
@@ -244,11 +243,8 @@ public final class ClientUtils {
     }
 
     /* External to internal */
-    public static Optional<GroupCommand> groupExtensionToGroupCommand(
-            Type com,
-            List<Member> members,
-            String subject) {
-
+    private static Optional<GroupCommand> groupExtensionToGroupCommand(
+            Type com, List<Member> members, String subject) {
         switch (com) {
             case NONE:
                 return Optional.empty();
