@@ -144,7 +144,7 @@ final class ChatListView extends ListView<Chat> {
     @Override
     protected String getTooltipText(Chat value) {
         return "<html><body>" +
-                Tr.tr("Last message:")+" " + lastActivity(value, false) + "<br>"
+                lastActivity(value, true, false) + "<br>"
                 + "</body></html>";
     }
 
@@ -214,7 +214,7 @@ final class ChatListView extends ListView<Chat> {
                 mTitleLabel.setForeground(View.DARK_GREEN);
 
             // status
-            mStatusLabel.setText(lastActivity(value, true));
+            mStatusLabel.setText(lastActivity(value, isSelected, true));
 
             // state
             String stateText = "";
@@ -244,11 +244,11 @@ final class ChatListView extends ListView<Chat> {
         }
     }
 
-    private static String lastActivity(Chat chat, boolean pretty) {
+    private static String lastActivity(Chat chat, boolean withLabel, boolean pretty) {
         KonMessage m = chat.getMessages().getLast().orElse(null);
-        String lastActivity = m == null ? Tr.tr("no messages yet") :
-                pretty ? Utils.PRETTY_TIME.format(m.getDate()) :
-                Utils.MID_DATE_FORMAT.format(m.getDate());
-        return lastActivity;
+        return m == null ? Tr.tr("No messages yet") :
+                (withLabel ? Tr.tr("Last message:") + " " : "") +
+                (pretty ? Utils.PRETTY_TIME.format(m.getDate()) :
+                         Utils.MID_DATE_FORMAT.format(m.getDate()));
     }
 }

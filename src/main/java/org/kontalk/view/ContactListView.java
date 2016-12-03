@@ -177,7 +177,7 @@ final class ContactListView extends ListView<Contact> {
             html += Tr.tr("Status") + ": " + status + "<br>";
         }
         if (value.getOnline() != Contact.Online.YES) {
-            html += Utils.lastSeen(value, false, true) + "<br>";
+            html += Utils.lastSeen(value, true, false) + "<br>";
         }
         if (value.isBlocked()) {
             html += Tr.tr("Contact is blocked!") + "<br>";
@@ -237,7 +237,7 @@ final class ContactListView extends ListView<Contact> {
             }
 
             // status
-            mStatusLabel.setText(Utils.mainStatus(value, false));
+            mStatusLabel.setText(Utils.mainStatus(value, isSelected));
 
             // online status / background
             Contact.Subscription subStatus = value.getSubScription();
@@ -259,7 +259,7 @@ final class ContactListView extends ListView<Contact> {
                 html += Tr.tr("Status") + ": " + status + "<br>";
             }
             if (value.getOnline() != Contact.Online.YES) {
-                html += Utils.lastSeen(value, false, true) + "<br>";
+                html += Utils.lastSeen(value, true, false) + "<br>";
             }
             if (value.isBlocked()) {
                 html += Tr.tr("Contact is blocked!") + "<br>";

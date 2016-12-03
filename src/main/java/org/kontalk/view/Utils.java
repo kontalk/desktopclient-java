@@ -277,7 +277,7 @@ final class Utils {
         }
     }
 
-    static String mainStatus(Contact c, boolean pre) {
+    static String mainStatus(Contact c, boolean withLabel) {
         Contact.Subscription subStatus = c.getSubScription();
         return c.isMe() ? Tr.tr("Myself") :
                     c.isBlocked() ? Tr.tr("Blocked") :
@@ -285,14 +285,15 @@ final class Utils {
                     c.getOnline() == Contact.Online.ERROR ? Tr.tr("Not reachable") :
                     subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
                     subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    lastSeen(c, true, pre);
+                    lastSeen(c, withLabel, true);
     }
 
-    static String lastSeen(Contact contact, boolean pretty, boolean pre) {
-        String lastSeen = !contact.getLastSeen().isPresent() ? Tr.tr("never") :
-                pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
-                Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get());
-        return pre ? Tr.tr("Last seen")+": " + lastSeen : lastSeen;
+    static String lastSeen(Contact contact, boolean withLabel, boolean pretty) {
+        return !contact.getLastSeen().isPresent() ?
+                (withLabel ? Tr.tr("Not seen yet") : "") :
+                (withLabel ? Tr.tr("Last seen:") + " " : "")
+                        + (pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
+                                   Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get()));
     }
 
     static String getErrorText(KonException ex) {
