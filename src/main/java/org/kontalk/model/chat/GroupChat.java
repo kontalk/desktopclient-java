@@ -70,7 +70,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         mGroupData = gData;
         mSubject = subject;
 
-        members.forEach(m -> this.addMemberSilent(m));
+        members.forEach(this::addMemberSilent);
     }
 
     @Override
@@ -82,14 +82,14 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     @Override
     public List<Contact> getAllContacts() {
         return mMemberSet.stream()
-                .map(m -> m.getContact())
+                .map(ProtoMember::getContact)
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<Contact> getValidContacts() {
         return mMemberSet.stream()
-                .map(m -> m.getContact())
+                .map(ProtoMember::getContact)
                 .filter(c -> (!c.isDeleted() && !c.isMe()))
                 .collect(Collectors.toList());
     }
@@ -105,7 +105,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
             }
         })
         .map(m -> new Member(m, mID))
-        .forEach(m -> this.addMemberSilent(m));
+        .forEach(this::addMemberSilent);
     }
 
     private void addMemberSilent(Member member) {
@@ -151,7 +151,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
         Database db = Model.database();
         for (ProtoMember pm : removed) {
             Member member = mMemberSet.stream()
-                    .filter(m -> pm.equals(m))
+                    .filter(pm::equals)
                     .findFirst().orElse(null);
             if (member == null) {
                 LOGGER.warning("(proto)member not in chat: "+pm);
@@ -188,14 +188,14 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     @Override
     public boolean isSendEncrypted() {
         return this.getValidContacts().stream()
-                .anyMatch(c -> c.getEncrypted());
+                .anyMatch(Contact::getEncrypted);
     }
 
     @Override
     public boolean canSendEncrypted() {
         List<Contact> contacts = this.getValidContacts();
         return !contacts.isEmpty() &&
-                contacts.stream().allMatch(c -> c.hasKey());
+                contacts.stream().allMatch(Contact::hasKey);
     }
 
     @Override

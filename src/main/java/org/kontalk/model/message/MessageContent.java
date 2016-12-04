@@ -464,10 +464,6 @@ public class MessageContent {
             return mMimeType;
         }
 
-        public void save(int messageID) {
-            Integer.toString(messageID);
-        }
-
         // using legacy lib, raw types extend Object
         @SuppressWarnings("unchecked")
         private String toJSON() {
@@ -569,12 +565,12 @@ public class MessageContent {
             EncodingUtils.putJSON(json, JSON_SUBJECT, mSubject);
 
             List<String> added = mAdded.stream()
-                    .map(jid -> jid.string())
+                    .map(JID::string)
                     .collect(Collectors.toList());
             json.put(JSON_ADDED, added);
 
             List<String> removed = mRemoved.stream()
-                    .map(jid -> jid.string())
+                    .map(JID::string)
                     .collect(Collectors.toList());
             json.put(JSON_REMOVED, removed);
 
@@ -595,12 +591,12 @@ public class MessageContent {
 
                 List<String> a = (List<String>) map.get(JSON_ADDED);
                 List<JID> added = a.stream()
-                        .map(s -> JID.bare(s))
+                        .map(JID::bare)
                         .collect(Collectors.toList());
 
                 List<String> r = (List<String>) map.get(JSON_REMOVED);
                 List<JID> removed = r.stream()
-                        .map(s -> JID.bare(s))
+                        .map(JID::bare)
                         .collect(Collectors.toList());
 
                 return new GroupCommand(op, added, removed, subj);

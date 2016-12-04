@@ -164,7 +164,7 @@ public final class Account {
     }
 
     private byte[] readFile(String filename, boolean disarm) throws KonException {
-        byte[] bytes = null;
+        byte[] bytes;
         try (InputStream input = new FileInputStream(new File(mKeyDir.toString(), filename))) {
             bytes = disarm ? PGPUtils.mayDisarm(input) : IOUtils.toByteArray(input);
         } catch (IOException ex) {

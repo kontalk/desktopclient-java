@@ -87,10 +87,6 @@ public class CoderStatus {
         return mErrors.clone();
     }
 
-    public boolean hasSecurityError(Coder.Error error) {
-        return mErrors.contains(error);
-    }
-
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {
         mErrors.clear();
         mErrors.addAll(errors);

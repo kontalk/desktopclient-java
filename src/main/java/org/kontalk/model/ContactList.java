@@ -136,7 +136,7 @@ public final class ContactList extends Observable {
     }
 
     void onShutDown() {
-        mJIDMap.values().forEach(c -> c.onShutDown());
+        mJIDMap.values().forEach(Contact::onShutDown);
     }    
 
     /**

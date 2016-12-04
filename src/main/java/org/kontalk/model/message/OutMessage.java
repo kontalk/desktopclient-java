@@ -48,7 +48,7 @@ public final class OutMessage extends KonMessage {
                 chat,
                 "Kon_" + EncodingUtils.randomString(8),
                 content,
-                Optional.<Date>empty(),
+                Optional.empty(),
                 Status.PENDING,
                 encrypted ?
                         CoderStatus.createToEncrypt() :

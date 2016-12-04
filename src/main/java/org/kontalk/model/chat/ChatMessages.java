@@ -50,7 +50,7 @@ public final class ChatMessages {
 
     // comparator inconsistent with .equals(); using one set for ordering...
     private final NavigableSet<KonMessage> mSortedSet =
-        Collections.synchronizedNavigableSet(new TreeSet<KonMessage>(MESSAGE_COMPARATOR));
+        Collections.synchronizedNavigableSet(new TreeSet<>(MESSAGE_COMPARATOR));
     // ... and one set for .contains()
     private final Set<KonMessage> mContainsSet =
             Collections.synchronizedSet(new HashSet<>());

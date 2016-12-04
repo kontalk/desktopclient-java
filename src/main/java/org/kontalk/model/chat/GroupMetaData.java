@@ -91,7 +91,7 @@ public abstract class GroupMetaData {
         }
     }
 
-    /** Data fields specific to a MUC (XEP-0045) chat. */
+    /** Data fields specific to a MUC (XEP-0045) chat. Not used/deprecated! */
     public static class MUCData extends GroupMetaData {
         private static final String JSON_ROOM = "room";
         private static final String JSON_PW = "pw";

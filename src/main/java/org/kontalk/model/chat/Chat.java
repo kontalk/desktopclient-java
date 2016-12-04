@@ -31,6 +31,7 @@ import java.util.Observer;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.apache.commons.lang.ObjectUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
@@ -214,7 +215,7 @@ public abstract class Chat extends Observable implements Observer, Searchable {
 
     void delete() {
         // messages
-        boolean succ = mMessages.getAll().stream().allMatch(m -> m.delete());
+        boolean succ = mMessages.getAll().stream().allMatch(KonMessage::delete);
         if (!succ)
             return;
 

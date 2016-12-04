@@ -153,7 +153,7 @@ final public class Transmission {
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load transmission(s) from db", ex);
-            return Collections.<Transmission>emptySet();
+            return Collections.emptySet();
         }
         if (ts.isEmpty())
             LOGGER.warning("no transmission(s) found, messageID: "+messageID);

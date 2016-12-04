@@ -284,7 +284,7 @@ public abstract class KonMessage extends Observable implements Searchable {
     }
 
     public boolean delete() {
-        boolean succ = this.getTransmissions().stream().allMatch(t -> t.delete());
+        boolean succ = this.getTransmissions().stream().allMatch(Transmission::delete);
         if (!succ)
             return false;
 
@@ -316,6 +316,7 @@ public abstract class KonMessage extends Observable implements Searchable {
     public boolean contains(String search) {
         if (mContent.getText().toLowerCase().contains(search))
             return true;
+
         return this.getTransmissions().stream()
                 .anyMatch(t -> t.getContact().getName().toLowerCase().contains(search) ||
                         t.getContact().getJID().string().toLowerCase().contains(search));

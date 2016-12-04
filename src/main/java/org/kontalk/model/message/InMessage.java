@@ -18,7 +18,7 @@
 
 package org.kontalk.model.message;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Objects;
@@ -62,7 +62,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
         if (builder.mTransmissions.size() != 1)
             throw new IllegalArgumentException("builder does not contain one transmission");
 
-        mTransmission = builder.mTransmissions.stream().findAny().get();
+        mTransmission = builder.mTransmissions.iterator().next();
     }
 
     @Override
@@ -142,7 +142,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
 
     @Override
     public Set<Transmission> getTransmissions() {
-        return new HashSet<>(Arrays.asList(mTransmission));
+        return new HashSet<>(Collections.singletonList(mTransmission));
     }
 
     @Override
