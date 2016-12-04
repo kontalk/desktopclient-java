@@ -262,11 +262,8 @@ public final class Database {
         }
     }
 
-    /**
-     * Update values (at most one row)
-     * @return id value of updated row, 0 if something went wrong
-     */
-    public synchronized int execUpdate(String table, Map<String, Object> set, int id) {
+    /** Update values (at most one row). */
+    public synchronized void execUpdate(String table, Map<String, Object> set, int id) {
         LOGGER.config("table: "+table);
         String update = "UPDATE OR FAIL " + table + " SET ";
 
@@ -284,11 +281,9 @@ public final class Database {
             insertValues(stat, keyList, set);
             stat.executeUpdate();
             mConn.commit();
-            ResultSet keys = stat.getGeneratedKeys();
-            return keys.getInt(1);
+            stat.getGeneratedKeys();
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't execute update: " + update + " " + set, ex);
-            return 0;
         }
     }
 
