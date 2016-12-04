@@ -556,10 +556,6 @@ final class ComponentUtils {
 
         private final DefaultListModel<Member> mModel;
 
-        public MemberList() {
-            this(true);
-        }
-
         @SuppressWarnings("unchecked")
         MemberList(boolean selectable) {
             mModel = new DefaultListModel<>();

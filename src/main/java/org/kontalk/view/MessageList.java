@@ -452,7 +452,7 @@ final class MessageList extends ListView<KonMessage> {
             Date deliveredDate = null;
             Set<Transmission> transmissions = value.getTransmissions();
             if (transmissions.size() == 1)
-                deliveredDate = transmissions.stream().findFirst().get().getReceivedDate().orElse(null);
+                deliveredDate = transmissions.iterator().next().getReceivedDate().orElse(null);
 
             // status icon
             Icon statusIcon = null;
@@ -728,10 +728,10 @@ final class MessageList extends ListView<KonMessage> {
                 return null;
             }
 
-            StringBuffer plainBuf = new StringBuffer();
+            StringBuilder plainBuf = new StringBuilder();
             for (KonMessage m : messages) {
                 String val = messageToString(m, mView, true);
-                plainBuf.append(val + "\n"); // NOTE: newline after last line
+                plainBuf.append(val).append("\n"); // NOTE: newline after last line
             }
 
             //return new BasicTransferable(plainBuf.toString(), htmlBuf.toString());

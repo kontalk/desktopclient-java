@@ -23,7 +23,6 @@ import java.awt.Component;
 import java.awt.GridBagLayout;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.util.Optional;
 
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
@@ -53,12 +52,6 @@ final class Content extends WebPanel {
         });
 
         this.show(mChatView);
-    }
-
-    Optional<Chat> getCurrentChat() {
-        if (!(mCurrent instanceof ChatView))
-            return Optional.empty();
-        return mChatView.getCurrentChat();
     }
 
     void showChat(Chat chat) {

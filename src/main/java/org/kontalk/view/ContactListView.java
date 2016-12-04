@@ -34,6 +34,8 @@ import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.tooltip.TooltipManager;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
@@ -249,6 +251,8 @@ final class ContactListView extends ListView<Contact> {
                             Color.WHITE);
 
             // tooltip
+            // TODO blocks mouse clicks interaction
+            if (true) return;
             String html = "<html><body>";
                     //"<h3>Header</h3>" +
 
@@ -266,8 +270,7 @@ final class ContactListView extends ListView<Contact> {
             }
 
             html += "</body></html>" ;
-            // TODO blocks mouse clicks interaction
-            //TooltipManager.setTooltip(this, html, TooltipWay.right);
+            TooltipManager.setTooltip(this, html, TooltipWay.right);
         }
     }
 }

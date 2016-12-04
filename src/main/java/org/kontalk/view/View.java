@@ -119,7 +119,6 @@ public final class View implements Observer {
     private final TrayManager mTrayManager;
     private final Notifier mNotifier;
 
-    private final SearchPanel mSearchPanel;
     private final ContactListView mContactListView;
     private final ChatListView mChatListView;
     private final Content mContent;
@@ -148,7 +147,7 @@ public final class View implements Observer {
         mChatListView = new ChatListView(this, mModel.chats());
 
         // search panel
-        mSearchPanel = new SearchPanel(
+        SearchPanel searchPanel = new SearchPanel(
                 new ListView[]{mContactListView, mChatListView},
                 mChatView);
         // status bar
@@ -157,11 +156,11 @@ public final class View implements Observer {
         statusBar.add(mStatusBarLabel);
         // main frame
         mMainFrame = new MainFrame(this, mModel, mContactListView, mChatListView,
-                mContent, mSearchPanel, statusBar);
+                mContent, searchPanel, statusBar);
         mMainFrame.addWindowFocusListener(new WindowAdapter() {
             @Override
             public void windowGainedFocus(WindowEvent e) {
-                mChatView.getCurrentChat().ifPresent(chat -> chat.setRead());
+                mChatView.getCurrentChat().ifPresent(Chat::setRead);
             }
         });
 
@@ -421,10 +420,6 @@ public final class View implements Observer {
         // show by selecting in contact list
         mMainFrame.selectTab(MainFrame.Tab.CONTACT);
         mContactListView.setSelectedItem(contact);
-    }
-
-    void clearSearch() {
-        mSearchPanel.clear();
     }
 
     void tabPaneChanged(MainFrame.Tab tab) {

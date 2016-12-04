@@ -29,10 +29,6 @@ import java.awt.Desktop;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -51,7 +47,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.text.WebTextArea;
@@ -105,20 +100,6 @@ final class Utils {
         if (file.getParentFile() != null && file.getParentFile().exists())
             chooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
         return chooser;
-    }
-
-    static WebMenuItem createCopyMenuItem(final String copyText, String toolTipText) {
-        WebMenuItem item = new WebMenuItem(Tr.tr("Copy"));
-        if (!toolTipText.isEmpty())
-            item.setToolTipText(toolTipText);
-        item.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent event) {
-                Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clip.setContents(new StringSelection(copyText), null);
-            }
-        });
-        return item;
     }
 
     static WebTextArea createFingerprintArea() {
@@ -289,11 +270,12 @@ final class Utils {
     }
 
     static String lastSeen(Contact contact, boolean withLabel, boolean pretty) {
-        return !contact.getLastSeen().isPresent() ?
+        Date d = contact.getLastSeen().orElse(null);
+        return d == null ?
                 (withLabel ? Tr.tr("Not seen yet") : "") :
                 (withLabel ? Tr.tr("Last seen:") + " " : "")
-                        + (pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
-                                   Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get()));
+                        + (pretty ? Utils.PRETTY_TIME.format(d) :
+                                   Utils.MID_DATE_FORMAT.format(d));
     }
 
     static String getErrorText(KonException ex) {
@@ -405,12 +387,7 @@ final class Utils {
 
     static List<Contact> contactList(Chat chat) {
         List<Contact> contacts = new ArrayList<>(chat.getAllContacts());
-        contacts.sort(new Comparator<Contact>() {
-            @Override
-            public int compare(Contact c1, Contact c2) {
-                return Utils.compareContacts(c1, c2);
-            }
-        });
+        contacts.sort(Utils::compareContacts);
         return contacts;
     }
 

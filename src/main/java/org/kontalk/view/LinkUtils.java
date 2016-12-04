@@ -17,8 +17,13 @@
  */
 package org.kontalk.view;
 
-import com.alee.laf.text.WebTextPane;
-import com.alee.utils.WebUtils;
+import javax.swing.event.MouseInputAdapter;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Element;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
+import javax.swing.text.StyledDocument;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.event.MouseAdapter;
@@ -29,13 +34,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.swing.event.MouseInputAdapter;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Element;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyleContext;
-import javax.swing.text.StyledDocument;
+
+import com.alee.laf.text.WebTextPane;
+import com.alee.utils.WebUtils;
 
 /**
  * Static methods/field for parsing web links in the text of a WebTextPane.
@@ -140,7 +141,7 @@ final class LinkUtils {
         try {
             new URL(url);
             return url;
-        } catch (MalformedURLException ex) {
+        } catch (MalformedURLException ignored) {
         }
         url = "http://" + url;
         try {

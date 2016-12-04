@@ -57,7 +57,7 @@ import org.kontalk.util.Tr;
  */
 final class Notifier {
 
-    private static final Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
+    //private static final Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
 
     private final View mView;
     private final WebFrame mWindow;
@@ -85,6 +85,8 @@ final class Notifier {
 
     // TODO more information for message exs
     void showSecurityErrors(KonMessage message) {
+        //TODO too intrusive for user, but use the explanation for message view
+        if (true) return;
         String errorText = "<html>";
 
         boolean isOut = !message.isInMessage();
@@ -109,9 +111,7 @@ final class Notifier {
         }
 
         errorText += "</html>";
-
-        // TODO too intrusive for user, but use the explanation above for message view
-        //NotificationManager.showNotification(mChatView, errorText);
+        NotificationManager.showNotification(mWindow, errorText);
     }
 
     void showPresenceError(Contact contact, RosterHandler.Error error) {

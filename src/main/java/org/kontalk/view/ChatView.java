@@ -233,7 +233,7 @@ final class ChatView extends WebPanel implements Observer {
     Optional<Chat> getCurrentChat() {
         MessageList view = this.currentMessageListOrNull();
         return view == null ?
-                Optional.<Chat>empty() :
+                Optional.empty() :
                 Optional.of(view.getChat());
     }
 
@@ -281,8 +281,8 @@ final class ChatView extends WebPanel implements Observer {
 
     Background createBGOrNull(Chat.ViewSettings s) {
         JViewport p = mScrollPane.getViewport();
-        if (s.getBGColor().isPresent()) {
-            Color c = s.getBGColor().get();
+        Color c = s.getBGColor().orElse(null);
+        if (c != null) {
             return new Background(p, c);
         } else if (!s.getImagePath().isEmpty()) {
             return new Background(p, s.getImagePath());

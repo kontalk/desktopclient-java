@@ -235,13 +235,6 @@ final class ChatListView extends ListView<Chat> {
             mChatStateLabel.setText(stateText);
             mStatusLabel.setVisible(stateText.isEmpty());
         }
-
-        protected boolean contains(String search) {
-            // TODO always show entry for current chat
-            //Chat chat = mView.getCurrentShownChat().orElse(null);
-            //if (chat != null && chat == mValue)
-                return true;
-        }
     }
 
     private static String lastActivity(Chat chat, boolean withLabel, boolean pretty) {

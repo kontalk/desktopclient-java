@@ -74,8 +74,4 @@ final class SearchPanel extends WebPanel {
         mSearchField.setTrailingComponent(clearSearchButton);
         this.add(mSearchField, BorderLayout.CENTER);
     }
-
-    void clear() {
-        mSearchField.clear();
-    }
 }

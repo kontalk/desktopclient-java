@@ -74,7 +74,7 @@ final class ProfileDialog extends WebDialog {
         // permanent, user has to re-open the dialog on change
         final boolean supported = mView.serverFeatures().contains(FeatureDiscovery.Feature.USER_AVATAR);
         mAvatarImage = new ComponentUtils.EditableAvatarImage(View.AVATAR_PROFILE_SIZE, supported,
-                Avatar.UserAvatar.get().flatMap(userAvatar -> userAvatar.loadImage())) {
+                Avatar.UserAvatar.get().flatMap(Avatar::loadImage)) {
             @Override
             AvatarImg defaultImage() {
                 return AvatarLoader.loadFallback(View.AVATAR_PROFILE_SIZE);
@@ -104,7 +104,7 @@ final class ProfileDialog extends WebDialog {
         // status text
 
         String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
-        List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
+        List<String> stats = new ArrayList<>(Arrays.asList(strings));
         String currentStatus = !stats.isEmpty() ? stats.remove(0) : "";
 
         groupPanel.add(new WebLabel(Tr.tr("Status Message")).setBoldFont());
