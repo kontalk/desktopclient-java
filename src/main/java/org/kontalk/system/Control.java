@@ -205,7 +205,7 @@ public final class Control {
             mClient.sendUserPresence(strings.length > 0 ? strings[0] : "");
             // send all pending messages
             for (Chat chat: mModel.chats())
-                chat.getMessages().getPending().forEach(m -> this.sendMessage(m));
+                chat.getMessages().getPending().forEach(this::sendMessage);
 
             // send public key requests for Kontalk contacts with missing key
             for (Contact contact : mModel.contacts().getAll(false, false))
@@ -475,8 +475,8 @@ public final class Control {
 
     boolean sendMessage(OutMessage message) {
         MessageContent content = message.getContent();
-        if (content.getAttachment().isPresent() &&
-                !content.getAttachment().get().hasURL()) {
+        Attachment attachment = content.getAttachment().orElse(null);
+        if (attachment != null && !attachment.hasURL()) {
             // continue later...
             mAttachmentManager.queueUpload(message);
             return false;
@@ -755,8 +755,8 @@ public final class Control {
 
         /* contact */
 
-        public Optional<Contact> createContact(JID jid, String name, boolean encrypted) {
-            return Control.this.createContact(jid, name, encrypted);
+        public void createContact(JID jid, String name, boolean encrypted) {
+            Control.this.createContact(jid, name, encrypted);
         }
 
         public void deleteContact(Contact contact) {
@@ -829,7 +829,7 @@ public final class Control {
         public Optional<GroupChat> createGroupChat(List<Contact> contacts, String subject) {
             // user is part of the group
             List<ProtoMember> members = contacts.stream()
-                    .map(c -> new ProtoMember(c))
+                    .map(ProtoMember::new)
                     .collect(Collectors.toList());
             Contact me = mModel.contacts().getMe().orElse(null);
             if (me == null) {

@@ -84,7 +84,7 @@ public class AttachmentManager implements Runnable {
         }
     }
 
-    private static final String ENCRYPT_MIME = "application/octet-stream";
+    //private static final String ENCRYPT_MIME = "application/octet-stream";
 
     private final Control mControl;
     private final Client mClient;
@@ -209,7 +209,7 @@ public class AttachmentManager implements Runnable {
                     null :
                     Coder.encryptAttachment(myKey, message, file).orElse(null);
             if (!file.equals(original))
-                file.delete();
+                delete(file);
             if (encryptFile == null)
                 return;
             file = encryptFile;
@@ -239,7 +239,7 @@ public class AttachmentManager implements Runnable {
         }
 
         if (!file.equals(original))
-            file.delete();
+            delete(file);
 
         message.setUpload(uploadSlot.downloadURL, mime, length);
 
@@ -312,11 +312,11 @@ public class AttachmentManager implements Runnable {
         message.setPreviewFilename(filename);
     }
 
-    boolean mayCreateImagePreview(KonMessage message) {
+    void mayCreateImagePreview(KonMessage message) {
         Attachment att = message.getContent().getAttachment().orElse(null);
         if (att == null) {
             LOGGER.warning("no attachment in message: "+message);
-            return false;
+            return;
         }
         Path path = absoluteFilePath(att);
 
@@ -325,12 +325,12 @@ public class AttachmentManager implements Runnable {
                 MediaUtils.mimeForFile(path));
 
         if (!isImage(mime))
-            return false;
+            return;
 
         BufferedImage image = MediaUtils.readImage(path);
         if (image.getWidth() <= THUMBNAIL_DIM.width
                 && image.getHeight() <= THUMBNAIL_DIM.height)
-            return false;
+            return;
 
         Image thumb = MediaUtils.scaleAsync(image,
                 THUMBNAIL_DIM.width ,
@@ -340,7 +340,7 @@ public class AttachmentManager implements Runnable {
 
         byte[] bytes = MediaUtils.imageToByteArray(thumb, format);
         if (bytes.length <= 0)
-            return false;
+            return;
 
         String id = Integer.toString(message.getID());
         String filename = id + "_bob_." + format;
@@ -350,8 +350,6 @@ public class AttachmentManager implements Runnable {
         this.writePreview(preview, filename);
 
         message.setPreview(preview);
-
-        return true;
     }
 
     Path getAttachmentDir() {
@@ -438,5 +436,11 @@ public class AttachmentManager implements Runnable {
 
     private static boolean isImage(String mimeType) {
         return mimeType.startsWith("image");
+    }
+
+    private static void delete(File f) {
+        if (!f.delete()) {
+            LOGGER.warning("can not delete file: " + f);
+        }
     }
 }

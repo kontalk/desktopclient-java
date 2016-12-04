@@ -71,7 +71,7 @@ public final class AccountImporter extends Observable implements Callback.Handle
     // note: with disarming if needed
     private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
         ZipEntry zipEntry = zipFile.getEntry(filename);
-        byte[] bytes = null;
+        byte[] bytes;
         try {
             bytes = PGPUtils.mayDisarm(zipFile.getInputStream(zipEntry));
         } catch (IOException ex) {
@@ -81,6 +81,7 @@ public final class AccountImporter extends Observable implements Callback.Handle
         return bytes;
     }
 
+    // TODO unused
     public void fromServer(String host, int port, boolean validateCertificate,
             String token, char[] password) {
         mPassword = password;

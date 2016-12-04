@@ -19,11 +19,12 @@
 package org.kontalk.system;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
@@ -82,7 +83,7 @@ final class GroupControl {
         void onCreate() {
             // send create group command
             List<JID> jids = mChat.getValidContacts().stream()
-                    .map(contact -> contact.getJID())
+                    .map(Contact::getJID)
                     .collect(Collectors.toList());
 
             mControl.createAndSendMessage(mChat,
@@ -257,7 +258,7 @@ final class GroupControl {
 
         return Optional.of(
                 mModel.chats().create(
-                        Arrays.asList(new ProtoMember(sender, Member.Role.OWNER)),
+                        Collections.singletonList(new ProtoMember(sender, Member.Role.OWNER)),
                         gData));
     }
 
