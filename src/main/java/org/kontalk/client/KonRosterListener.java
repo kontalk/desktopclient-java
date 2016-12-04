@@ -55,7 +55,7 @@ final class KonRosterListener implements RosterLoadedListener, RosterListener {
         LOGGER.info("loading "+entries.size()+" entries");
 
         mHandler.onLoaded(entries.stream()
-                .map(e -> clientToModel(e))
+                .map(KonRosterListener::clientToModel)
                 .collect(Collectors.toList()));
         mLoaded = true;
     }

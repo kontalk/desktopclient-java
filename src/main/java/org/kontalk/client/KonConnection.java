@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
@@ -56,8 +55,6 @@ final class KonConnection extends XMPPTCPConnection {
 
     private static final String RESSOURCE = "Kontalk_Desktop";
 
-    private final boolean mHasLoginCredentials;
-
     public KonConnection(EndpointServer server, boolean validateCertificate) {
         this(server, null, null, validateCertificate);
     }
@@ -72,8 +69,6 @@ final class KonConnection extends XMPPTCPConnection {
                 bridgeCert,
                 validateCertificate)
         );
-
-        mHasLoginCredentials = privateKey != null && bridgeCert != null;
 
         // blacklist PLAIN mechanism
         SASLAuthentication.blacklistSASLMechanism("PLAIN");
@@ -128,8 +123,7 @@ final class KonConnection extends XMPPTCPConnection {
                 IOException |
                 CertificateException |
                 UnrecoverableKeyException |
-                KeyManagementException |
-                NoSuchProviderException ex) {
+                KeyManagementException ex) {
             LOGGER.log(Level.WARNING, "can't setup SSL connection", ex);
         }
 
@@ -147,10 +141,6 @@ final class KonConnection extends XMPPTCPConnection {
 
     String getServer() {
         return this.getConfiguration().getServiceName();
-    }
-
-    boolean hasLoginCredentials() {
-        return mHasLoginCredentials;
     }
 
     boolean send(Stanza p) {
