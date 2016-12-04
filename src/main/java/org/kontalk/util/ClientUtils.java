@@ -170,7 +170,7 @@ public final class ClientUtils {
 
             // body text is maybe URI, for clients that dont understand OOB,
             // but we do, don't save it twice
-            if (plainText.equals(url.toString()));
+            if (plainText.equals(url.toString()))
                 plainText = "";
         }
 
