@@ -163,7 +163,7 @@ public final class PGPUtils {
             signKey = authKey;
         }
 
-        if (encryptKey == null || signKey == null || uid == null || fp == null) {
+        if (encryptKey == null || signKey == null || uid == null) {
             LOGGER.warning("can't find public keys in key ring, uid: "+uid);
             return Optional.empty();
         }

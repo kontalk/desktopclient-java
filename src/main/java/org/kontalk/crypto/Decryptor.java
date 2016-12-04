@@ -113,7 +113,7 @@ final class Decryptor {
                     mMyKey.getPrivateEncryptionKey(),
                     mSenderKey != null ?
                             Optional.of(mSenderKey.signKey) :
-                            Optional.<PGPPublicKey>empty());
+                            Optional.empty());
         } catch (IOException | PGPException ex) {
             LOGGER.log(Level.WARNING, "can't decrypt message", ex);
             return false;
@@ -175,7 +175,7 @@ final class Decryptor {
                     plainOut,
                     mMyKey.getPrivateEncryptionKey(),
                     mSenderKey != null ? Optional.of(mSenderKey.signKey) :
-                            Optional.<PGPPublicKey>empty());
+                            Optional.empty());
         } catch (IOException | PGPException ex){
             LOGGER.log(Level.WARNING, "can't decrypt attachment", ex);
             inMessage.setAttachmentErrors(EnumSet.of(Coder.Error.UNKNOWN_ERROR));
@@ -244,7 +244,7 @@ final class Decryptor {
             if (pbe.getKeyID() == myKeyID)
                 sKey = myKey;
         }
-        if (sKey == null || pbe == null) {
+        if (sKey == null) {
             LOGGER.warning("private key for message not found");
             result.errors.add(Coder.Error.INVALID_PRIVATE_KEY);
             return result;

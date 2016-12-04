@@ -88,10 +88,6 @@ public final class PersonalKey {
         return mSignKey.getPublicKey().getAlgorithm();
     }
 
-    PGPPublicKey getPublicEncryptionKey() {
-        return mEncryptKey.getPublicKey();
-    }
-
     public X509Certificate getBridgeCertificate() {
         return mBridgeCert;
     }

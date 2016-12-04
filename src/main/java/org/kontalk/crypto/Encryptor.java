@@ -52,6 +52,7 @@ import org.bouncycastle.openpgp.operator.bc.BcPGPDataEncryptorBuilder;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyKeyEncryptionMethodGenerator;
 import org.kontalk.model.Contact;
 import org.kontalk.model.message.OutMessage;
+import org.kontalk.model.message.Transmission;
 import org.kontalk.util.CPIMMessage;
 
 /**
@@ -147,7 +148,7 @@ final class Encryptor {
 
     private List<PGPUtils.PGPCoderKey> loadKeysOrNull() {
         List<Contact> contacts = message.getTransmissions().stream()
-                .map(t -> t.getContact())
+                .map(Transmission::getContact)
                 .collect(Collectors.toList());
         List<PGPUtils.PGPCoderKey> receiverKeys = contacts.stream()
                 .map(c -> Coder.contactkey(c).orElse(null))
@@ -162,7 +163,6 @@ final class Encryptor {
     /**
      * Encrypt, sign and write input stream data to output stream.
      * Input and output stream are closed.
-     * @return true on success, else false
      */
     private static void encryptAndSign(
             InputStream plainInput, OutputStream encryptedOutput,
