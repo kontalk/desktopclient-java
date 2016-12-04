@@ -277,10 +277,10 @@ public final class ClientUtils {
                 }
                 // sanity check; prioritize 'removed' over 'added'
                 removed.stream()
-                        .filter(jid -> added.contains(jid))
+                        .filter(added::contains)
                         .peek(jid -> LOGGER.warning(
                                 "member added AND removed (removing) " + jid))
-                        .forEach(jid -> added.remove(jid));
+                        .forEach(added::remove);
                 return Optional.of(GroupCommand.set(
                         new ArrayList<>(added),
                         new ArrayList<>(removed),

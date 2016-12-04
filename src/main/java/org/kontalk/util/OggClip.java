@@ -295,7 +295,7 @@ class OggClip {
 
                     try {
                         bitStream.reset();
-                    } catch (IOException e) {
+                    } catch (IOException ignored) {
                     }
                 }
             }
@@ -324,7 +324,7 @@ class OggClip {
             if (bitStream != null) {
                 bitStream.close();
             }
-        } catch (IOException e) {
+        } catch (IOException ignored) {
         }
     }
 
@@ -605,7 +605,7 @@ class OggClip {
     /*
      * Taken from the JOrbis Player
      */
-    private SourceDataLine getOutputLine(int channels, int rate) {
+    private void getOutputLine(int channels, int rate) {
         if (outputLine == null || this.rate != rate
                 || this.channels != channels) {
             if (outputLine != null) {
@@ -616,7 +616,6 @@ class OggClip {
             initJavaSound(channels, rate);
             outputLine.start();
         }
-        return outputLine;
     }
 
     private class InternalException extends Exception {
