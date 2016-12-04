@@ -213,9 +213,6 @@ final class ChatListView extends ListView<Chat> {
             if (value.isGroupChat())
                 mTitleLabel.setForeground(View.DARK_GREEN);
 
-            // status
-            mStatusLabel.setText(lastActivity(value, isSelected, true));
-
             // state
             String stateText = "";
             List<Member> members = value.getAllMembers();
@@ -233,6 +230,9 @@ final class ChatListView extends ListView<Chat> {
 //                if (!stateText.isEmpty() && mValue.isGroupChat())
 //                    stateText = member.getContact().getName() + ": " + stateText;
             mChatStateLabel.setText(stateText);
+
+            // status
+            mStatusLabel.setText(stateText.isEmpty() ? lastActivity(value, isSelected, true) : "");
             mStatusLabel.setVisible(stateText.isEmpty());
         }
     }
