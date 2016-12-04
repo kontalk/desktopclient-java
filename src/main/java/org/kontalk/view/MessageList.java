@@ -166,6 +166,7 @@ final class MessageList extends ListView<KonMessage> {
             // or hide "is writing..." for -now- second to last message after new message was added
             this.updateRowRendering(this.getRowCount() - 2, this.getRowCount() - 1);
             this.scrollToRow(this.getRowCount() - 1);
+            this.repaint(); // swing...
         }
     }
 
