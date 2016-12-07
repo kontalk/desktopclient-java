@@ -23,6 +23,10 @@ import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.event.DocumentEvent;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -104,6 +108,18 @@ final class ComposingArea {
                         ComposingArea.this.adjustSize();
                     }
                 });
+            }
+        });
+        ((AbstractDocument) mTextArea.getDocument()).setDocumentFilter(new DocumentFilter() {
+            @Override
+            public void replace(FilterBypass fb, int offset, int length, String string,
+                                AttributeSet attr) throws BadLocationException {
+                // input implementation of the "/me" command, XEP-0245
+                if (length == 0 && offset == 0 && string.equals("/")) {
+                    fb.insertString(0, View.THE_ME_COMMAND, attr);
+                    return;
+                }
+                super.replace(fb, offset, length, string, attr);
             }
         });
 

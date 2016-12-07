@@ -28,13 +28,16 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.text.AbstractDocument;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.BoxView;
 import javax.swing.text.ComponentView;
 import javax.swing.text.Element;
 import javax.swing.text.IconView;
 import javax.swing.text.LabelView;
 import javax.swing.text.ParagraphView;
+import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 import javax.swing.text.StyledEditorKit;
 import javax.swing.text.ViewFactory;
 import java.awt.BorderLayout;
@@ -68,6 +71,7 @@ import org.apache.commons.lang.time.DateUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Contact;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
@@ -290,6 +294,9 @@ final class MessageList extends ListView<KonMessage> {
 
         private final AttachmentPanel mAttPanel;
 
+        private final LinkUtils.Linkifier mLinkifier;
+        private final Style mMeCommandStyle;
+
         MessageListFlyWeightItem(View view) {
             mView = view;
 
@@ -323,6 +330,7 @@ final class MessageList extends ListView<KonMessage> {
             mFromLabel.setFontSize(View.FONT_SIZE_SMALL);
             mFromLabel.setForeground(Color.BLUE);
             mFromLabel.setItalicFont();
+            mPanel.add(mFromLabel, BorderLayout.NORTH);
 
             // text area
             mTextPane = new WebTextPane();
@@ -339,21 +347,15 @@ final class MessageList extends ListView<KonMessage> {
             // right click menu
             mTextPane.setComponentPopupMenu(TEXT_COPY_MENU);
 
-            // icons
-            mStatusIconLabel = new WebLabel();
-            mEncryptIconLabel = new WebLabel();
-
-            // date label
-            mTimeLabel = new WebLabel();
-            mTimeLabel.setForeground(Color.GRAY);
+            // text styling
+            mLinkifier = new LinkUtils.Linkifier(mTextPane.getStyledDocument());
+            mMeCommandStyle = mTextPane.addStyle(null, null);
+            StyleConstants.setForeground(mMeCommandStyle, View.GREEN);
 
             // attachment
             mAttPanel = new AttachmentPanel();
 
-            // layout...
-
-            mPanel.add(mFromLabel, BorderLayout.NORTH);
-
+            // layout: content panel
             WebPanel mContentPanel = new WebPanel();
             mContentPanel.setOpaque(false);
             mContentPanel.setMargin(View.MARGIN_SMALL);
@@ -361,15 +363,23 @@ final class MessageList extends ListView<KonMessage> {
             mContentPanel.add(mAttPanel, BorderLayout.SOUTH);
             mPanel.add(mContentPanel, BorderLayout.CENTER);
 
-            WebPanel southPanel = new WebPanel();
-            southPanel.setOpaque(false);
+            // status panel...
             mStatusPanel = new WebPanel();
             mStatusPanel.setOpaque(false);
-            TooltipManager.addTooltip(mStatusPanel, "???");
             mStatusPanel.setLayout(new FlowLayout());
+
+            mStatusIconLabel = new WebLabel();
             mStatusPanel.add(mStatusIconLabel);
+
+            mEncryptIconLabel = new WebLabel();
             mStatusPanel.add(mEncryptIconLabel);
+
+            mTimeLabel = new WebLabel();
+            mTimeLabel.setForeground(Color.GRAY);
             mStatusPanel.add(mTimeLabel);
+
+            WebPanel southPanel = new WebPanel();
+            southPanel.setOpaque(false);
             southPanel.add(mStatusPanel, BorderLayout.EAST);
             mPanel.add(southPanel, BorderLayout.SOUTH);
 
@@ -473,7 +483,21 @@ final class MessageList extends ListView<KonMessage> {
                 mTextPane.setFontStyle(false, true);
             } else {
                 mTextPane.setFontStyle(false, value.isEncrypted());
-                LinkUtils.linkify(mTextPane.getStyledDocument(), text);
+                StyledDocument document = mTextPane.getStyledDocument();
+                try {
+                    document.remove(0, document.getLength());
+                    // output implementation of the "/me" command, XEP-0245
+                    if (text.startsWith(View.THE_ME_COMMAND)) {
+                        Contact sender = value.getSender().orElse(null);
+                        // NOTE: not updated if sender name changes, people have to live with it
+                        String meName = (sender == null ? Tr.tr("Me") : sender.getName()) + " ";
+                        document.insertString(0, meName, mMeCommandStyle);
+                        text = text.substring(View.THE_ME_COMMAND.length());
+                    }
+                    mLinkifier.linkify(text);
+                } catch (BadLocationException ex) {
+                    LOGGER.log(Level.WARNING, "can't set styled document text", ex);
+                }
             }
 
             // hide area if there is no text

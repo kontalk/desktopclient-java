@@ -102,6 +102,7 @@ public final class View implements Observer {
     static final Color LIGHT_BLUE = new Color(220, 230, 250);
     static final Color LIGHT_GREY = new Color(240, 240, 240);
     //static final Color GREEN = new Color(83, 196, 46);
+    static final Color GREEN = new Color(0, 200, 0);
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
     static final Color DARK_RED = new Color(196, 46, 46);
@@ -112,6 +113,8 @@ public final class View implements Observer {
     static final int AVATAR_CHAT_SIZE = 40;
     static final int AVATAR_DETAIL_SIZE = 60;
     static final int AVATAR_PROFILE_SIZE = 150;
+
+    static final String THE_ME_COMMAND = "/me ";
 
     private final ViewControl mControl;
     private final Model mModel;

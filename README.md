@@ -46,6 +46,7 @@ Connect with Kontalk...
 - XEP-0084: Avatar images
 - XEP-0363: HTTP File Upload
 - XEP-0012: Last activity timestamp
+- XEP-0245: The infamous and most essential "/me" command
 
 ## Support us
 

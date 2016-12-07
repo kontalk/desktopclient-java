@@ -65,27 +65,33 @@ final class LinkUtils {
 
     private static final String URL_ATT_NAME = "URL";
 
-    static void linkify(StyledDocument doc, String text) {
+    static class Linkifier {
+
+        private final StyledDocument mDocument;
         // style for all links in a document
-        Style urlStyle = doc.addStyle(null, DEFAULT_STYLE);
-        StyleConstants.setForeground(urlStyle, Color.BLUE);
-        // only for identifying URLs
-        urlStyle.addAttribute(URL_ATT_NAME, new Object());
-        try {
-            doc.remove(0, doc.getLength());
+        private final Style mURLStyle;
+
+        Linkifier(StyledDocument doc) {
+            mDocument = doc;
+
+            mURLStyle = mDocument.addStyle(null, DEFAULT_STYLE);
+            StyleConstants.setForeground(mURLStyle, Color.BLUE);
+            // only for identifying URLs
+            mURLStyle.addAttribute(URL_ATT_NAME, new Object());
+        }
+
+        void linkify(String text) throws BadLocationException {
             Matcher m = URL_PATTERN.matcher(text);
             int lastPos = 0;
             while (m.find()) {
                 // non-matching
-                insertDefault(doc, text.substring(lastPos, m.start()));
+                insertDefault(mDocument, text.substring(lastPos, m.start()));
                 // matching
-                doc.insertString(doc.getLength(), m.group(), urlStyle);
+                mDocument.insertString(mDocument.getLength(), m.group(), mURLStyle);
                 lastPos = m.end();
             }
             // last non-matching
-            insertDefault(doc, lastPos >= text.length() ? "" : text.substring(lastPos));
-        } catch (BadLocationException ex) {
-            LOGGER.log(Level.WARNING, "can't set document text", ex);
+            insertDefault(mDocument, lastPos >= text.length() ? "" : text.substring(lastPos));
         }
     }
 
