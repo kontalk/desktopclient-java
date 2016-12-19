@@ -92,7 +92,7 @@ public abstract class KonMessage extends Observable implements Searchable {
             COL_CHAT_ID + " INTEGER NOT NULL, " +
             // XMPP ID attribute; only RECOMMENDED and must be unique only
             // within a stream (RFC 6120)
-            COL_XMPP_ID + " TEXT NOT NULL, " +
+            COL_XMPP_ID + " TEXT, " +
             // unix time, local creation timestamp
             COL_DATE + " INTEGER NOT NULL, " +
             // enum, message sending status
@@ -145,7 +145,9 @@ public abstract class KonMessage extends Observable implements Searchable {
         // insert
         List<Object> values = Arrays.asList(
                 mChat.getID(),
-                Database.setString(mXMPPID),
+                // database downward compatibility due to bug in version 3.1.2 (and prior)
+                //Database.setString(mXMPPID),
+                mXMPPID,
                 mDate,
                 mStatus,
         // i simply don't like to save all possible content explicitly in the
