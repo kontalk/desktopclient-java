@@ -370,8 +370,7 @@ public class MessageContent {
 
         @Override
         public Path getFilePath() {
-            return mFilename.isEmpty() ? Paths.get("") :
-                    Model.appDir().resolve(AttachmentManager.ATT_DIRNAME).resolve(mFilename);
+            return path(mFilename, AttachmentManager.ATT_DIRNAME);
         }
 
         public void setDecryptedFile(String filename) {
@@ -564,8 +563,9 @@ public class MessageContent {
             return mData;
         }
 
-        public String getFilename() {
-            return mFilename;
+        public Path getImagePath() {
+            return !MediaUtils.isImage(mMimeType) ? Paths.get("") :
+                    path(mFilename, AttachmentManager.PREVIEW_DIRNAME);
         }
 
         void setFilename(String filename) {
@@ -758,5 +758,10 @@ public class MessageContent {
         public MessageContent build() {
             return new MessageContent(this);
         }
+    }
+
+    private static Path path(String filename, String dirName) {
+        return filename.isEmpty() ? Paths.get("") :
+                Model.appDir().resolve(dirName).resolve(filename);
     }
 }

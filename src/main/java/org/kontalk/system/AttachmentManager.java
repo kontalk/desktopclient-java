@@ -18,6 +18,8 @@
 
 package org.kontalk.system;
 
+import static org.kontalk.util.MediaUtils.isImage;
+
 import java.awt.Dimension;
 import java.awt.Image;
 import java.awt.image.BufferedImage;
@@ -28,7 +30,6 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -44,7 +45,6 @@ import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
-import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.InAttachment;
 import org.kontalk.model.message.MessageContent.OutAttachment;
@@ -64,8 +64,8 @@ public class AttachmentManager implements Runnable {
     private static final Logger LOGGER = Logger.getLogger(AttachmentManager.class.getName());
 
     public static final String ATT_DIRNAME = "attachments";
+    public static final String PREVIEW_DIRNAME = "preview";
 
-    private static final String PREVIEW_DIRNAME = "preview";
     private static final String RESIZED_IMG_MIME = "image/jpeg";
     private static final String THUMBNAIL_MIME = "image/jpeg";
 
@@ -363,18 +363,6 @@ public class AttachmentManager implements Runnable {
         return mAttachmentDir;
     }
 
-    Optional<Path> imagePreviewPath(KonMessage message) {
-        MessageContent.Preview preview = message.getContent().getPreview().orElse(null);
-        if (preview == null)
-            return Optional.empty();
-
-        String fn = preview.getFilename();
-        if (fn.isEmpty() || !isImage(preview.getMimeType()))
-            return Optional.empty();
-
-        return Optional.of(mPreviewDir.resolve(fn));
-    }
-
     private void writePreview(Preview preview, String filename) {
         File newFile = mPreviewDir.resolve(filename).toFile();
         try {
@@ -432,10 +420,6 @@ public class AttachmentManager implements Runnable {
         }
 
         return new OutAttachment(path, mimeType);
-    }
-
-    private static boolean isImage(String mimeType) {
-        return mimeType.startsWith("image");
     }
 
     private static void delete(File f) {

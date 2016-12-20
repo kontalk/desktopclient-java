@@ -125,6 +125,10 @@ public class MediaUtils {
         }
     }
 
+    public static boolean isImage(String mimeType) {
+        return mimeType.startsWith("image");
+    }
+
     public enum Sound{NOTIFICATION}
 
     private static OggClip mAudioClip = null;

@@ -649,9 +649,9 @@ final class MessageList extends ListView<KonMessage> {
             Attachment att = value.getContent().getAttachment().orElse(null);
             mAttPanel.setVisible(att != null);
             if (att != null) {
-                Path imagePath = mView.getControl().getImagePath(value).orElse(null);
+                Path imagePath = value.getContent().getPreview().map(p -> p.getImagePath()).orElse(null);
                 Path linkPath = att.getFilePath();
-                if (imagePath != null)
+                if (imagePath != null && !imagePath.toString().isEmpty())
                     mAttPanel.setAttachment(imagePath, linkPath);
                 else
                     mAttPanel.setAttachment(linkPath.getFileName().toString(), linkPath);

@@ -746,10 +746,6 @@ public final class Control {
             return mAttachmentManager.getAttachmentDir();
         }
 
-        public Optional<Path> getImagePath(KonMessage message) {
-            return mAttachmentManager.imagePreviewPath(message);
-        }
-
         /* contact */
 
         public void createContact(JID jid, String name, boolean encrypted) {
