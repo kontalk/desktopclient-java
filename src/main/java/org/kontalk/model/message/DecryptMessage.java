@@ -34,7 +34,7 @@ public interface DecryptMessage {
 
     boolean isEncrypted();
 
-    MessageContent getContent();
+    String getEncryptedContent();
 
     void setDecryptedContent(MessageContent content);
 

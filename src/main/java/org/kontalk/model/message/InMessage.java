@@ -30,7 +30,6 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.chat.Chat;
-import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.Preview;
 
 /**
@@ -81,52 +80,16 @@ public final class InMessage extends KonMessage implements DecryptMessage {
     }
 
     @Override
+    public String getEncryptedContent() {
+        return mContent.getEncryptedContent();
+    }
+
+    @Override
     public void setDecryptedContent(MessageContent decryptedContent) {
         mContent.setDecryptedContent(decryptedContent);
         mCoderStatus.setDecrypted();
         this.save();
         this.changed(ViewChange.CONTENT);
-    }
-
-    public void setAttachmentFileName(String fileName) {
-        Attachment attachment = this.getAttachment();
-        if (attachment == null)
-            return;
-
-        attachment.setFile(fileName);
-        this.save();
-        // only tell view if file not encrypted
-        if (!attachment.getCoderStatus().isEncrypted())
-            this.changed(ViewChange.ATTACHMENT);
-     }
-
-    public void setAttachmentSigning(Coder.Signing signing) {
-        Attachment attachment = this.getAttachment();
-        if (attachment == null)
-            return;
-
-        attachment.getCoderStatus().setSigning(signing);
-        this.save();
-    }
-
-    public void setAttachmentDownloadProgress(int p) {
-        Attachment attachment = this.getAttachment();
-        if (attachment == null)
-            return;
-
-        attachment.setDownloadProgress(p);
-        if (p <= 0)
-            this.changed(ViewChange.ATTACHMENT);
-    }
-
-    public void setDecryptedAttachment(String filename) {
-        Attachment attachment = this.getAttachment();
-        if (attachment == null)
-            return;
-
-        attachment.setDecryptedFile(filename);
-        this.save();
-        this.changed(ViewChange.ATTACHMENT);
     }
 
     public void setPreviewFilename(String filename) {

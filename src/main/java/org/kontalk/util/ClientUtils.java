@@ -44,9 +44,9 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.MessageContent;
-import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.MessageContent.GroupCommand.OP;
+import org.kontalk.model.message.MessageContent.InAttachment;
 import org.kontalk.model.message.MessageContent.Preview;
 
 /**
@@ -155,7 +155,7 @@ public final class ClientUtils {
         }
 
         // Out of Band Data: a URI to a file
-        Attachment attachment = null;
+        InAttachment attachment = null;
         ExtensionElement oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
         if (oobExt instanceof OutOfBandData) {
             OutOfBandData oobData = (OutOfBandData) oobExt;
@@ -166,7 +166,8 @@ public final class ClientUtils {
                 LOGGER.log(Level.WARNING, "can't parse URL", ex);
                 url = URI.create("");
             }
-            attachment = MessageContent.Attachment.incoming(url, oobData.isEncrypted());
+
+            attachment = new InAttachment(url);
 
             // body text is maybe URI, for clients that dont understand OOB,
             // but we do, don't save it twice

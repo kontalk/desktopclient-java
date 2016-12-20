@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.chatstates.ChatState;
@@ -33,6 +34,8 @@ import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.MessageContent;
+import org.kontalk.model.message.MessageContent.OutAttachment;
+import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
 import org.kontalk.util.ClientUtils;
@@ -63,7 +66,7 @@ public final class KonMessageSender {
         }
 
         MessageContent content = message.getContent();
-        MessageContent.Attachment att = content.getAttachment().orElse(null);
+        OutAttachment att = content.getOutAttachment().orElse(null);
         if (att != null && !att.hasURL()) {
             LOGGER.warning("attachment not uploaded");
             message.setStatus(KonMessage.Status.ERROR);
@@ -137,7 +140,7 @@ public final class KonMessageSender {
     public static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
         Message smackMessage = new Message();
 
-        MessageContent.Attachment att = content.getAttachment().orElse(null);
+        OutAttachment att = content.getOutAttachment().orElse(null);
 
         // text body
         String text = content.getPlainText();
@@ -154,7 +157,7 @@ public final class KonMessageSender {
                     att.getMimeType(), att.getLength(), encrypted);
             smackMessage.addExtension(oobData);
 
-            MessageContent.Preview preview = content.getPreview().orElse(null);
+            Preview preview = content.getPreview().orElse(null);
             if (preview != null) {
                 String data = EncodingUtils.bytesToBase64(preview.getData());
                 BitsOfBinary bob = new BitsOfBinary(preview.getMimeType(), data);

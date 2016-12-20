@@ -19,15 +19,15 @@
 package org.kontalk.crypto;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.logging.Logger;
+
 import org.kontalk.crypto.PGPUtils.PGPCoderKey;
 import org.kontalk.model.Contact;
-import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.DecryptMessage;
-import org.kontalk.model.message.InMessage;
+import org.kontalk.model.message.MessageContent.InAttachment;
+import org.kontalk.model.message.OutMessage;
 
 /**
  * Static methods for decryption and encryption of a message.
@@ -111,16 +111,16 @@ public final class Coder {
      * status of the message and errors that may occur are saved to the message.
      */
     public static boolean decryptMessage(PersonalKey myKey, DecryptMessage message) {
-        return new Decryptor(myKey, message).decryptMessage();
+        return Decryptor.decryptMessage(message, myKey);
     }
 
     /**
      * Decrypt and verify a downloaded attachment file. Sets the encryption and
      * signing status of the message attachment and errors that may occur are
-     * saved to the message.
+     * saved to the attachment.
      */
-    public static void decryptAttachment(PersonalKey myKey, InMessage message, Path baseDir) {
-        new Decryptor(myKey, message).decryptAttachment(baseDir);
+    public static void decryptAttachment(PersonalKey myKey, InAttachment attachment, Contact sender) {
+        Decryptor.decryptAttachment(attachment, myKey, sender);
     }
 
     /**

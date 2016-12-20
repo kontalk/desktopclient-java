@@ -19,8 +19,10 @@
 package org.kontalk.crypto;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -34,15 +36,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPEncryptedData;
+import org.bouncycastle.openpgp.PGPEncryptedDataList;
 import org.bouncycastle.openpgp.PGPException;
 import org.bouncycastle.openpgp.PGPKeyFlags;
 import org.bouncycastle.openpgp.PGPKeyPair;
+import org.bouncycastle.openpgp.PGPMarker;
+import org.bouncycastle.openpgp.PGPObjectFactory;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
@@ -313,5 +319,16 @@ public final class PGPUtils {
         return new String[]{StringUtils.defaultString(matcher.group(1)),
             StringUtils.defaultString(matcher.group(3)),
             StringUtils.defaultString(matcher.group(5))};
+    }
+
+    public static boolean isEncryptedFile(Path file) {
+        try (FileInputStream input = new FileInputStream(file.toFile())) {
+            PGPObjectFactory factory = new PGPObjectFactory(input, FP_CALC);
+            Object o = factory.nextObject();
+            return o instanceof PGPEncryptedDataList || o instanceof PGPMarker;
+        // NOTE: exception class is not well defined for non-pgp data
+        } catch(IOException | RuntimeException ex) {
+            return false;
+        }
     }
 }
