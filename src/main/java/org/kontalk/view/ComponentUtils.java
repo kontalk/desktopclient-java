@@ -912,6 +912,7 @@ final class ComponentUtils {
 
         void setStatus(String text) {
             mStatus.setText(text);
+            mAttLabel.setEnabled(text.isEmpty());
         }
     }
 
