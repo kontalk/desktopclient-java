@@ -41,6 +41,7 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.text.AttributeSet;
 import javax.swing.text.BadLocationException;
+import javax.swing.text.Document;
 import javax.swing.text.PlainDocument;
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -736,34 +737,45 @@ final class ComponentUtils {
         abstract void onInvalidInput();
     }
 
-    static class EditableTextField extends WebTextField {
+    static class LabelTextField extends WebTextField {
 
-        EditableTextField(int maxTextLength, int columns, final Component focusGainer) {
+        LabelTextField(int columns, Component focusGainer) {
+            this("", null, false, columns, focusGainer);
+        }
+
+        LabelTextField(int maxTextLength, int columns, final Component focusGainer) {
             this("", maxTextLength, true, columns, focusGainer);
         }
 
-        EditableTextField(String text, int maxTextLength, boolean editable,
+        LabelTextField(String text, int maxTextLength, boolean editable,
                 int columns, final Component focusGainer) {
-            super(new ComponentUtils.TextLimitDocument(maxTextLength), text, columns);
+            this(text, new TextLimitDocument(maxTextLength), editable, columns, focusGainer);
+        }
 
-            this.setTrailingComponent(new WebImage(Utils.getIcon("ic_ui_edit.png")));
+        LabelTextField(String text, Document doc, boolean editable,
+                       int columns, final Component focusGainer) {
+            super(doc, text, columns);
 
             this.setEditable(editable);
-            this.setFocusable(editable);
+            this.setFocusable(true);
+            if (editable)
+                this.setTrailingComponent(new WebImage(Utils.getIcon("ic_ui_edit.png")));
+            else
+                this.setBackground(null);
 
-            // edit mode is higher than label mode
-            this.setMinimumHeight(27);
+            // edit mode needs more height than label mode
+            this.setMinimumHeight(30);
 
             this.setHideInputPromptOnFocus(false);
             this.addFocusListener(new FocusListener() {
                 @Override
                 public void focusGained(FocusEvent e) {
-                    EditableTextField.this.switchToEditMode();
+                    LabelTextField.this.switchToEditMode();
                 }
                 @Override
                 public void focusLost(FocusEvent e) {
-                    EditableTextField.this.onFocusLost();
-                    EditableTextField.this.switchToLabelMode();
+                    LabelTextField.this.onFocusLost();
+                    LabelTextField.this.switchToLabelMode();
                 }
             });
             this.addActionListener(new ActionListener() {
@@ -780,15 +792,17 @@ final class ComponentUtils {
             String text = this.editText();
             this.setInputPrompt(text);
             this.setText(text);
+            this.setCaretPosition(0); // "scroll" back
             this.setDrawBorder(true);
-            this.getTrailingComponent().setVisible(false);
+            Optional.ofNullable(this.getTrailingComponent()).ifPresent(c -> c.setVisible(false));
         }
 
         private void switchToLabelMode() {
             this.setText(this.labelText());
+            this.setCaretPosition(0); // "scroll" back
             // layout problem here
             this.setDrawBorder(false);
-            this.getTrailingComponent().setVisible(true);
+            Optional.ofNullable(this.getTrailingComponent()).ifPresent(c -> c.setVisible(true));
         }
 
         String labelText() {

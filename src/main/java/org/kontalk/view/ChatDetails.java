@@ -46,6 +46,7 @@ import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.util.Tr;
+import org.kontalk.view.ComponentUtils.LabelTextField;
 import org.kontalk.view.ComponentUtils.MemberList;
 
 /**
@@ -59,7 +60,7 @@ final class ChatDetails extends ComponentUtils.PopupPanel {
 
     private final View mView;
     private final Chat mChat;
-    private final ComponentUtils.EditableTextField mSubjectField;
+    private final LabelTextField mSubjectField;
     private final WebRadioButton mColorOpt;
     private final WebButton mColor;
     private final WebRadioButton mImgOpt;
@@ -79,7 +80,7 @@ final class ChatDetails extends ComponentUtils.PopupPanel {
         groupPanel.add(new WebSeparator(true, true));
 
         // editable fields
-        mSubjectField = new ComponentUtils.EditableTextField(mChat.getSubject(),
+        mSubjectField = new LabelTextField(mChat.getSubject(),
                 View.MAX_SUBJ_LENGTH, mChat.isAdministratable(), 16, this);
         if (mChat instanceof GroupChat) {
             GroupChat groupChat = (GroupChat) mChat;

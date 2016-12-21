@@ -53,6 +53,7 @@ import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.util.Tr;
 import org.kontalk.view.AvatarLoader.AvatarImg;
+import org.kontalk.view.ComponentUtils.LabelTextField;
 
 /**
  * Show and edit contact details.
@@ -119,7 +120,7 @@ final class ContactDetails extends WebPanel implements Observer {
         mainPanel.add(Box.createGlue());
 
         mainPanel.add(new WebLabel(Tr.tr("Display Name:")));
-        mNameField = new ComponentUtils.EditableTextField(View.MAX_NAME_LENGTH, 15, this) {
+        mNameField = new LabelTextField(View.MAX_NAME_LENGTH, 15, this) {
             @Override
             protected String labelText() {
                 return mContact.getName();
@@ -137,8 +138,8 @@ final class ContactDetails extends WebPanel implements Observer {
         mainPanel.add(mNameField);
 
         mainPanel.add(new WebLabel("Jabber ID:"));
-        ComponentUtils.EditableTextField jidField =
-                new ComponentUtils.EditableTextField(View.MAX_JID_LENGTH, 20, this) {
+        LabelTextField jidField =
+                new LabelTextField(View.MAX_JID_LENGTH, 20, this) {
             @Override
             protected String labelText() {
                 return Utils.jid(mContact.getJID(), View.PRETTY_JID_LENGTH);
