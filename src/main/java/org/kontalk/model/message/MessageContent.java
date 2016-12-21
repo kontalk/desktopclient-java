@@ -365,7 +365,8 @@ public class MessageContent {
         public void setFile(String fileName, boolean encrypted) {
             mFilename = fileName;
             mCoderStatus = encrypted ? CoderStatus.createEncrypted() : CoderStatus.createInsecure();
-            this.changed(!encrypted);
+            if (!encrypted)
+                this.changed(true);
         }
 
         @Override
@@ -381,12 +382,10 @@ public class MessageContent {
 
         public void setErrors(EnumSet<Coder.Error> errors) {
             mCoderStatus.setSecurityErrors(errors);
-            this.changed(false);
         }
 
         public void setSigning(Coder.Signing signing) {
             mCoderStatus.setSigning(signing);
-            this.changed(false);
         }
 
         @Override
