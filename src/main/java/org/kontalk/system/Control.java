@@ -620,9 +620,8 @@ public final class Control {
             this.onSecurityErrors(message);
         }
 
-        if (message.getContent().getPreview().isPresent()) {
-            mAttachmentManager.savePreview(message);
-        }
+        message.getContent().getPreview()
+                .ifPresent(p -> mAttachmentManager.savePreview(p, message.getID()));
 
         if (message.getContent().getInAttachment().isPresent()) {
             this.download(message);

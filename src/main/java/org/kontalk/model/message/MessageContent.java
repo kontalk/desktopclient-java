@@ -44,7 +44,8 @@ import org.kontalk.util.MediaUtils;
 
 /**
  * All possible content a message can contain.
- * Recursive: A message can contain a decrypted message.
+ *
+ * Implementation detail: nested, a message can contain a decrypted message.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -104,14 +105,11 @@ public class MessageContent {
 
     /**
      * Get encrypted or plain text content.
-     * @return encrypted content if present, else plain text. If there is no
+     * @return decrypted content text if present, else plain text. If there is no
      * plain text either returns an empty string.
      */
     public String getText() {
-        if (mDecryptedContent != null)
-            return mDecryptedContent.getPlainText();
-        else
-            return mPlainText;
+        return mDecryptedContent != null ? mDecryptedContent.getPlainText() : mPlainText;
     }
 
     public String getPlainText() {
@@ -119,8 +117,7 @@ public class MessageContent {
     }
 
     public Optional<Attachment> getAttachment() {
-        if (mDecryptedContent != null &&
-                mDecryptedContent.getAttachment().isPresent()) {
+        if (mDecryptedContent != null && mDecryptedContent.getAttachment().isPresent()) {
             return mDecryptedContent.getAttachment();
         }
         return Optional.ofNullable(mAttachment);
@@ -156,8 +153,7 @@ public class MessageContent {
     }
 
     public Optional<Preview> getPreview() {
-        if (mDecryptedContent != null &&
-                mDecryptedContent.getPreview().isPresent()) {
+        if (mDecryptedContent != null && mDecryptedContent.getPreview().isPresent()) {
             return mDecryptedContent.getPreview();
         }
         return Optional.ofNullable(mPreview);
@@ -437,10 +433,10 @@ public class MessageContent {
         private static final String JSON_MIME_TYPE = "mime_type";
         private static final String JSON_LENGTH = "length";
 
+        // path to upload file
+        private final Path mFile;
         // URL for file download, empty string by default
         private URI mURL;
-        // path to upload file
-        private Path mFile;
         // MIME of file, empty string by default
         private String mMimeType;
         // size of (decrypted) upload file in bytes, -1 by default
@@ -505,7 +501,7 @@ public class MessageContent {
 
         @Override
         public String toString() {
-            return "{OATT:url="+mURL+",file="+mFile+",mime="+mMimeType+",length="+mLength+"}";
+            return "{OATT:file="+mFile+",url="+mURL+",mime="+mMimeType+",length="+mLength+"}";
         }
 
         // using legacy lib, raw types extend Object
@@ -530,31 +526,21 @@ public class MessageContent {
         }
     }
 
+    // immutable
     public static class Preview {
 
-        private static final String JSON_FILENAME= "filename";
         private static final String JSON_MIME_TYPE = "mime_type";
 
         private final byte[] mData;
-        private String mFilename = "";
         private final String mMimeType;
 
-        // used for incoming
         public Preview(byte[] data, String mimeType) {
             mData = data;
             mMimeType = mimeType;
         }
 
-        // used for outgoing / self created
-        public Preview(byte[] data, String filename, String mimeType) {
-            mData = data;
-            mFilename = filename;
-            mMimeType = mimeType;
-        }
-
-        private Preview(String filename, String mimeType) {
+        private Preview(String mimeType) {
             mData = new byte[0];
-            mFilename = filename;
             mMimeType = mimeType;
         }
 
@@ -562,13 +548,10 @@ public class MessageContent {
             return mData;
         }
 
-        public Path getImagePath() {
+        public Path getImagePath(int messageID) {
             return !MediaUtils.isImage(mMimeType) ? Paths.get("") :
-                    path(mFilename, AttachmentManager.PREVIEW_DIRNAME);
-        }
-
-        void setFilename(String filename) {
-            mFilename = filename;
+                    path(AttachmentManager.previewFilename(messageID, mMimeType),
+                            AttachmentManager.PREVIEW_DIRNAME);
         }
 
         public String getMimeType() {
@@ -580,7 +563,6 @@ public class MessageContent {
         private String toJSON() {
             JSONObject json = new JSONObject();
             EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
-            EncodingUtils.putJSON(json, JSON_FILENAME, mFilename);
             return json.toJSONString();
         }
 
@@ -588,9 +570,8 @@ public class MessageContent {
             Object obj = JSONValue.parse(json);
             try {
                 Map<?, ?> map = (Map) obj;
-                String filename = EncodingUtils.getJSONString(map, JSON_FILENAME);
                 String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
-                return new Preview(filename, mimeType);
+                return new Preview(mimeType);
             }  catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON preview", ex);
                 return null;
@@ -599,7 +580,7 @@ public class MessageContent {
 
         @Override
         public String toString() {
-            return "{PRE:fn="+mFilename+",mime="+mMimeType+"}";
+            return "{PRE:mime="+mMimeType+"}";
         }
     }
 

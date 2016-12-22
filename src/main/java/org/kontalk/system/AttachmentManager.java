@@ -305,18 +305,8 @@ public class AttachmentManager implements Runnable {
             this.mayCreateImagePreview(message);
     }
 
-    void savePreview(InMessage message) {
-        Preview preview = message.getContent().getPreview().orElse(null);
-        if (preview == null) {
-            LOGGER.warning("no preview in message: "+message);
-            return;
-        }
-        String id = Integer.toString(message.getID());
-        String ext = MediaUtils.extensionForMIME(preview.getMimeType());
-        String filename = id + "_bob." + ext;
-        this.writePreview(preview, filename);
-
-        message.setPreviewFilename(filename);
+    void savePreview(Preview preview, int messageID) {
+        this.writePreview(preview.getData(), messageID, preview.getMimeType());
     }
 
     void mayCreateImagePreview(KonMessage message) {
@@ -349,12 +339,9 @@ public class AttachmentManager implements Runnable {
         if (bytes.length <= 0)
             return;
 
-        String id = Integer.toString(message.getID());
-        String filename = id + "_bob_." + format;
-        Preview preview = new Preview(bytes, filename, THUMBNAIL_MIME);
+        this.writePreview(bytes, message.getID(), THUMBNAIL_MIME);
+        Preview preview = new Preview(bytes, THUMBNAIL_MIME);
         LOGGER.info("created: "+preview);
-
-        this.writePreview(preview, filename);
 
         message.setPreview(preview);
     }
@@ -363,16 +350,22 @@ public class AttachmentManager implements Runnable {
         return mAttachmentDir;
     }
 
-    private void writePreview(Preview preview, String filename) {
+    private void writePreview(byte[] data, int messageID, String mimeType) {
+        String filename = previewFilename(messageID, mimeType);
+
         File newFile = mPreviewDir.resolve(filename).toFile();
         try {
-            FileUtils.writeByteArrayToFile(newFile, preview.getData());
+            FileUtils.writeByteArrayToFile(newFile, data);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't save preview file", ex);
             return;
         }
 
         LOGGER.config("to file: "+newFile);
+    }
+
+    public static String previewFilename(int messageID, String mimeType) {
+        return Integer.toString(messageID) + "_bob." + MediaUtils.extensionForMIME(mimeType);
     }
 
     private HTTPFileClient clientOrNull(){

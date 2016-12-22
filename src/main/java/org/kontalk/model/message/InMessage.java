@@ -30,7 +30,6 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.chat.Chat;
-import org.kontalk.model.message.MessageContent.Preview;
 
 /**
  * Model for an XMPP message sent to the user.
@@ -90,17 +89,6 @@ public final class InMessage extends KonMessage implements DecryptMessage {
         mCoderStatus.setDecrypted();
         this.save();
         this.changed(ViewChange.CONTENT);
-    }
-
-    public void setPreviewFilename(String filename) {
-        Preview preview = this.getContent().getPreview().orElse(null);
-        if (preview == null) {
-            LOGGER.warning("no preview !?");
-            return;
-        }
-        preview.setFilename(filename);
-        this.save();
-        this.changed(ViewChange.ATTACHMENT);
     }
 
     @Override
