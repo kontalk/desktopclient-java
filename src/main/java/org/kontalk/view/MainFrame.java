@@ -78,7 +78,7 @@ import org.kontalk.util.Tr;
  */
 final class MainFrame extends WebFrame {
 
-    enum Tab {CHATS, CONTACT};
+    enum Tab {CHATS, CONTACT}
 
     private static final int SCROLL_BAR_WIDTH =
             (int) new WebScrollBar(Adjustable.VERTICAL).getPreferredSize().getWidth();
@@ -87,7 +87,6 @@ final class MainFrame extends WebFrame {
     private final WebMenuItem mConnectMenuItem;
     private final WebMenuItem mDisconnectMenuItem;
     private final WebTabbedPane mTabbedPane;
-    private final WebToggleButton mAddGroupButton;
     private final WebToggleButton mAddContactButton;
 
     MainFrame(View view,
@@ -157,7 +156,7 @@ final class MainFrame extends WebFrame {
         statusMenuItem.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent event) {
-                WebDialog statusDialog = new ProfileDialog(mView, model);
+                WebDialog statusDialog = new ProfileDialog(mView);
                 statusDialog.setVisible(true);
             }
         });
@@ -249,15 +248,14 @@ final class MainFrame extends WebFrame {
         String chatOverlayText =
                 Tr.tr("No chats to display. You can create a new chat from the contact list.");
         ComponentUtils.PopupPanel addGroupChatPanel = new ComponentUtils.AddGroupChatPanel(mView, model);
-        mAddGroupButton = new ComponentUtils.ToggleButton(
-                Utils.getIcon("ic_ui_add_group.png"),
-                Tr.tr("Create a new group chat")) {
+        WebToggleButton addGroupButton = new ComponentUtils.ToggleButton(
+                Utils.getIcon("ic_ui_add_group.png"), Tr.tr("Create a new group chat")) {
             @Override
             Optional<ComponentUtils.PopupPanel> getPanel() {
                 return Optional.of(addGroupChatPanel);
             }
         };
-        WebPanel chatListPanel = createListPanel(chatList, chatOverlayText, mAddGroupButton);
+        WebPanel chatListPanel = createListPanel(chatList, chatOverlayText, addGroupButton);
         mTabbedPane.addTab("", chatListPanel);
         mTabbedPane.setTabComponentAt(Tab.CHATS.ordinal(),
                 new WebVerticalLabel(Tr.tr("Chats")));

@@ -18,7 +18,7 @@
 
 package org.kontalk.system;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
@@ -50,11 +50,11 @@ public final class RosterHandler {
     private final Client mClient;
     private final Model mModel;
 
-    private static final List<String> KEY_SERVERS = Arrays.asList(
+    private static final List<String> KEY_SERVERS = Collections.singletonList(
             "pgp.mit.edu"
             // TODO: add CA for this
             //"pool.sks-keyservers.net"
-            );
+    );
 
     public enum Error {
         SERVER_NOT_FOUND

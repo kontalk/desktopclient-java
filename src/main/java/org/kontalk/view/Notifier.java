@@ -31,6 +31,7 @@ import com.alee.global.StyleConstants;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.panel.WebPanel;
 import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.rootpane.WebFrame;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.text.WebTextArea;
 import com.alee.managers.notification.NotificationIcon;
@@ -56,12 +57,14 @@ import org.kontalk.util.Tr;
  */
 final class Notifier {
 
-    private static final Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
+    //private static final Icon NOTIFICATION_ICON = Utils.getIcon("ic_msg_pending.png");
 
     private final View mView;
+    private final WebFrame mWindow;
 
-    Notifier(View view) {
+    Notifier(View view, WebFrame window) {
         mView = view;
+        mWindow = window;
     }
 
     void onNewMessage(InMessage newMessage) {
@@ -77,11 +80,13 @@ final class Notifier {
             return;
         }
         Icon icon = NotificationIcon.error.getIcon();
-        NotificationManager.showNotification(textArea(Utils.getErrorText(ex)), icon);
+        NotificationManager.showNotification(mWindow, textArea(Utils.getErrorText(ex)), icon);
     }
 
     // TODO more information for message exs
     void showSecurityErrors(KonMessage message) {
+        //TODO too intrusive for user, but use the explanation for message view
+        if (true) return;
         String errorText = "<html>";
 
         boolean isOut = !message.isInMessage();
@@ -106,9 +111,7 @@ final class Notifier {
         }
 
         errorText += "</html>";
-
-        // TODO too intrusive for user, but use the explanation above for message view
-        //NotificationManager.showNotification(mChatView, errorText);
+        NotificationManager.showNotification(mWindow, errorText);
     }
 
     void showPresenceError(Contact contact, RosterHandler.Error error) {
@@ -124,7 +127,7 @@ final class Notifier {
 
         panel.add(textArea(errorText));
 
-        NotificationManager.showNotification(panel, NotificationOption.cancel);
+        NotificationManager.showNotification(mWindow, panel, NotificationOption.cancel);
     }
 
     void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {
@@ -138,7 +141,7 @@ final class Notifier {
         String expl = Tr.tr("When declining the key further communication to and from this contact will be blocked.");
         panel.add(textArea(expl));
 
-        WebNotificationPopup popup = NotificationManager.showNotification(panel,
+        WebNotificationPopup popup = NotificationManager.showNotification(mWindow, panel,
                 NotificationOption.accept, NotificationOption.decline,
                 NotificationOption.cancel);
         popup.setClickToClose(false);
@@ -169,7 +172,7 @@ final class Notifier {
 
         panel.add(textArea(Tr.tr("The reset option will recreate the server entry.")));
 
-        WebNotificationPopup popup = NotificationManager.showNotification(panel,
+        WebNotificationPopup popup = NotificationManager.showNotification(mWindow, panel,
                 NotificationOption.yes, NotificationOption.reset,
                 NotificationOption.cancel);
         popup.setClickToClose(false);
@@ -200,7 +203,7 @@ final class Notifier {
         String expl = Tr.tr("When accepting, this contact will be able to see your online status.");
         panel.add(textArea(expl));
 
-        WebNotificationPopup popup = NotificationManager.showNotification(panel,
+        WebNotificationPopup popup = NotificationManager.showNotification(mWindow, panel,
                 NotificationOption.accept, NotificationOption.decline,
                 NotificationOption.cancel);
         popup.setClickToClose(false);

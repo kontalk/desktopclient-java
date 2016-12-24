@@ -17,8 +17,13 @@
  */
 package org.kontalk.view;
 
-import com.alee.laf.text.WebTextPane;
-import com.alee.utils.WebUtils;
+import javax.swing.event.MouseInputAdapter;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Element;
+import javax.swing.text.Style;
+import javax.swing.text.StyleConstants;
+import javax.swing.text.StyleContext;
+import javax.swing.text.StyledDocument;
 import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.event.MouseAdapter;
@@ -29,13 +34,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import javax.swing.event.MouseInputAdapter;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Element;
-import javax.swing.text.Style;
-import javax.swing.text.StyleConstants;
-import javax.swing.text.StyleContext;
-import javax.swing.text.StyledDocument;
+
+import com.alee.laf.text.WebTextPane;
+import com.alee.utils.WebUtils;
 
 /**
  * Static methods/field for parsing web links in the text of a WebTextPane.
@@ -64,27 +65,33 @@ final class LinkUtils {
 
     private static final String URL_ATT_NAME = "URL";
 
-    static void linkify(StyledDocument doc, String text) {
+    static class Linkifier {
+
+        private final StyledDocument mDocument;
         // style for all links in a document
-        Style urlStyle = doc.addStyle(null, DEFAULT_STYLE);
-        StyleConstants.setForeground(urlStyle, Color.BLUE);
-        // only for identifying URLs
-        urlStyle.addAttribute(URL_ATT_NAME, new Object());
-        try {
-            doc.remove(0, doc.getLength());
+        private final Style mURLStyle;
+
+        Linkifier(StyledDocument doc) {
+            mDocument = doc;
+
+            mURLStyle = mDocument.addStyle(null, DEFAULT_STYLE);
+            StyleConstants.setForeground(mURLStyle, Color.BLUE);
+            // only for identifying URLs
+            mURLStyle.addAttribute(URL_ATT_NAME, new Object());
+        }
+
+        void linkify(String text) throws BadLocationException {
             Matcher m = URL_PATTERN.matcher(text);
             int lastPos = 0;
             while (m.find()) {
                 // non-matching
-                insertDefault(doc, text.substring(lastPos, m.start()));
+                insertDefault(mDocument, text.substring(lastPos, m.start()));
                 // matching
-                doc.insertString(doc.getLength(), m.group(), urlStyle);
+                mDocument.insertString(mDocument.getLength(), m.group(), mURLStyle);
                 lastPos = m.end();
             }
             // last non-matching
-            insertDefault(doc, lastPos >= text.length() ? "" : text.substring(lastPos));
-        } catch (BadLocationException ex) {
-            LOGGER.log(Level.WARNING, "can't set document text", ex);
+            insertDefault(mDocument, lastPos >= text.length() ? "" : text.substring(lastPos));
         }
     }
 
@@ -140,7 +147,7 @@ final class LinkUtils {
         try {
             new URL(url);
             return url;
-        } catch (MalformedURLException ex) {
+        } catch (MalformedURLException ignored) {
         }
         url = "http://" + url;
         try {

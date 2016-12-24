@@ -36,6 +36,7 @@ public final class EndpointServer {
         mPort = port;
     }
 
+    // TODO unused
     public EndpointServer(String network, String host, int port) {
         mNetwork = network;
         mHost = host;

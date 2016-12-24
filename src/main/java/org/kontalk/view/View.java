@@ -67,7 +67,7 @@ public final class View implements Observer {
     static final String KONTALK_SITE = "https://www.kontalk.org";
     static final String KONTALK_RELEASES = "https://github.com/kontalk/desktopclient-java/releases";
 
-    static final int LISTS_WIDTH = 280;
+    static final int LISTS_WIDTH = 300;
 
     static final int GAP_DEFAULT = 10;
     static final int GAP_BIG = 15;
@@ -102,6 +102,7 @@ public final class View implements Observer {
     static final Color LIGHT_BLUE = new Color(220, 230, 250);
     static final Color LIGHT_GREY = new Color(240, 240, 240);
     //static final Color GREEN = new Color(83, 196, 46);
+    static final Color GREEN = new Color(0, 200, 0);
     static final Color LIGHT_GREEN = new Color(220, 250, 220);
     static final Color DARK_GREEN = new Color(0, 100, 0);
     static final Color DARK_RED = new Color(196, 46, 46);
@@ -113,13 +114,14 @@ public final class View implements Observer {
     static final int AVATAR_DETAIL_SIZE = 60;
     static final int AVATAR_PROFILE_SIZE = 150;
 
+    static final String THE_ME_COMMAND = "/me ";
+
     private final ViewControl mControl;
     private final Model mModel;
 
     private final TrayManager mTrayManager;
     private final Notifier mNotifier;
 
-    private final SearchPanel mSearchPanel;
     private final ContactListView mContactListView;
     private final ChatListView mChatListView;
     private final Content mContent;
@@ -148,7 +150,7 @@ public final class View implements Observer {
         mChatListView = new ChatListView(this, mModel.chats());
 
         // search panel
-        mSearchPanel = new SearchPanel(
+        SearchPanel searchPanel = new SearchPanel(
                 new ListView[]{mContactListView, mChatListView},
                 mChatView);
         // status bar
@@ -157,18 +159,18 @@ public final class View implements Observer {
         statusBar.add(mStatusBarLabel);
         // main frame
         mMainFrame = new MainFrame(this, mModel, mContactListView, mChatListView,
-                mContent, mSearchPanel, statusBar);
+                mContent, searchPanel, statusBar);
         mMainFrame.addWindowFocusListener(new WindowAdapter() {
             @Override
             public void windowGainedFocus(WindowEvent e) {
-                mChatView.getCurrentChat().ifPresent(chat -> chat.setRead());
+                mChatView.getCurrentChat().ifPresent(Chat::setRead);
             }
         });
 
         // tray
         mTrayManager = new TrayManager(this, mModel, mMainFrame);
         // notifier
-        mNotifier = new Notifier(this);
+        mNotifier = new Notifier(this, mMainFrame);
 
         // register observer
         mModel.contacts().addObserver(mContactListView);
@@ -281,6 +283,10 @@ public final class View implements Observer {
             mNotifier.showPresenceError(presenceError.contact, presenceError.error);
         } else if (arg instanceof ViewEvent.SubscriptionRequest) {
             mNotifier.confirmSubscription((ViewEvent.SubscriptionRequest) arg);
+        } else if (arg instanceof ViewEvent.RetryTimerMessage) {
+            mStatusBarLabel.setText(
+                    String.format(Tr.tr("Connection failure. Retry in %1$d seconds."),
+                    ((ViewEvent.RetryTimerMessage) arg).countdown));
         } else {
             LOGGER.warning("unexpected argument: "+arg);
         }
@@ -419,10 +425,6 @@ public final class View implements Observer {
         mContactListView.setSelectedItem(contact);
     }
 
-    void clearSearch() {
-        mSearchPanel.clear();
-    }
-
     void tabPaneChanged(MainFrame.Tab tab) {
         if (tab == MainFrame.Tab.CHATS) {
             Chat chat = mChatListView.getSelectedValue().orElse(null);
@@ -454,6 +456,10 @@ public final class View implements Observer {
 
     void updateTray() {
         mTrayManager.setTray();
+    }
+
+    void updateMessageLists() {
+        mChatView.updateMessageLists();
     }
 
     // TODO is this good?

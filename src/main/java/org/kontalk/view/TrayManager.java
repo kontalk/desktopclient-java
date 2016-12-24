@@ -18,9 +18,7 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.menu.WebMenuItem;
-import com.alee.laf.menu.WebPopupMenu;
-import com.alee.laf.rootpane.WebDialog;
+import javax.swing.SwingUtilities;
 import java.awt.AWTException;
 import java.awt.Image;
 import java.awt.SystemTray;
@@ -34,7 +32,10 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.SwingUtilities;
+
+import com.alee.laf.menu.WebMenuItem;
+import com.alee.laf.menu.WebPopupMenu;
+import com.alee.laf.rootpane.WebDialog;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.ChatList;
 import org.kontalk.persistence.Config;
@@ -47,8 +48,8 @@ import org.kontalk.util.Tr;
 final class TrayManager implements Observer {
     private static final Logger LOGGER = Logger.getLogger(TrayManager.class.getName());
 
-    static final Image NORMAL_TRAY = Utils.getImage("kontalk.png");
-    static final Image NOTIFICATION_TRAY = Utils.getImage("kontalk_notification.png");
+    private static final Image NORMAL_TRAY = Utils.getImage("kontalk.png");
+    private static final Image NOTIFICATION_TRAY = Utils.getImage("kontalk_notification.png");
 
     private final View mView;
     private final Model mModel;

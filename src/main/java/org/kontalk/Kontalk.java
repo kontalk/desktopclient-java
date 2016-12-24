@@ -155,18 +155,16 @@ public final class Kontalk {
         return 0;
     }
 
-    private boolean removeLock() {
+    private void removeLock() {
         if (mRunLock == null) {
             LOGGER.warning("no lock");
-            return false;
+            return;
         }
         try {
             mRunLock.close();
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't close run socket", ex);
-            return false;
         }
-        return true;
     }
 
     /**

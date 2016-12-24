@@ -53,7 +53,7 @@ public final class Contact extends Observable implements Searchable {
     /**
      * Online status of one contact.
      */
-    public enum Online {UNKNOWN, YES, NO, ERROR};
+    public enum Online {UNKNOWN, YES, NO, ERROR}
 
     /**
      * XMPP subscription status in roster.
@@ -432,7 +432,7 @@ public final class Contact extends Observable implements Searchable {
                 +",subsc="+mSubStatus;
     }
 
-    static Contact load(Database db, ResultSet rs) throws SQLException {
+    static Contact load(ResultSet rs) throws SQLException {
         int id = rs.getInt("_id");
         JID jid = JID.bare(rs.getString(Contact.COL_JID));
 

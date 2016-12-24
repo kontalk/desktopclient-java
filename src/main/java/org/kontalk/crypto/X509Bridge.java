@@ -168,8 +168,8 @@ public class X509Bridge {
      * @param endDate
      *            date until which the certificate will be valid
      *            (defaults to start date and time if null)
-     * @param subjectAltName
-     *            URI to be placed in subjectAltName
+     * @param subjectAltNames
+     *            URIs to be placed in subjectAltName
      * @return self-signed certificate
      */
     private static X509Certificate createCertificate(PublicKey pubKey,
@@ -184,25 +184,26 @@ public class X509Bridge {
          */
         BcContentSignerBuilder signerBuilder;
         String pubKeyAlgorithm = pubKey.getAlgorithm();
-        if (pubKeyAlgorithm.equals("DSA")) {
-            AlgorithmIdentifier sigAlgId = new DefaultSignatureAlgorithmIdentifierFinder()
-                .find("SHA1WithDSA");
-            AlgorithmIdentifier digAlgId = new DefaultDigestAlgorithmIdentifierFinder()
-                .find(sigAlgId);
-            signerBuilder = new BcDSAContentSignerBuilder(sigAlgId, digAlgId);
+        switch (pubKeyAlgorithm) {
+            case "DSA": {
+                AlgorithmIdentifier sigAlgId = new DefaultSignatureAlgorithmIdentifierFinder()
+                        .find("SHA1WithDSA");
+                AlgorithmIdentifier digAlgId = new DefaultDigestAlgorithmIdentifierFinder()
+                        .find(sigAlgId);
+                signerBuilder = new BcDSAContentSignerBuilder(sigAlgId, digAlgId);
+                break;
+            }
+            case "RSA": {
+                AlgorithmIdentifier sigAlgId = new DefaultSignatureAlgorithmIdentifierFinder()
+                        .find("SHA1WithRSAEncryption");
+                AlgorithmIdentifier digAlgId = new DefaultDigestAlgorithmIdentifierFinder()
+                        .find(sigAlgId);
+                signerBuilder = new BcRSAContentSignerBuilder(sigAlgId, digAlgId);
+                break;
+            }
+            default:
+                throw new RuntimeException("Algorithm not recognised: " + pubKeyAlgorithm);
         }
-        else if (pubKeyAlgorithm.equals("RSA")) {
-            AlgorithmIdentifier sigAlgId = new DefaultSignatureAlgorithmIdentifierFinder()
-                .find("SHA1WithRSAEncryption");
-            AlgorithmIdentifier digAlgId = new DefaultDigestAlgorithmIdentifierFinder()
-                .find(sigAlgId);
-            signerBuilder = new BcRSAContentSignerBuilder(sigAlgId, digAlgId);
-        }
-        else {
-            throw new RuntimeException(
-                    "Algorithm not recognised: " + pubKeyAlgorithm);
-        }
-
 
         AsymmetricKeyParameter keyp = PrivateKeyFactory.createKey(privKey.getEncoded());
         ContentSigner signer = signerBuilder.build(keyp);
@@ -322,17 +323,8 @@ public class X509Bridge {
 
        private final DERBitString keyData;
 
-       public SubjectPGPPublicKeyInfo(ASN1Encodable publicKey) throws IOException {
-           keyData = new DERBitString(publicKey);
-       }
-
        public SubjectPGPPublicKeyInfo(byte[] publicKey) {
            keyData = new DERBitString(publicKey);
-       }
-
-       public DERBitString getPublicKeyData()
-       {
-           return keyData;
        }
 
        @Override

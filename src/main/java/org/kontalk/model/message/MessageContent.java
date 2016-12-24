@@ -18,7 +18,6 @@
 
 package org.kontalk.model.message;
 
-import org.kontalk.misc.JID;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -30,9 +29,11 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
+import org.kontalk.misc.JID;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.util.EncodingUtils;
@@ -100,7 +101,7 @@ public class MessageContent {
     /**
      * Get encrypted or plain text content.
      * @return encrypted content if present, else plain text. If there is no
-     * plain text either return an empty string.
+     * plain text either returns an empty string.
      */
     public String getText() {
         if (mDecryptedContent != null)
@@ -270,9 +271,9 @@ public class MessageContent {
         private Path mFile;
         // MIME of file, only used for outgoing, empty string by default
         private String mMimeType;
-        // size of (decrypted) upload file in bytes, -1 by default
+        // size of (decrypted) upload file in bytes, only used for outgoing, -1 by default
         private long mLength;
-        // coder status of file encryption
+        // coder status of file encryption, only used for incoming
         private final CoderStatus mCoderStatus;
         // progress downloaded of (encrypted) file in percent
         private int mDownloadProgress = -1;
@@ -289,16 +290,21 @@ public class MessageContent {
         }
 
         // used for incoming attachments
-        public static Attachment incoming(URI url, long length,
+        // TODO do not use `encrpyted` and detect this by mime type
+        // $file att5qxceq.jpg
+        // att5qxceq.jpg: PGP RSA encrypted session key - keyid: 1B9BE79 526E5734 RSA (Encrypt or Sign) 2048b .
+        public static Attachment incoming(URI url,
                 boolean encrypted) {
-            return new Attachment(url, Paths.get(""), "", length,
+            return new Attachment(url, Paths.get(""), "", -1,
                     encrypted ?
                             CoderStatus.createEncrypted() :
                             CoderStatus.createInsecure()
             );
         }
 
-        // used for outgoing attachments
+        /** For outgoing attachments
+         * URI, length and (maybe) new MIME type are set after upload.
+         */
         public static Attachment outgoing(Path path, String mimeType) {
             return new Attachment(URI.create(""), path, mimeType, -1,
                     CoderStatus.createInsecure());
@@ -458,10 +464,6 @@ public class MessageContent {
             return mMimeType;
         }
 
-        public void save(int messageID) {
-            Integer.toString(messageID);
-        }
-
         // using legacy lib, raw types extend Object
         @SuppressWarnings("unchecked")
         private String toJSON() {
@@ -563,12 +565,12 @@ public class MessageContent {
             EncodingUtils.putJSON(json, JSON_SUBJECT, mSubject);
 
             List<String> added = mAdded.stream()
-                    .map(jid -> jid.string())
+                    .map(JID::string)
                     .collect(Collectors.toList());
             json.put(JSON_ADDED, added);
 
             List<String> removed = mRemoved.stream()
-                    .map(jid -> jid.string())
+                    .map(JID::string)
                     .collect(Collectors.toList());
             json.put(JSON_REMOVED, removed);
 
@@ -589,12 +591,12 @@ public class MessageContent {
 
                 List<String> a = (List<String>) map.get(JSON_ADDED);
                 List<JID> added = a.stream()
-                        .map(s -> JID.bare(s))
+                        .map(JID::bare)
                         .collect(Collectors.toList());
 
                 List<String> r = (List<String>) map.get(JSON_REMOVED);
                 List<JID> removed = r.stream()
-                        .map(s -> JID.bare(s))
+                        .map(JID::bare)
                         .collect(Collectors.toList());
 
                 return new GroupCommand(op, added, removed, subj);
@@ -627,15 +629,19 @@ public class MessageContent {
         }
 
         public Builder attachment(Attachment attachment) {
-            mAttachment = attachment; return this; };
+            mAttachment = attachment; return this; }
+
         public Builder preview(Preview preview) {
-            mPreview = preview; return this; };
+            mPreview = preview; return this; }
+
         public Builder groupData(KonGroupData gData) {
-            mGroupData = gData; return this; };
+            mGroupData = gData; return this; }
+
         public Builder groupCommand(GroupCommand group) {
-            mGroup = group; return this; };
+            mGroup = group; return this; }
+
         private Builder decryptedContent(MessageContent decrypted) {
-            mDecrypted = decrypted; return this; };
+            mDecrypted = decrypted; return this; }
 
         public MessageContent build() {
             return new MessageContent(this);

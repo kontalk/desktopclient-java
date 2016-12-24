@@ -22,7 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -69,10 +69,10 @@ public final class Client implements StanzaListener, Runnable {
     private static final String CAPS_CACHE_DIR = "caps_cache";
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
-    public enum PresenceCommand {REQUEST, GRANT, DENY};
+    public enum PresenceCommand {REQUEST, GRANT, DENY}
 
     // NOTE: disconnect is instantaneous, all resulting exceptions should be catched
-    private enum Command {CONNECT, LAST_ACTIVITY};
+    private enum Command {CONNECT, LAST_ACTIVITY}
 
     private final Control mControl;
 
@@ -293,7 +293,7 @@ public final class Client implements StanzaListener, Runnable {
         return Optional.of(JID.full(user));
     }
 
-    public EnumSet<FeatureDiscovery.Feature> getServerFeature() {
+    private EnumSet<FeatureDiscovery.Feature> getServerFeature() {
         EnumSet<FeatureDiscovery.Feature> e = EnumSet.noneOf(FeatureDiscovery.Feature.class);
         e.addAll(mFeatures.keySet());
         return e;
@@ -318,7 +318,7 @@ public final class Client implements StanzaListener, Runnable {
         this.sendPacket(publicKeyRequest);
     }
 
-    public void sendBlocklistRequest() {
+    private void sendBlocklistRequest() {
         this.sendPacket(BlockingCommand.blocklist());
     }
 
@@ -367,7 +367,8 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public void sendLastActivityRequest(JID jid) {
-        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.LAST_ACTIVITY, Arrays.asList(jid)));
+        Client.TASK_QUEUE.offer(new Client.Task(Client.Command.LAST_ACTIVITY,
+                                                       Collections.singletonList(jid)));
     }
 
     private void sendLastActivityRequestAsync(JID jid) {
@@ -456,16 +457,16 @@ public final class Client implements StanzaListener, Runnable {
         return true;
     }
 
-    public boolean updateRosterEntry(JID jid, String newName) {
+    public void updateRosterEntry(JID jid, String newName) {
         if (!this.isConnected()) {
             LOGGER.info("not connected");
-            return false;
+            return;
         }
         Roster roster = Roster.getInstanceFor(mConn);
         RosterEntry entry = roster.getEntry(jid.string());
         if (entry == null) {
             LOGGER.warning("can't find roster entry for jid: "+jid);
-            return true;
+            return;
         }
         try {
             entry.setName(newName);
@@ -474,7 +475,6 @@ public final class Client implements StanzaListener, Runnable {
                 XMPPException.XMPPErrorException ex) {
             LOGGER.log(Level.WARNING, "can't set name for entry", ex);
         }
-        return true;
     }
 
     public void requestAvatar(JID jid, String id) {

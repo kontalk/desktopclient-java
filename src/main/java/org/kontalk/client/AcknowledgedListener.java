@@ -32,7 +32,7 @@ import org.kontalk.util.ClientUtils.MessageIDs;
  * Listener for acknowledged packets (Stream Management, XEP-0198).
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class AcknowledgedListener implements StanzaListener {
+final class AcknowledgedListener implements StanzaListener {
     private static final Logger LOGGER = Logger.getLogger(AcknowledgedListener.class.getName());
 
     private final Control mControl;

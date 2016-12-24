@@ -121,7 +121,7 @@ public final class ChatList extends Observable implements Observer, Iterable<Cha
     }
 
     public GroupChat createNew(List<ProtoMember> members, GroupMetaData gData, String subject) {
-        GroupChat newChat = GroupChat.create(Model.database(), members, gData, subject);
+        GroupChat newChat = GroupChat.create(members, gData, subject);
         LOGGER.config("new group chat: "+newChat);
         this.putSilent(newChat);
         this.changed(ViewChange.MODIFIED);

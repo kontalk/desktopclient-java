@@ -193,6 +193,7 @@ final class ConfigurationDialog extends WebDialog {
     private class NetworkPanel extends WebPanel {
 
         private final WebCheckBox mConnectStartupBox;
+        private final WebCheckBox mConnectRetryBox;
         private final WebCheckBox mRequestAvatars;
         private final WebComboBox mMaxImgSizeBox;
         private final LinkedHashMap<Integer, String> mImgResizeMap;
@@ -209,6 +210,11 @@ final class ConfigurationDialog extends WebDialog {
                     mConf.getBoolean(Config.MAIN_CONNECT_STARTUP));
             groupPanel.add(mConnectStartupBox);
 
+            mConnectRetryBox = createCheckBox(Tr.tr("Retry on connection failure"),
+                    Tr.tr("Try automatic (re-)connect after connection failure"),
+                    mConf.getBoolean(Config.NET_RETRY_CONNECT));
+            groupPanel.add(new GroupPanel(mConnectRetryBox, new WebSeparator()));
+
             mRequestAvatars = createCheckBox(Tr.tr("Download profile pictures"),
                     Tr.tr("Download contact profile pictures"),
                     mConf.getBoolean(Config.NET_REQUEST_AVATARS));
@@ -221,9 +227,9 @@ final class ConfigurationDialog extends WebDialog {
             mImgResizeMap.put(800 * 1000, Tr.tr("Large (0.8MP)"));
 
             mMaxImgSizeBox = new WebComboBox(new ArrayList<>(mImgResizeMap.values()).toArray());
-            int maxImgSize = mConf.getInt(Config.NET_MAX_IMG_SIZE);
-            int maxImgIndex = new ArrayList<>(mImgResizeMap.keySet()).indexOf(maxImgSize);
-            if (maxImgSize >= 0)
+            int maxImgIndex = new ArrayList<>(mImgResizeMap.keySet()).indexOf(
+                    mConf.getInt(Config.NET_MAX_IMG_SIZE));
+            if (maxImgIndex >= 0)
                 mMaxImgSizeBox.setSelectedIndex(maxImgIndex);
             TooltipManager.addTooltip(mMaxImgSizeBox, Tr.tr("Reduce size of images before sending"));
 
@@ -237,6 +243,7 @@ final class ConfigurationDialog extends WebDialog {
 
         private void saveConfiguration() {
             mConf.setProperty(Config.MAIN_CONNECT_STARTUP, mConnectStartupBox.isSelected());
+            mConf.setProperty(Config.NET_RETRY_CONNECT, mConnectRetryBox.isSelected());
             mConf.setProperty(Config.NET_REQUEST_AVATARS, mRequestAvatars.isSelected());
 
             mConf.setProperty(Config.NET_MAX_IMG_SIZE,
@@ -283,16 +290,18 @@ final class ConfigurationDialog extends WebDialog {
                     !mConf.getBoolean(Config.SERV_CERT_VALIDATION));
             groupPanel.add(new GroupPanel(mDisableCertBox, new WebSeparator()));
 
+            groupPanel.add(Box.createVerticalStrut(View.GAP_BIG));
+            groupPanel.add(new WebLabel(Tr.tr("Personal Key")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
             mUserIDArea = new WebTextArea().setBoldFont();
             mUserIDArea.setEditable(false);
             mUserIDArea.setOpaque(false);
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
-                    new WebLabel(Tr.tr("Key user ID:")),
+                    new WebLabel(Tr.tr("User ID:")),
                     mUserIDArea));
 
-            WebLabel fpLabel = new WebLabel(Tr.tr("Key fingerprint:")+" ");
+            WebLabel fpLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
             fpLabel.setAlignmentY(Component.TOP_ALIGNMENT);
             GroupPanel fpLabelPanel = new GroupPanel(false, fpLabel, Box.createGlue());
             mFingerprintArea = Utils.createFingerprintArea();
@@ -406,6 +415,8 @@ final class ConfigurationDialog extends WebDialog {
 
         private final WebCheckBox mBGBox;
         private final WebFileChooserField mBGChooser;
+        private final WebComboBox mMessageFontSizeBox;
+        private final LinkedHashMap<String, Integer> mMessageFontSizeMap;
 
         ViewPanel() {
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
@@ -425,10 +436,28 @@ final class ConfigurationDialog extends WebDialog {
                     mBGChooser.getChooseButton().setEnabled(e.getStateChange() == ItemEvent.SELECTED);
                 }
             });
-
-            mBGChooser = Utils.createImageChooser(mBGBox.isSelected(), bgPath);
-
+            TooltipManager.addTooltip(mBGBox, Tr.tr("Background image for all chats"));
+            mBGChooser = Utils.createImageChooser(bgPath);
+            mBGChooser.setEnabled(mBGBox.isSelected());
             groupPanel.add(new GroupPanel(GroupingType.fillLast, mBGBox, mBGChooser));
+
+            mMessageFontSizeMap = new LinkedHashMap<>();
+            mMessageFontSizeMap.put(Tr.tr("Small"), 1);
+            mMessageFontSizeMap.put(Tr.tr("Normal"), -1);
+            mMessageFontSizeMap.put(Tr.tr("Large"), 2);
+            mMessageFontSizeMap.put(Tr.tr("Huge"), 3);
+
+            mMessageFontSizeBox = new WebComboBox(new ArrayList<>(mMessageFontSizeMap.keySet()).toArray());
+            int fontSizeIndex = new ArrayList<>(mMessageFontSizeMap.values()).indexOf(
+                    mConf.getInt(Config.VIEW_MESSAGE_FONT_SIZE));
+            if (fontSizeIndex >= 0)
+                mMessageFontSizeBox.setSelectedIndex(fontSizeIndex);
+            TooltipManager.addTooltip(mMessageFontSizeBox, Tr.tr("Font size for message text and date"));
+
+            groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
+                    new WebLabel(Tr.tr("Font size for chat messages:")),
+                    mMessageFontSizeBox,
+                    new WebSeparator()));
 
             this.add(groupPanel);
         }
@@ -445,6 +474,13 @@ final class ConfigurationDialog extends WebDialog {
                 mConf.setProperty(Config.VIEW_CHAT_BG, bgPath);
                 mView.reloadChatBG();
             }
+
+            Integer value = mMessageFontSizeMap.get(mMessageFontSizeBox.getSelectedItem());
+            // first term should always be true
+            if (value != null && !value.equals(mConf.getInt(Config.VIEW_MESSAGE_FONT_SIZE))) {
+                mConf.setProperty(Config.VIEW_MESSAGE_FONT_SIZE, value);
+                mView.updateMessageLists();
+            }
         }
     }
 
@@ -452,9 +488,8 @@ final class ConfigurationDialog extends WebDialog {
         WebCheckBox checkBox = new WebCheckBox(Tr.tr(title));
         checkBox.setAnimated(false);
         checkBox.setSelected(selected);
-        String rosterNameText = Tr.tr(tooltip);
         if (!tooltip.isEmpty())
-            TooltipManager.addTooltip(checkBox, rosterNameText);
+            TooltipManager.addTooltip(checkBox, tooltip);
         return checkBox;
     }
 

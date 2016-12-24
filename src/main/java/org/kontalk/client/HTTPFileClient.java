@@ -29,7 +29,6 @@ import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
@@ -67,8 +66,6 @@ import org.kontalk.util.TrustUtils;
  */
 public class HTTPFileClient {
     private static final Logger LOGGER = Logger.getLogger(HTTPFileClient.class.getName());
-
-    static final String KON_UPLOAD_FEATURE = "http://kontalk.org/extensions/message#upload";
 
     /** Regex used to parse content-disposition headers for download. */
     private static final Pattern CONTENT_DISPOSITION_PATTERN = Pattern
@@ -214,7 +211,6 @@ public class HTTPFileClient {
 
     /**
      * Upload file using a PUT request.
-     * @return the URL the file can be downloaded with.
      */
     public synchronized void upload(File file, URI uploadURL, String mime, boolean encrypted)
             throws KonException {
@@ -274,8 +270,7 @@ public class HTTPFileClient {
                 CertificateException |
                 IOException |
                 KeyManagementException |
-                UnrecoverableKeyException |
-                NoSuchProviderException ex) {
+                UnrecoverableKeyException ex) {
             LOGGER.log(Level.WARNING, "unable to set SSL context", ex);
             return null;
         }

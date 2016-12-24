@@ -53,6 +53,7 @@ public final class Config extends PropertiesConfiguration {
     public static final String VIEW_CHAT_BG = "view.thread_bg";
     public static final String VIEW_USER_CONTACT = "view.user_in_contactlist";
     public static final String VIEW_HIDE_BLOCKED = "view.hide_blocked_contacts";
+    public static final String VIEW_MESSAGE_FONT_SIZE = "view.msg_font_size";
     public static final String NET_SEND_CHAT_STATE = "net.chatstate";
     public static final String NET_SEND_ROSTER_NAME = "net.roster_name";
     public static final String NET_STATUS_LIST = "net.status_list";
@@ -60,6 +61,7 @@ public final class Config extends PropertiesConfiguration {
     public static final String NET_REQUEST_AVATARS = "net.request_avatars";
     public static final String NET_MAX_IMG_SIZE = "net.max_img_size";
     public static final String MAIN_CONNECT_STARTUP = "main.connect_startup";
+    public static final String NET_RETRY_CONNECT = "main.retry_connect";
     public static final String MAIN_TRAY = "main.tray";
     public static final String MAIN_TRAY_CLOSE = "main.tray_close";
     public static final String MAIN_ENTER_SENDS = "main.enter_sends";
@@ -100,12 +102,14 @@ public final class Config extends PropertiesConfiguration {
         map.put(VIEW_CHAT_BG, "");
         map.put(VIEW_USER_CONTACT, false);
         map.put(VIEW_HIDE_BLOCKED, false);
+        map.put(VIEW_MESSAGE_FONT_SIZE, -1);
         map.put(NET_SEND_CHAT_STATE, true);
         map.put(NET_SEND_ROSTER_NAME, false);
         map.put(NET_STATUS_LIST, new String[]{mDefaultXMPPStatus});
         map.put(NET_AUTO_SUBSCRIPTION, false);
         map.put(NET_REQUEST_AVATARS, true);
         map.put(NET_MAX_IMG_SIZE, -1);
+        map.put(NET_RETRY_CONNECT, true);
         map.put(MAIN_CONNECT_STARTUP, true);
         map.put(MAIN_TRAY, true);
         map.put(MAIN_TRAY_CLOSE, false);

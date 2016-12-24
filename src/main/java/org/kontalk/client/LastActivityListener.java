@@ -32,7 +32,7 @@ import org.kontalk.system.Control;
  * Listener for Last Activity Response packets (XEP-0012).
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class LastActivityListener implements StanzaListener {
+class LastActivityListener implements StanzaListener {
     private static final Logger LOGGER = Logger.getLogger(LastActivityListener.class.getName());
 
     private final Control mControl;

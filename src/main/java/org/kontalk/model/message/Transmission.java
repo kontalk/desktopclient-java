@@ -18,7 +18,6 @@
 
 package org.kontalk.model.message;
 
-import org.kontalk.misc.JID;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -33,12 +32,18 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.persistence.Database;
 
 /**
- * A transmission of one message.
+ * A transmission of a message.
+ *
+ * This class represents the sending information of a message: receiver (in message) recipient
+ * (out message) and received timestamp.
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 final public class Transmission {
@@ -77,7 +82,7 @@ final public class Transmission {
         mID = this.insert(messageID);
     }
 
-    private Transmission(Database db, int id, Contact contact, JID jid, Date receivedDate) {
+    private Transmission(int id, Contact contact, JID jid, Date receivedDate) {
         mID = id;
         mContact = contact;
         mJID = jid;
@@ -96,7 +101,7 @@ final public class Transmission {
         return Optional.ofNullable(mReceivedDate);
     }
 
-    public boolean isReceived() {
+    boolean isReceived() {
         return mReceivedDate != null;
     }
 
@@ -140,23 +145,22 @@ final public class Transmission {
     }
 
     static Set<Transmission> load(int messageID, Map<Integer, Contact> contactMap) {
-        Database db = Model.database();
         HashSet<Transmission> ts = new HashSet<>();
-        try (ResultSet transmissionRS = db.execSelectWhereInsecure(TABLE,
+        try (ResultSet transmissionRS = Model.database().execSelectWhereInsecure(TABLE,
                 COL_MESSAGE_ID + " == " + messageID)) {
             while (transmissionRS.next()) {
-                ts.add(load(db, transmissionRS, contactMap));
+                ts.add(load(transmissionRS, contactMap));
             }
         } catch (SQLException ex) {
             LOGGER.log(Level.WARNING, "can't load transmission(s) from db", ex);
-            return Collections.<Transmission>emptySet();
+            return Collections.emptySet();
         }
         if (ts.isEmpty())
             LOGGER.warning("no transmission(s) found, messageID: "+messageID);
         return ts;
     }
 
-    private static Transmission load(Database db, ResultSet resultSet,
+    private static Transmission load(ResultSet resultSet,
             Map<Integer, Contact> contactMap)
             throws SQLException {
         int id = resultSet.getInt("_id");
@@ -171,7 +175,7 @@ final public class Transmission {
         long rDate = resultSet.getLong(COL_REC_DATE);
         Date receivedDate = rDate == 0 ? null : new Date(rDate);
 
-        return new Transmission(db, id, contact, jid, receivedDate);
+        return new Transmission(id, contact, jid, receivedDate);
     }
 
     @Override

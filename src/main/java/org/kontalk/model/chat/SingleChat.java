@@ -18,11 +18,11 @@
 
 package org.kontalk.model.chat;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
+
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.model.Contact;
 
@@ -67,12 +67,12 @@ public final class SingleChat extends Chat {
 
     @Override
     public List<Member> getAllMembers() {
-        return Arrays.asList(mMember);
+        return Collections.singletonList(mMember);
     }
 
     @Override
     public List<Contact> getAllContacts() {
-        return Arrays.asList(mMember.getContact());
+        return Collections.singletonList(mMember.getContact());
     }
 
     @Override
@@ -81,7 +81,7 @@ public final class SingleChat extends Chat {
         if ((c.isDeleted() || c.isBlocked()) && !c.isMe())
             return Collections.emptyList();
 
-        return Arrays.asList(c);
+        return Collections.singletonList(c);
     }
 
     @Override

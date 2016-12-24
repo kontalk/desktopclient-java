@@ -34,6 +34,7 @@ import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.OutMessage;
+import org.kontalk.model.message.Transmission;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
 
@@ -106,7 +107,7 @@ public final class KonMessageSender {
         }
 
         List<JID> JIDs = message.getTransmissions().stream()
-                .map(t -> t.getJID())
+                .map(Transmission::getJID)
                 .collect(Collectors.toList());
 
         String multiAddressHost = mClient.multiAddressHost();

@@ -55,6 +55,7 @@ final class ChatListView extends ListView<Chat> {
                 new FlyweightChatItem(),
                 new FlyweightChatItem(),
                 ListSelectionModel.SINGLE_SELECTION,
+                false,
                 true);
 
         mChatList = chatList;
@@ -143,7 +144,7 @@ final class ChatListView extends ListView<Chat> {
     @Override
     protected String getTooltipText(Chat value) {
         return "<html><body>" +
-                Tr.tr("Last message:")+" " + lastActivity(value, false) + "<br>"
+                lastActivity(value, true, false) + "<br>"
                 + "</body></html>";
     }
 
@@ -198,7 +199,7 @@ final class ChatListView extends ListView<Chat> {
         }
 
         @Override
-        protected void render(Chat value, int listWidth, boolean isSelected) {
+        protected void render(Chat value, int listWidth, boolean isSelected, boolean isLast) {
             // background
             this.setBackground(isSelected ? View.BLUE :
                     !value.isRead() ? View.LIGHT_BLUE :
@@ -211,9 +212,6 @@ final class ChatListView extends ListView<Chat> {
             mTitleLabel.setText(Utils.chatTitle(value));
             if (value.isGroupChat())
                 mTitleLabel.setForeground(View.DARK_GREEN);
-
-            // status
-            mStatusLabel.setText(lastActivity(value, true));
 
             // state
             String stateText = "";
@@ -232,22 +230,18 @@ final class ChatListView extends ListView<Chat> {
 //                if (!stateText.isEmpty() && mValue.isGroupChat())
 //                    stateText = member.getContact().getName() + ": " + stateText;
             mChatStateLabel.setText(stateText);
-            mStatusLabel.setVisible(stateText.isEmpty());
-        }
 
-        protected boolean contains(String search) {
-            // TODO always show entry for current chat
-            //Chat chat = mView.getCurrentShownChat().orElse(null);
-            //if (chat != null && chat == mValue)
-                return true;
+            // status
+            mStatusLabel.setText(stateText.isEmpty() ? lastActivity(value, isSelected, true) : "");
+            mStatusLabel.setVisible(stateText.isEmpty());
         }
     }
 
-    private static String lastActivity(Chat chat, boolean pretty) {
+    private static String lastActivity(Chat chat, boolean withLabel, boolean pretty) {
         KonMessage m = chat.getMessages().getLast().orElse(null);
-        String lastActivity = m == null ? Tr.tr("no messages yet") :
-                pretty ? Utils.PRETTY_TIME.format(m.getDate()) :
-                Utils.MID_DATE_FORMAT.format(m.getDate());
-        return lastActivity;
+        return m == null ? Tr.tr("No messages yet") :
+                (withLabel ? Tr.tr("Last message:") + " " : "") +
+                (pretty ? Utils.PRETTY_TIME.format(m.getDate()) :
+                         Utils.MID_DATE_FORMAT.format(m.getDate()));
     }
 }

@@ -18,17 +18,18 @@
 
 package org.kontalk.model.message;
 
-import java.util.Arrays;
-import org.kontalk.model.chat.Chat;
-import org.kontalk.misc.JID;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
+
 import org.kontalk.crypto.Coder;
+import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.Preview;
 
@@ -55,13 +56,13 @@ public final class InMessage extends KonMessage implements DecryptMessage {
     }
 
     // used when loading from database
-    protected InMessage(KonMessage.Builder builder) {
+    InMessage(KonMessage.Builder builder) {
         super(builder);
 
         if (builder.mTransmissions.size() != 1)
             throw new IllegalArgumentException("builder does not contain one transmission");
 
-        mTransmission = builder.mTransmissions.stream().findAny().get();
+        mTransmission = builder.mTransmissions.iterator().next();
     }
 
     @Override
@@ -141,7 +142,7 @@ public final class InMessage extends KonMessage implements DecryptMessage {
 
     @Override
     public Set<Transmission> getTransmissions() {
-        return new HashSet<>(Arrays.asList(mTransmission));
+        return new HashSet<>(Collections.singletonList(mTransmission));
     }
 
     @Override

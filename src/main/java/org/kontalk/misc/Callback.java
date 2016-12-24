@@ -60,7 +60,7 @@ public final class Callback<V> {
             mLatch.countDown();
         }
 
-        public boolean waitForSync() {
+        public void waitForSync() {
             boolean succ = false;
             try {
                 succ = mLatch.await(5, TimeUnit.SECONDS);
@@ -70,7 +70,6 @@ public final class Callback<V> {
             if (!succ) {
                 LOGGER.warning("await failed, timeout reached");
             }
-            return succ;
         }
     }
 }

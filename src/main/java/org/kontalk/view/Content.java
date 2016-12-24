@@ -18,22 +18,22 @@
 
 package org.kontalk.view;
 
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.panel.WebPanel;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.GridBagLayout;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.util.Optional;
-import org.kontalk.model.chat.Chat;
+
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.panel.WebPanel;
 import org.kontalk.model.Contact;
+import org.kontalk.model.chat.Chat;
 
 /**
  * Content view area: show a chat or contact details
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class Content extends WebPanel {
+final class Content extends WebPanel {
 
     private final View mView;
     private final ChatView mChatView;
@@ -52,12 +52,6 @@ public class Content extends WebPanel {
         });
 
         this.show(mChatView);
-    }
-
-    Optional<Chat> getCurrentChat() {
-        if (!(mCurrent instanceof ChatView))
-            return Optional.empty();
-        return mChatView.getCurrentChat();
     }
 
     void showChat(Chat chat) {

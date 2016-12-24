@@ -166,13 +166,11 @@ public final class ClientUtils {
                 LOGGER.log(Level.WARNING, "can't parse URL", ex);
                 url = URI.create("");
             }
-            attachment = MessageContent.Attachment.incoming(url,
-                    oobData.getLength(),
-                    oobData.isEncrypted());
+            attachment = MessageContent.Attachment.incoming(url, oobData.isEncrypted());
 
             // body text is maybe URI, for clients that dont understand OOB,
             // but we do, don't save it twice
-            if (plainText.equals(url.toString()));
+            if (plainText.equals(url.toString()))
                 plainText = "";
         }
 
@@ -214,8 +212,7 @@ public final class ClientUtils {
                 String subject = groupCommand.getSubject();
                 if (op == OP.CREATE) {
                     command = Type.CREATE;
-                    groupCommand.getAdded().stream().forEach(added ->
-                        members.add(new Member(added.string())));
+                    groupCommand.getAdded().forEach(added -> members.add(new Member(added.string())));
                 } else {
                     command = Type.SET;
                     Set<JID> incl = new HashSet<>();
@@ -246,11 +243,8 @@ public final class ClientUtils {
     }
 
     /* External to internal */
-    public static Optional<GroupCommand> groupExtensionToGroupCommand(
-            Type com,
-            List<Member> members,
-            String subject) {
-
+    private static Optional<GroupCommand> groupExtensionToGroupCommand(
+            Type com, List<Member> members, String subject) {
         switch (com) {
             case NONE:
                 return Optional.empty();
@@ -283,10 +277,10 @@ public final class ClientUtils {
                 }
                 // sanity check; prioritize 'removed' over 'added'
                 removed.stream()
-                        .filter(jid -> added.contains(jid))
+                        .filter(added::contains)
                         .peek(jid -> LOGGER.warning(
                                 "member added AND removed (removing) " + jid))
-                        .forEach(jid -> added.remove(jid));
+                        .forEach(added::remove);
                 return Optional.of(GroupCommand.set(
                         new ArrayList<>(added),
                         new ArrayList<>(removed),

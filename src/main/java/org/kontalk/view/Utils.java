@@ -29,26 +29,24 @@ import java.awt.Desktop;
 import java.awt.Font;
 import java.awt.Image;
 import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.security.cert.CertificateException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
 import com.alee.laf.optionpane.WebOptionPane;
 import com.alee.laf.text.WebTextArea;
@@ -64,6 +62,7 @@ import org.kontalk.model.ContactList;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.Member;
 import org.kontalk.persistence.Config;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.Tr;
 import org.ocpsoft.prettytime.PrettyTime;
@@ -75,16 +74,19 @@ import org.ocpsoft.prettytime.PrettyTime;
 final class Utils {
     private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
 
-    static final SimpleDateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("EEE, HH:mm");
-    static final SimpleDateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM, HH:mm");
-    static final SimpleDateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy, HH:mm:ss");
+    static final DateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("HH:mm");
+    static final DateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM HH:mm");
+    static final DateFormat LONG_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss");
     static final PrettyTime PRETTY_TIME = new PrettyTime();
+
+    private static final DateFormat DAY_DATE_FORMAT = new SimpleDateFormat("EEE, d MMMM");
+    private static final DateFormat DAY_YEAR_DATE_FORMAT = new SimpleDateFormat("EEE, d MMMM yyyy");
 
     private Utils() {}
 
     /* fields */
 
-    static WebFileChooserField createImageChooser(boolean enabled, String path) {
+    static WebFileChooserField createImageChooser(String path) {
         WebFileChooserField chooser = new WebFileChooserField();
         if (!path.isEmpty())
             chooser.setSelectedFile(new File(path));
@@ -98,20 +100,6 @@ final class Utils {
         if (file.getParentFile() != null && file.getParentFile().exists())
             chooser.getWebFileChooser().setCurrentDirectory(file.getParentFile());
         return chooser;
-    }
-
-    static WebMenuItem createCopyMenuItem(final String copyText, String toolTipText) {
-        WebMenuItem item = new WebMenuItem(Tr.tr("Copy"));
-        if (!toolTipText.isEmpty())
-            item.setToolTipText(toolTipText);
-        item.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent event) {
-                Clipboard clip = Toolkit.getDefaultToolkit().getSystemClipboard();
-                clip.setContents(new StringSelection(copyText), null);
-            }
-        });
-        return item;
     }
 
     static WebTextArea createFingerprintArea() {
@@ -208,9 +196,9 @@ final class Utils {
         List<String> nameList = new ArrayList<>(jids.size());
         for (JID jid : jids) {
             Contact contact = contactList.get(jid).orElse(null);
-            return contact != null ?
-                    displayName(contact, jid, Integer.MAX_VALUE) :
-                    jid(jid, maxJIDLength);
+            nameList.add(contact != null ?
+                                 displayName(contact, jid, Integer.MAX_VALUE) :
+                                 jid(jid, maxJIDLength));
         }
         return StringUtils.join(nameList, ", ");
     }
@@ -270,7 +258,7 @@ final class Utils {
         }
     }
 
-    static String mainStatus(Contact c, boolean pre) {
+    static String mainStatus(Contact c, boolean withLabel) {
         Contact.Subscription subStatus = c.getSubScription();
         return c.isMe() ? Tr.tr("Myself") :
                     c.isBlocked() ? Tr.tr("Blocked") :
@@ -278,14 +266,16 @@ final class Utils {
                     c.getOnline() == Contact.Online.ERROR ? Tr.tr("Not reachable") :
                     subStatus == Contact.Subscription.UNSUBSCRIBED ? Tr.tr("Not authorized") :
                     subStatus == Contact.Subscription.PENDING ? Tr.tr("Waiting for authorization") :
-                    lastSeen(c, true, pre);
+                    lastSeen(c, withLabel, true);
     }
 
-    static String lastSeen(Contact contact, boolean pretty, boolean pre) {
-        String lastSeen = !contact.getLastSeen().isPresent() ? Tr.tr("never") :
-                pretty ? Utils.PRETTY_TIME.format(contact.getLastSeen().get()) :
-                Utils.MID_DATE_FORMAT.format(contact.getLastSeen().get());
-        return pre ? Tr.tr("Last seen")+": " + lastSeen : lastSeen;
+    static String lastSeen(Contact contact, boolean withLabel, boolean pretty) {
+        Date d = contact.getLastSeen().orElse(null);
+        return d == null ?
+                (withLabel ? Tr.tr("Not seen yet") : "") :
+                (withLabel ? Tr.tr("Last seen:") + " " : "")
+                        + (pretty ? Utils.PRETTY_TIME.format(d) :
+                                   Utils.MID_DATE_FORMAT.format(d));
     }
 
     static String getErrorText(KonException ex) {
@@ -397,12 +387,7 @@ final class Utils {
 
     static List<Contact> contactList(Chat chat) {
         List<Contact> contacts = new ArrayList<>(chat.getAllContacts());
-        contacts.sort(new Comparator<Contact>() {
-            @Override
-            public int compare(Contact c1, Contact c2) {
-                return Utils.compareContacts(c1, c2);
-            }
-        });
+        contacts.sort(Utils::compareContacts);
         return contacts;
     }
 
@@ -424,5 +409,17 @@ final class Utils {
         String s1 = StringUtils.defaultIfEmpty(c1.getName(), c1.getJID().string());
         String s2 = StringUtils.defaultIfEmpty(c2.getName(), c2.getJID().string());
         return s1.compareToIgnoreCase(s2);
+    }
+
+    static String getDateSeparatorText(Date date) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        boolean sameYear = cal.get(Calendar.YEAR) == Calendar.getInstance().get(Calendar.YEAR);
+        DateFormat format = sameYear ? DAY_DATE_FORMAT : DAY_YEAR_DATE_FORMAT;
+        return format.format(date);
+    }
+
+    static boolean isAllowedAttachmentFile(File file) {
+        return file.length() <= AttachmentManager.MAX_ATT_SIZE;
     }
 }

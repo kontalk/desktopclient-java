@@ -163,7 +163,7 @@ public final class PGPUtils {
             signKey = authKey;
         }
 
-        if (encryptKey == null || signKey == null || uid == null || fp == null) {
+        if (encryptKey == null || signKey == null || uid == null) {
             LOGGER.warning("can't find public keys in key ring, uid: "+uid);
             return Optional.empty();
         }
@@ -200,9 +200,8 @@ public final class PGPUtils {
         while (sigs.hasNext()) {
             PGPSignature sig = sigs.next();
             PGPSignatureSubpacketVector subpackets = sig.getHashedSubPackets();
-            if (subpackets == null)
-                return 0;
-            return subpackets.getKeyFlags();
+            if (subpackets != null)
+                return subpackets.getKeyFlags();
         }
         return 0;
     }

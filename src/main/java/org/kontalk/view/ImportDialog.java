@@ -18,17 +18,9 @@
 
 package org.kontalk.view;
 
-import com.alee.extended.filechooser.FilesSelectionListener;
-import com.alee.extended.filechooser.WebFileChooserField;
-import com.alee.extended.panel.GroupPanel;
-import com.alee.laf.button.WebButton;
-import com.alee.laf.checkbox.WebCheckBox;
-import com.alee.laf.label.WebLabel;
-import com.alee.laf.panel.WebPanel;
-import com.alee.laf.rootpane.WebDialog;
-import com.alee.laf.separator.WebSeparator;
-import com.alee.laf.text.WebPasswordField;
-import com.alee.utils.swing.DocumentChangeListener;
+import javax.swing.SwingUtilities;
+import javax.swing.event.DocumentEvent;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.FlowLayout;
@@ -43,9 +35,18 @@ import java.util.Observable;
 import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.swing.SwingUtilities;
-import javax.swing.event.DocumentEvent;
-import javax.swing.filechooser.FileNameExtensionFilter;
+
+import com.alee.extended.filechooser.FilesSelectionListener;
+import com.alee.extended.filechooser.WebFileChooserField;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.laf.button.WebButton;
+import com.alee.laf.checkbox.WebCheckBox;
+import com.alee.laf.label.WebLabel;
+import com.alee.laf.panel.WebPanel;
+import com.alee.laf.rootpane.WebDialog;
+import com.alee.laf.separator.WebSeparator;
+import com.alee.laf.text.WebPasswordField;
+import com.alee.utils.swing.DocumentChangeListener;
 import org.kontalk.misc.KonException;
 import org.kontalk.system.AccountImporter;
 import org.kontalk.util.Tr;
@@ -57,8 +58,8 @@ import org.kontalk.util.Tr;
 final class ImportDialog extends WebDialog {
     private static final Logger LOGGER = Logger.getLogger(ImportDialog.class.getName());
 
-    private enum ImportPage {INTRO, SETTINGS, RESULT};
-    private enum Direction {BACK, FORTH};
+    private enum ImportPage {INTRO, SETTINGS, RESULT}
+    private enum Direction {BACK, FORTH}
 
     private final EnumMap<ImportPage, ImportPanel> mPanels;
     private final WebButton mBackButton;
@@ -161,7 +162,7 @@ final class ImportDialog extends WebDialog {
 
         abstract protected void onShow();
 
-        protected void onNext() {};
+        void onNext() {}
     }
 
     private class IntroPanel extends ImportPanel {

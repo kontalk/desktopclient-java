@@ -18,22 +18,20 @@
 
 package org.kontalk.client;
 
+import javax.net.ssl.SSLContext;
+import javax.security.auth.callback.Callback;
+import javax.security.auth.callback.CallbackHandler;
+import javax.security.auth.callback.UnsupportedCallbackException;
 import java.io.IOException;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import javax.net.ssl.SSLContext;
-import javax.security.auth.callback.Callback;
-import javax.security.auth.callback.CallbackHandler;
-import javax.security.auth.callback.UnsupportedCallbackException;
 
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
 import org.jivesoftware.smack.ExceptionCallback;
@@ -52,12 +50,10 @@ import org.kontalk.util.TrustUtils;
  * XMPP Connection to a Kontalk Server.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class KonConnection extends XMPPTCPConnection {
+final class KonConnection extends XMPPTCPConnection {
     private static final Logger LOGGER = Logger.getLogger(KonConnection.class.getName());
 
     private static final String RESSOURCE = "Kontalk_Desktop";
-
-    private final boolean mHasLoginCredentials;
 
     public KonConnection(EndpointServer server, boolean validateCertificate) {
         this(server, null, null, validateCertificate);
@@ -73,8 +69,6 @@ public final class KonConnection extends XMPPTCPConnection {
                 bridgeCert,
                 validateCertificate)
         );
-
-        mHasLoginCredentials = privateKey != null && bridgeCert != null;
 
         // blacklist PLAIN mechanism
         SASLAuthentication.blacklistSASLMechanism("PLAIN");
@@ -129,8 +123,7 @@ public final class KonConnection extends XMPPTCPConnection {
                 IOException |
                 CertificateException |
                 UnrecoverableKeyException |
-                KeyManagementException |
-                NoSuchProviderException ex) {
+                KeyManagementException ex) {
             LOGGER.log(Level.WARNING, "can't setup SSL connection", ex);
         }
 
@@ -148,10 +141,6 @@ public final class KonConnection extends XMPPTCPConnection {
 
     String getServer() {
         return this.getConfiguration().getServiceName();
-    }
-
-    boolean hasLoginCredentials() {
-        return mHasLoginCredentials;
     }
 
     boolean send(Stanza p) {

@@ -18,10 +18,11 @@
 
 package org.kontalk.client;
 
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
@@ -173,7 +174,7 @@ final class AvatarSendReceiver {
                 new ItemsExtension(
                         ItemsExtension.ItemsElementType.items,
                         DATA_NODE,
-                        Arrays.asList(new Item(id))));
+                        Collections.singletonList(new Item(id))));
 
         // handle response
         StanzaListener callback = new StanzaListener() {

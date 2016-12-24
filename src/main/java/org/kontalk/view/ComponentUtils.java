@@ -33,7 +33,6 @@ import javax.swing.JRootPane;
 import javax.swing.ListCellRenderer;
 import javax.swing.ListSelectionModel;
 import javax.swing.ScrollPaneConstants;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.DocumentEvent;
@@ -46,7 +45,6 @@ import javax.swing.text.PlainDocument;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
-import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Window;
 import java.awt.event.ActionEvent;
@@ -96,7 +94,6 @@ import com.alee.laf.scroll.WebScrollPane;
 import com.alee.laf.separator.WebSeparator;
 import com.alee.laf.tabbedpane.WebTabbedPane;
 import com.alee.laf.text.WebPasswordField;
-import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.popup.WebPopup;
 import com.alee.managers.tooltip.TooltipManager;
@@ -142,55 +139,6 @@ final class ComponentUtils {
             this.setHorizontalScrollBarPolicy(
                     ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
             this.getVerticalScrollBar().setUnitIncrement(25);
-        }
-    }
-
-    static class GrowingScrollPane extends ScrollPane {
-
-        private final WebTextArea mTextArea;
-        private final Component mRelativeComponent;
-
-        GrowingScrollPane(WebTextArea textArea, Component relativeComponent) {
-            super(textArea, false);
-
-            mTextArea = textArea;
-            mRelativeComponent = relativeComponent;
-
-            // when text changed...
-            mTextArea.getDocument().addDocumentListener(new DocumentChangeListener() {
-                @Override
-                public void documentChanged(DocumentEvent e) {
-                    // these are strange times
-                    SwingUtilities.invokeLater(new Runnable() {
-                        public void run() {
-                            GrowingScrollPane.this.adjustSize();
-                       }
-                    });
-                }
-            });
-
-            // or window is resized...
-            mRelativeComponent.addComponentListener(new ComponentAdapter() {
-                @Override
-                public void componentResized(ComponentEvent e) {
-                    GrowingScrollPane.this.adjustSize();
-                }
-            });
-        }
-
-        private void adjustSize() {
-            int newHeight = mTextArea.getPreferredSize().height;
-            int maxHeight = mRelativeComponent.getHeight() / 3;
-
-            this.setPreferredSize(new Dimension(this.getWidth(),
-                    newHeight < maxHeight ?
-                            // grow
-                            newHeight +1 : // +1 for border
-                            // fixed height
-                            maxHeight));
-
-            // swing does not figure this out itself
-            mRelativeComponent.revalidate();
         }
     }
 
@@ -311,7 +259,7 @@ final class ComponentUtils {
      *  Popup is closed if panel visibility is set to false.
      */
     static class PopupPanel extends WebPanel {
-        protected void onShow() {};
+        void onShow() {}
     }
 
     static class AddContactPanel extends PopupPanel {
@@ -608,10 +556,6 @@ final class ComponentUtils {
 
         private final DefaultListModel<Member> mModel;
 
-        public MemberList() {
-            this(true);
-        }
-
         @SuppressWarnings("unchecked")
         MemberList(boolean selectable) {
             mModel = new DefaultListModel<>();
@@ -847,15 +791,15 @@ final class ComponentUtils {
             this.getTrailingComponent().setVisible(true);
         }
 
-        protected String labelText() {
+        String labelText() {
             return this.getText();
         }
 
-        protected String editText() {
+        String editText() {
             return this.getText();
         }
 
-        protected void onFocusLost() {};
+        void onFocusLost() {}
     }
 
     static class AttachmentPanel extends GroupPanel {
@@ -977,7 +921,9 @@ final class ComponentUtils {
             mEncryptionIcon.setIcon(isEncrypted ? ICON_SECURE : ICON_INSECURE);
             mEncryptionWarningIcon.setVisible(isEncrypted != canEncrypt);
 
-            String text = "<html>" + (isEncrypted ? Tr.tr("Encrypted") : Tr.tr("Not encrypted"));
+            String text = "<html>" + (isEncrypted ?
+                                              Tr.tr("Encryption Enabled") :
+                                              Tr.tr("Encryption Disabled"));
             if (isEncrypted && !canEncrypt) {
                 text += "<br>" + Tr.tr("Contact key is missing");
             } else if (!isEncrypted && canEncrypt) {
@@ -1010,7 +956,7 @@ final class ComponentUtils {
     // -> component size depends on image size
     static class AvatarImage extends WebDecoratedImage {
 
-        protected final int mSize;
+        final int mSize;
 
         AvatarImage(int size) {
             mSize = size;
@@ -1026,7 +972,7 @@ final class ComponentUtils {
             this.setAvatarImg(AvatarLoader.load(c, mSize));
         }
 
-        protected void setAvatarImg(AvatarImg avatarImg) {
+        void setAvatarImg(AvatarImg avatarImg) {
             this.setDrawGlassLayer(avatarImg.isFallback);
             this.setImage(avatarImg.image);
         }
@@ -1112,13 +1058,13 @@ final class ComponentUtils {
 
         abstract boolean canRemove();
 
-        protected String tooltipText() {
+        String tooltipText() {
             return this.canRemove() ?
                     Tr.tr("Right click to unset") :
                     Tr.tr("Click to choose image");
         }
 
-        protected void update() {
+        void update() {
             AvatarImg img = this.defaultImage();
             mImage = img.image;
             this.setDrawGlassLayer(img.isFallback);

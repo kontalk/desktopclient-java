@@ -9,6 +9,8 @@ The desktop client uses your existing Kontalk account from the [Android client](
 
 **FAQ:** Common questions are answered [HERE!](https://github.com/kontalk/desktopclient-java/wiki)
 
+User Forum: https://forum.kontalk.org/
+
 ### Screenshots
 
 ![Conversation screen](/misc/kon_snap1.png?raw=true)
@@ -22,19 +24,18 @@ The desktop client uses your existing Kontalk account from the [Android client](
 ## Key Features
 
 Connect with Kontalk...
-- Use the existing Kontalk account from your phone.
-- Synchronized contact list (=XMPP roster).
-- Add new Kontalk users by phone number.
-- The client automatically requests public keys for safe communication.
-- Your communication with Kontalk users is encrypted by default.
+- Use the existing Kontalk account from your phone
+- Synchronized contact list (=XMPP roster)
+- Add new Kontalk users by phone number
+- The client automatically requests public keys for safe communication
+- Your communication with Kontalk users is encrypted by default
 
 ... and beyond:
 - Exchange text messages with any Jabber/XMPP users!
-- Add new Jabber contacts by JID.
-- Tested with clients like [Pidgin](https://pidgin.im/) or [Conversations](https://github.com/siacs/Conversations).
+- Add new Jabber contacts by JID
+- Tested with clients like [Pidgin](https://pidgin.im/) or [Conversations](https://github.com/siacs/Conversations)
 
-**Note: private key and messages are saved unencrypted and can be read by other
-applications on your computer!**
+**Note: private key and messages are saved unencrypted and can be read by other applications on your computer!**
 
 ## Implemented XEP features:
 - XEP-0184: Message receipts
@@ -44,6 +45,8 @@ applications on your computer!**
 - XEP-0231: Image thumbnails for attachments
 - XEP-0084: Avatar images
 - XEP-0363: HTTP File Upload
+- XEP-0012: Last activity timestamp
+- XEP-0245: The infamous and most essential "/me" command
 
 ## Support us
 

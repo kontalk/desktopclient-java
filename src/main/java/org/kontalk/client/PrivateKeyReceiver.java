@@ -37,7 +37,11 @@ import org.kontalk.misc.Callback;
 /**
  * Send request and listen to response for private data over
  * 'jabber:iq:register' namespace.
- * Temporary server connection is established on requesting.
+ *
+ * Temporary server connection is established when requesting key.
+ *
+ * TODO not used
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class PrivateKeyReceiver implements StanzaListener {
@@ -74,7 +78,7 @@ public final class PrivateKeyReceiver implements StanzaListener {
             mConn.connect();
         } catch (XMPPException | SmackException | IOException ex) {
             LOGGER.log(Level.WARNING, "can't connect to "+mConn.getServer(), ex);
-            mHandler.handle(new Callback<String>(ex));
+            mHandler.handle(new Callback<>(ex));
             return;
         }
 
@@ -102,12 +106,12 @@ public final class PrivateKeyReceiver implements StanzaListener {
             mConn.sendIqWithResponseCallback(iq, this, new ExceptionCallback() {
                 @Override
                 public void processException(Exception exception) {
-                    mHandler.handle(new Callback<String>(exception));
+                    mHandler.handle(new Callback<>(exception));
                 }
             });
         } catch (SmackException.NotConnectedException ex) {
             LOGGER.log(Level.WARNING, "not connected", ex);
-            mHandler.handle(new Callback<String>(ex));
+            mHandler.handle(new Callback<>(ex));
         }
     }
 
@@ -151,7 +155,7 @@ public final class PrivateKeyReceiver implements StanzaListener {
 
     private void finish(String token) {
         mHandler.handle(token == null ?
-                new Callback<String>() :
+                new Callback<>() :
                 new Callback<>(token));
     }
 

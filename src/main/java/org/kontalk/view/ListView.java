@@ -76,14 +76,14 @@ abstract class ListView<V extends Observable & Searchable>
         extends WebTable implements Observer, Comparator<V> {
 
     private final Class mVClass;
-    protected final View mView;
+    final View mView;
     private final DefaultTableModel mModel;
     private final TableRowSorter<DefaultTableModel> mRowSorter;
+
     /** Flyweight item that is used by cell renderer. */
-    private final FlyweightItem mRenderItem;
+    protected final FlyweightItem mRenderItem;
     /** Flyweight item that is used by cell editor. */
-    private final FlyweightItem mEditorItem;
-    private final Timer mTimer;
+    protected final FlyweightItem mEditorItem;
 
     /** The current search string. */
     private String mSearch = "";
@@ -95,6 +95,7 @@ abstract class ListView<V extends Observable & Searchable>
     ListView(View view,
              FlyweightItem renderItem, FlyweightItem editorItem,
              int selectionMode,
+             boolean filterSelected,
              boolean activateTimer) {
 
         // damn Java
@@ -131,7 +132,8 @@ abstract class ListView<V extends Observable & Searchable>
             @Override
             public boolean include(Entry<? extends DefaultTableModel, ? extends Integer> entry) {
                 V v = (V) entry.getValue(0);
-                return v.contains(mSearch);
+                return (!filterSelected && v.equals(ListView.this.getSelectedValue().orElse(null)))
+                               || v.contains(mSearch);
             }
         };
         mRowSorter.setRowFilter(rowFilter);
@@ -196,7 +198,7 @@ abstract class ListView<V extends Observable & Searchable>
         });
 
         if (activateTimer) {
-            mTimer = new Timer();
+            Timer aTimer = new Timer();
             // update periodically values to be up-to-date with 'last seen' text
             TimerTask statusTask = new TimerTask() {
                 @Override
@@ -205,9 +207,7 @@ abstract class ListView<V extends Observable & Searchable>
                 }
             };
             long timerInterval = TimeUnit.SECONDS.toMillis(60);
-            mTimer.schedule(statusTask, timerInterval, timerInterval);
-        } else {
-            mTimer = null;
+            aTimer.schedule(statusTask, timerInterval, timerInterval);
         }
 
         // actions triggered by selection
@@ -239,8 +239,7 @@ abstract class ListView<V extends Observable & Searchable>
         boolean newToggle =
                 this.getSelectionModel().getSelectionMode() != ListSelectionModel.SINGLE_SELECTION
                         && this.getSelectedRowCount() == 1
-                        && this.getSelectedRow() == rowIndex ?
-                        true : toggle;
+                        && this.getSelectedRow() == rowIndex || toggle;
         super.changeSelection(rowIndex, columnIndex, newToggle, extend);
     }
 
@@ -254,12 +253,12 @@ abstract class ListView<V extends Observable & Searchable>
         menu.show(this, e.getX(), e.getY());
     }
 
-    protected void selectionChanged(Optional<V> value){};
+    void selectionChanged(Optional<V> value){}
 
     protected abstract WebPopupMenu rightClickMenu(List<V> selectedValues);
 
     @SuppressWarnings("unchecked")
-    protected boolean sync(Set<V> values) {
+    boolean sync(Set<V> values) {
         Set<V> oldValues = new HashSet<>();
         // remove old
         for (int i=0; i < mModel.getRowCount(); i++) {
@@ -285,20 +284,20 @@ abstract class ListView<V extends Observable & Searchable>
         return added;
     }
 
-    protected void clearItems() {
+    void clearItems() {
         mModel.setRowCount(0);
     }
 
-    protected V getDisplayedValueAt(int row) {
+    V getDisplayedValueAt(int row) {
         return this.getValueAtModelIndex(mRowSorter.convertRowIndexToModel(row));
     }
 
     @SuppressWarnings("unchecked")
-    protected V getValueAtModelIndex(int row) {
+    V getValueAtModelIndex(int row) {
         return (V) mModel.getValueAt(row, 0);
     }
 
-    protected List<V> getSelectedValues() {
+    List<V> getSelectedValues() {
         List<V> values = new ArrayList<>();
         for (int i : this.getSelectedRows()) {
             values.add(this.getDisplayedValueAt(i));
@@ -306,7 +305,7 @@ abstract class ListView<V extends Observable & Searchable>
         return values;
     }
 
-    protected Optional<V> getSelectedValue() {
+    Optional<V> getSelectedValue() {
         int row = this.getSelectedRow();
         return row == -1 ?
                 Optional.empty() :
@@ -328,7 +327,7 @@ abstract class ListView<V extends Observable & Searchable>
             this.setSelectedItem(0);
     }
 
-    protected void setSelectedItem(int i) {
+    void setSelectedItem(int i) {
         if (i >= mModel.getRowCount())
             return;
 
@@ -364,10 +363,14 @@ abstract class ListView<V extends Observable & Searchable>
     private void updateOnEDT(Observable o, Object arg) {
         if (o == null || mVClass.isAssignableFrom(o.getClass())) {
             // render everything again (and update sorting)
-            mModel.fireTableRowsUpdated(0, mModel.getRowCount() -1);
+            updateRowRendering(0, this.getRowCount() -1);
             return;
         }
         this.updateOnEDT(arg);
+    }
+
+    void updateRowRendering(int from, int to) {
+        mModel.fireTableRowsUpdated(from, to);
     }
 
     abstract protected void updateOnEDT(Object arg);
@@ -383,9 +386,9 @@ abstract class ListView<V extends Observable & Searchable>
         return null;
     }
 
-    protected String getTooltipText(V value) {
+    String getTooltipText(V value) {
         return "";
-    };
+    }
 
     private void showTooltip(V value) {
         String text = this.getTooltipText(value);
@@ -413,12 +416,14 @@ abstract class ListView<V extends Observable & Searchable>
         return mVClass;
     }
 
-    protected void onRenameEvent() {}
+    void onRenameEvent() {}
 
     /** View item used as flyweight object. */
     abstract static class FlyweightItem<V> extends WebPanel {
         /** Update before painting. */
-        protected abstract void render(V value, int listWidth, boolean isSelected);
+        protected abstract void render(V value, int listWidth, boolean isSelected, boolean isLast);
+
+        protected void configUpdate() {};
     }
 
     private class TableRenderer extends WebTableCellRenderer {
@@ -463,7 +468,8 @@ abstract class ListView<V extends Observable & Searchable>
             return item;
         }
 
-        item.render(valueItem, table.getWidth(), isSelected);
+        boolean isLast = row == table.getRowCount() - 1;
+        item.render(valueItem, table.getWidth(), isSelected, isLast);
 
         int height = Math.max(table.getRowHeight(), item.getPreferredSize().height);
         // view item needs a little more then it preferres

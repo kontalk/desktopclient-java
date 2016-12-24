@@ -18,6 +18,12 @@
 
 package org.kontalk.util;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -35,12 +41,7 @@ import java.security.cert.X509Certificate;
 import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
-import javax.net.ssl.X509TrustManager;
+
 import org.kontalk.crypto.PGPUtils;
 
 /**
@@ -76,7 +77,6 @@ public class TrustUtils {
             NoSuchAlgorithmException,
             CertificateException,
             UnrecoverableKeyException,
-            NoSuchProviderException,
             KeyManagementException {
         // in-memory keystore
         KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());

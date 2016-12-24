@@ -139,7 +139,7 @@ public final class FeatureDiscovery {
                 SmackException.NotConnectedException ex) {
             // not supported by all servers/server not reachable, we only know after trying
             //LOGGER.log(Level.WARNING, "can't get service discovery info", ex);
-            LOGGER.warning("can't get info for " + entity);
+            LOGGER.warning("can't get info for " + entity + " " + ex.getMessage());
             return null;
         }
 
@@ -154,9 +154,9 @@ public final class FeatureDiscovery {
         List<DiscoverInfo.Identity> identities = info.getIdentities();
         LOGGER.config("entity: " + entity
                 + " identities: " + identities.stream()
-                .map(i -> i.toXML()).collect(Collectors.toList())
+                .map(DiscoverInfo.Identity::toXML).collect(Collectors.toList())
                 + " features: " + info.getFeatures().stream()
-                .map(f -> f.getVar()).collect(Collectors.toList()));
+                .map(DiscoverInfo.Feature::getVar).collect(Collectors.toList()));
 
         return features;
     }

@@ -57,7 +57,7 @@ public final class ContactList extends Observable {
         Database db = Model.database();
         try (ResultSet resultSet = db.execSelectAll(Contact.TABLE)) {
             while (resultSet.next()) {
-                Contact contact = Contact.load(db, resultSet);
+                Contact contact = Contact.load(resultSet);
 
                 JID jid = contact.getJID();
                 if (mJIDMap.containsKey(jid)) {
@@ -136,7 +136,7 @@ public final class ContactList extends Observable {
     }
 
     void onShutDown() {
-        mJIDMap.values().stream().forEach(c -> c.onShutDown());
+        mJIDMap.values().forEach(Contact::onShutDown);
     }    
 
     /**

@@ -41,7 +41,7 @@ import org.kontalk.system.RosterHandler;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public class PresenceListener implements StanzaListener {
+class PresenceListener implements StanzaListener {
     private static final Logger LOGGER = Logger.getLogger(PresenceListener.class.getName());
 
     private final Roster mRoster;

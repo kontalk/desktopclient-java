@@ -18,18 +18,19 @@
 
 package org.kontalk.system;
 
-import org.kontalk.model.Account;
 import java.io.IOException;
 import java.util.Observable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
 import org.kontalk.client.EndpointServer;
 import org.kontalk.client.PrivateKeyReceiver;
 import org.kontalk.crypto.PGPUtils;
 import org.kontalk.misc.Callback;
 import org.kontalk.misc.KonException;
+import org.kontalk.model.Account;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -39,7 +40,7 @@ import org.kontalk.util.EncodingUtils;
 public final class AccountImporter extends Observable implements Callback.Handler<String>{
     private static final Logger LOGGER = Logger.getLogger(AccountImporter.class.getName());
 
-    static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
+    private static final String PRIVATE_KEY_FILENAME = "kontalk-private.asc";
 
     private final Account mAccount;
 
@@ -70,7 +71,7 @@ public final class AccountImporter extends Observable implements Callback.Handle
     // note: with disarming if needed
     private static byte[] readBytesFromZip(ZipFile zipFile, String filename) throws KonException {
         ZipEntry zipEntry = zipFile.getEntry(filename);
-        byte[] bytes = null;
+        byte[] bytes;
         try {
             bytes = PGPUtils.mayDisarm(zipFile.getInputStream(zipEntry));
         } catch (IOException ex) {
@@ -80,6 +81,7 @@ public final class AccountImporter extends Observable implements Callback.Handle
         return bytes;
     }
 
+    // TODO unused
     public void fromServer(String host, int port, boolean validateCertificate,
             String token, char[] password) {
         mPassword = password;

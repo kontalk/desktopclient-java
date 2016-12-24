@@ -39,7 +39,6 @@ import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
 import org.kontalk.client.FeatureDiscovery;
 import org.kontalk.model.Avatar;
-import org.kontalk.model.Model;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.Control;
 import org.kontalk.util.Tr;
@@ -56,7 +55,7 @@ final class ProfileDialog extends WebDialog {
     private final WebTextField mStatusField;
     private final WebList mStatusList;
 
-    ProfileDialog(View view, Model model) {
+    ProfileDialog(View view) {
         mView = view;
 
         this.setTitle(Tr.tr("User Profile"));
@@ -75,7 +74,7 @@ final class ProfileDialog extends WebDialog {
         // permanent, user has to re-open the dialog on change
         final boolean supported = mView.serverFeatures().contains(FeatureDiscovery.Feature.USER_AVATAR);
         mAvatarImage = new ComponentUtils.EditableAvatarImage(View.AVATAR_PROFILE_SIZE, supported,
-                Avatar.UserAvatar.get().flatMap(userAvatar -> userAvatar.loadImage())) {
+                Avatar.UserAvatar.get().flatMap(Avatar::loadImage)) {
             @Override
             AvatarImg defaultImage() {
                 return AvatarLoader.loadFallback(View.AVATAR_PROFILE_SIZE);
@@ -105,7 +104,7 @@ final class ProfileDialog extends WebDialog {
         // status text
 
         String[] strings = Config.getInstance().getStringArray(Config.NET_STATUS_LIST);
-        List<String> stats = new ArrayList<>(Arrays.<String>asList(strings));
+        List<String> stats = new ArrayList<>(Arrays.asList(strings));
         String currentStatus = !stats.isEmpty() ? stats.remove(0) : "";
 
         groupPanel.add(new WebLabel(Tr.tr("Status Message")).setBoldFont());

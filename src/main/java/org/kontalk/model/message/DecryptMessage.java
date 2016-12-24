@@ -30,15 +30,15 @@ import org.kontalk.model.Contact;
  */
 public interface DecryptMessage {
 
-    public Contact getContact();
+    Contact getContact();
 
-    public boolean isEncrypted();
+    boolean isEncrypted();
 
-    public MessageContent getContent();
+    MessageContent getContent();
 
-    public void setDecryptedContent(MessageContent content);
+    void setDecryptedContent(MessageContent content);
 
-    public void setSigning(Signing signing);
+    void setSigning(Signing signing);
 
-    public void setSecurityErrors(EnumSet<Coder.Error> errors);
+    void setSecurityErrors(EnumSet<Coder.Error> errors);
 }

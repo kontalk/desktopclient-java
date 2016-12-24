@@ -20,6 +20,7 @@ package org.kontalk.view;
 
 import javax.swing.AbstractAction;
 import javax.swing.Action;
+import javax.swing.Box;
 import javax.swing.Icon;
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
@@ -27,13 +28,16 @@ import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.TransferHandler;
 import javax.swing.text.AbstractDocument;
+import javax.swing.text.BadLocationException;
 import javax.swing.text.BoxView;
 import javax.swing.text.ComponentView;
 import javax.swing.text.Element;
 import javax.swing.text.IconView;
 import javax.swing.text.LabelView;
 import javax.swing.text.ParagraphView;
+import javax.swing.text.Style;
 import javax.swing.text.StyleConstants;
+import javax.swing.text.StyledDocument;
 import javax.swing.text.StyledEditorKit;
 import javax.swing.text.ViewFactory;
 import java.awt.BorderLayout;
@@ -53,6 +57,9 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.alee.extended.panel.FlowPanel;
+import com.alee.extended.panel.GroupPanel;
+import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
@@ -60,8 +67,11 @@ import com.alee.laf.panel.WebPanel;
 import com.alee.laf.text.WebEditorPane;
 import com.alee.laf.text.WebTextPane;
 import com.alee.managers.tooltip.TooltipManager;
+import org.apache.commons.lang.time.DateUtils;
+import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
+import org.kontalk.model.Contact;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
@@ -70,6 +80,7 @@ import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
+import org.kontalk.persistence.Config;
 import org.kontalk.util.Tr;
 import org.kontalk.view.ChatView.Background;
 import org.kontalk.view.ComponentUtils.AttachmentPanel;
@@ -82,7 +93,7 @@ import org.kontalk.view.ComponentUtils.AttachmentPanel;
 final class MessageList extends ListView<KonMessage> {
     private static final Logger LOGGER = Logger.getLogger(MessageList.class.getName());
 
-    private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");;
+    private static final Icon PENDING_ICON = Utils.getIcon("ic_msg_pending.png");
     private static final Icon SENT_ICON = Utils.getIcon("ic_msg_sent.png");
     private static final Icon DELIVERED_ICON = Utils.getIcon("ic_msg_delivered.png");
     private static final Icon ERROR_ICON = Utils.getIcon("ic_msg_error.png");
@@ -97,7 +108,7 @@ final class MessageList extends ListView<KonMessage> {
     private final ChatView mChatView;
     private final Chat mChat;
 
-    private Optional<Background> mBackground = Optional.empty();
+    private Background mBackground = null;
 
     MessageList(View view, ChatView chatView, Chat chat) {
         // render and editor item are equal (but not the same!)
@@ -106,6 +117,7 @@ final class MessageList extends ListView<KonMessage> {
                 new MessageListFlyWeightItem(view),
                 // allow multiple selections for "copy" action
                 ListSelectionModel.MULTIPLE_INTERVAL_SELECTION,
+                true,
                 false);
 
         mChatView = chatView;
@@ -130,7 +142,7 @@ final class MessageList extends ListView<KonMessage> {
     }
 
     Optional<Background> getBG() {
-        return mBackground;
+        return Optional.ofNullable(mBackground);
     }
 
     @Override
@@ -153,6 +165,14 @@ final class MessageList extends ListView<KonMessage> {
                 !mChat.isRead() && mView.chatIsVisible(mChat)) {
             mChat.setRead();
         }
+
+        if (arg == Chat.ViewChange.MEMBER_STATE) {
+            // show/hide "is writing..." for last message
+            // or hide "is writing..." for -now- second to last message after new message was added
+            this.updateRowRendering(this.getRowCount() - 2, this.getRowCount() - 1);
+            this.scrollToRow(this.getRowCount() - 1);
+            this.repaint(); // swing...
+        }
     }
 
     private void insertMessages() {
@@ -165,7 +185,13 @@ final class MessageList extends ListView<KonMessage> {
 
     private void setBackground(Chat.ViewSettings s) {
         // simply overwrite
-        mBackground = mChatView.createBG(s);
+        mBackground = mChatView.createBGOrNull(s);
+    }
+
+    void updateMessageFontSize() {
+        mRenderItem.configUpdate();
+        mEditorItem.configUpdate();
+        this.updateRowRendering(0, this.getRowCount() - 1);
     }
 
     @Override
@@ -245,10 +271,15 @@ final class MessageList extends ListView<KonMessage> {
     /**
      * Flyweight render item for message items.
      * The content is added to a panel inside this panel.
+     * Above the content panel a centered date panel is drawn (if appropriate).
      */
     private static class MessageListFlyWeightItem extends FlyweightItem<KonMessage> {
 
         private final View mView;
+        private final WebPanel mDateMarginPanel;
+        private final WebPanel mDatePanel;
+        private final WebLabel mDateLabel;
+        private final WebPanel mFlowPanel;
         private final WebPanel mPanel;
         private final WebLabel mFromLabel;
         private final WebTextPane mTextPane;
@@ -257,15 +288,38 @@ final class MessageList extends ListView<KonMessage> {
         // TODO use WebImages
         private final WebLabel mStatusIconLabel;
         private final WebLabel mEncryptIconLabel;
-        private final WebLabel dateLabel;
+        private final WebLabel mTimeLabel;
+        private final WebPanel mWritingPanel;
+        private final WebLabel mWritingLabel;
 
         private final AttachmentPanel mAttPanel;
+
+        private final LinkUtils.Linkifier mLinkifier;
+        private final Style mMeCommandStyle;
 
         MessageListFlyWeightItem(View view) {
             mView = view;
 
+            this.setOpaque(false);
+
+            mDatePanel = new WebPanel();
+            mDatePanel.setRound(View.ROUND);
+            mDatePanel.setWebColoredBackground(false);
+            mDatePanel.setBackground(View.BLUE);
+            mDatePanel.setBorderColor(View.BLUE);
+            mDateLabel = new WebLabel();
+            mDateLabel.setForeground(Color.WHITE);
+            mDatePanel.add(mDateLabel, BorderLayout.CENTER);
+            mDateMarginPanel = new GroupPanel(mDatePanel);
+            this.add(new GroupPanel(GroupingType.fillFirstAndLast,
+                                           Box.createGlue(), mDateMarginPanel, Box.createGlue())
+                             .setMargin(0),
+                    BorderLayout.NORTH);
+
+            // FlowLayout to toggle left/right position of panel (see below)
+            mFlowPanel = new FlowPanel(0);
             //this.setBorder(new EmptyBorder(10, 10, 10, 10));
-            this.setBackground(View.BLUE); // seen when selected
+            mFlowPanel.setBackground(View.BLUE); // seen when selected
 
             mPanel = new WebPanel(true);
             mPanel.setRound(View.ROUND);
@@ -276,12 +330,12 @@ final class MessageList extends ListView<KonMessage> {
             mFromLabel.setFontSize(View.FONT_SIZE_SMALL);
             mFromLabel.setForeground(Color.BLUE);
             mFromLabel.setItalicFont();
+            mPanel.add(mFromLabel, BorderLayout.NORTH);
 
             // text area
             mTextPane = new WebTextPane();
             mTextPane.setEditable(false);
             mTextPane.setOpaque(false);
-            //mTextPane.setFontSize(View.FONT_SIZE_SMALL);
             // sets default font
             mTextPane.putClientProperty(WebEditorPane.HONOR_DISPLAY_PROPERTIES, true);
             // for detecting link clicks
@@ -293,22 +347,15 @@ final class MessageList extends ListView<KonMessage> {
             // right click menu
             mTextPane.setComponentPopupMenu(TEXT_COPY_MENU);
 
-            // icons
-            mStatusIconLabel = new WebLabel();
-            mEncryptIconLabel = new WebLabel();
-
-            // date label
-            dateLabel = new WebLabel();
-            dateLabel.setForeground(Color.GRAY);
-            dateLabel.setFontSize(View.FONT_SIZE_TINY);
+            // text styling
+            mLinkifier = new LinkUtils.Linkifier(mTextPane.getStyledDocument());
+            mMeCommandStyle = mTextPane.addStyle(null, null);
+            StyleConstants.setForeground(mMeCommandStyle, View.GREEN);
 
             // attachment
             mAttPanel = new AttachmentPanel();
 
-            // layout...
-
-            mPanel.add(mFromLabel, BorderLayout.NORTH);
-
+            // layout: content panel
             WebPanel mContentPanel = new WebPanel();
             mContentPanel.setOpaque(false);
             mContentPanel.setMargin(View.MARGIN_SMALL);
@@ -316,27 +363,89 @@ final class MessageList extends ListView<KonMessage> {
             mContentPanel.add(mAttPanel, BorderLayout.SOUTH);
             mPanel.add(mContentPanel, BorderLayout.CENTER);
 
-            WebPanel southPanel = new WebPanel();
-            southPanel.setOpaque(false);
+            // status panel...
             mStatusPanel = new WebPanel();
             mStatusPanel.setOpaque(false);
-            TooltipManager.addTooltip(mStatusPanel, "???");
             mStatusPanel.setLayout(new FlowLayout());
+
+            mStatusIconLabel = new WebLabel();
             mStatusPanel.add(mStatusIconLabel);
+
+            mEncryptIconLabel = new WebLabel();
             mStatusPanel.add(mEncryptIconLabel);
-            mStatusPanel.add(dateLabel);
+
+            mTimeLabel = new WebLabel();
+            mTimeLabel.setForeground(Color.GRAY);
+            mStatusPanel.add(mTimeLabel);
+
+            WebPanel southPanel = new WebPanel();
+            southPanel.setOpaque(false);
             southPanel.add(mStatusPanel, BorderLayout.EAST);
             mPanel.add(southPanel, BorderLayout.SOUTH);
 
-            // FlowLayout to toggle left/right position of panel (see below)
-            this.setLayout(new FlowLayout(FlowLayout.TRAILING, 0, 0));
-            this.add(mPanel);
+            mFlowPanel.add(mPanel);
+            this.add(mFlowPanel, BorderLayout.CENTER);
+
+            mWritingPanel = new WebPanel();
+            mWritingPanel.setRound(View.ROUND);
+            mWritingPanel.setWebColoredBackground(false);
+            mWritingPanel.setBackground(Color.WHITE);
+            mWritingPanel.setBorderColor(Color.WHITE);
+            mWritingLabel = new WebLabel();
+            mWritingLabel.setForeground(View.DARK_RED);
+            mWritingPanel.add(mWritingLabel, BorderLayout.CENTER);
+            this.add(new GroupPanel(GroupingType.fillLast, mWritingPanel, Box.createGlue())
+                             .setMargin(0),
+                    BorderLayout.SOUTH);
+
+            // set font size
+            this.configUpdate();
         }
 
         @Override
-        protected void render(KonMessage value, int listWidth, boolean isSelected) {
-            // background (item panel)
-            this.setOpaque(isSelected);
+        protected void configUpdate() {
+            int textFontSize;
+            int timeFontSize;
+            switch(Config.getInstance().getInt(Config.VIEW_MESSAGE_FONT_SIZE)) {
+                case 1:
+                    textFontSize = timeFontSize = View.FONT_SIZE_TINY; break;
+                case 2:
+                    textFontSize = View.FONT_SIZE_NORMAL;
+                    timeFontSize = View.FONT_SIZE_SMALL; break;
+                case 3:
+                    textFontSize = View.FONT_SIZE_BIG;
+                    timeFontSize = View.FONT_SIZE_NORMAL; break;
+                default:
+                    textFontSize = View.FONT_SIZE_SMALL;
+                    timeFontSize = View.FONT_SIZE_TINY;
+            }
+            mDateLabel.setFontSize(textFontSize);
+            mTextPane.setFontSize(textFontSize);
+            mTimeLabel.setFontSize(timeFontSize);
+        }
+
+        @Override
+        protected void render(KonMessage value, int listWidth, boolean isSelected, boolean isLast) {
+            KonMessage last = value.getPredecessor().orElse(null);
+            boolean showDateSeparator = last == null ||
+                    !DateUtils.isSameDay(last.getDate(), value.getDate());
+            mDatePanel.setVisible(showDateSeparator); // otherwise visible on mouse over (?)
+            mDateMarginPanel.setMargin(showDateSeparator ? View.MARGIN_SMALL : 0);
+            boolean consecutive = last == null || last.getSender().equals(value.getSender());
+            mDatePanel.setMargin(showDateSeparator || !consecutive ? View.MARGIN_SMALL : 0);
+            // decoration consumes space, even if nothing is visible in panel
+            mDatePanel.setUndecorated(!showDateSeparator);
+            mDateLabel.setText(showDateSeparator ?
+                                       Utils.getDateSeparatorText(value.getDate()) : "");
+
+            // background (flow item panel)
+            mFlowPanel.setOpaque(isSelected);
+
+            boolean isOut = !value.isInMessage();
+
+            // toggle left/right position
+            mFlowPanel.setComponentOrientation(!isOut ?
+                   ComponentOrientation.LEFT_TO_RIGHT : ComponentOrientation.RIGHT_TO_LEFT);
 
             // background (message panel)
             boolean hasGroupCommand = value.getContent().getGroupCommand().isPresent();
@@ -357,7 +466,7 @@ final class MessageList extends ListView<KonMessage> {
             }
 
             // date label
-            dateLabel.setText(Utils.SHORT_DATE_FORMAT.format(value.isInMessage() ?
+            mTimeLabel.setText(Utils.SHORT_DATE_FORMAT.format(value.isInMessage() ?
                             value.getServerDate().orElse(value.getDate()) :
                             value.getDate()));
 
@@ -374,7 +483,21 @@ final class MessageList extends ListView<KonMessage> {
                 mTextPane.setFontStyle(false, true);
             } else {
                 mTextPane.setFontStyle(false, value.isEncrypted());
-                LinkUtils.linkify(mTextPane.getStyledDocument(), text);
+                StyledDocument document = mTextPane.getStyledDocument();
+                try {
+                    document.remove(0, document.getLength());
+                    // output implementation of the "/me" command, XEP-0245
+                    if (text.startsWith(View.THE_ME_COMMAND)) {
+                        Contact sender = value.getSender().orElse(null);
+                        // NOTE: not updated if sender name changes, people have to live with it
+                        String meName = (sender == null ? Tr.tr("Me") : sender.getName()) + " ";
+                        document.insertString(0, meName, mMeCommandStyle);
+                        text = text.substring(View.THE_ME_COMMAND.length());
+                    }
+                    mLinkifier.linkify(text);
+                } catch (BadLocationException ex) {
+                    LOGGER.log(Level.WARNING, "can't set styled document text", ex);
+                }
             }
 
             // hide area if there is no text
@@ -384,11 +507,10 @@ final class MessageList extends ListView<KonMessage> {
             Date deliveredDate = null;
             Set<Transmission> transmissions = value.getTransmissions();
             if (transmissions.size() == 1)
-                deliveredDate = transmissions.stream().findFirst().get().getReceivedDate().orElse(null);
+                deliveredDate = transmissions.iterator().next().getReceivedDate().orElse(null);
 
             // status icon
             Icon statusIcon = null;
-            boolean isOut = !value.isInMessage();
             if (isOut) {
                 if (deliveredDate != null) {
                     statusIcon = DELIVERED_ICON;
@@ -438,7 +560,7 @@ final class MessageList extends ListView<KonMessage> {
                 String secStat = null;
                 Date statusDate;
                 if (deliveredDate != null) {
-                    secStat = Tr.tr("Delivered:");
+                    secStat = Tr.tr("Received:");
                     statusDate = deliveredDate;
                 } else {
                     statusDate = value.getServerDate().orElse(null);
@@ -450,7 +572,7 @@ final class MessageList extends ListView<KonMessage> {
                             break;
                         // legacy
                         case RECEIVED:
-                            secStat = Tr.tr("Delivered:");
+                            secStat = Tr.tr("Received:");
                             break;
                         case ERROR:
                             secStat = Tr.tr("Error report:");
@@ -576,10 +698,13 @@ final class MessageList extends ListView<KonMessage> {
             // is again totally different; I love Swing
             mTextPane.setPreferredSize(prefSize);
 
-            // toggle left/right position
-            this.setComponentOrientation(isOut ?
-                    ComponentOrientation.LEFT_TO_RIGHT:
-                    ComponentOrientation.RIGHT_TO_LEFT);
+            boolean showWriting = isLast
+                    && value.getChat().getAllMembers().stream()
+                    .anyMatch(m -> m.getState() == ChatState.composing);
+            mWritingPanel.setMargin(showWriting ? View.MARGIN_SMALL : 0);
+            // decoration consumes space, even if nothing is visible in panel
+            mWritingPanel.setUndecorated(!showWriting);
+            mWritingLabel.setText(showWriting ? Tr.tr("is writing...") : "");
         }
     }
 
@@ -592,7 +717,7 @@ final class MessageList extends ListView<KonMessage> {
      * Source: https://stackoverflow.com/a/13375811
      */
     private static class WrapEditorKit extends StyledEditorKit {
-        ViewFactory defaultFactory = new WrapColumnFactory();
+        final ViewFactory defaultFactory = new WrapColumnFactory();
         @Override
         public ViewFactory getViewFactory() {
             return defaultFactory;
@@ -658,10 +783,10 @@ final class MessageList extends ListView<KonMessage> {
                 return null;
             }
 
-            StringBuffer plainBuf = new StringBuffer();
+            StringBuilder plainBuf = new StringBuilder();
             for (KonMessage m : messages) {
                 String val = messageToString(m, mView, true);
-                plainBuf.append(val + "\n"); // NOTE: newline after last line
+                plainBuf.append(val).append("\n"); // NOTE: newline after last line
             }
 
             //return new BasicTransferable(plainBuf.toString(), htmlBuf.toString());

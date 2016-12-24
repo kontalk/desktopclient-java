@@ -34,6 +34,8 @@ import com.alee.extended.panel.GroupingType;
 import com.alee.laf.label.WebLabel;
 import com.alee.laf.menu.WebMenuItem;
 import com.alee.laf.menu.WebPopupMenu;
+import com.alee.managers.language.data.TooltipWay;
+import com.alee.managers.tooltip.TooltipManager;
 import org.apache.commons.lang.StringEscapeUtils;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
@@ -55,6 +57,7 @@ final class ContactListView extends ListView<Contact> {
                 new FlyweightContactItem(),
                 new FlyweightContactItem(),
                 ListSelectionModel.SINGLE_SELECTION,
+                true,
                 true);
 
         mModel = model;
@@ -176,7 +179,7 @@ final class ContactListView extends ListView<Contact> {
             html += Tr.tr("Status") + ": " + status + "<br>";
         }
         if (value.getOnline() != Contact.Online.YES) {
-            html += Utils.lastSeen(value, false, true) + "<br>";
+            html += Utils.lastSeen(value, true, false) + "<br>";
         }
         if (value.isBlocked()) {
             html += Tr.tr("Contact is blocked!") + "<br>";
@@ -225,7 +228,7 @@ final class ContactListView extends ListView<Contact> {
         }
 
         @Override
-        protected void render(Contact value, int listWidth, boolean isSelected) {
+        protected void render(Contact value, int listWidth, boolean isSelected, boolean isLast) {
             // avatar
             mAvatar.setAvatarImage(value);
 
@@ -236,7 +239,7 @@ final class ContactListView extends ListView<Contact> {
             }
 
             // status
-            mStatusLabel.setText(Utils.mainStatus(value, false));
+            mStatusLabel.setText(Utils.mainStatus(value, isSelected));
 
             // online status / background
             Contact.Subscription subStatus = value.getSubScription();
@@ -248,6 +251,8 @@ final class ContactListView extends ListView<Contact> {
                             Color.WHITE);
 
             // tooltip
+            // TODO blocks mouse clicks interaction
+            if (true) return;
             String html = "<html><body>";
                     //"<h3>Header</h3>" +
 
@@ -258,15 +263,14 @@ final class ContactListView extends ListView<Contact> {
                 html += Tr.tr("Status") + ": " + status + "<br>";
             }
             if (value.getOnline() != Contact.Online.YES) {
-                html += Utils.lastSeen(value, false, true) + "<br>";
+                html += Utils.lastSeen(value, true, false) + "<br>";
             }
             if (value.isBlocked()) {
                 html += Tr.tr("Contact is blocked!") + "<br>";
             }
 
             html += "</body></html>" ;
-            // TODO blocks mouse clicks interaction
-            //TooltipManager.setTooltip(this, html, TooltipWay.right);
+            TooltipManager.setTooltip(this, html, TooltipWay.right);
         }
     }
 }

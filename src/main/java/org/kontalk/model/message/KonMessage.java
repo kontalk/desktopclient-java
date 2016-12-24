@@ -18,7 +18,6 @@
 
 package org.kontalk.model.message;
 
-import org.kontalk.model.chat.Chat;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Arrays;
@@ -33,14 +32,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
-import org.kontalk.persistence.Database;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.Searchable;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.MessageContent.Preview;
+import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
 
 /**
@@ -68,7 +69,7 @@ public abstract class KonMessage extends Observable implements Searchable {
         RECEIVED,
         /** Outgoing message, an error occurred somewhere in the transmission. */
         ERROR
-    };
+    }
 
     public enum ViewChange {
         STATUS, CONTENT, ATTACHMENT
@@ -91,7 +92,7 @@ public abstract class KonMessage extends Observable implements Searchable {
             COL_CHAT_ID + " INTEGER NOT NULL, " +
             // XMPP ID attribute; only RECOMMENDED and must be unique only
             // within a stream (RFC 6120)
-            COL_XMPP_ID + " TEXT NOT NULL, " +
+            COL_XMPP_ID + " TEXT, " +
             // unix time, local creation timestamp
             COL_DATE + " INTEGER NOT NULL, " +
             // enum, message sending status
@@ -109,30 +110,28 @@ public abstract class KonMessage extends Observable implements Searchable {
             COL_SERV_ERR + " TEXT, " +
             // unix time, transmission/delay timestamp
             COL_SERV_DATE + " INTEGER, " +
-            "FOREIGN KEY ("+COL_CHAT_ID+") REFERENCES "+Chat.TABLE+" (_id) " +
+            "FOREIGN KEY (" + COL_CHAT_ID + ") REFERENCES " + Chat.TABLE + " (_id) " +
             ")";
 
-    protected final int mID;
+    final int mID;
     private final Chat mChat;
     private final String mXMPPID;
-    // (local) creation time
     private final Date mDate;
-    protected final MessageContent mContent;
+    final MessageContent mContent;
 
     // last timestamp of server transmission packet
     // incoming: (delayed) sent; outgoing: sent or error
-    protected Date mServerDate;
-    protected Status mStatus;
-    protected CoderStatus mCoderStatus;
-    protected ServerError mServerError;
+    Date mServerDate;
+    Status mStatus;
+    final CoderStatus mCoderStatus;
+    ServerError mServerError;
 
-    protected KonMessage(
-            Chat chat,
-            String xmppID,
-            MessageContent content,
-            Optional<Date> serverDate,
-            Status status,
-            CoderStatus coderStatus) {
+    KonMessage(Chat chat,
+               String xmppID,
+               MessageContent content,
+               Optional<Date> serverDate,
+               Status status,
+               CoderStatus coderStatus) {
         mChat = chat;
         mXMPPID = xmppID;
         mDate = new Date();
@@ -146,7 +145,9 @@ public abstract class KonMessage extends Observable implements Searchable {
         // insert
         List<Object> values = Arrays.asList(
                 mChat.getID(),
-                Database.setString(mXMPPID),
+                // database downward compatibility due to bug in version 3.1.2 (and prior)
+                //Database.setString(mXMPPID),
+                mXMPPID,
                 mDate,
                 mStatus,
         // i simply don't like to save all possible content explicitly in the
@@ -165,7 +166,7 @@ public abstract class KonMessage extends Observable implements Searchable {
     }
 
     // used when loading from database
-    protected KonMessage(Builder builder) {
+    KonMessage(Builder builder) {
         mID = builder.mID;
         mChat = builder.mChat;
         mXMPPID = builder.mXMPPID;
@@ -190,12 +191,16 @@ public abstract class KonMessage extends Observable implements Searchable {
         return mStatus == Status.IN;
     }
 
+    /** Get transmissions: Exactly one for incoming messages. For outgoing messages exactly one in
+     * a single chat and one or more in a group chat.
+     */
     public abstract Set<Transmission> getTransmissions();
 
     public String getXMPPID() {
         return mXMPPID;
     }
 
+    /** Return (local) creation time of this message. */
     public Date getDate() {
         return mDate;
     }
@@ -221,7 +226,7 @@ public abstract class KonMessage extends Observable implements Searchable {
         this.save();
     }
 
-    protected MessageContent.Attachment getAttachment() {
+    MessageContent.Attachment getAttachment() {
         MessageContent.Attachment att = this.getContent().getAttachment().orElse(null);
         if (att == null) {
             LOGGER.warning("no attachment!?");
@@ -254,7 +259,21 @@ public abstract class KonMessage extends Observable implements Searchable {
         return mCoderStatus.isEncrypted();
     }
 
-    protected void save() {
+    /**
+     * Return the message that is placed before this message (in or out) - if any -
+     * in the ordered chat message list of this message.
+     */
+    public Optional<KonMessage> getPredecessor() {
+        return mChat.getMessages().getPredecessor(this);
+    }
+
+    /** Get the contact that send this message if this message wasn't send by user. */
+    public Optional<Contact> getSender() {
+        return this instanceof InMessage ?
+                       Optional.of(((InMessage) this).getContact()) : Optional.empty();
+    }
+
+    void save() {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_STATUS, mStatus);
         set.put(COL_CONTENT, mContent.toJSON());
@@ -267,7 +286,7 @@ public abstract class KonMessage extends Observable implements Searchable {
     }
 
     public boolean delete() {
-        boolean succ = this.getTransmissions().stream().allMatch(t -> t.delete());
+        boolean succ = this.getTransmissions().stream().allMatch(Transmission::delete);
         if (!succ)
             return false;
 
@@ -278,17 +297,17 @@ public abstract class KonMessage extends Observable implements Searchable {
         return Model.database().execDelete(TABLE, mID);
     }
 
-    protected void changed(ViewChange change) {
+    void changed(ViewChange change) {
         this.setChanged();
         this.notifyObservers(change);
     }
 
-    protected boolean abstractEquals(KonMessage oMessage) {
+    boolean abstractEquals(KonMessage oMessage) {
         return mChat.equals(oMessage.mChat)
                 && !mXMPPID.isEmpty() && mXMPPID.equals(oMessage.mXMPPID);
     }
 
-    protected int abstractHashCode() {
+    int abstractHashCode() {
         int hash = 7;
         hash = 17 * hash + Objects.hashCode(this.mChat);
         hash = 17 * hash + Objects.hashCode(this.mXMPPID);
@@ -299,6 +318,7 @@ public abstract class KonMessage extends Observable implements Searchable {
     public boolean contains(String search) {
         if (mContent.getText().toLowerCase().contains(search))
             return true;
+
         return this.getTransmissions().stream()
                 .anyMatch(t -> t.getContact().getName().toLowerCase().contains(search) ||
                         t.getContact().getJID().string().toLowerCase().contains(search));
@@ -313,9 +333,8 @@ public abstract class KonMessage extends Observable implements Searchable {
                 +",codstat="+mCoderStatus+",serverr="+mServerError;
     }
 
-    public static KonMessage load(Database db, ResultSet messageRS, Chat chat,
-            Map<Integer, Contact> contactMap)
-            throws SQLException {
+    public static KonMessage load(ResultSet messageRS, Chat chat,
+            Map<Integer, Contact> contactMap) throws SQLException {
         int id = messageRS.getInt("_id");
 
         String xmppID = Database.getString(messageRS, KonMessage.COL_XMPP_ID);
@@ -397,14 +416,14 @@ public abstract class KonMessage extends Observable implements Searchable {
         }
     }
 
-    protected static class Builder {
+    static class Builder {
         private final int mID;
         private final Chat mChat;
         private final Status mStatus;
         private final Date mDate;
         private final MessageContent mContent;
 
-        protected Set<Transmission> mTransmissions = null;
+        Set<Transmission> mTransmissions = null;
 
         private String mXMPPID = null;
         private Date mServerDate = null;

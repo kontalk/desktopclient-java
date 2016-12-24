@@ -31,6 +31,7 @@ import java.util.Observer;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.apache.commons.lang.ObjectUtils;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.json.simple.JSONObject;
@@ -75,7 +76,7 @@ public abstract class Chat extends Observable implements Observer, Searchable {
             COL_GD+" TEXT " +
             ")";
 
-    protected final int mID;
+    final int mID;
     private final ChatMessages mMessages;
 
     private boolean mRead;
@@ -83,10 +84,10 @@ public abstract class Chat extends Observable implements Observer, Searchable {
 
     private ViewSettings mViewSettings;
 
-    protected Chat(String xmppID, String subject, GroupMetaData gData) {
+    Chat(String xmppID, String subject, GroupMetaData gData) {
         mMessages = new ChatMessages();
         mRead = true;
-        mViewSettings = new ViewSettings();
+        mViewSettings = ViewSettings.createDefault();
 
         // insert
         List<Object> values = Arrays.asList(
@@ -102,14 +103,14 @@ public abstract class Chat extends Observable implements Observer, Searchable {
     }
 
     // used when loading from database
-    protected Chat(int id, boolean read, String jsonViewSettings) {
+    Chat(int id, boolean read, String jsonViewSettings) {
         mID = id;
         mMessages = new ChatMessages();
         mRead = read;
-        mViewSettings = new ViewSettings(this, jsonViewSettings);
+        mViewSettings = new ViewSettings(jsonViewSettings);
     }
 
-    void loadMessages(Database db, Map<Integer, Contact> contactMap) {
+    private void loadMessages(Database db, Map<Integer, Contact> contactMap) {
         mMessages.load(db, this, contactMap);
     }
 
@@ -202,7 +203,7 @@ public abstract class Chat extends Observable implements Observer, Searchable {
     abstract void save();
 
     // not saving members here
-    protected void save(String subject) {
+    void save(String subject) {
         Map<String, Object> set = new HashMap<>();
         set.put(COL_SUBJ, Database.setString(subject));
         set.put(COL_READ, mRead);
@@ -214,7 +215,7 @@ public abstract class Chat extends Observable implements Observer, Searchable {
 
     void delete() {
         // messages
-        boolean succ = mMessages.getAll().stream().allMatch(m -> m.delete());
+        boolean succ = mMessages.getAll().stream().allMatch(KonMessage::delete);
         if (!succ)
             return;
 
@@ -239,7 +240,7 @@ public abstract class Chat extends Observable implements Observer, Searchable {
         return mDeleted;
     }
 
-    protected void changed(ViewChange change) {
+    void changed(ViewChange change) {
         this.setChanged();
         this.notifyObservers(change);
     }
@@ -303,7 +304,7 @@ public abstract class Chat extends Observable implements Observer, Searchable {
         // custom image, if set
         private final String mImagePath;
 
-        private ViewSettings(Chat t, String json) {
+        private ViewSettings(String json) {
             Object obj = JSONValue.parse(json);
             Color color;
             String imagePath;
@@ -324,19 +325,21 @@ public abstract class Chat extends Observable implements Observer, Searchable {
             mImagePath = imagePath;
         }
 
-        public ViewSettings() {
-            mColor = null;
-            mImagePath = "";
+        public static ViewSettings createDefault() {
+            return new ViewSettings(null, "");
         }
 
-        public ViewSettings(Color color) {
-            mColor = color;
-            mImagePath = "";
+        public static ViewSettings fromColor(Color color) {
+            return new ViewSettings(color, "");
         }
 
-        public ViewSettings(String imagePath) {
-            mColor = null;
-            mImagePath = imagePath;
+        public static ViewSettings fromImagePath(String imagePath) {
+            return new ViewSettings(null, imagePath);
+        }
+
+        private ViewSettings(Color c, String p) {
+            mColor = c;
+            mImagePath = p;
         }
 
         public Optional<Color> getBGColor() {
