@@ -19,12 +19,14 @@
 package org.kontalk.model.message;
 
 import java.net.URI;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -36,11 +38,14 @@ import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
+import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.EncodingUtils;
+import org.kontalk.util.MediaUtils;
 
 /**
  * All possible content a message can contain.
- * Recursive: A message can contain a decrypted message.
+ *
+ * Implementation detail: nested, a message can contain a decrypted message.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -100,14 +105,11 @@ public class MessageContent {
 
     /**
      * Get encrypted or plain text content.
-     * @return encrypted content if present, else plain text. If there is no
+     * @return decrypted content text if present, else plain text. If there is no
      * plain text either returns an empty string.
      */
     public String getText() {
-        if (mDecryptedContent != null)
-            return mDecryptedContent.getPlainText();
-        else
-            return mPlainText;
+        return mDecryptedContent != null ? mDecryptedContent.getPlainText() : mPlainText;
     }
 
     public String getPlainText() {
@@ -115,14 +117,23 @@ public class MessageContent {
     }
 
     public Optional<Attachment> getAttachment() {
-        if (mDecryptedContent != null &&
-                mDecryptedContent.getAttachment().isPresent()) {
+        if (mDecryptedContent != null && mDecryptedContent.getAttachment().isPresent()) {
             return mDecryptedContent.getAttachment();
         }
         return Optional.ofNullable(mAttachment);
     }
 
-    public String getEncryptedContent() {
+    public Optional<InAttachment> getInAttachment() {
+        Attachment att = this.getAttachment().orElse(null);
+        return !(att instanceof InAttachment)? Optional.empty() : Optional.of((InAttachment) att);
+    }
+
+    public Optional<OutAttachment> getOutAttachment() {
+        Attachment att = this.getAttachment().orElse(null);
+        return !(att instanceof OutAttachment)? Optional.empty() : Optional.of((OutAttachment) att);
+    }
+
+    String getEncryptedContent() {
         return mEncryptedContent;
     }
 
@@ -142,8 +153,7 @@ public class MessageContent {
     }
 
     public Optional<Preview> getPreview() {
-        if (mDecryptedContent != null &&
-                mDecryptedContent.getPreview().isPresent()) {
+        if (mDecryptedContent != null && mDecryptedContent.getPreview().isPresent()) {
             return mDecryptedContent.getPreview();
         }
         return Optional.ofNullable(mPreview);
@@ -255,59 +265,195 @@ public class MessageContent {
         }
     }
 
-    public static class Attachment {
+    public abstract static class Attachment extends Observable {
+        protected static final String JSON_URL = "url";
+        protected static final String JSON_FILENAME = "file_name";
 
-        private static final String JSON_URL = "url";
-        private static final String JSON_MIME_TYPE = "mime_type";
-        private static final String JSON_LENGTH = "length";
-        private static final String JSON_FILENAME = "file_name";
+        protected void changed(boolean repeat) {
+            this.setChanged();
+            this.notifyObservers(repeat);
+        }
+
+        public abstract String getFilename();
+
+        public abstract Path getFilePath();
+
+        public abstract String getMimeType();
+
+        /** Download progress in percent. <br>
+         * -1: no download/default <br>
+         *  0: download started... <br>
+         * 100: ...download finished <br>
+         * -2: unknown size <br>
+         * -3: download aborted
+         */
+        public abstract int getDownloadProgress();
+
+        public abstract boolean isEncrypted();
+
+        protected abstract String toJSONString();
+
+        // using legacy lib, raw types extend Object
+        @SuppressWarnings("unchecked")
+        private static Attachment fromJSONOrNull(String json) {
+            Object obj = JSONValue.parse(json);
+            try {
+                Map<?, ?> map = (Map) obj;
+                return map.containsKey(InAttachment.JSON_ENCRYPTION) ?
+                        InAttachment.fromJSON(map) :
+                        OutAttachment.fromJSON(map);
+            } catch (ClassCastException | InvalidPathException ex) {
+                LOGGER.log(Level.WARNING, "can't parse JSON attachment", ex);
+                return null;
+            }
+        }
+    }
+
+    public static final class InAttachment extends Attachment {
         private static final String JSON_ENCRYPTION = "encryption";
         private static final String JSON_SIGNING = "signing";
         private static final String JSON_CODER_ERRORS = "coder_errors";
 
-        // URL for file download, empty string by default
-        private URI mURL;
-        // file name of downloaded file or path to upload file, empty by default
-        private Path mFile;
-        // MIME of file, only used for outgoing, empty string by default
-        private String mMimeType;
-        // size of (decrypted) upload file in bytes, only used for outgoing, -1 by default
-        private long mLength;
-        // coder status of file encryption, only used for incoming
-        private final CoderStatus mCoderStatus;
+        // URL for file download
+        private final URI mURL;
+        // file name of downloaded file, empty by default
+        private String mFilename;
+        // coder status of file encryption, known after file is downloaded
+        protected CoderStatus mCoderStatus;
+
         // progress downloaded of (encrypted) file in percent
         private int mDownloadProgress = -1;
 
+        public InAttachment(URI url) {
+            this(url, "",
+                    // TODO we don't know, but value is not used anyway
+                    CoderStatus.createInsecure());
+        }
+
         // used when loading from database.
-        private Attachment(URI url, Path file,
-                String mimeType, long length,
-                CoderStatus coderStatus)  {
+        private InAttachment(URI url, String filename, CoderStatus coderStatus)  {
+            mURL = url;
+            mFilename = filename;
+            mCoderStatus = coderStatus;
+        }
+
+        public URI getURL() {
+            return mURL;
+        }
+
+        @Override
+        public int getDownloadProgress() {
+            return mDownloadProgress;
+        }
+
+        /** Set download progress. See getDownloadProgress() */
+        public void setDownloadProgress(int p) {
+            mDownloadProgress = p;
+            if (p <= 0)
+                this.changed(true);
+        }
+
+        @Override
+        public String getFilename() {
+            return mFilename;
+        }
+
+        public void setFile(String fileName, boolean encrypted) {
+            mFilename = fileName;
+            mCoderStatus = encrypted ? CoderStatus.createEncrypted() : CoderStatus.createInsecure();
+            if (!encrypted)
+                this.changed(true);
+        }
+
+        @Override
+        public Path getFilePath() {
+            return path(mFilename, AttachmentManager.ATT_DIRNAME);
+        }
+
+        public void setDecryptedFile(String filename) {
+            mCoderStatus.setDecrypted();
+            mFilename = filename;
+            this.changed(true);
+        }
+
+        public void setErrors(EnumSet<Coder.Error> errors) {
+            mCoderStatus.setSecurityErrors(errors);
+        }
+
+        public void setSigning(Coder.Signing signing) {
+            mCoderStatus.setSigning(signing);
+        }
+
+        @Override
+        public boolean isEncrypted() {
+            return mCoderStatus.isEncrypted();
+        }
+
+        @Override
+        public String getMimeType() {
+            // guess from file
+            return MediaUtils.mimeForFile(this.getFilePath());
+        }
+
+        @Override
+        public String toString() {
+            return "{IOATT:url="+mURL+",file="+mFilename+",status="+mCoderStatus+"}";
+        }
+
+        // using legacy lib, raw types extend Object
+        @SuppressWarnings("unchecked")
+        @Override
+        protected String toJSONString() {
+            JSONObject json = new JSONObject();
+            EncodingUtils.putJSON(json, JSON_URL, mURL.toString());
+            EncodingUtils.putJSON(json, JSON_FILENAME, mFilename.toString());
+            json.put(JSON_ENCRYPTION, mCoderStatus.getEncryption().ordinal());
+            json.put(JSON_SIGNING, mCoderStatus.getSigning().ordinal());
+            int errs = EncodingUtils.enumSetToInt(mCoderStatus.getErrors());
+            json.put(JSON_CODER_ERRORS, errs);
+            return json.toJSONString();
+        }
+
+        private static InAttachment fromJSON(Map<?, ?> map) {
+            URI url = URI.create(EncodingUtils.getJSONString(map, JSON_URL));
+            String filename = EncodingUtils.getJSONString(map, JSON_FILENAME);
+
+            Number enc = (Number) map.get(JSON_ENCRYPTION);
+            Coder.Encryption encryption = Coder.Encryption.values()[enc.intValue()];
+            Number sig = (Number) map.get(JSON_SIGNING);
+            Coder.Signing signing = Coder.Signing.values()[sig.intValue()];
+            Number err = ((Number) map.get(JSON_CODER_ERRORS));
+            EnumSet<Coder.Error> errors = EncodingUtils.intToEnumSet(Coder.Error.class, err.intValue());
+
+            return new InAttachment(url, filename, new CoderStatus(encryption, signing, errors));
+        }
+    }
+
+    public static final class OutAttachment extends Attachment {
+        private static final String JSON_MIME_TYPE = "mime_type";
+        private static final String JSON_LENGTH = "length";
+
+        // path to upload file
+        private final Path mFile;
+        // URL for file download, empty string by default
+        private URI mURL;
+        // MIME of file, empty string by default
+        private String mMimeType;
+        // size of (decrypted) upload file in bytes, -1 by default
+        private long mLength;
+
+        /** URI, length and (maybe) new MIME type are set after upload. */
+        public OutAttachment(Path path, String mimeType) {
+            this(URI.create(""), path, mimeType, -1);
+        }
+
+        // used when loading from database.
+        private OutAttachment(URI url, Path file,
+                String mimeType, long length)  {
             mURL = url;
             mFile = file;
             mMimeType = mimeType;
             mLength = length;
-            mCoderStatus = coderStatus;
-        }
-
-        // used for incoming attachments
-        // TODO do not use `encrpyted` and detect this by mime type
-        // $file att5qxceq.jpg
-        // att5qxceq.jpg: PGP RSA encrypted session key - keyid: 1B9BE79 526E5734 RSA (Encrypt or Sign) 2048b .
-        public static Attachment incoming(URI url,
-                boolean encrypted) {
-            return new Attachment(url, Paths.get(""), "", -1,
-                    encrypted ?
-                            CoderStatus.createEncrypted() :
-                            CoderStatus.createInsecure()
-            );
-        }
-
-        /** For outgoing attachments
-         * URI, length and (maybe) new MIME type are set after upload.
-         */
-        public static Attachment outgoing(Path path, String mimeType) {
-            return new Attachment(URI.create(""), path, mimeType, -1,
-                    CoderStatus.createInsecure());
         }
 
         public boolean hasURL() {
@@ -318,12 +464,19 @@ public class MessageContent {
             return mURL;
         }
 
-        void updateUploaded(URI url, String mime, long length){
+        @Override
+        public String getFilename() {
+            return mFile.getFileName().toString();
+        }
+
+        public void setUploaded(URI url, String mime, long length){
             mURL = url;
             mMimeType = mime;
             mLength = length;
+            this.changed(false);
         }
 
+        @Override
         public String getMimeType() {
             return mMimeType;
         }
@@ -332,119 +485,62 @@ public class MessageContent {
             return mLength;
         }
 
-       /**
-        * Return the filename (download) or path to the local file (upload).
-        */
         public Path getFilePath() {
             return mFile;
         }
 
-        void setFile(String fileName) {
-            mFile = Paths.get(fileName);
-        }
-
-        void setDecryptedFile(String fileName) {
-            mCoderStatus.setDecrypted();
-            mFile = Paths.get(fileName);
-        }
-
-        public CoderStatus getCoderStatus() {
-            return mCoderStatus;
-        }
-
-        /** Download progress in percent. <br>
-         * -1: no download/default <br>
-         *  0: download started... <br>
-         * 100: ...download finished <br>
-         * -2: unknown size <br>
-         * -3: download aborted
-         */
+        @Override
         public int getDownloadProgress() {
-            return mDownloadProgress;
+            return -1;
         }
 
-        /** Set download progress. See getDownloadProgress() */
-        void setDownloadProgress(int p) {
-            mDownloadProgress = p;
+        @Override
+        public boolean isEncrypted() {
+            return false;
         }
 
         @Override
         public String toString() {
-            return "{ATT:url="+mURL+",file="+mFile+",mime="+mMimeType
-                    +",length="+mLength+",status="+mCoderStatus+"}";
+            return "{OATT:file="+mFile+",url="+mURL+",mime="+mMimeType+",length="+mLength+"}";
         }
 
         // using legacy lib, raw types extend Object
         @SuppressWarnings("unchecked")
-        private String toJSONString() {
+        @Override
+        protected String toJSONString() {
             JSONObject json = new JSONObject();
             EncodingUtils.putJSON(json, JSON_URL, mURL.toString());
             EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
             json.put(JSON_LENGTH, mLength);
             EncodingUtils.putJSON(json, JSON_FILENAME, mFile.toString());
-            json.put(JSON_ENCRYPTION, mCoderStatus.getEncryption().ordinal());
-            json.put(JSON_SIGNING, mCoderStatus.getSigning().ordinal());
-            int errs = EncodingUtils.enumSetToInt(mCoderStatus.getErrors());
-            json.put(JSON_CODER_ERRORS, errs);
             return json.toJSONString();
         }
 
-        private static Attachment fromJSONOrNull(String json) {
-            Object obj = JSONValue.parse(json);
-            try {
-                Map<?, ?> map = (Map) obj;
+        private static OutAttachment fromJSON(Map<?, ?> map) {
+            URI url = URI.create(EncodingUtils.getJSONString(map, JSON_URL));
+            Path file = Paths.get(EncodingUtils.getJSONString(map, JSON_FILENAME));
+            String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
+            long length = ((Number) map.get(JSON_LENGTH)).longValue();
 
-                URI url = URI.create(EncodingUtils.getJSONString(map, JSON_URL));
-
-                String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
-
-                long length = ((Number) map.get(JSON_LENGTH)).longValue();
-
-                Path file = Paths.get(EncodingUtils.getJSONString(map, JSON_FILENAME));
-
-                Number enc = (Number) map.get(JSON_ENCRYPTION);
-                Coder.Encryption encryption = Coder.Encryption.values()[enc.intValue()];
-
-                Number sig = (Number) map.get(JSON_SIGNING);
-                Coder.Signing signing = Coder.Signing.values()[sig.intValue()];
-
-                Number err = ((Number) map.get(JSON_CODER_ERRORS));
-                EnumSet<Coder.Error> errors = EncodingUtils.intToEnumSet(Coder.Error.class, err.intValue());
-
-                return new Attachment(url, file, mimeType, length,
-                        new CoderStatus(encryption, signing, errors));
-            } catch (ClassCastException ex) {
-                LOGGER.log(Level.WARNING, "can't parse JSON attachment", ex);
-                return null;
-            }
+            return new OutAttachment(url, file, mimeType, length);
         }
     }
 
+    // immutable
     public static class Preview {
 
-        private static final String JSON_FILENAME= "filename";
         private static final String JSON_MIME_TYPE = "mime_type";
 
         private final byte[] mData;
-        private String mFilename = "";
         private final String mMimeType;
 
-        // used for incoming
         public Preview(byte[] data, String mimeType) {
             mData = data;
             mMimeType = mimeType;
         }
 
-        // used for outgoing / self created
-        public Preview(byte[] data, String filename, String mimeType) {
-            mData = data;
-            mFilename = filename;
-            mMimeType = mimeType;
-        }
-
-        private Preview(String filename, String mimeType) {
+        private Preview(String mimeType) {
             mData = new byte[0];
-            mFilename = filename;
             mMimeType = mimeType;
         }
 
@@ -452,12 +548,10 @@ public class MessageContent {
             return mData;
         }
 
-        public String getFilename() {
-            return mFilename;
-        }
-
-        void setFilename(String filename) {
-            mFilename = filename;
+        public Path getImagePath(int messageID) {
+            return !MediaUtils.isImage(mMimeType) ? Paths.get("") :
+                    path(AttachmentManager.previewFilename(messageID, mMimeType),
+                            AttachmentManager.PREVIEW_DIRNAME);
         }
 
         public String getMimeType() {
@@ -469,7 +563,6 @@ public class MessageContent {
         private String toJSON() {
             JSONObject json = new JSONObject();
             EncodingUtils.putJSON(json, JSON_MIME_TYPE, mMimeType);
-            EncodingUtils.putJSON(json, JSON_FILENAME, mFilename);
             return json.toJSONString();
         }
 
@@ -477,9 +570,8 @@ public class MessageContent {
             Object obj = JSONValue.parse(json);
             try {
                 Map<?, ?> map = (Map) obj;
-                String filename = EncodingUtils.getJSONString(map, JSON_FILENAME);
                 String mimeType = EncodingUtils.getJSONString(map, JSON_MIME_TYPE);
-                return new Preview(filename, mimeType);
+                return new Preview(mimeType);
             }  catch (NullPointerException | ClassCastException ex) {
                 LOGGER.log(Level.WARNING, "can't parse JSON preview", ex);
                 return null;
@@ -488,7 +580,7 @@ public class MessageContent {
 
         @Override
         public String toString() {
-            return "{PRE:fn="+mFilename+",mime="+mMimeType+"}";
+            return "{PRE:mime="+mMimeType+"}";
         }
     }
 
@@ -646,5 +738,10 @@ public class MessageContent {
         public MessageContent build() {
             return new MessageContent(this);
         }
+    }
+
+    private static Path path(String filename, String dirName) {
+        return filename.isEmpty() ? Paths.get("") :
+                Model.appDir().resolve(dirName).resolve(filename);
     }
 }

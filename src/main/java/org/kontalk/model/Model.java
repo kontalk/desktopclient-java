@@ -130,7 +130,7 @@ public final class Model {
         return Optional.of(newMessage);
     }
 
-    static Path appDir() {
+    public static Path appDir() {
         if (APP_DIR == null)
             throw new IllegalStateException("model not set up");
 

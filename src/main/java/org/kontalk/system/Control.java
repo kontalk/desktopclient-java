@@ -62,6 +62,7 @@ import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
+import org.kontalk.model.message.MessageContent.OutAttachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.ProtoMessage;
@@ -467,7 +468,7 @@ public final class Control {
         if (newMessage == null)
             return false;
 
-        if (newMessage.getContent().getAttachment().isPresent())
+        if (newMessage.getContent().getOutAttachment().isPresent())
             mAttachmentManager.mayCreateImagePreview(newMessage);
 
         return this.sendMessage(newMessage);
@@ -475,7 +476,7 @@ public final class Control {
 
     boolean sendMessage(OutMessage message) {
         MessageContent content = message.getContent();
-        Attachment attachment = content.getAttachment().orElse(null);
+        OutAttachment attachment = content.getOutAttachment().orElse(null);
         if (attachment != null && !attachment.hasURL()) {
             // continue later...
             mAttachmentManager.queueUpload(message);
@@ -619,11 +620,10 @@ public final class Control {
             this.onSecurityErrors(message);
         }
 
-        if (message.getContent().getPreview().isPresent()) {
-            mAttachmentManager.savePreview(message);
-        }
+        message.getContent().getPreview()
+                .ifPresent(p -> mAttachmentManager.savePreview(p, message.getID()));
 
-        if (message.getContent().getAttachment().isPresent()) {
+        if (message.getContent().getInAttachment().isPresent()) {
             this.download(message);
         }
     }
@@ -743,14 +743,6 @@ public final class Control {
 
         public Path getAttachmentDir() {
             return mAttachmentManager.getAttachmentDir();
-        }
-
-        public Path getFilePath(Attachment attachment) {
-            return mAttachmentManager.absoluteFilePath(attachment);
-        }
-
-        public Optional<Path> getImagePath(KonMessage message) {
-            return mAttachmentManager.imagePreviewPath(message);
         }
 
         /* contact */

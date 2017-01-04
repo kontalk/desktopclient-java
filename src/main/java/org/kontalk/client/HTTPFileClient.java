@@ -55,7 +55,6 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.kontalk.misc.KonException;
-import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.EncodingUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.TrustUtils;
@@ -106,10 +105,9 @@ public class HTTPFileClient {
      * Download file to directory.
      * @param url URL of file
      * @param base base directory in which the download is saved
-     * @param encrypted indicate if file is encrypted
      * @return absolute path of downloaded file, empty if download failed
      */
-    public synchronized Path download(URI url, Path base, ProgressListener listener, boolean encrypted)
+    public synchronized Path download(URI url, Path base, ProgressListener listener)
             throws KonException {
         if (mHTTPClient == null) {
             mHTTPClient = httpClientOrNull(mPrivateKey, mCertificate, mValidateCertificate);
@@ -177,9 +175,7 @@ public class HTTPFileClient {
             final long fileSize = s;
             mCurrentListener.updateProgress(s < 0 ? -2 : 0);
 
-            File outFile = MediaUtils.nonExistingFileForPath(
-                    Paths.get(base.toString(),
-                            (encrypted ? AttachmentManager.ENCRYPT_PREFIX : "") + filename));
+            File outFile = MediaUtils.nonExistingFileForPath(Paths.get(base.toString(), filename));
             try (FileOutputStream out = new FileOutputStream(outFile)){
                 CountingOutputStream cOut = new CountingOutputStream(out) {
                     @Override

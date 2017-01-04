@@ -75,9 +75,9 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
-import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
+import org.kontalk.model.message.MessageContent.InAttachment;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
 import org.kontalk.persistence.Config;
@@ -231,9 +231,8 @@ final class MessageList extends ListView<KonMessage> {
                 });
                 menu.add(decryptMenuItem);
             }
-            Attachment att = m.getContent().getAttachment().orElse(null);
-            if (att != null &&
-                    att.getFilePath().toString().isEmpty()) {
+            InAttachment att = m.getContent().getInAttachment().orElse(null);
+            if (att != null && att.getFilename().isEmpty()) {
                 WebMenuItem attMenuItem = new WebMenuItem(Tr.tr("Load"));
                 attMenuItem.setToolTipText(Tr.tr("Retry downloading attachment"));
                 attMenuItem.addActionListener(new ActionListener() {
@@ -650,26 +649,31 @@ final class MessageList extends ListView<KonMessage> {
             Attachment att = value.getContent().getAttachment().orElse(null);
             mAttPanel.setVisible(att != null);
             if (att != null) {
-                Path imagePath = mView.getControl().getImagePath(value).orElse(null);
-                Path linkPath = mView.getControl().getFilePath(att);
-                if (imagePath != null)
+                Path imagePath = value.getContent().getPreview()
+                        .map(p -> p.getImagePath(value.getID())).orElse(null);
+                Path linkPath = att.getFilePath();
+                if (imagePath != null && !imagePath.toString().isEmpty())
                     mAttPanel.setAttachment(imagePath, linkPath);
                 else
                     mAttPanel.setAttachment(linkPath.getFileName().toString(), linkPath);
 
                 // status text
                 String statusText;
-                if (!linkPath.toString().isEmpty()) {
+                if (!linkPath.toString().isEmpty() && !att.isEncrypted()) {
                     // file should exist, no status needed
                     statusText = "";
                 } else {
                     statusText = Tr.tr("Attachment:") + " ";
-                    switch (att.getDownloadProgress()) {
-                        case -1: statusText += Tr.tr("stalled"); break;
-                        case 0:
-                        case -2: statusText += Tr.tr("downloading…"); break;
-                        case -3: statusText += Tr.tr("download failed"); break;
-                        default: statusText += Tr.tr("loading…");
+                    if (att.isEncrypted()) {
+                        statusText += Tr.tr("encrypted");
+                    } else {
+                        switch (att.getDownloadProgress()) {
+                            case -1: statusText += Tr.tr("stalled"); break;
+                            case 0:
+                            case -2: statusText += Tr.tr("downloading…"); break;
+                            case -3: statusText += Tr.tr("download failed"); break;
+                            default: statusText += Tr.tr("loading…");
+                        }
                     }
                 }
                 mAttPanel.setStatus(statusText);
@@ -805,9 +809,8 @@ final class MessageList extends ListView<KonMessage> {
             String from = message instanceof InMessage ?
                     getFromString((InMessage) message) :
                     Tr.tr("me"); // TODO get my name
-            MessageContent c = message.getContent();
-            Attachment att = c.getAttachment().orElse(null);
-            String as = att == null ? "" : "[" + att.getFilePath().getFileName() + "] ";
+            Attachment att = message.getContent().getAttachment().orElse(null);
+            String as = att == null ? "" : "[" + att.getFilename() + "] ";
             pre = date + " - " + from + " : " + as;
         }
 

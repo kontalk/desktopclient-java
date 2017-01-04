@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,6 +51,8 @@ import org.kontalk.misc.Callback;
  */
 public class MediaUtils {
     private static final Logger LOGGER = Logger.getLogger(MediaUtils.class.getName());
+
+    private static final String DEFAULT_EXT = "dat";
 
     private MediaUtils() {}
 
@@ -73,7 +76,7 @@ public class MediaUtils {
 
     public static String extensionForMIME(String mimeType) {
         if (mimeType.isEmpty())
-            return "unk";
+            return DEFAULT_EXT;
 
         MimeType mime = null;
         try {
@@ -86,7 +89,7 @@ public class MediaUtils {
         // remove dot
         if (!m.isEmpty())
             m = m.substring(1);
-        return StringUtils.defaultIfEmpty(m, "dat");
+        return StringUtils.defaultIfEmpty(m, DEFAULT_EXT);
     }
 
     public static String mimeForFile(Path path) {
@@ -111,6 +114,19 @@ public class MediaUtils {
             LOGGER.warning("can't determine content type: "+path);
 
         return StringUtils.defaultString(mime);
+    }
+
+    public static Path renameFile(Path file, String newName) {
+        try {
+            return Files.move(file, file.resolveSibling(newName));
+        } catch (IOException ex) {
+            LOGGER.log(Level.WARNING, "can't rename file", ex);
+            return Paths.get("");
+        }
+    }
+
+    public static boolean isImage(String mimeType) {
+        return mimeType.startsWith("image");
     }
 
     public enum Sound{NOTIFICATION}

@@ -370,7 +370,10 @@ abstract class ListView<V extends Observable & Searchable>
     }
 
     void updateRowRendering(int from, int to) {
-        mModel.fireTableRowsUpdated(from, to);
+        from = Math.max(0, from);
+        to = Math.max(0, to);
+        if (this.getRowCount() > 0)
+            mModel.fireTableRowsUpdated(from, to);
     }
 
     abstract protected void updateOnEDT(Object arg);

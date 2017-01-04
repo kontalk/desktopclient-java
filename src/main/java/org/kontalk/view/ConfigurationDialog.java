@@ -51,7 +51,6 @@ import com.alee.laf.text.WebFormattedTextField;
 import com.alee.laf.text.WebTextArea;
 import com.alee.laf.text.WebTextField;
 import com.alee.managers.tooltip.TooltipManager;
-import org.apache.commons.lang.StringUtils;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.KonException;
 import org.kontalk.model.Account;
@@ -78,7 +77,7 @@ final class ConfigurationDialog extends WebDialog {
         mModel = model;
 
         this.setTitle(Tr.tr("Preferences"));
-        this.setSize(550, 450);
+        this.setSize(550, 470);
         this.setResizable(false);
         this.setModal(true);
         this.setLayout(new BorderLayout(View.GAP_SMALL, View.GAP_SMALL));
@@ -256,7 +255,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebTextField mServerField;
         private final WebFormattedTextField mPortField;
         private final WebCheckBox mDisableCertBox;
-        private final WebTextArea mUserIDArea;
+        private final WebTextField mUserIDField;
         private final WebTextArea mFingerprintArea;
 
         AccountPanel() {
@@ -294,12 +293,10 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new WebLabel(Tr.tr("Personal Key")).setBoldFont());
             groupPanel.add(new WebSeparator(true, true));
 
-            mUserIDArea = new WebTextArea().setBoldFont();
-            mUserIDArea.setEditable(false);
-            mUserIDArea.setOpaque(false);
+            mUserIDField = new ComponentUtils.LabelTextField(View.MAX_USER_ID_LENGTH, this);
             groupPanel.add(new GroupPanel(View.GAP_DEFAULT,
                     new WebLabel(Tr.tr("User ID:")),
-                    mUserIDArea));
+                    mUserIDField));
 
             WebLabel fpLabel = new WebLabel(Tr.tr("Fingerprint:")+" ");
             fpLabel.setAlignmentY(Component.TOP_ALIGNMENT);
@@ -355,14 +352,11 @@ final class ConfigurationDialog extends WebDialog {
         private void updateKey() {
             PersonalKey key = mModel.account().getPersonalKey().orElse(null);
             String uid = key != null ? key.getUserId() : null;
-            mUserIDArea.setText(uid != null ?
-                    StringUtils.abbreviate(uid, View.MAX_USER_ID_LENGTH) :
-                    "- "+Tr.tr("no key loaded")+" -");
+            mUserIDField.setText(uid != null ? uid : "- " + Tr.tr("no key loaded") + " -");
+            mUserIDField.setCaretPosition(0); // "scroll" back
             if (uid != null)
-                TooltipManager.addTooltip(mUserIDArea, uid);
-            mFingerprintArea.setText(key != null ?
-                    Utils.fingerprint(key.getFingerprint()) :
-                    "---");
+                TooltipManager.addTooltip(mUserIDField, uid);
+            mFingerprintArea.setText(key != null ? Utils.fingerprint(key.getFingerprint()) : "---");
         }
 
         private void saveConfiguration() {

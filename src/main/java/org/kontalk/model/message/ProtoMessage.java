@@ -62,9 +62,13 @@ public final class ProtoMessage implements DecryptMessage {
         return mCoderStatus.isEncrypted();
     }
 
-    @Override
-    public MessageContent getContent() {
+    MessageContent getContent() {
         return mContent;
+    }
+
+    @Override
+    public String getEncryptedContent() {
+        return mContent.getEncryptedContent();
     }
 
     @Override

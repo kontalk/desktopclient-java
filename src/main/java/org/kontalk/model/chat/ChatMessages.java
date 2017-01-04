@@ -32,6 +32,7 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.kontalk.model.Contact;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.OutMessage;
@@ -46,7 +47,10 @@ public final class ChatMessages {
     private static final Logger LOGGER = Logger.getLogger(ChatMessages.class.getName());
 
     private static final Comparator<KonMessage> MESSAGE_COMPARATOR =
-            (KonMessage o1, KonMessage o2) -> o1.getDate().compareTo(o2.getDate());
+            (KonMessage o1, KonMessage o2) -> {
+                int dateOrder = o1.getDate().compareTo(o2.getDate());
+                return dateOrder != 0 ? dateOrder : Integer.compare(o1.getID(), o2.getID());
+            };
 
     // comparator inconsistent with .equals(); using one set for ordering...
     private final NavigableSet<KonMessage> mSortedSet =

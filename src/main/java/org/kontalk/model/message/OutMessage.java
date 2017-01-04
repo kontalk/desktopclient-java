@@ -18,7 +18,6 @@
 
 package org.kontalk.model.message;
 
-import java.net.URI;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -109,16 +108,6 @@ public final class OutMessage extends KonMessage {
             LOGGER.warning("unexpected status of message with error: "+mStatus);
         mServerError = new KonMessage.ServerError(condition, text);
         this.setStatus(Status.ERROR);
-    }
-
-    /** Update attachment after upload. */
-    public void setUpload(URI url, String mime, long length) {
-        MessageContent.Attachment attachment = this.getAttachment();
-        if (attachment == null)
-            return;
-
-        attachment.updateUploaded(url, mime, length);
-        this.save();
     }
 
     public boolean isSendEncrypted() {

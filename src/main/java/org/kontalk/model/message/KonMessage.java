@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Observable;
+import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
@@ -40,6 +41,7 @@ import org.kontalk.misc.Searchable;
 import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.Chat;
+import org.kontalk.model.message.MessageContent.Attachment;
 import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.persistence.Database;
 import org.kontalk.util.EncodingUtils;
@@ -49,7 +51,7 @@ import org.kontalk.util.EncodingUtils;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public abstract class KonMessage extends Observable implements Searchable {
+public abstract class KonMessage extends Observable implements Searchable, Observer {
     private static final Logger LOGGER = Logger.getLogger(KonMessage.class.getName());
 
     /**
@@ -136,6 +138,7 @@ public abstract class KonMessage extends Observable implements Searchable {
         mXMPPID = xmppID;
         mDate = new Date();
         mContent = content;
+        mContent.getAttachment().ifPresent(att -> att.addObserver(this));
 
         mServerDate = serverDate.orElse(null);
         mStatus = status;
@@ -172,6 +175,7 @@ public abstract class KonMessage extends Observable implements Searchable {
         mXMPPID = builder.mXMPPID;
         mDate = builder.mDate;
         mContent = builder.mContent;
+        mContent.getAttachment().ifPresent(att -> att.addObserver(this));
 
         mServerDate = builder.mServerDate;
         mStatus = builder.mStatus;
@@ -217,24 +221,6 @@ public abstract class KonMessage extends Observable implements Searchable {
         return mContent;
     }
 
-    public void setAttachmentErrors(EnumSet<Coder.Error> errors) {
-        MessageContent.Attachment attachment = this.getAttachment();
-        if (attachment == null)
-            return;
-
-        attachment.getCoderStatus().setSecurityErrors(errors);
-        this.save();
-    }
-
-    MessageContent.Attachment getAttachment() {
-        MessageContent.Attachment att = this.getContent().getAttachment().orElse(null);
-        if (att == null) {
-            LOGGER.warning("no attachment!?");
-            return null;
-        }
-        return att;
-    }
-
     public CoderStatus getCoderStatus() {
         return mCoderStatus;
     }
@@ -267,7 +253,7 @@ public abstract class KonMessage extends Observable implements Searchable {
         return mChat.getMessages().getPredecessor(this);
     }
 
-    /** Get the contact that send this message if this message wasn't send by user. */
+    /** Get the contact who sent this message if this is not an outgoing message. */
     public Optional<Contact> getSender() {
         return this instanceof InMessage ?
                        Optional.of(((InMessage) this).getContact()) : Optional.empty();
@@ -322,6 +308,14 @@ public abstract class KonMessage extends Observable implements Searchable {
         return this.getTransmissions().stream()
                 .anyMatch(t -> t.getContact().getName().toLowerCase().contains(search) ||
                         t.getContact().getJID().string().toLowerCase().contains(search));
+    }
+
+    @Override
+    public void update(Observable o, Object arg) {
+        this.save();
+
+        if (o instanceof Attachment && arg instanceof Boolean && ((boolean) arg))
+            this.changed(ViewChange.ATTACHMENT);
     }
 
     @Override

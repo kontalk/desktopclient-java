@@ -155,7 +155,8 @@ public final class Client implements StanzaListener, Runnable {
         roster.addRosterLoadedListener(rl);
 
         StanzaFilter messageFilter = new StanzaTypeFilter(Message.class);
-        mConn.addAsyncStanzaListener(
+        // must be synchronized: we want to receive messages in the order they were sent
+        mConn.addSyncStanzaListener(
                 new KonMessageListener(this, mControl, mAvatarSendReceiver),
                 messageFilter);
 
