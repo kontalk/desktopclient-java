@@ -162,8 +162,8 @@ final class ConfigurationDialog extends WebDialog {
                     mConf.getBoolean(Config.MAIN_ENTER_SENDS));
             groupPanel.add(new GroupPanel(mEnterSendsBox, new WebSeparator()));
 
-            mShowUserBox = createCheckBox(Tr.tr("Show yourself in contacts"),
-                    Tr.tr("Show yourself in the contact list"),
+            mShowUserBox = createCheckBox(Tr.tr("Display yourself in contacts"),
+                    Tr.tr("Display yourself in the contact list"),
                     mConf.getBoolean(Config.VIEW_USER_CONTACT));
             groupPanel.add(new GroupPanel(mShowUserBox, new WebSeparator()));
 
@@ -215,7 +215,7 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new GroupPanel(mConnectRetryBox, new WebSeparator()));
 
             mRequestAvatars = createCheckBox(Tr.tr("Download profile pictures"),
-                    Tr.tr("Download contact profile pictures"),
+                    Tr.tr("Download the profile pictures of your contacts"),
                     mConf.getBoolean(Config.NET_REQUEST_AVATARS));
             groupPanel.add(new GroupPanel(mRequestAvatars, new WebSeparator()));
 
@@ -391,7 +391,7 @@ final class ConfigurationDialog extends WebDialog {
             groupPanel.add(new GroupPanel(mChatStateBox, new WebSeparator()));
 
             mRosterNameBox = createCheckBox(Tr.tr("Upload contact names"),
-                    Tr.tr("Upload your contact names to server for client synchronization"),
+                    Tr.tr("Upload your contact names to the server for client synchronization"),
                     mConf.getBoolean(Config.NET_SEND_ROSTER_NAME));
             groupPanel.add(new GroupPanel(mRosterNameBox, new WebSeparator()));
 
