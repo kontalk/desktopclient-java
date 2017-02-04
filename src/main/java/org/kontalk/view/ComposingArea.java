@@ -189,7 +189,7 @@ final class ComposingArea {
         Color textBG = enabled ? Color.WHITE : Color.LIGHT_GRAY;
         mTextArea.setBackground(textBG);
         mOverlay.setBackground(textBG);
-        mOverlayLabel.setText(isMember ? Tr.tr("You are not member of this group") : "");
+        mOverlayLabel.setText(isMember ? Tr.tr("You are not a member of this group") : "");
     }
 
     String getText() {

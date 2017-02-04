@@ -98,7 +98,7 @@ final class ChatDetails extends ComponentUtils.PopupPanel {
             leaveButton.setEnabled(chat.isValid());
             TooltipManager.addTooltip(leaveButton,
                     groupChat.containsMe() ? Tr.tr("Leave this group chat")
-                            : Tr.tr("You are not member of this group"));
+                            : Tr.tr("You are not a member of this group"));
 
             leaveButton.addActionListener(new ActionListener() {
                 @Override

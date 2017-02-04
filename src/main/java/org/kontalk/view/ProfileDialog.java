@@ -110,7 +110,7 @@ final class ProfileDialog extends WebDialog {
         groupPanel.add(new WebLabel(Tr.tr("Status Message")).setBoldFont());
         mStatusField = new WebTextField(currentStatus, 30);
         TooltipManager.addTooltip(mStatusField,
-                Tr.tr("Set status text send to other user"));
+                Tr.tr("Set the status text sent to other users"));
         groupPanel.add(mStatusField);
 
         groupPanel.add(new WebLabel(Tr.tr("Previously used:")));
