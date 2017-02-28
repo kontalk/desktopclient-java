@@ -66,6 +66,7 @@ public final class View implements Observer {
 
     static final String KONTALK_SITE = "https://www.kontalk.org";
     static final String KONTALK_RELEASES = "https://github.com/kontalk/desktopclient-java/releases";
+    static final String KONTALK_FORUM = "https://forum.kontalk.org/";
 
     static final int LISTS_WIDTH = 300;
 
