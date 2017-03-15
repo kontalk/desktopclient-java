@@ -842,7 +842,7 @@ final class MessageList extends ListView<KonMessage> {
                         text = String.format(Tr.tr("%1$s removed %2$s"), somebody, view.names(removed));
                     }
                     if (text.isEmpty()) {
-                        text = "did something wrong";
+                        text = somebody + " did something wrong";
                     }
                     break;
             }

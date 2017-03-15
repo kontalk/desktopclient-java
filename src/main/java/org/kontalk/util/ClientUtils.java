@@ -279,14 +279,13 @@ public final class ClientUtils {
                 // sanity check; prioritize 'removed' over 'added'
                 removed.stream()
                         .filter(added::contains)
-                        .peek(jid -> LOGGER.warning(
-                                "member added AND removed (removing) " + jid))
+                        .peek(jid -> LOGGER.warning("member added AND removed (removing) " + jid))
                         .forEach(added::remove);
+
                 return Optional.of(GroupCommand.set(
                         new ArrayList<>(added),
                         new ArrayList<>(removed),
-                        // for now we assume the subject wasn't changed
-                        ""));
+                        subject));
             case GET:
             case RESULT:
             default:
