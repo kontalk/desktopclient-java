@@ -196,10 +196,6 @@ public class MessageContent {
                 mGroupCommand == null;
     }
 
-    public boolean isComplex() {
-        return mAttachment != null || mGroupCommand != null;
-    }
-
     @Override
     public String toString() {
         return "CONT:plain="+mPlainText+",encr="+mEncryptedContent

@@ -493,7 +493,8 @@ public final class Control {
 
             Chat chat = message.getChat();
             byte[] encryptedData;
-            if (content.isComplex() || chat.isGroupChat()) {
+            if (content.getAttachment().isPresent() || content.getGroupCommand().isPresent()
+                    || chat.isGroupChat()) {
                 String stanza = KonMessageSender.rawMessage(content, chat, true).toXML().toString();
                 encryptedData = Coder.encryptStanza(myKey, message, stanza).orElse(null);
             } else {
