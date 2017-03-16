@@ -66,6 +66,12 @@ repositories {
     mavenCentral()
 }
 
+run {
+    if (project.hasProperty('jvmargs')) {
+        jvmArgs(jvmargs.split(','))
+    }
+}
+
 task deleteDeps(type: Delete) {
   delete fileTree(project.file('dist/lib')) {
         include '*.jar'
