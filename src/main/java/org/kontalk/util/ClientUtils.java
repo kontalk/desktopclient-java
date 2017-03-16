@@ -45,7 +45,6 @@ import org.kontalk.model.chat.GroupChat.KonGroupChat;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.GroupCommand;
-import org.kontalk.model.message.MessageContent.GroupCommand.OP;
 import org.kontalk.model.message.MessageContent.InAttachment;
 import org.kontalk.model.message.MessageContent.Preview;
 
@@ -200,46 +199,41 @@ public final class ClientUtils {
         assert chat.isGroupChat();
 
         KonGroupData gid = chat.getGroupData();
-        OP op = groupCommand.getOperation();
-        switch (op) {
+        switch (groupCommand.getOperation()) {
             case LEAVE:
                 // weare leaving
                 return new GroupExtension(gid.id, gid.owner.string(), Type.PART);
-            case CREATE:
-            case SET:
-            default:
-                Type command;
+            case CREATE: {
                 Set<Member> members = new HashSet<>();
-                String subject = groupCommand.getSubject();
-                if (op == OP.CREATE) {
-                    command = Type.CREATE;
-                    groupCommand.getAdded().forEach(added -> members.add(new Member(added.string())));
-                } else {
-                    command = Type.SET;
-                    Set<JID> incl = new HashSet<>();
-                    for (JID added : groupCommand.getAdded()) {
-                        incl.add(added);
-                        members.add(new Member(added.string(), Member.Operation.ADD));
-                    }
-                    for (JID removed : groupCommand.getRemoved()) {
-                        incl.add(removed);
-                        members.add(new Member(removed.string(), Member.Operation.REMOVE));
-                    }
-                    if (!groupCommand.getAdded().isEmpty()) {
-                        // list all remaining member for the new member
-                        for (Contact c : chat.getValidContacts()) {
-                            JID old = c.getJID();
-                            if (!incl.contains(old))
-                                members.add(new Member(old.string()));
-                        }
+                groupCommand.getAdded().forEach(added -> members.add(new Member(added.string())));
+                return new GroupExtension(gid.id, gid.owner.string(), Type.CREATE,
+                        groupCommand.getSubject(), members);
+            }
+            case SET: {
+                Set<Member> members = new HashSet<>();
+                Set<JID> incl = new HashSet<>();
+                for (JID added : groupCommand.getAdded()) {
+                    incl.add(added);
+                    members.add(new Member(added.string(), Member.Operation.ADD));
+                }
+                for (JID removed : groupCommand.getRemoved()) {
+                    incl.add(removed);
+                    members.add(new Member(removed.string(), Member.Operation.REMOVE));
+                }
+                if (!groupCommand.getAdded().isEmpty()) {
+                    // list all remaining members for the new members
+                    for (Contact c : chat.getValidContacts()) {
+                        JID old = c.getJID();
+                        if (!incl.contains(old))
+                            members.add(new Member(old.string()));
                     }
                 }
-
-                return new GroupExtension(gid.id,
-                        gid.owner.string(),
-                        command,
-                        subject,
-                        members);
+                return new GroupExtension(gid.id, gid.owner.string(), Type.SET,
+                        groupCommand.getSubject(), members);
+            }
+            default:
+                LOGGER.warning("not implemented: "+groupCommand.getOperation());
+                return new GroupExtension(gid.id, gid.owner.string());
         }
     }
 
