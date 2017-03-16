@@ -261,17 +261,13 @@ public final class ClientUtils {
             case PART:
                 return Optional.of(GroupCommand.leave());
             case SET:
-                // TODO we have to get the group chat here
-                // * to find out if we are already member
-                // * to find out if the subject is really new or only included
-                // for new members
                 // ignoring duplicate JIDs (no log output)
+                Set<JID> unchanged = new HashSet<>();
                 Set<JID> added = new HashSet<>();
                 Set<JID> removed = new HashSet<>();
                 for (Member m : members) {
                    switch (m.operation) {
-                       case NONE: // treat unchanged members as if they are new
-                       // falltrough
+                       case NONE: unchanged.add(JID.bare(m.jid)); break;
                        case ADD: added.add(JID.bare(m.jid)); break;
                        case REMOVE: removed.add((JID.bare(m.jid))); break;
                    }
@@ -283,6 +279,7 @@ public final class ClientUtils {
                         .forEach(added::remove);
 
                 return Optional.of(GroupCommand.set(
+                        new ArrayList<>(unchanged),
                         new ArrayList<>(added),
                         new ArrayList<>(removed),
                         subject));
