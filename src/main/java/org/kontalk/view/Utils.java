@@ -34,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.cert.CertificateException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -73,6 +74,8 @@ import org.ocpsoft.prettytime.PrettyTime;
  */
 final class Utils {
     private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
+
+    static final String IMG_DIR =  "img";
 
     static final DateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("HH:mm");
     static final DateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM HH:mm");
@@ -163,7 +166,7 @@ final class Utils {
     }
 
     static Image getImage(String fileName) {
-        URL imageUrl = ClassLoader.getSystemResource(fileName);
+        URL imageUrl = ClassLoader.getSystemResource(Paths.get(IMG_DIR, fileName).toString());
         if (imageUrl == null) {
             LOGGER.warning("can't find icon image resource");
             return new BufferedImage(10, 10, BufferedImage.TYPE_INT_RGB);
