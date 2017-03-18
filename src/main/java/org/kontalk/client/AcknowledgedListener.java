@@ -42,7 +42,7 @@ final class AcknowledgedListener implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza p) {
+    public void processStanza(Stanza p) {
         // NOTE: the packet is not the acknowledgement itself but the packet
         // that is acknowledged
         if (!(p instanceof Message)) {

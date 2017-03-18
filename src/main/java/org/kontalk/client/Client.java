@@ -49,6 +49,8 @@ import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
 import org.jivesoftware.smackx.iqlast.packet.LastActivity;
+import org.jxmpp.jid.EntityFullJid;
+import org.jxmpp.jid.Jid;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
@@ -77,7 +79,7 @@ public final class Client implements StanzaListener, Runnable {
     private final Control mControl;
 
     private final KonMessageSender mMessageSender;
-    private final EnumMap<FeatureDiscovery.Feature, String> mFeatures;
+    private final EnumMap<FeatureDiscovery.Feature, JID> mFeatures;
 
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
@@ -197,7 +199,7 @@ public final class Client implements StanzaListener, Runnable {
             // connect
             try {
                 mConn.connect();
-            } catch (XMPPException | SmackException | IOException ex) {
+            } catch (XMPPException | SmackException | IOException | InterruptedException ex) {
                 LOGGER.log(Level.WARNING, "can't connect to "+mConn.getServer(), ex);
                 this.newStatus(Control.Status.FAILED);
                 mControl.onException(new KonException(KonException.Error.CLIENT_CONNECT, ex));
@@ -207,7 +209,7 @@ public final class Client implements StanzaListener, Runnable {
             // login
             try {
                 mConn.login();
-            } catch (XMPPException | SmackException | IOException ex) {
+            } catch (XMPPException | SmackException | IOException | InterruptedException ex) {
                 LOGGER.log(Level.WARNING, "can't login on "+mConn.getServer(), ex);
                 mConn.disconnect();
                 this.newStatus(Control.Status.FAILED);
@@ -223,7 +225,7 @@ public final class Client implements StanzaListener, Runnable {
 
         mSlotRequester = mFeatures.containsKey(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD) ?
                 new HTTPFileSlotRequester(mConn,
-                        JID.bare(mFeatures.get(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD))) :
+                        mFeatures.get(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD)) :
                 null;
 
         // Caps, XEP-0115
@@ -284,14 +286,12 @@ public final class Client implements StanzaListener, Runnable {
         return mConn != null && mConn.isAuthenticated();
     }
 
-    /**
-     * The full JID of the user currently logged in.
-     */
+    /** The full JID of the user currently logged in. */
     public Optional<JID> getOwnJID() {
-        String user = mConn.getUser();
+        EntityFullJid user = mConn.getUser();
         if (user == null)
             return Optional.empty();
-        return Optional.of(JID.full(user));
+        return Optional.of(JID.fromSmack(user));
     }
 
     private EnumSet<FeatureDiscovery.Feature> getServerFeature() {
@@ -301,21 +301,25 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     public boolean sendMessage(OutMessage message, boolean sendChatState) {
-        return mMessageSender.sendMessage(message, sendChatState);
+        Optional<Jid> multiAddressHost =
+                mFeatures.containsKey(FeatureDiscovery.Feature.MULTI_ADDRESSING)
+                && mConn != null ? Optional.of(mConn.getServiceName()) : Optional.empty();
+
+        return mMessageSender.sendMessage(message, sendChatState, multiAddressHost);
     }
 
     // TODO unused
-    public void sendVCardRequest(String jid) {
+    public void sendVCardRequest(JID jid) {
         VCard4 vcard = new VCard4();
         vcard.setType(IQ.Type.get);
-        vcard.setTo(jid);
+        vcard.setTo(jid.toBareSmack());
         this.sendPacket(vcard);
     }
 
     public void sendPublicKeyRequest(JID jid) {
         LOGGER.info("to "+jid);
         PublicKeyPublish publicKeyRequest = new PublicKeyPublish();
-        publicKeyRequest.setTo(jid.string());
+        publicKeyRequest.setTo(jid.toBareSmack());
         this.sendPacket(publicKeyRequest);
     }
 
@@ -354,12 +358,12 @@ public final class Client implements StanzaListener, Runnable {
             case DENY: type = Presence.Type.unsubscribed; break;
         }
         Presence presence = new Presence(type);
-        presence.setTo(jid.string());
+        presence.setTo(jid.toBareSmack());
         this.sendPacket(presence);
     }
 
     public void sendChatState(JID jid, String threadID, ChatState state) {
-        Message message = new Message(jid.string(), Message.Type.chat);
+        Message message = new Message(jid.toBareSmack(), Message.Type.chat);
         if (!threadID.isEmpty())
             message.setThread(threadID);
         message.addExtension(new ChatStateExtension(state));
@@ -379,12 +383,12 @@ public final class Client implements StanzaListener, Runnable {
         }
 
         // blocking
-        if (!mFeatureDiscovery.getFeaturesFor(jid.domain())
+        if (!mFeatureDiscovery.getFeaturesFor(jid.toDomain())
                 .containsKey(FeatureDiscovery.Feature.LAST_ACTIVITY))
             // not supported by server
             return;
 
-        LastActivity request = new LastActivity(jid.string());
+        LastActivity request = new LastActivity(jid.toBareSmack());
         this.sendPacket(request);
     }
 
@@ -405,7 +409,7 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     @Override
-    public void processPacket(Stanza packet) {
+    public void processStanza(Stanza packet) {
         LOGGER.warning("IQ error: "+packet);
     }
 
@@ -422,12 +426,13 @@ public final class Client implements StanzaListener, Runnable {
 
         try {
             // also sends presence subscription request
-            Roster.getInstanceFor(mConn).createEntry(jid.string(), name,
+            Roster.getInstanceFor(mConn).createEntry(jid.toBareSmack(), name,
                     null);
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
-                SmackException.NotConnectedException ex) {
+                SmackException.NotConnectedException |
+                InterruptedException ex) {
             LOGGER.log(Level.WARNING, "can't add contact to roster", ex);
             return false;
         }
@@ -440,7 +445,7 @@ public final class Client implements StanzaListener, Runnable {
             return false;
         }
         Roster roster = Roster.getInstanceFor(mConn);
-        RosterEntry entry = roster.getEntry(jid.string());
+        RosterEntry entry = roster.getEntry(jid.toBareSmack());
         if (entry == null) {
             LOGGER.info("can't find roster entry for jid: "+jid);
             return true;
@@ -451,7 +456,8 @@ public final class Client implements StanzaListener, Runnable {
         } catch (SmackException.NotLoggedInException |
                 SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
-                SmackException.NotConnectedException ex) {
+                SmackException.NotConnectedException |
+                InterruptedException ex) {
             LOGGER.log(Level.WARNING, "can't remove contact from roster", ex);
             return false;
         }
@@ -464,7 +470,7 @@ public final class Client implements StanzaListener, Runnable {
             return;
         }
         Roster roster = Roster.getInstanceFor(mConn);
-        RosterEntry entry = roster.getEntry(jid.string());
+        RosterEntry entry = roster.getEntry(jid.toBareSmack());
         if (entry == null) {
             LOGGER.warning("can't find roster entry for jid: "+jid);
             return;
@@ -473,7 +479,8 @@ public final class Client implements StanzaListener, Runnable {
             entry.setName(newName);
         } catch (SmackException.NotConnectedException |
                 SmackException.NoResponseException |
-                XMPPException.XMPPErrorException ex) {
+                XMPPException.XMPPErrorException |
+                InterruptedException ex) {
             LOGGER.log(Level.WARNING, "can't set name for entry", ex);
         }
     }
@@ -534,11 +541,6 @@ public final class Client implements StanzaListener, Runnable {
 
     void newException(KonException konException) {
         mControl.onException(konException);
-    }
-
-    String multiAddressHost() {
-        return mFeatures.containsKey(FeatureDiscovery.Feature.MULTI_ADDRESSING)
-                && mConn != null ? mConn.getHost() : "";
     }
 
     @Override

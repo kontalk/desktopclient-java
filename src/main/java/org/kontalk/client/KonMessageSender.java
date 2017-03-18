@@ -20,6 +20,7 @@ package org.kontalk.client;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -28,6 +29,7 @@ import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
+import org.jxmpp.jid.Jid;
 import org.kontalk.misc.JID;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
@@ -54,7 +56,7 @@ public final class KonMessageSender {
         mClient = client;
     }
 
-    boolean sendMessage(OutMessage message, boolean sendChatState) {
+    boolean sendMessage(OutMessage message, boolean sendChatState, Optional<Jid> multiAddressHost) {
         // check for correct receipt status and reset it
         KonMessage.Status status = message.getStatus();
         assert status == KonMessage.Status.PENDING || status == KonMessage.Status.ERROR;
@@ -113,13 +115,12 @@ public final class KonMessageSender {
                 .map(Transmission::getJID)
                 .collect(Collectors.toList());
 
-        String multiAddressHost = mClient.multiAddressHost();
-        if (JIDs.size() > 1 && !multiAddressHost.isEmpty()) {
+        if (JIDs.size() > 1 && !multiAddressHost.isPresent()) {
             // send one message to multiple receiver using XEP-0033
-            protoMessage.setTo(multiAddressHost);
+            protoMessage.setTo(multiAddressHost.get());
             MultipleAddresses addresses = new MultipleAddresses();
             for (JID to: JIDs) {
-                addresses.addAddress(MultipleAddresses.Type.to, to.string(), null, null, false, null);
+                addresses.addAddress(MultipleAddresses.Type.to, to.toBareSmack(), null, null, false, null);
             }
             protoMessage.addExtension(addresses);
 
@@ -130,7 +131,7 @@ public final class KonMessageSender {
         ArrayList<Message> sendMessages = new ArrayList<>();
         for (JID to: JIDs) {
             Message sendMessage = protoMessage.clone();
-            sendMessage.setTo(to.string());
+            sendMessage.setTo(to.toBareSmack());
             sendMessages.add(sendMessage);
         }
 

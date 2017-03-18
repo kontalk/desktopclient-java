@@ -70,7 +70,7 @@ final class KonMessageListener implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza packet) {
+    public void processStanza(Stanza packet) {
         Message m = (Message) packet;
 
         Message.Type type = m.getType();
@@ -190,7 +190,7 @@ final class KonMessageListener implements StanzaListener {
                 if (extension instanceof ItemsExtension) {
                     ItemsExtension items = (ItemsExtension) extension;
                     if (items.getNode().equals(AvatarSendReceiver.METADATA_NODE)) {
-                        mAvatarHandler.processMetadataEvent(JID.full(m.getFrom()), items);
+                        mAvatarHandler.processMetadataEvent(JID.fromSmack(m.getFrom()), items);
                         return;
                     }
                 }

@@ -85,13 +85,14 @@ final class AvatarSendReceiver {
             return;
         }
 
-        PubSubManager mPubSubManager = new PubSubManager(mConn, mConn.getServiceName());
+        PubSubManager mPubSubManager = PubSubManager.getInstance(mConn, mConn.getServiceName());
         LeafNode node;
         try {
             node = mPubSubManager.createNode(DATA_NODE);
         } catch (SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
-                SmackException.NotConnectedException ex) {
+                SmackException.NotConnectedException |
+                InterruptedException ex) {
             LOGGER.log(Level.WARNING, "can't create node", ex);
             return;
         }
@@ -103,7 +104,8 @@ final class AvatarSendReceiver {
             node.send(item);
         } catch (SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
-                SmackException.NotConnectedException ex) {
+                SmackException.NotConnectedException |
+                InterruptedException ex) {
             LOGGER.log(Level.WARNING, "can't send item", ex);
             return;
         }
@@ -166,9 +168,7 @@ final class AvatarSendReceiver {
         // I dont get how to use this here
         //PubSubManager manager = new PubSubManager(conn);
 
-        PubSub request = new PubSub(jid.toBare().string(),
-                IQ.Type.get,
-                PubSubNamespace.BASIC);
+        PubSub request = new PubSub(jid.toBareSmack(), IQ.Type.get, PubSubNamespace.BASIC);
 
         request.addExtension(
                 new ItemsExtension(
@@ -179,7 +179,7 @@ final class AvatarSendReceiver {
         // handle response
         StanzaListener callback = new StanzaListener() {
             @Override
-            public void processPacket(Stanza packet)
+            public void processStanza(Stanza packet)
                     throws SmackException.NotConnectedException {
 
                 if (!(packet instanceof PubSub)) {

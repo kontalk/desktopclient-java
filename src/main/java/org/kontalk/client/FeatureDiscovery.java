@@ -34,6 +34,7 @@ import org.jivesoftware.smackx.disco.packet.DiscoverInfo;
 import org.jivesoftware.smackx.disco.packet.DiscoverItems;
 import org.jivesoftware.smackx.iqlast.packet.LastActivity;
 import org.jivesoftware.smackx.pubsub.packet.PubSub;
+import org.kontalk.misc.JID;
 
 /**
  *  Feature Service discovery (XEP-0030).
@@ -71,35 +72,37 @@ public final class FeatureDiscovery {
     }
 
     private final KonConnection mConn;
-    private final Map<String, EnumMap<Feature, String>> mCache = new HashMap<>();
+    // NOTE: ignoring resource
+    private final Map<JID, EnumMap<Feature, JID>> mCache = new HashMap<>();
 
     FeatureDiscovery(KonConnection conn) {
         mConn = conn;
     }
 
     /** Discover all known features of connected server and its items.  */
-    EnumMap<Feature, String> getServerFeatures() {
-        return getFeatures(mConn.getServiceName(), true);
+    EnumMap<Feature, JID> getServerFeatures() {
+        // TODO use ServiceDiscoveryManager.serverSupportsFeature()
+        return getFeatures(JID.fromSmack(mConn.getServiceName()), true);
     }
 
     /** Discover all known features of an entity.  */
-    EnumMap<Feature, String> getFeaturesFor(String entity) {
+    EnumMap<Feature, JID> getFeaturesFor(JID entity) {
         return getFeatures(entity, false);
     }
 
-    private EnumMap<Feature, String> getFeatures(String entity, boolean withItems) {
+    private EnumMap<Feature, JID> getFeatures(JID entity, boolean withItems) {
         if (!mCache.containsKey(entity))
             mCache.put(entity, this.discover(entity, withItems));
 
         return mCache.get(entity);
     }
 
-    private EnumMap<Feature, String> discover(String entity, boolean withItems) {
+    private EnumMap<Feature, JID> discover(JID entity, boolean withItems) {
         // NOTE: smack automatically creates instances of SDM and CapsM and connects them
         ServiceDiscoveryManager discoManager = ServiceDiscoveryManager.getInstanceFor(mConn);
 
         // 1. get features from server
-        EnumMap<Feature, String> features = discover(discoManager, entity);
+        EnumMap<Feature, JID> features = discover(discoManager, entity);
         if (features == null)
             return new EnumMap<>(FeatureDiscovery.Feature.class);
 
@@ -109,17 +112,18 @@ public final class FeatureDiscovery {
         // 2. get server items
         DiscoverItems items;
         try {
-            items = discoManager.discoverItems(entity);
+            items = discoManager.discoverItems(entity.toBareSmack());
         } catch (SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
-                SmackException.NotConnectedException ex) {
+                SmackException.NotConnectedException |
+                InterruptedException ex) {
             LOGGER.log(Level.WARNING, "can't get service discovery items", ex);
             return features;
         }
 
         // 3. get features from server items
         for (DiscoverItems.Item item: items.getItems()) {
-            EnumMap<Feature, String> itemFeatures = discover(discoManager, item.getEntityID());
+            EnumMap<Feature, JID> itemFeatures = discover(discoManager, JID.fromSmack(item.getEntityID()));
             if (itemFeatures != null)
                 features.putAll(itemFeatures);
         }
@@ -128,22 +132,23 @@ public final class FeatureDiscovery {
         return features;
     }
 
-    private static EnumMap<Feature, String> discover(ServiceDiscoveryManager dm, String entity) {
+    private static EnumMap<Feature, JID> discover(ServiceDiscoveryManager dm, JID entity) {
         DiscoverInfo info;
         try {
             // blocking
             // NOTE: null parameter does not work
-            info = dm.discoverInfo(entity);
+            info = dm.discoverInfo(entity.toSmack());
         } catch (SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
-                SmackException.NotConnectedException ex) {
+                SmackException.NotConnectedException |
+                InterruptedException ex) {
             // not supported by all servers/server not reachable, we only know after trying
             //LOGGER.log(Level.WARNING, "can't get service discovery info", ex);
             LOGGER.warning("can't get info for " + entity + " " + ex.getMessage());
             return null;
         }
 
-        EnumMap<Feature, String> features = new EnumMap<>(FeatureDiscovery.Feature.class);
+        EnumMap<Feature, JID> features = new EnumMap<>(FeatureDiscovery.Feature.class);
         for (DiscoverInfo.Feature feature: info.getFeatures()) {
             String var = feature.getVar();
             if (FEATURE_MAP.containsKey(var)) {

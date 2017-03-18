@@ -33,6 +33,7 @@ import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
+import org.jxmpp.jid.Jid;
 import org.kontalk.client.BitsOfBinary;
 import org.kontalk.client.E2EEncryption;
 import org.kontalk.client.GroupExtension;
@@ -83,9 +84,9 @@ public final class ClientUtils {
             return create(m, m.getTo(), "");
         }
 
-        private static MessageIDs create(Message m, String jid, String receiptID) {
+        private static MessageIDs create(Message m, Jid jid, String receiptID) {
             return new MessageIDs(
-                    JID.full(StringUtils.defaultString(jid)),
+                    JID.fromSmack(jid),
                     !receiptID.isEmpty() ? receiptID :
                             StringUtils.defaultString(m.getStanzaId()),
                     StringUtils.defaultString(m.getThread()));
@@ -103,21 +104,21 @@ public final class ClientUtils {
         public final Contact.Subscription subscription;
 
         public KonRosterEntry(JID jid, String name,
-                              RosterPacket.ItemType type, RosterPacket.ItemStatus status) {
+                              RosterPacket.ItemType type, boolean subscriptionPending) {
             this.jid = jid;
             this.name = name;
-            this.subscription = rosterToModelSubscription(status, type);
+            this.subscription = rosterToModelSubscription(subscriptionPending, type);
         }
 
 
         private static Contact.Subscription rosterToModelSubscription(
-                RosterPacket.ItemStatus status, RosterPacket.ItemType type) {
+                boolean subscriptionPending, RosterPacket.ItemType type) {
             if (type == RosterPacket.ItemType.both ||
                     type == RosterPacket.ItemType.to ||
                     type == RosterPacket.ItemType.remove)
                 return Contact.Subscription.SUBSCRIBED;
 
-            if (status == RosterPacket.ItemStatus.SUBSCRIPTION_PENDING)
+            if (subscriptionPending)
                 return Contact.Subscription.PENDING;
 
             return Contact.Subscription.UNSUBSCRIBED;

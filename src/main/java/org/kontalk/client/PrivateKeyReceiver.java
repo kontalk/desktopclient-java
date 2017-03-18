@@ -76,7 +76,7 @@ public final class PrivateKeyReceiver implements StanzaListener {
         // connect
         try {
             mConn.connect();
-        } catch (XMPPException | SmackException | IOException ex) {
+        } catch (XMPPException | SmackException | IOException | InterruptedException ex) {
             LOGGER.log(Level.WARNING, "can't connect to "+mConn.getServer(), ex);
             mHandler.handle(new Callback<>(ex));
             return;
@@ -109,14 +109,14 @@ public final class PrivateKeyReceiver implements StanzaListener {
                     mHandler.handle(new Callback<>(exception));
                 }
             });
-        } catch (SmackException.NotConnectedException ex) {
+        } catch (SmackException.NotConnectedException | InterruptedException ex) {
             LOGGER.log(Level.WARNING, "not connected", ex);
             mHandler.handle(new Callback<>(ex));
         }
     }
 
     @Override
-    public void processPacket(Stanza packet) {
+    public void processStanza(Stanza packet) {
         LOGGER.info("response: "+packet);
 
         mConn.removeSyncStanzaListener(this);

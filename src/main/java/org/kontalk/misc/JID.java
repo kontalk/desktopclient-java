@@ -19,8 +19,15 @@
 package org.kontalk.misc;
 
 import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.commons.lang.StringUtils;
+import org.jxmpp.jid.BareJid;
+import org.jxmpp.jid.Jid;
+import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.jid.util.JidUtil;
+import org.jxmpp.stringprep.XmppStringprepException;
 import org.jxmpp.stringprep.simple.SimpleXmppStringprep;
 import org.jxmpp.util.XmppStringUtils;
 
@@ -33,6 +40,7 @@ import org.jxmpp.util.XmppStringUtils;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class JID {
+    private static final Logger LOGGER = Logger.getLogger(JID.class.getName());
 
     static {
         // good to know. For working JID validation
@@ -53,7 +61,7 @@ public final class JID {
                 // NOTE: domain check could be stronger - compliant with RFC 6122, but
                 // server does not accept most special characters
                 // NOTE: resource not checked
-                && JidUtil.isValidBareJid(
+                && JidUtil.isTypicalValidEntityBareJid(
                         XmppStringUtils.completeJidFrom(mLocal, mDomain));
     }
 
@@ -85,6 +93,29 @@ public final class JID {
         return new JID(mLocal, mDomain, "");
     }
 
+    /** To invalid(!) domain JID. */
+    public JID toDomain() {
+        return new JID("", mDomain, "");
+    }
+
+    public BareJid toBareSmack() {
+        try {
+            return JidCreate.bareFrom(this.string());
+        } catch (XmppStringprepException ex) {
+            LOGGER.log(Level.WARNING, "could not convert to smack", ex);
+            throw new RuntimeException("You didn't check isValid(), idiot!");
+        }
+    }
+
+    public Jid toSmack() {
+        try {
+            return JidCreate.from(this.string());
+        } catch (XmppStringprepException ex) {
+            LOGGER.log(Level.WARNING, "could not convert to smack", ex);
+            throw new RuntimeException("Not even a simple Jid?");
+        }
+    }
+
     /**
      * Comparing only bare JIDs.
      * Case-insensitive.
@@ -110,6 +141,7 @@ public final class JID {
         return hash;
     }
 
+    /** Use this only for debugging and otherwise string() instead! */
     @Override
     public String toString() {
         return "'"+this.string()+"'";
@@ -127,6 +159,10 @@ public final class JID {
         return new JID(XmppStringUtils.parseLocalpart(jid),
                 XmppStringUtils.parseDomain(jid),
                 "");
+    }
+
+    public static JID fromSmack(Jid jid) {
+        return full(jid.asUnescapedString());
     }
 
     public static JID bare(String local, String domain) {

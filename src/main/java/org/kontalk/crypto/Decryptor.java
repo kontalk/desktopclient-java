@@ -51,7 +51,6 @@ import org.bouncycastle.openpgp.PGPSignature;
 import org.bouncycastle.openpgp.PGPSignatureList;
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
-import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
 import org.kontalk.model.Contact;
 import org.kontalk.model.message.DecryptMessage;
@@ -62,7 +61,6 @@ import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.XMPPParserUtils;
-import org.xmlpull.v1.XmlPullParserException;
 
 /**
  * Decrypt message content. Message parameter is internally changed by methods.
@@ -378,7 +376,7 @@ final class Decryptor {
             Message parsedMessage;
             try {
                 parsedMessage = XMPPParserUtils.parseMessageStanza(content);
-            } catch (XmlPullParserException | IOException | SmackException ex) {
+            } catch (Exception ex) {
                 LOGGER.log(Level.WARNING, "can't parse XMPP XML string", ex);
                 errors.add(Coder.Error.INVALID_DATA);
                 message.setSecurityErrors(errors);
