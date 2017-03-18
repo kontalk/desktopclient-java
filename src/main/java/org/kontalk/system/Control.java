@@ -55,6 +55,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat;
+import org.kontalk.model.chat.GroupMetaData;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.chat.ProtoMember;
 import org.kontalk.model.chat.SingleChat;
@@ -62,8 +63,8 @@ import org.kontalk.model.message.InMessage;
 import org.kontalk.model.message.KonMessage;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.Attachment;
-import org.kontalk.model.message.MessageContent.OutAttachment;
 import org.kontalk.model.message.MessageContent.GroupCommand;
+import org.kontalk.model.message.MessageContent.OutAttachment;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.ProtoMessage;
 import org.kontalk.persistence.Config;
@@ -284,8 +285,9 @@ public final class Control {
         }
 
         // NOTE: decryption must be successful to select group chat
-        Chat chat = content.getGroupData().isPresent() ?
-                mGroupControl.getGroupChat(content, sender).orElse(null) :
+        GroupMetaData groupData = content.getGroupData().orElse(null);
+        Chat chat = groupData != null ?
+                mGroupControl.getGroupChat(groupData, sender, content.getGroupCommand()).orElse(null) :
                 mModel.chats().getOrCreate(sender, ids.xmppThreadID);
         if (chat == null) {
             LOGGER.warning("no chat found, message lost: "+protoMessage);
@@ -491,7 +493,8 @@ public final class Control {
 
             Chat chat = message.getChat();
             byte[] encryptedData;
-            if (content.isComplex() || chat.isGroupChat()) {
+            if (content.getAttachment().isPresent() || content.getGroupCommand().isPresent()
+                    || chat.isGroupChat()) {
                 String stanza = KonMessageSender.rawMessage(content, chat, true).toXML().toString();
                 encryptedData = Coder.encryptStanza(myKey, message, stanza).orElse(null);
             } else {

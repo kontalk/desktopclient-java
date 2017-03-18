@@ -61,7 +61,7 @@ import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.MediaUtils;
-import org.kontalk.util.XMPPUtils;
+import org.kontalk.util.XMPPParserUtils;
 import org.xmlpull.v1.XmlPullParserException;
 
 /**
@@ -373,19 +373,19 @@ final class Decryptor {
 
         String content = cpimMessage.getBody().toString();
         MessageContent decryptedContent;
-        if (XMPPUtils.XML_XMPP_TYPE.equalsIgnoreCase(mime)) {
+        if (XMPPParserUtils.XML_XMPP_TYPE.equalsIgnoreCase(mime)) {
             // XMPP XML format for advanced content (attachments)
-            Message m;
+            Message parsedMessage;
             try {
-                m = XMPPUtils.parseMessageStanza(content);
+                parsedMessage = XMPPParserUtils.parseMessageStanza(content);
             } catch (XmlPullParserException | IOException | SmackException ex) {
                 LOGGER.log(Level.WARNING, "can't parse XMPP XML string", ex);
                 errors.add(Coder.Error.INVALID_DATA);
                 message.setSecurityErrors(errors);
                 return null;
             }
-            LOGGER.config("decrypted XML: "+m.toXML());
-            decryptedContent = ClientUtils.parseMessageContent(m);
+            LOGGER.config("decrypted XML: "+parsedMessage.toXML());
+            decryptedContent = ClientUtils.parseMessageContent(parsedMessage);
         } else {
             // text/plain MIME type for simple text messages
             decryptedContent = MessageContent.plainText(content);

@@ -37,6 +37,7 @@ import org.json.simple.JSONValue;
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Model;
+import org.kontalk.model.chat.GroupMetaData;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.EncodingUtils;
@@ -45,7 +46,7 @@ import org.kontalk.util.MediaUtils;
 /**
  * All possible content a message can contain.
  *
- * Implementation detail: nested, a message can contain a decrypted message.
+ * Implementation detail: nested, an incoming message can contain a decrypted message.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -92,14 +93,13 @@ public class MessageContent {
         return new Builder("", "").groupCommand(group).build();
     }
 
-    // used when loading from db
     private MessageContent(Builder builder) {
         mPlainText = builder.mPlainText;
         mEncryptedContent = builder.mEncrypted;
         mAttachment = builder.mAttachment;
         mPreview = builder.mPreview;
         mGroupData = builder.mGroupData;
-        mGroupCommand = builder.mGroup;
+        mGroupCommand = builder.mGroupCommand;
         mDecryptedContent = builder.mDecrypted;
     }
 
@@ -167,7 +167,7 @@ public class MessageContent {
         mPreview = preview;
     }
 
-    public Optional<KonGroupData> getGroupData() {
+    public Optional<GroupMetaData> getGroupData() {
         if (mDecryptedContent != null &&
                 mDecryptedContent.getGroupData().isPresent()) {
             return mDecryptedContent.getGroupData();
@@ -194,10 +194,6 @@ public class MessageContent {
                 mPreview == null &&
                 mDecryptedContent == null &&
                 mGroupCommand == null;
-    }
-
-    public boolean isComplex() {
-        return mAttachment != null || mGroupCommand != null;
     }
 
     @Override
@@ -598,6 +594,8 @@ public class MessageContent {
         }
 
         private final OP mOP;
+        // unchanged members in set command, not saved to database
+        private final List<JID> mUnchanged;
         private final List<JID> mAdded;
         private final List<JID> mRemoved;
         private final String mSubject;
@@ -608,8 +606,9 @@ public class MessageContent {
         }
 
         /** Group changed. */
-        public static GroupCommand set(List<JID> added, List<JID> removed, String subject) {
-            return new GroupCommand(OP.SET, added, removed, subject);
+        public static GroupCommand set(List<JID> unchanged, List<JID> added, List<JID> removed,
+                                       String subject) {
+            return new GroupCommand(OP.SET, unchanged, added, removed, subject);
         }
 
         public static GroupCommand set(String subject) {
@@ -622,7 +621,13 @@ public class MessageContent {
         }
 
         private GroupCommand(OP operation, List<JID> added, List<JID> removed, String subject) {
+            this(operation, Collections.emptyList(), added, removed, subject);
+        }
+
+        private GroupCommand(OP operation, List<JID> unchanged, List<JID> added, List<JID> removed,
+                             String subject) {
             mOP = operation;
+            mUnchanged = unchanged;
             mAdded = added;
             mRemoved = removed;
             mSubject = subject;
@@ -630,6 +635,10 @@ public class MessageContent {
 
         public OP getOperation() {
             return mOP;
+        }
+
+        public List<JID> getUnchanged() {
+            return mUnchanged;
         }
 
         public List<JID> getAdded() {
@@ -712,7 +721,7 @@ public class MessageContent {
         private Attachment mAttachment = null;
         private Preview mPreview = null;
         private KonGroupData mGroupData = null;
-        private GroupCommand mGroup = null;
+        private GroupCommand mGroupCommand = null;
         private MessageContent mDecrypted = null;
 
         public Builder(String plainText, String encrypted) {
@@ -730,7 +739,7 @@ public class MessageContent {
             mGroupData = gData; return this; }
 
         public Builder groupCommand(GroupCommand group) {
-            mGroup = group; return this; }
+            mGroupCommand = group; return this; }
 
         private Builder decryptedContent(MessageContent decrypted) {
             mDecrypted = decrypted; return this; }

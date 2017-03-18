@@ -216,6 +216,15 @@ final class MainFrame extends WebFrame {
             }
         });
         helpMenu.add(wikiItem);
+        WebMenuItem forumItem = new WebMenuItem(Tr.tr("Community Forum"));
+        forumItem.setToolTipText(Tr.tr("Visit the Kontalk webforum"));
+        forumItem.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                WebUtils.browseSiteSafely(View.KONTALK_FORUM);
+            }
+        });
+        helpMenu.add(forumItem);
         WebMenuItem releaseItem = new WebMenuItem(Tr.tr("Release Website"));
         releaseItem.setToolTipText(Tr.tr("Check out the release website"));
         releaseItem.addActionListener(new ActionListener() {

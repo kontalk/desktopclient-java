@@ -30,6 +30,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.Model;
 import org.kontalk.model.chat.GroupChat;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
+import org.kontalk.model.chat.GroupMetaData;
 import org.kontalk.model.chat.GroupMetaData.KonGroupData;
 import org.kontalk.model.chat.Member;
 import org.kontalk.model.chat.ProtoMember;
@@ -158,7 +159,7 @@ final class GroupControl {
             MessageContent.GroupCommand.OP op = command.getOperation();
 
             // validation check
-            if (op != MessageContent.GroupCommand.OP.LEAVE) {
+            if (op != GroupCommand.OP.LEAVE) {
                 // sender must be owner
                 if (!gid.owner.equals(sender.getJID())) {
                     LOGGER.warning("sender not owner");
@@ -186,6 +187,8 @@ final class GroupControl {
                     break;
                 case SET:
                     added.addAll(JIDsToMembers(command.getAdded()));
+                    if (command.isAddingMe())
+                        added.addAll(JIDsToMembers(command.getUnchanged()));
                     for (JID jid : command.getRemoved()) {
                         Contact contact = mModel.contacts().get(jid).orElse(null);
                         if (contact == null) {
@@ -222,19 +225,14 @@ final class GroupControl {
 
     ChatControl getInstanceFor(GroupChat chat) {
         if (chat instanceof KonGroupChat)
-                return new KonChatControl((KonGroupChat) chat);
-        throw new IllegalArgumentException("Not implemented for "+chat);
+            return new KonChatControl((KonGroupChat) chat);
+        throw new IllegalArgumentException("Not implemented for " + chat);
     }
 
-    Optional<GroupChat> getGroupChat(MessageContent content, Contact sender) {
-        KonGroupData gData = content.getGroupData().orElse(null);
-        if (gData == null) {
-            LOGGER.warning("message does not contain group data");
-            return Optional.empty();
-        }
-
+    Optional<GroupChat> getGroupChat(GroupMetaData metaData, Contact sender,
+                                     Optional<GroupCommand> command) {
         // get old...
-        GroupChat chat = mModel.chats().get(gData).orElse(null);
+        GroupChat chat = mModel.chats().get(metaData).orElse(null);
         if (chat != null) {
             if (!chat.getAllContacts().contains(sender)) {
                 LOGGER.warning("chat does not include sender: "+chat);
@@ -245,13 +243,17 @@ final class GroupControl {
         }
 
         // ...or create new
-        if (!gData.owner.equals(sender.getJID())) {
-            LOGGER.warning("sender is not owner for new group chat: "+gData);
+        if (!(metaData instanceof KonGroupData)) {
+            return Optional.empty(); // creation only for Kontalk Groups
+        }
+        KonGroupData konData = (KonGroupData) metaData;
+
+        if (!konData.owner.equals(sender.getJID())) {
+            LOGGER.warning("sender is not owner for new group chat: "+metaData);
             return Optional.empty();
         }
 
-        GroupCommand command = content.getGroupCommand().orElse(null);
-        if (command == null || !command.isAddingMe()) {
+        if (!command.isPresent() || !command.get().isAddingMe()) {
             LOGGER.warning("ignoring unexpected message of unknown group");
             return Optional.empty();
         }
@@ -259,7 +261,7 @@ final class GroupControl {
         return Optional.of(
                 mModel.chats().create(
                         Collections.singletonList(new ProtoMember(sender, Member.Role.OWNER)),
-                        gData));
+                        metaData));
     }
 
     static KonGroupData newKonGroupData(JID myJID) {
