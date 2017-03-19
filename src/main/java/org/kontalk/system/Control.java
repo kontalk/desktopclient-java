@@ -803,6 +803,7 @@ public final class Control {
 
         public void declineKey(Contact contact) {
             this.sendContactBlocking(contact, true);
+            // TODO remember that a key was not accepted
         }
 
         public void sendSubscriptionResponse(Contact contact, boolean accept) {

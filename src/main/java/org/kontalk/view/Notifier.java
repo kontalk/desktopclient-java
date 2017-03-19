@@ -131,14 +131,20 @@ final class Notifier {
     }
 
     void confirmNewKey(final Contact contact, final PGPUtils.PGPCoderKey key) {
-        WebPanel panel = panel(Tr.tr("Received new key for contact"), contact);
+         final boolean overwriting = contact.hasKey();
+
+        WebPanel panel = panel(overwriting ?
+                Tr.tr("Received a new public key for contact") :
+                Tr.tr("Public key for contact was found"), contact);
 
         panel.add(new WebLabel(Tr.tr("Key fingerprint:")));
         WebTextArea fpArea = Utils.createFingerprintArea();
         fpArea.setText(Utils.fingerprint(key.fingerprint));
         panel.add(fpArea);
 
-        String expl = Tr.tr("When declining the key further communication to and from this contact will be blocked.");
+        String expl = overwriting ?
+                Tr.tr("When declining the key, communication with this contact will be blocked.") :
+                Tr.tr("When accepting the key, communication with this contact will be encrypted.");
         panel.add(textArea(expl));
 
         WebNotificationPopup popup = NotificationManager.showNotification(mWindow, panel,
@@ -153,7 +159,8 @@ final class Notifier {
                         mView.getControl().acceptKey(contact, key);
                         break;
                     case decline :
-                        mView.getControl().declineKey(contact);
+                        if (overwriting)
+                             mView.getControl().declineKey(contact);
                 }
             }
             @Override
