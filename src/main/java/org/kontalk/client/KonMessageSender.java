@@ -115,7 +115,7 @@ public final class KonMessageSender {
                 .map(Transmission::getJID)
                 .collect(Collectors.toList());
 
-        if (JIDs.size() > 1 && !multiAddressHost.isPresent()) {
+        if (JIDs.size() > 1 && multiAddressHost.isPresent()) {
             // send one message to multiple receiver using XEP-0033
             protoMessage.setTo(multiAddressHost.get());
             MultipleAddresses addresses = new MultipleAddresses();
