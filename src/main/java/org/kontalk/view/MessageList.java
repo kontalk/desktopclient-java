@@ -708,7 +708,7 @@ final class MessageList extends ListView<KonMessage> {
             mWritingPanel.setMargin(showWriting ? View.MARGIN_SMALL : 0);
             // decoration consumes space, even if nothing is visible in panel
             mWritingPanel.setUndecorated(!showWriting);
-            mWritingLabel.setText(showWriting ? Tr.tr("is writing...") : "");
+            mWritingLabel.setText(showWriting ? Tr.tr("is writing…") : "");
         }
     }
 

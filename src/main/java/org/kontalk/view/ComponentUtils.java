@@ -940,7 +940,7 @@ final class ComponentUtils {
                                               Tr.tr("Encryption Enabled") :
                                               Tr.tr("Encryption Disabled"));
             if (isEncrypted && !canEncrypt) {
-                text += "<br>" + Tr.tr("Contact key is missing");
+                text += "<br>" + Tr.tr("The contact's public key is missing");
             } else if (!isEncrypted && canEncrypt) {
                 text += "<br>" + Tr.tr("Encryption can be activated");
             }

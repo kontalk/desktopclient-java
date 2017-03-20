@@ -317,7 +317,7 @@ final class Utils {
                         errorText = Tr.tr("Can't load key files from configuration directory.");
                         break;
                 }
-                errorText += eol + Tr.tr("Please reimport your key.");
+                errorText += eol + Tr.tr("Please reimport your personal key.");
                 break;
             case LOAD_KEY_DECRYPT:
                 errorText = Tr.tr("Can't decrypt key. Is the passphrase correct?");
@@ -328,7 +328,7 @@ final class Utils {
                 if (ex.getCauseClass().equals(SmackException.ConnectionException.class)) {
                     errorText += eol + Tr.tr("Is the server address correct?");
                 } else if (ex.getCauseClass().equals(SSLHandshakeException.class)) {
-                    errorText += eol + Tr.tr("The server rejects the key.");
+                    errorText += eol + Tr.tr("The server rejects the personal key.");
                 } else if (ex.getCauseClass().equals(SmackException.NoResponseException.class)) {
                     errorText += eol + Tr.tr("The server does not respond.");
                 } else {
