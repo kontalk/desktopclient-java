@@ -146,7 +146,7 @@ final class ContactDetails extends WebPanel implements Observer {
             }
             @Override
             protected String editText() {
-                return mContact.getJID().string();
+                return mContact.getJID().asUnescapedString();
             }
             @Override
             protected void onFocusLost() {

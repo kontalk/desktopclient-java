@@ -227,7 +227,7 @@ final class Utils {
     static String jid(JID jid, int maxLength) {
         String local = jid.local(), domain = jid.domain();
         if (jid.isHash())
-            local = "[" + jid.local().substring(0, Math.min(jid.local().length(), 6)) + "]";
+            local = "[" + local.substring(0, Math.min(local.length(), 6)) + "]";
 
         local = StringUtils.abbreviate(local, (int) ((maxLength-1) * 0.4));
         domain = StringUtils.abbreviate(domain, (int) ((maxLength-1) * 0.6));
@@ -409,8 +409,8 @@ final class Utils {
         if (c1.isMe()) return +1;
         if (c2.isMe()) return -1;
 
-        String s1 = StringUtils.defaultIfEmpty(c1.getName(), c1.getJID().string());
-        String s2 = StringUtils.defaultIfEmpty(c2.getName(), c2.getJID().string());
+        String s1 = StringUtils.defaultIfEmpty(c1.getName(), c1.getJID().asUnescapedString());
+        String s2 = StringUtils.defaultIfEmpty(c2.getName(), c2.getJID().asUnescapedString());
         return s1.compareToIgnoreCase(s2);
     }
 

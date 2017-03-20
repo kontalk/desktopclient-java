@@ -26,6 +26,7 @@ import org.apache.commons.lang.StringUtils;
 import org.jxmpp.jid.BareJid;
 import org.jxmpp.jid.Jid;
 import org.jxmpp.jid.impl.JidCreate;
+import org.jxmpp.jid.parts.Localpart;
 import org.jxmpp.jid.util.JidUtil;
 import org.jxmpp.stringprep.XmppStringprepException;
 import org.jxmpp.stringprep.simple.SimpleXmppStringprep;
@@ -34,8 +35,7 @@ import org.jxmpp.util.XmppStringUtils;
 /**
  * A Jabber ID (the address of an XMPP entity). Immutable.
  *
- * NOTE: manual JID escaping (XEP-0106) is not supported here. Better mark JIDs
- * e.g. with spaces in local part as invalid.
+ * Escaping of local part (XEP-0106) supported.
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
@@ -47,7 +47,7 @@ public final class JID {
         SimpleXmppStringprep.setup();
     }
 
-    private final String mLocal;
+    private final String mLocal; // escaped!
     private final String mDomain;
     private final String mResource;
     private final boolean mValid;
@@ -65,16 +65,22 @@ public final class JID {
                         XmppStringUtils.completeJidFrom(mLocal, mDomain));
     }
 
+    /** Return unescaped local part. */
     public String local() {
-        return mLocal;
+        return XmppStringUtils.unescapeLocalpart(mLocal);
     }
 
     public String domain() {
         return mDomain;
     }
 
+    /** Return JID as escaped string. */
     public String string() {
         return XmppStringUtils.completeJidFrom(mLocal, mDomain, mResource);
+    }
+
+    public String asUnescapedString() {
+        return XmppStringUtils.completeJidFrom(this.local(), mDomain, mResource);
     }
 
     public boolean isValid() {
@@ -149,24 +155,29 @@ public final class JID {
 
     public static JID full(String jid) {
         jid = StringUtils.defaultString(jid);
-        return new JID(XmppStringUtils.parseLocalpart(jid),
+        return escape(XmppStringUtils.parseLocalpart(jid),
                 XmppStringUtils.parseDomain(jid),
                 XmppStringUtils.parseResource(jid));
     }
 
     public static JID bare(String jid) {
         jid = StringUtils.defaultString(jid);
-        return new JID(XmppStringUtils.parseLocalpart(jid),
-                XmppStringUtils.parseDomain(jid),
-                "");
+        return escape(XmppStringUtils.parseLocalpart(jid), XmppStringUtils.parseDomain(jid), "");
     }
 
     public static JID fromSmack(Jid jid) {
-        return full(jid.asUnescapedString());
+        Localpart localpart = jid.getLocalpartOrNull();
+        return new JID(localpart != null ? localpart.toString() : "",
+                jid.getDomain().toString(),
+                jid.getResourceOrEmpty().toString());
     }
 
     public static JID bare(String local, String domain) {
-        return new JID(local, domain, "");
+        return escape(local, domain, "");
+    }
+
+    private static JID escape(String local, String domain, String resource) {
+        return new JID(XmppStringUtils.escapeLocalpart(local), domain, resource);
     }
 
     public static JID deleted(int id) {
