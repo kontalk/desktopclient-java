@@ -83,8 +83,8 @@ public final class Contact extends Observable implements Searchable {
             COL_LAST_SEEN + " INTEGER, " +
             // boolean, send messages encrypted?
             COL_ENCR + " INTEGER NOT NULL, " +
-            COL_PUB_KEY + " TEXT UNIQUE, " +
-            COL_KEY_FP + " TEXT UNIQUE," +
+            COL_PUB_KEY + " TEXT, " +
+            COL_KEY_FP + " TEXT," +
             COL_AVATAR_ID + " TEXT" +
             ")";
 

@@ -600,7 +600,13 @@ public final class Control {
         this.processContent(message);
     }
 
-    private static void setKey(Contact contact, PGPCoderKey key) {
+    private void setKey(Contact contact, PGPCoderKey key) {
+        for (Contact c: mModel.contacts().getAll(true, true)) {
+            if (key.fingerprint.equals(c.getFingerprint())) {
+                LOGGER.warning("key already set, setting for: "+contact+" set for: "+c);
+            }
+        }
+
         contact.setKey(key.rawKey, key.fingerprint);
 
         // enable encryption without asking
