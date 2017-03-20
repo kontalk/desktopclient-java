@@ -54,11 +54,11 @@ import org.jxmpp.jid.Jid;
 import org.kontalk.crypto.PersonalKey;
 import org.kontalk.misc.JID;
 import org.kontalk.misc.KonException;
-import org.kontalk.model.message.OutMessage;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.system.Control;
 import org.kontalk.system.RosterHandler;
+import org.kontalk.util.MessageUtils.SendTask;
 
 /**
  * Network client for an XMPP Kontalk Server.
@@ -300,12 +300,12 @@ public final class Client implements StanzaListener, Runnable {
         return e;
     }
 
-    public boolean sendMessage(OutMessage message, boolean sendChatState) {
+    public boolean sendMessage(SendTask task) {
         Optional<Jid> multiAddressHost =
                 mFeatures.containsKey(FeatureDiscovery.Feature.MULTI_ADDRESSING)
                 && mConn != null ? Optional.of(mConn.getServiceName()) : Optional.empty();
 
-        return mMessageSender.sendMessage(message, sendChatState, multiAddressHost);
+        return mMessageSender.sendMessage(task, multiAddressHost);
     }
 
     // TODO unused

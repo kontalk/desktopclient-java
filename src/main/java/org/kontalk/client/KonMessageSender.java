@@ -18,18 +18,22 @@
 
 package org.kontalk.client;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
 import org.jxmpp.jid.Jid;
+import org.kontalk.client.OpenPGPExtension.SignCryptElement;
 import org.kontalk.misc.JID;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.GroupChat.KonGroupChat;
@@ -40,8 +44,11 @@ import org.kontalk.model.message.MessageContent.OutAttachment;
 import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
+import org.kontalk.util.MessageUtils.SendTask;
+import org.kontalk.util.MessageUtils.SendTask.Encryption;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
+import org.kontalk.client.OpenPGPExtension.BodyElement;
 
 /**
  *
@@ -50,13 +57,17 @@ import org.kontalk.util.EncodingUtils;
 public final class KonMessageSender {
     private static final Logger LOGGER = Logger.getLogger(KonMessageSender.class.getName());
 
+    private static final int RPAD_LENGTH_RANGE = 40;
+
     private final Client mClient;
 
     KonMessageSender(Client client) {
         mClient = client;
     }
 
-    boolean sendMessage(OutMessage message, boolean sendChatState, Optional<Jid> multiAddressHost) {
+    boolean sendMessage(SendTask task, Optional<Jid> multiAddressHost) {
+        OutMessage message = task.message;
+
         // check for correct receipt status and reset it
         KonMessage.Status status = message.getStatus();
         assert status == KonMessage.Status.PENDING || status == KonMessage.Status.ERROR;
@@ -75,40 +86,48 @@ public final class KonMessageSender {
             return false;
         }
 
-        boolean encrypted = message.isSendEncrypted();
+        boolean encrypted = task.encryption != Encryption.NONE;
 
         Chat chat = message.getChat();
+        Message smackMessage = encrypted ? new Message() : rawMessage(content, chat, false);
 
-        Message protoMessage = encrypted ?
-                new Message() :
-                rawMessage(content, chat, false);
-
-        protoMessage.setType(Message.Type.chat);
-        protoMessage.setStanzaId(message.getXMPPID());
+        smackMessage.setType(Message.Type.chat);
+        smackMessage.setStanzaId(message.getXMPPID());
         String threadID = chat.getXMPPID();
         if (!threadID.isEmpty())
-            protoMessage.setThread(threadID);
+            smackMessage.setThread(threadID);
 
         // extensions
 
         // not with group chat (at least not for Kontalk groups or MUC)
         if (!chat.isGroupChat())
-            protoMessage.addExtension(new DeliveryReceiptRequest());
+            smackMessage.addExtension(new DeliveryReceiptRequest());
 
-        // TEMP: server bug workaround, always include body
-        if (protoMessage.getBody() == null)
-            protoMessage.setBody("dummy");
+        if (smackMessage.getBody() == null)
+            // TEMP: server bug workaround, always include body
+            smackMessage.setBody(encrypted ?
+                    // Using implicit Enum.toString()
+                    "This message is encrypted using OpenPGP (" + task.encryption +")." : "dummy");
 
-        if (sendChatState)
-            protoMessage.addExtension(new ChatStateExtension(ChatState.active));
+        if (task.sendChatState)
+            smackMessage.addExtension(new ChatStateExtension(ChatState.active));
 
         if (encrypted) {
-            byte[] encryptedData = content.getEncryptedData().orElse(null);
-            if (encryptedData == null) {
+            String encryptedData = task.getEncryptedData();
+            if (encryptedData.isEmpty()) {
                 LOGGER.warning("no encrypted data");
                 return false;
             }
-            protoMessage.addExtension(new E2EEncryption(encryptedData));
+
+            ExtensionElement encryptionExtension;
+            switch(task.encryption) {
+                case RFC3923: encryptionExtension = new E2EEncryption(encryptedData); break;
+                case XEP0373: encryptionExtension = new E2EEncryption(encryptedData); break;
+                default:
+                    LOGGER.warning("unknown encryption: " + task.encryption);
+                    return false;
+            }
+            smackMessage.addExtension(encryptionExtension);
         }
 
         List<JID> JIDs = message.getTransmissions().stream()
@@ -117,34 +136,37 @@ public final class KonMessageSender {
 
         if (JIDs.size() > 1 && multiAddressHost.isPresent()) {
             // send one message to multiple receiver using XEP-0033
-            protoMessage.setTo(multiAddressHost.get());
+            smackMessage.setTo(multiAddressHost.get());
             MultipleAddresses addresses = new MultipleAddresses();
             for (JID to: JIDs) {
                 addresses.addAddress(MultipleAddresses.Type.to, to.toBareSmack(), null, null, false, null);
             }
-            protoMessage.addExtension(addresses);
+            smackMessage.addExtension(addresses);
 
-            return mClient.sendPacket(protoMessage);
+            return mClient.sendPacket(smackMessage);
+        } else {
+            // only one receiver or fallback: send one message to each receiver
+            ArrayList<Message> sendMessages = new ArrayList<>();
+            for (JID to: JIDs) {
+                Message sendMessage = smackMessage.clone();
+                sendMessage.setTo(to.toBareSmack());
+                sendMessages.add(sendMessage);
+            }
+
+            return mClient.sendPackets(sendMessages.toArray(new Message[0]));
         }
-
-        // onle one receiver or fallback: send one message to each receiver
-        ArrayList<Message> sendMessages = new ArrayList<>();
-        for (JID to: JIDs) {
-            Message sendMessage = protoMessage.clone();
-            sendMessage.setTo(to.toBareSmack());
-            sendMessages.add(sendMessage);
-        }
-
-        return mClient.sendPackets(sendMessages.toArray(new Message[0]));
     }
 
-    public static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
-        Message smackMessage = new Message();
+    public static String getEncryptionPayloadRFC3923(MessageContent content, Chat chat) {
+        return rawMessage(content, chat, true).toXML().toString();
+    }
 
-        OutAttachment att = content.getOutAttachment().orElse(null);
+    private static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
+        Message smackMessage = new Message();
 
         // text body
         String text = content.getPlainText();
+        OutAttachment att = content.getOutAttachment().orElse(null);
         if (text.isEmpty() && att != null) {
             // use attachment URL as body
             text = att.getURL().toString();
@@ -152,17 +174,45 @@ public final class KonMessageSender {
         if (!text.isEmpty())
             smackMessage.setBody(text);
 
+        extensionsForContent(content, chat, encrypted)
+                .forEach(smackMessage::addExtension);
+
+        return smackMessage;
+    }
+
+    /** Get XEP-0373 signcrypt plaintext as XML string. */
+    public static String getSignCryptElement(OutMessage message) {
+        List<String> tos = message.getTransmissions().stream()
+                .map(t -> t.getJID().string())
+                .collect(Collectors.toList());
+        int rpadLength = new SecureRandom().nextInt(RPAD_LENGTH_RANGE);
+
+        List<ExtensionElement> contentElements = new ArrayList<>();
+        MessageContent content = message.getContent();
+        String text = content.getPlainText();
+        if (!text.isEmpty())
+            contentElements.add(new BodyElement(text));
+        contentElements.addAll(extensionsForContent(content, message.getChat(), true));
+
+        return new SignCryptElement(tos, new Date(), rpadLength, contentElements)
+                .toXML().toString();
+    }
+
+    private static List<ExtensionElement> extensionsForContent(MessageContent content, Chat chat,
+                                                               boolean encrypted) {
+        List<ExtensionElement> elements = new ArrayList<>();
         // attachment
+        OutAttachment att = content.getOutAttachment().orElse(null);
         if (att != null) {
             OutOfBandData oobData = new OutOfBandData(att.getURL().toString(),
                     att.getMimeType(), att.getLength(), encrypted);
-            smackMessage.addExtension(oobData);
+            elements.add(oobData);
 
             Preview preview = content.getPreview().orElse(null);
             if (preview != null) {
                 String data = EncodingUtils.bytesToBase64(preview.getData());
                 BitsOfBinary bob = new BitsOfBinary(preview.getMimeType(), data);
-                smackMessage.addExtension(bob);
+                elements.add(bob);
             }
         }
 
@@ -171,11 +221,12 @@ public final class KonMessageSender {
             KonGroupChat groupChat = (KonGroupChat) chat;
             KonGroupData gid = groupChat.getGroupData();
             MessageContent.GroupCommand groupCommand = content.getGroupCommand().orElse(null);
-            smackMessage.addExtension(groupCommand != null ?
+            elements.add(groupCommand != null ?
                     ClientUtils.groupCommandToGroupExtension(groupChat, groupCommand) :
                     new GroupExtension(gid.id, gid.owner.string()));
         }
 
-        return smackMessage;
+        return elements;
     }
+
 }

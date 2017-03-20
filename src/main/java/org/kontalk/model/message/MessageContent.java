@@ -57,8 +57,6 @@ public class MessageContent {
     private final String mPlainText;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
-    // temporary encrypted data, not saved to database
-    private byte[] mEncryptedData;
     // attachment (file url, path and metadata)
     private final Attachment mAttachment;
     // small preview file of attachment
@@ -142,14 +140,6 @@ public class MessageContent {
         mDecryptedContent = decryptedContent;
         // deleting encrypted data!
         mEncryptedContent = "";
-    }
-
-    public Optional<byte[]> getEncryptedData() {
-        return Optional.ofNullable(mEncryptedData);
-    }
-
-    public void setEncryptedData(byte[] encryptedData) {
-        mEncryptedData = encryptedData;
     }
 
     public Optional<Preview> getPreview() {

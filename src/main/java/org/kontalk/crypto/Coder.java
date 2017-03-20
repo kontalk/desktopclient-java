@@ -128,12 +128,17 @@ public final class Coder {
      * Errors that may occur are saved to the message.
      * @return the encrypted and signed text.
      */
-    public static Optional<byte[]> encryptMessage(PersonalKey myKey, OutMessage message) {
-        return new Encryptor(myKey, message).encryptMessage();
+    public static String encryptMessageRFC3923(PersonalKey myKey, OutMessage message) {
+        return new Encryptor(myKey, message).encryptMessageRFC3923();
     }
 
-    public static Optional<byte[]> encryptStanza(PersonalKey myKey, OutMessage message, String xml) {
-        return new Encryptor(myKey, message).encryptStanza(xml);
+    public static String encryptStanzaRFC3923(PersonalKey myKey, OutMessage message, String xml) {
+        return new Encryptor(myKey, message).encryptStanzaRFC3923(xml);
+    }
+
+    /** Encrypt an arbitrary UTF-8 string as a Base64 encoded OpenPGP Message. */
+    public static String encryptString(PersonalKey myKey, OutMessage message, String plainText) {
+        return new Encryptor(myKey, message).encryptString(plainText);
     }
 
     public static Optional<File> encryptAttachment(PersonalKey myKey, OutMessage message, File file) {
