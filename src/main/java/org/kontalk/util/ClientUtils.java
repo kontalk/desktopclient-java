@@ -21,6 +21,7 @@ package org.kontalk.util;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -33,12 +34,15 @@ import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.roster.packet.RosterPacket;
+import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jxmpp.jid.Jid;
 import org.kontalk.client.BitsOfBinary;
 import org.kontalk.client.E2EEncryption;
 import org.kontalk.client.GroupExtension;
 import org.kontalk.client.GroupExtension.Member;
 import org.kontalk.client.GroupExtension.Type;
+import org.kontalk.client.OpenPGPExtension.BodyElement;
 import org.kontalk.client.OutOfBandData;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
@@ -56,6 +60,9 @@ import org.kontalk.model.message.MessageContent.Preview;
  */
 public final class ClientUtils {
     private static final Logger LOGGER = Logger.getLogger(ClientUtils.class.getName());
+
+    private static final List<String> IGNORED_NAMESPACES = Arrays.asList(
+            ChatStateExtension.NAMESPACE, DeliveryReceipt.NAMESPACE);
 
     /**
      * Message attributes for identifying the chat for a message.
@@ -125,73 +132,90 @@ public final class ClientUtils {
         }
     }
 
-    public static MessageContent parseMessageContent(Message m) {
-        // default body
+    public static MessageContent parseMessageContent(Message m, boolean decrypted) {
+        MessageContent.Builder builder = new MessageContent.Builder();
+
+        // parsing only default body
         String plainText = StringUtils.defaultString(m.getBody());
 
-        // encryption extension (RFC 3923), decrypted later
-        String encrypted = "";
-        ExtensionElement encryptionExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
-        if (encryptionExt instanceof E2EEncryption) {
-            if (m.getBody() != null)
-                LOGGER.config("message contains encryption and body (ignoring body): "+m.getBody());
-            E2EEncryption encryption = (E2EEncryption) encryptionExt;
-            encrypted = EncodingUtils.bytesToBase64(encryption.getData());
-        }
-
-        // Bits of Binary: preview for file attachment
-        Preview preview = null;
-        ExtensionElement bobExt = m.getExtension(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE);
-        if (bobExt instanceof BitsOfBinary) {
-            BitsOfBinary bob = (BitsOfBinary) bobExt;
-            String mime = StringUtils.defaultString(bob.getType());
-            byte[] bits = bob.getContents();
-            if (bits == null)
-                bits = new byte[0];
-            if (mime.isEmpty() || bits.length <= 0)
-                LOGGER.warning("invalid BOB data: "+bob.toXML());
-            else
-                preview = new Preview(bits, mime);
-        }
-
-        // Out of Band Data: a URI to a file
-        InAttachment attachment = null;
-        ExtensionElement oobExt = m.getExtension(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE);
-        if (oobExt instanceof OutOfBandData) {
-            OutOfBandData oobData = (OutOfBandData) oobExt;
-            URI url;
-            try {
-                url = new URI(oobData.getUrl());
-            } catch (URISyntaxException ex) {
-                LOGGER.log(Level.WARNING, "can't parse URL", ex);
-                url = URI.create("");
+        if (!decrypted) {
+            ExtensionElement encryptionExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
+            if (encryptionExt instanceof E2EEncryption) {
+                // encryption extension (RFC 3923), decrypted later
+                if (!plainText.isEmpty()) {
+                    LOGGER.config("message contains encryption and body (ignoring body): " + m.getBody());
+                    plainText = "";
+                }
+                builder.encrypted(
+                        EncodingUtils.bytesToBase64(((E2EEncryption) encryptionExt).getData()));
+                // remove extension before parsing all others
+                m.removeExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
             }
-
-            attachment = new InAttachment(url);
-
-            // body text is maybe URI, for clients that dont understand OOB,
-            // but we do, don't save it twice
-            if (plainText.equals(url.toString()))
-                plainText = "";
         }
 
-        // group command
-        KonGroupData gid = null;
-        GroupCommand groupCommand = null;
-        ExtensionElement groupExt = m.getExtension(GroupExtension.ELEMENT_NAME,
-                GroupExtension.NAMESPACE);
-        if (groupExt instanceof GroupExtension) {
-            GroupExtension group = (GroupExtension) groupExt;
-            gid = new KonGroupData(JID.bare(group.getOwner()), group.getID());
-            groupCommand = ClientUtils.groupExtensionToGroupCommand(
-                    group.getType(), group.getMembers(), group.getSubject()).orElse(null);
+        addContent(builder, m.getExtensions(), plainText, decrypted);
+        return builder.build();
+    }
+
+    public static MessageContent extensionsToContent(List<ExtensionElement> elements) {
+        MessageContent.Builder builder = new MessageContent.Builder();
+        addContent(builder, elements, "", true);
+        return builder.build();
+    }
+
+    private static void addContent(MessageContent.Builder builder, List<ExtensionElement> elements,
+                                   String body, boolean decrypted) {
+        String outOfBandURL = null;
+        for (ExtensionElement element : elements) {
+            if (element instanceof BodyElement) {
+                body = ((BodyElement) element).getText();
+            } else if (element instanceof BitsOfBinary) {
+                // Bits of Binary: preview for file attachment
+                BitsOfBinary bob = (BitsOfBinary) element;
+                String mime = StringUtils.defaultString(bob.getType());
+                byte[] bits = bob.getContents();
+                if (bits == null)
+                    bits = new byte[0];
+                if (mime.isEmpty() || bits.length <= 0)
+                    LOGGER.warning("invalid BOB data: " + bob.toXML());
+                else
+                    builder.preview(new Preview(bits, mime));
+            } else if (element instanceof OutOfBandData) { // Out of Band Data: a URI to a file
+                OutOfBandData oobData = (OutOfBandData) element;
+                URI url;
+                try {
+                    url = new URI(oobData.getUrl());
+                } catch (URISyntaxException ex) {
+                    LOGGER.log(Level.WARNING, "can't parse URL", ex);
+                    url = URI.create("");
+                }
+
+                builder.attachment(new InAttachment(url));
+
+                outOfBandURL = url.toString();
+            } else if (element instanceof GroupExtension) { // Kontalk group element and (maybe) command
+                GroupExtension group = (GroupExtension) element;
+                KonGroupData gid = new KonGroupData(JID.bare(group.getOwner()), group.getID());
+                GroupCommand groupCommand = ClientUtils.groupExtensionToGroupCommand(
+                        group.getType(), group.getMembers(), group.getSubject()).orElse(null);
+
+                builder.groupData(gid);
+                if (groupCommand != null)
+                    builder.groupCommand(groupCommand);
+            } else {
+                if (decrypted || !IGNORED_NAMESPACES.contains(element.getNamespace()))
+                    LOGGER.warning("unexpected extension: "
+                            + (element == null ? element : element.toXML().toString()));
+            }
         }
 
-        return new MessageContent.Builder(plainText, encrypted)
-                .attachment(attachment)
-                .preview(preview)
-                .groupData(gid)
-                .groupCommand(groupCommand).build();
+        // body text is maybe URI, for clients that dont understand OOB,
+        // but we do, don't save it twice
+        if (body.equals(outOfBandURL))
+            body = "";
+
+        if (!body.isEmpty())
+            builder.body(body);
     }
 
     /* Internal to external */
