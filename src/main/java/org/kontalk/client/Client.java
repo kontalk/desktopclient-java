@@ -98,6 +98,8 @@ public final class Client implements StanzaListener, Runnable {
         mFeatures = new EnumMap<>(FeatureDiscovery.Feature.class);
 
         // setting caps cache
+        // NOTE: the cache is actually not used right now: only client entity requests (==full JIDs)
+        // can be cached
         File cacheDir = appDir.resolve(CAPS_CACHE_DIR).toFile();
         if (cacheDir.mkdir())
             LOGGER.info("created caps cache directory");

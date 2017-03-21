@@ -217,8 +217,11 @@ public final class RosterHandler {
             if (!foundKey.isEmpty())
                 break;
         }
-        if (foundKey.isEmpty())
+        if (foundKey.isEmpty()) {
+            LOGGER.config("searched for public key (nothing found): "+jid+" keyId="+id);
             return;
+        }
+        LOGGER.info("key found with HKP: "+jid+" keyId="+id);
 
         PGPUtils.PGPCoderKey key = PGPUtils.readPublicKey(foundKey).orElse(null);
         if (key == null)
