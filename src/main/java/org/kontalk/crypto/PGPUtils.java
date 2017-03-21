@@ -49,6 +49,7 @@ import org.bouncycastle.openpgp.PGPKeyFlags;
 import org.bouncycastle.openpgp.PGPKeyPair;
 import org.bouncycastle.openpgp.PGPMarker;
 import org.bouncycastle.openpgp.PGPObjectFactory;
+import org.bouncycastle.openpgp.PGPOnePassSignatureList;
 import org.bouncycastle.openpgp.PGPPrivateKey;
 import org.bouncycastle.openpgp.PGPPublicKey;
 import org.bouncycastle.openpgp.PGPPublicKeyRing;
@@ -265,20 +266,29 @@ public final class PGPUtils {
             return 0;
         }
 
-        if (!(o instanceof PGPSignatureList)) {
-            LOGGER.warning("object not signature list");
+        // somehow two signature lists possible
+        if (o instanceof PGPSignatureList) {
+            PGPSignatureList signList = (PGPSignatureList) o;
+            if (signList.size() > 1) {
+                LOGGER.warning("more than one signature in signature list");
+            } else if (signList.isEmpty()) {
+                LOGGER.warning("signature list is empty");
+                return 0;
+            }
+            return signList.get(0).getKeyID();
+        } else if (o instanceof PGPOnePassSignatureList) {
+            PGPOnePassSignatureList signList = (PGPOnePassSignatureList) o;
+            if (signList.size() > 1) {
+                LOGGER.warning("more than one signature in signature list");
+            } else if (signList.isEmpty()) {
+                LOGGER.warning("signature list is empty");
+                return 0;
+            }
+            return signList.get(0).getKeyID();
+        } else {
+            LOGGER.warning("object not signature list: "+o);
             return 0;
         }
-        PGPSignatureList signList = (PGPSignatureList) o;
-        if (signList.size() > 1) {
-            LOGGER.warning("more than one signature in signature list");
-        }
-        if (signList.isEmpty()) {
-            LOGGER.warning("signature list is empty");
-            return 0;
-        }
-
-        return signList.get(0).getKeyID();
     }
 
     private static PGPPublicKeyRing keyRingOrNull(byte[] keyData) {
