@@ -18,6 +18,7 @@
 
 package org.kontalk.util;
 
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Base64;
@@ -25,6 +26,7 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
 import org.apache.commons.lang.RandomStringUtils;
 import org.apache.commons.lang.StringUtils;
 import org.json.simple.JSONObject;
@@ -96,5 +98,14 @@ public final class EncodingUtils {
 
     public static String randomString(int length) {
         return RandomStringUtils.randomAlphanumeric(length);
+    }
+
+    public static byte[] stringToBytes(String string) {
+        try {
+            return string.getBytes("utf-8");
+        } catch (UnsupportedEncodingException ex) {
+            LOGGER.log(Level.WARNING, "UTF-8 not supported", ex);
+            return string.getBytes();
+        }
     }
 }
