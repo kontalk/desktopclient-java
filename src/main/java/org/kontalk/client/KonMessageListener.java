@@ -39,6 +39,7 @@ import org.jivesoftware.smackx.pubsub.NodeExtension;
 import org.jivesoftware.smackx.pubsub.packet.PubSubNamespace;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
+import org.kontalk.client.OpenPGPExtension.BodyElement;
 import org.kontalk.misc.JID;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.system.Control;
@@ -58,6 +59,8 @@ final class KonMessageListener implements StanzaListener {
 
     static {
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
+        ProviderManager.addExtensionProvider(OpenPGPExtension.ELEMENT_NAME, OpenPGPExtension.NAMESPACE, new OpenPGPExtension.Provider());
+        ProviderManager.addExtensionProvider(BodyElement.ELEMENT_NAME, BodyElement.NAMESPACE, new BodyElement.Provider());
         ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
         ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
         ProviderManager.addExtensionProvider(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE, new GroupExtension.Provider());
@@ -70,7 +73,7 @@ final class KonMessageListener implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza packet) {
+    public void processStanza(Stanza packet) {
         Message m = (Message) packet;
 
         Message.Type type = m.getType();
@@ -132,9 +135,6 @@ final class KonMessageListener implements StanzaListener {
         // note: thread and subject are null if message comes from the Kontalk
         // Android client
 
-        // TODO a message can contain all sorts of extensions, we should loop
-        // over all of them
-
         MessageIDs ids = MessageIDs.from(m);
 
         Date delayDate = getDelay(m);
@@ -150,9 +150,8 @@ final class KonMessageListener implements StanzaListener {
         }
 
         // must be an incoming message
-
         // get content/text from body and/or encryption/url extension
-        MessageContent content = ClientUtils.parseMessageContent(m);
+        MessageContent content = ClientUtils.parseMessageContent(m, false);
 
         // make sure not to save a message without content
         if (content.isEmpty()) {
@@ -190,7 +189,7 @@ final class KonMessageListener implements StanzaListener {
                 if (extension instanceof ItemsExtension) {
                     ItemsExtension items = (ItemsExtension) extension;
                     if (items.getNode().equals(AvatarSendReceiver.METADATA_NODE)) {
-                        mAvatarHandler.processMetadataEvent(JID.full(m.getFrom()), items);
+                        mAvatarHandler.processMetadataEvent(JID.fromSmack(m.getFrom()), items);
                         return;
                     }
                 }

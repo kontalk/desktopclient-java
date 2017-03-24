@@ -57,8 +57,6 @@ public class MessageContent {
     private final String mPlainText;
     // encrypted content, empty string if not present
     private String mEncryptedContent;
-    // temporary encrypted data, not saved to database
-    private byte[] mEncryptedData;
     // attachment (file url, path and metadata)
     private final Attachment mAttachment;
     // small preview file of attachment
@@ -80,21 +78,21 @@ public class MessageContent {
     // used for decrypted content of incoming messages, outgoing messages
     // and as fallback
     public static MessageContent plainText(String plainText) {
-        return new Builder(plainText, "").build();
+        return new Builder().body(plainText).build();
     }
 
     // used for outgoing messages
     public static MessageContent outgoing(String plainText, Attachment attachment) {
-        return new Builder(plainText, "").attachment(attachment).build();
+        return new Builder().body(plainText).attachment(attachment).build();
     }
 
     // used for outgoing group commands
     public static MessageContent groupCommand(GroupCommand group) {
-        return new Builder("", "").groupCommand(group).build();
+        return new Builder().groupCommand(group).build();
     }
 
     private MessageContent(Builder builder) {
-        mPlainText = builder.mPlainText;
+        mPlainText = builder.mBodyText;
         mEncryptedContent = builder.mEncrypted;
         mAttachment = builder.mAttachment;
         mPreview = builder.mPreview;
@@ -142,14 +140,6 @@ public class MessageContent {
         mDecryptedContent = decryptedContent;
         // deleting encrypted data!
         mEncryptedContent = "";
-    }
-
-    public Optional<byte[]> getEncryptedData() {
-        return Optional.ofNullable(mEncryptedData);
-    }
-
-    public void setEncryptedData(byte[] encryptedData) {
-        mEncryptedData = encryptedData;
     }
 
     public Optional<Preview> getPreview() {
@@ -233,7 +223,6 @@ public class MessageContent {
             Map<?, ?> map = (Map) obj;
 
             String plainText = EncodingUtils.getJSONString(map, JSON_PLAIN_TEXT);
-
             String encrypted = EncodingUtils.getJSONString(map, JSON_ENC_CONTENT);
 
             String att = (String) map.get(JSON_ATTACHMENT);
@@ -250,7 +239,7 @@ public class MessageContent {
                     null :
                     fromJSONString(jsonDecryptedContent);
 
-            return new Builder(plainText, encrypted)
+            return new Builder().body(plainText).encrypted(encrypted)
                     .attachment(attachment)
                     .preview(preview)
                     .groupCommand(groupCommand)
@@ -715,19 +704,19 @@ public class MessageContent {
     }
 
     public static class Builder {
-        final String mPlainText;
-        final String mEncrypted;
-
+        private String mBodyText = "";
+        private String mEncrypted = "";
         private Attachment mAttachment = null;
         private Preview mPreview = null;
         private KonGroupData mGroupData = null;
         private GroupCommand mGroupCommand = null;
         private MessageContent mDecrypted = null;
 
-        public Builder(String plainText, String encrypted) {
-            this.mPlainText = plainText;
-            this.mEncrypted = encrypted;
-        }
+        public Builder body(String body) {
+            mBodyText = body; return this; }
+
+        public Builder encrypted(String encrypted) {
+            mEncrypted = encrypted; return this; }
 
         public Builder attachment(Attachment attachment) {
             mAttachment = attachment; return this; }

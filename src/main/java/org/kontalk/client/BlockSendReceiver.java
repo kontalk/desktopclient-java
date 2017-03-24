@@ -58,7 +58,7 @@ final class BlockSendReceiver implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza packet)
+    public void processStanza(Stanza packet)
             throws SmackException.NotConnectedException {
         LOGGER.info("response: "+packet);
 

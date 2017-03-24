@@ -352,7 +352,7 @@ final class ConfigurationDialog extends WebDialog {
         private void updateKey() {
             PersonalKey key = mModel.account().getPersonalKey().orElse(null);
             String uid = key != null ? key.getUserId() : null;
-            mUserIDField.setText(uid != null ? uid : "- " + Tr.tr("no key loaded") + " -");
+            mUserIDField.setText(uid != null ? uid : "- " + Tr.tr("No key loaded") + " -");
             mUserIDField.setCaretPosition(0); // "scroll" back
             if (uid != null)
                 TooltipManager.addTooltip(mUserIDField, uid);

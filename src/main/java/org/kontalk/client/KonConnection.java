@@ -43,6 +43,10 @@ import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration.Builder;
+import org.jxmpp.jid.DomainBareJid;
+import org.jxmpp.jid.impl.JidCreate;
+import org.jxmpp.jid.parts.Resourcepart;
+import org.jxmpp.stringprep.XmppStringprepException;
 import org.kontalk.util.TrustUtils;
 
 
@@ -87,11 +91,21 @@ final class KonConnection extends XMPPTCPConnection {
         Builder builder =
             XMPPTCPConnectionConfiguration.builder();
 
+
+        DomainBareJid networkJid = null;
+        Resourcepart resourcePart = null;
+        try {
+            networkJid = JidCreate.domainBareFrom(server.getNetwork());
+            resourcePart = Resourcepart.from(resource);
+        } catch (XmppStringprepException ex) {
+            LOGGER.log(Level.WARNING, "invalid settings", ex);
+        }
+
         builder
             .setHost(server.getHost())
             .setPort(server.getPort())
-            .setServiceName(server.getNetwork())
-            .setResource(resource)
+            .setXmppDomain(networkJid)
+            .setResource(resourcePart)
             .allowEmptyOrNullUsernames()
             .setCallbackHandler(new CallbackHandler() {
                 @Override
@@ -140,13 +154,13 @@ final class KonConnection extends XMPPTCPConnection {
     }
 
     String getServer() {
-        return this.getConfiguration().getServiceName();
+        return this.getConfiguration().getXMPPServiceDomain().toString();
     }
 
     boolean send(Stanza p) {
         try {
             super.sendStanza(p);
-        } catch (SmackException.NotConnectedException ex) {
+        } catch (SmackException.NotConnectedException | InterruptedException ex) {
             LOGGER.info("can't send packet, not connected.");
             return false;
         }
@@ -163,7 +177,7 @@ final class KonConnection extends XMPPTCPConnection {
                     LOGGER.log(Level.WARNING, "exception response", ex);
                 }
             });
-        } catch (SmackException.NotConnectedException ex) {
+        } catch (SmackException.NotConnectedException | InterruptedException ex) {
             LOGGER.log(Level.WARNING, "not connected", ex);
         }
     }

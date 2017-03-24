@@ -146,7 +146,7 @@ final class ContactDetails extends WebPanel implements Observer {
             }
             @Override
             protected String editText() {
-                return mContact.getJID().string();
+                return mContact.getJID().asUnescapedString();
             }
             @Override
             protected void onFocusLost() {
@@ -286,7 +286,7 @@ final class ContactDetails extends WebPanel implements Observer {
             mFPArea.setVisible(true);
         } else {
             hasKey += "<font color='red'>"+Tr.tr("Not Available")+"</font></html>";
-            String keyText = Tr.tr("The key for this contact could not yet be received");
+            String keyText = Tr.tr("The public key for this contact could not yet be received");
             TooltipManager.addTooltip(mKeyStatus, keyText);
             mFPLabel.setVisible(false);
             mFPArea.setVisible(false);

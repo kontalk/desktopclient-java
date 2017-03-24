@@ -36,6 +36,7 @@ import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+
 import org.bouncycastle.bcpg.HashAlgorithmTags;
 import org.bouncycastle.openpgp.PGPCompressedData;
 import org.bouncycastle.openpgp.PGPCompressedDataGenerator;
@@ -54,6 +55,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
 import org.kontalk.util.CPIMMessage;
+import org.kontalk.util.EncodingUtils;
 
 /**
  *
@@ -64,6 +66,7 @@ final class Encryptor {
 
     // should always be a power of 2
     private static final int BUFFER_SIZE = 1 << 8;
+    private static final String CHARSET = "utf-8";
 
     private final PersonalKey myKey;
     private final OutMessage message;
@@ -73,38 +76,57 @@ final class Encryptor {
         this.message = message;
     }
 
-    Optional<byte[]> encryptMessage() {
+    String encryptMessageRFC3923() {
         return encryptData(message.getContent().getPlainText(), "text/plain");
     }
 
-    Optional<byte[]> encryptStanza(String xml) {
-        String data = "<xmpp xmlns='jabber:client'>" + xml + "</xmpp>";
-        return encryptData(data, "application/xmpp+xml");
-    }
-
-    private Optional<byte[]> encryptData(String data, String mime) {
-        if (message.getCoderStatus().getEncryption() != Coder.Encryption.DECRYPTED) {
-            LOGGER.warning("message does not want to be encrypted");
-            return Optional.empty();
+    String encryptString(String plainText) {
+        byte[] plainData;
+        try {
+            plainData = plainText.getBytes(CHARSET);
+        } catch (UnsupportedEncodingException ex) {
+            LOGGER.log(Level.WARNING, "default charset not supported", ex);
+            plainData = plainText.getBytes();
         }
 
         List<PGPUtils.PGPCoderKey> receiverKeys = this.loadKeysOrNull();
         if (receiverKeys == null)
-            return Optional.empty();
+            return "";
+
+        return encrypt(plainData, receiverKeys);
+    }
+
+    String encryptStanzaRFC3923(String xml) {
+        String data = "<xmpp xmlns='jabber:client'>" + xml + "</xmpp>";
+        return encryptData(data, "application/xmpp+xml");
+    }
+
+    private String encryptData(String data, String mime) {
+        List<PGPUtils.PGPCoderKey> receiverKeys = this.loadKeysOrNull();
+        if (receiverKeys == null)
+            return "";
 
         // secure the message against replay attacks using Message/CPIM
         String from = myKey.getUserId();
         String[] tos = receiverKeys.stream()
                 .map(key -> key.userID)
                 .toArray(String[]::new);
-
         CPIMMessage cpim = new CPIMMessage(from, tos, new Date(), mime, data);
         byte[] plainText;
         try {
             plainText = cpim.toByteArray();
         } catch (UnsupportedEncodingException ex) {
-            LOGGER.log(Level.WARNING, "UTF-8 not supported", ex);
+            LOGGER.log(Level.WARNING, "CPIM's charset not supported", ex);
             plainText = cpim.toString().getBytes();
+        }
+
+        return encrypt(plainText, receiverKeys);
+    }
+
+    private String encrypt(byte[] plainText, List<PGPUtils.PGPCoderKey> receiverKeys) {
+        if (message.getCoderStatus().getEncryption() != Coder.Encryption.DECRYPTED) {
+            LOGGER.warning("message does not want to be encrypted");
+            return "";
         }
 
         ByteArrayInputStream in = new ByteArrayInputStream(plainText);
@@ -112,13 +134,13 @@ final class Encryptor {
         try {
             encryptAndSign(in, out, myKey, receiverKeys);
         } catch(IOException | PGPException ex) {
-            LOGGER.log(Level.WARNING, "can't encrypt message", ex);
+            LOGGER.log(Level.WARNING, "can't encrypt data", ex);
             message.setSecurityErrors(EnumSet.of(Coder.Error.UNKNOWN_ERROR));
-            return Optional.empty();
+            return "";
         }
 
-        LOGGER.info("message encryption successful");
-        return Optional.of(out.toByteArray());
+        LOGGER.info("data encryption successful");
+        return EncodingUtils.bytesToBase64(out.toByteArray());
     }
 
     Optional<File> encryptAttachment(File file) {

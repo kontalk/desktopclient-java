@@ -51,7 +51,7 @@ final class KonConnectionListener implements ConnectionListener {
 
     @Override
     public void authenticated(XMPPConnection connection, boolean resumed) {
-        JID jid = JID.bare(connection.getUser());
+        JID jid = JID.fromSmack(connection.getUser());
         LOGGER.info("as "+jid);
         mControl.onAuthenticated(jid);
     }

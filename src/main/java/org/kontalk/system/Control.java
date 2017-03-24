@@ -70,6 +70,8 @@ import org.kontalk.model.message.ProtoMessage;
 import org.kontalk.persistence.Config;
 import org.kontalk.persistence.Database;
 import org.kontalk.util.ClientUtils.MessageIDs;
+import org.kontalk.util.MessageUtils.SendTask;
+import org.kontalk.util.MessageUtils.SendTask.Encryption;
 import org.kontalk.util.XMPPUtils;
 import org.kontalk.view.View;
 
@@ -485,33 +487,45 @@ public final class Control {
             return false;
         }
 
-        // prepare encrypted content
-        if (message.isSendEncrypted()) {
+        SendTask task = new SendTask(message,
+                // TODO which encryption method to use?
+                message.isSendEncrypted() ? Encryption.RFC3923 : Encryption.NONE,
+                Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE));
+
+        if (task.encryption != Encryption.NONE) {
+            // prepare encrypted content
             PersonalKey myKey = this.myKey().orElse(null);
             if (myKey == null)
                 return false;
 
-            Chat chat = message.getChat();
-            byte[] encryptedData;
-            if (content.getAttachment().isPresent() || content.getGroupCommand().isPresent()
+            String encryptedData = "";
+            if (task.encryption == Encryption.XEP0373) {
+                String stanza = KonMessageSender.getSignCryptElement(message);
+                encryptedData = Coder.encryptString(myKey, message, stanza);
+            } else if (task.encryption == Encryption.RFC3923) {
+                // legacy
+                Chat chat = message.getChat();
+                if (content.getAttachment().isPresent() || content.getGroupCommand().isPresent()
                     || chat.isGroupChat()) {
-                String stanza = KonMessageSender.rawMessage(content, chat, true).toXML().toString();
-                encryptedData = Coder.encryptStanza(myKey, message, stanza).orElse(null);
-            } else {
-                encryptedData = Coder.encryptMessage(myKey, message).orElse(null);
+                    String stanza = KonMessageSender.getEncryptionPayloadRFC3923(content, chat);
+                    encryptedData = Coder.encryptStanzaRFC3923(myKey, message, stanza);
+                } else {
+                    encryptedData = Coder.encryptMessageRFC3923(myKey, message);
+                }
             }
+
             // check also for security errors just to be sure
-            if (encryptedData == null || !message.getCoderStatus().getErrors().isEmpty()) {
+            if (encryptedData.isEmpty() || !message.getCoderStatus().getErrors().isEmpty()) {
                 LOGGER.warning("encryption failed");
                 message.setStatus(KonMessage.Status.ERROR);
                 this.onSecurityErrors(message);
                 return false;
             }
-            content.setEncryptedData(encryptedData);
+
+            task.setEncryptedData(encryptedData);
         }
 
-        boolean sent = mClient.sendMessage(message,
-                Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE));
+        boolean sent = mClient.sendMessage(task);
         mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
         return sent;
     }
@@ -600,7 +614,13 @@ public final class Control {
         this.processContent(message);
     }
 
-    private static void setKey(Contact contact, PGPCoderKey key) {
+    private void setKey(Contact contact, PGPCoderKey key) {
+        for (Contact c: mModel.contacts().getAll(true, true)) {
+            if (key.fingerprint.equals(c.getFingerprint())) {
+                LOGGER.warning("key already set, setting for: "+contact+" set for: "+c);
+            }
+        }
+
         contact.setKey(key.rawKey, key.fingerprint);
 
         // enable encryption without asking
@@ -797,6 +817,7 @@ public final class Control {
 
         public void declineKey(Contact contact) {
             this.sendContactBlocking(contact, true);
+            // TODO remember that a key was not accepted
         }
 
         public void sendSubscriptionResponse(Contact contact, boolean accept) {

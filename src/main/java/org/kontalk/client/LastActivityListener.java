@@ -42,7 +42,7 @@ class LastActivityListener implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza packet) throws SmackException.NotConnectedException {
+    public void processStanza(Stanza packet) throws SmackException.NotConnectedException {
         LOGGER.config("last activity: " + packet);
 
         LastActivity lastActivity = (LastActivity) packet;
@@ -53,7 +53,7 @@ class LastActivityListener implements StanzaListener {
             return;
         }
 
-        mControl.onLastActivity(JID.full(lastActivity.getFrom()),
+        mControl.onLastActivity(JID.fromSmack(lastActivity.getFrom()),
                 lastActivity.getIdleTime(),
                 StringUtils.defaultString(lastActivity.getStatusMessage()));
     }

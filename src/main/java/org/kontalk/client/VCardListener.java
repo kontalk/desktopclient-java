@@ -36,7 +36,7 @@ final class VCardListener implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza packet) {
+    public void processStanza(Stanza packet) {
         VCard4 p = (VCard4) packet;
         LOGGER.info("vcard: "+p);
 
@@ -53,7 +53,7 @@ final class VCardListener implements StanzaListener {
                 LOGGER.warning("got vcard without pgp key included");
                 return;
             }
-            mControl.onPGPKey(JID.bare(p.getFrom()), publicKey);
+            mControl.onPGPKey(JID.fromSmack(p.getFrom()), publicKey);
         }
     }
 }

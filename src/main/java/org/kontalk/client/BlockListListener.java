@@ -47,7 +47,7 @@ final class BlockListListener implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza packet) {
+    public void processStanza(Stanza packet) {
         BlockingCommand p = (BlockingCommand) packet;
         LOGGER.config("blocking command: "+p);
 

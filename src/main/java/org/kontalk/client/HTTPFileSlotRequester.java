@@ -53,13 +53,13 @@ final class HTTPFileSlotRequester {
     private HTTPFileUpload.Slot mSlotPacket;
     synchronized AttachmentManager.Slot getSlot(String filename, long size, String mime) {
         HTTPFileUpload.Request request = new HTTPFileUpload.Request(filename, size, mime);
-        request.setTo(mService.string());
+        request.setTo(mService.toBareSmack());
 
         final Callback.Synchronizer syncer = new Callback.Synchronizer();
         mSlotPacket = null;
         mConn.sendWithCallback(request, new StanzaListener() {
             @Override
-            public void processPacket(Stanza packet)
+            public void processStanza(Stanza packet)
                     throws SmackException.NotConnectedException {
                 LOGGER.config("response: "+packet);
 

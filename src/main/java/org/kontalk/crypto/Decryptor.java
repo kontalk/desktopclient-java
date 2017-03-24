@@ -51,9 +51,10 @@ import org.bouncycastle.openpgp.PGPSignature;
 import org.bouncycastle.openpgp.PGPSignatureList;
 import org.bouncycastle.openpgp.operator.bc.BcPGPContentVerifierBuilderProvider;
 import org.bouncycastle.openpgp.operator.bc.BcPublicKeyDataDecryptorFactory;
-import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.packet.Message;
+import org.kontalk.client.OpenPGPExtension.SignCryptElement;
 import org.kontalk.model.Contact;
+import org.kontalk.model.Model;
 import org.kontalk.model.message.DecryptMessage;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.model.message.MessageContent.InAttachment;
@@ -62,7 +63,6 @@ import org.kontalk.util.CPIMMessage;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.MediaUtils;
 import org.kontalk.util.XMPPParserUtils;
-import org.xmlpull.v1.XmlPullParserException;
 
 /**
  * Decrypt message content. Message parameter is internally changed by methods.
@@ -115,11 +115,18 @@ final class Decryptor {
         String senderUID = senderKey != null ?
                 senderKey.userID :
                 null;
-        String decrText = EncodingUtils.getString(
+        String decryptedContent = EncodingUtils.getString(
                 plainOut.toByteArray(),
                 CPIMMessage.CHARSET);
-        MessageContent content = parseCPIMOrNull(message, decrText, myUID,
-                Optional.ofNullable(senderUID));
+
+        MessageContent content;
+        // TODO ugly, but working
+        if (decryptedContent.startsWith("<" + SignCryptElement.ELEMENT_NAME)) {
+            content = parseSignCryptElement(decryptedContent, allErrors);
+        } else {
+            content = parseCPIMOrNull(decryptedContent, myUID, Optional.ofNullable(senderUID),
+                    allErrors);
+        }
 
         // set errors
         message.setSecurityErrors(allErrors);
@@ -299,8 +306,7 @@ final class Decryptor {
     }
 
     private static DecryptionResult verifySignature(DecryptionResult result,
-            PGPObjectFactory pgpFact,
-            PGPOnePassSignature ops) throws PGPException, IOException {
+            PGPObjectFactory pgpFact, PGPOnePassSignature ops) throws PGPException, IOException {
         Object object = pgpFact.nextObject(); // nullable
         if (!(object instanceof PGPSignatureList)) {
             LOGGER.warning("invalid signature packet");
@@ -332,19 +338,17 @@ final class Decryptor {
      *
      * The decrypted content of a message is in CPIM format.
      */
-    private static MessageContent parseCPIMOrNull(DecryptMessage message, String cpim,
-            String myUID, Optional<String> senderKeyUID) {
+    private static MessageContent parseCPIMOrNull(String cpim, String myUID,
+            Optional<String> senderKeyUID, EnumSet<Coder.Error> allErrors) {
 
         CPIMMessage cpimMessage;
         try {
             cpimMessage = CPIMMessage.parse(cpim);
         } catch (ParseException ex) {
             LOGGER.log(Level.WARNING, "can't find valid CPIM data", ex);
-            message.setSecurityErrors(EnumSet.of(Coder.Error.INVALID_DATA));
+            allErrors.add(Coder.Error.INVALID_DATA);
             return null;
         }
-
-        EnumSet<Coder.Error> errors = EnumSet.noneOf(Coder.Error.class);
 
         String mime = cpimMessage.getMime();
 
@@ -356,17 +360,16 @@ final class Decryptor {
         //}
 
         // check that the recipient matches the full UID of the personal key
-
         if (!Arrays.stream(cpimMessage.getTo())
                 .anyMatch(s -> s.contains(myUID))) {
             LOGGER.warning("receiver list does not include own UID");
-            errors.add(Coder.Error.INVALID_RECIPIENT);
+            allErrors.add(Coder.Error.INVALID_RECIPIENT);
         }
         // check that the sender matches the full UID of the sender's key
         if (senderKeyUID.isPresent() &&
                 !senderKeyUID.get().equals(cpimMessage.getFrom())) {
             LOGGER.warning("sender does not match UID in public key of sender");
-            errors.add(Coder.Error.INVALID_SENDER);
+            allErrors.add(Coder.Error.INVALID_SENDER);
         }
 
         // TODO check DateTime (possibly compare it with <delay/>)
@@ -378,20 +381,42 @@ final class Decryptor {
             Message parsedMessage;
             try {
                 parsedMessage = XMPPParserUtils.parseMessageStanza(content);
-            } catch (XmlPullParserException | IOException | SmackException ex) {
+            } catch (Exception ex) {
                 LOGGER.log(Level.WARNING, "can't parse XMPP XML string", ex);
-                errors.add(Coder.Error.INVALID_DATA);
-                message.setSecurityErrors(errors);
+                allErrors.add(Coder.Error.INVALID_DATA);
                 return null;
             }
             LOGGER.config("decrypted XML: "+parsedMessage.toXML());
-            decryptedContent = ClientUtils.parseMessageContent(parsedMessage);
+            decryptedContent = ClientUtils.parseMessageContent(parsedMessage, true);
         } else {
             // text/plain MIME type for simple text messages
             decryptedContent = MessageContent.plainText(content);
         }
 
-        message.setSecurityErrors(errors);
         return decryptedContent;
     }
+
+    /** Parse and verify OpenPGP <signcrypt/> element (XEP-0373) */
+    private static MessageContent parseSignCryptElement(String signcrypt,
+                                                        EnumSet<Coder.Error> allErrors) {
+
+        SignCryptElement signCryptElement;
+        try {
+             signCryptElement = SignCryptElement.parse(signcrypt);
+        } catch (Exception ex) {
+            LOGGER.log(Level.WARNING, "cannot parse", ex);
+            return null;
+        }
+
+        if (!signCryptElement.getJIDs().contains(Model.getUserJID().string())) {
+            LOGGER.warning("receiver list does not include own JID: "+signCryptElement.getJIDs());
+            allErrors.add(Coder.Error.INVALID_RECIPIENT);
+        }
+
+        // TODO "RECOMMENDED", compare with delay date
+        //signCryptElement.getTimeStamp();
+
+        return ClientUtils.extensionsToContent(signCryptElement.getPayload());
+    }
+
 }

@@ -47,7 +47,7 @@ class PublicKeyListener implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza packet) {
+    public void processStanza(Stanza packet) {
         LOGGER.info("got public key: "+StringUtils.abbreviate(packet.toString(), 300));
 
         PublicKeyPublish publicKeyPacket = (PublicKeyPublish) packet;
@@ -63,7 +63,7 @@ class PublicKeyListener implements StanzaListener {
                 LOGGER.warning("got public key packet without public key");
                 return;
             }
-            mControl.onPGPKey(JID.bare(publicKeyPacket.getFrom()), keyData);
+            mControl.onPGPKey(JID.fromSmack(publicKeyPacket.getFrom()), keyData);
         }
     }
 

@@ -178,7 +178,7 @@ final class ImportDialog extends WebDialog {
             String text = "<html>"+
                     Tr.tr("Welcome to the import wizard.")+" "
                     +Tr.tr("To use the Kontalk desktop client you need an existing account.")+" "
-                    +Tr.tr("Please export the key files from your Android device and select them on the next page.")
+                    +Tr.tr("Please export the personal key files from your Android device and select them on the next page.")
                     +"</html>";
             groupPanel.add(new WebLabel(text));
 
@@ -218,7 +218,7 @@ final class ImportDialog extends WebDialog {
             groupPanel.add(new WebSeparator(true, true));
 
             // text field for passphrase
-            groupPanel.add(new WebLabel(Tr.tr("Decryption password for key:")));
+            groupPanel.add(new WebLabel(Tr.tr("Decryption password for personal key:")));
             mPassField = new WebPasswordField(42);
             mPassField.setInputPrompt(Tr.tr("Enter password…"));
             mPassField.setHideInputPromptOnFocus(false);

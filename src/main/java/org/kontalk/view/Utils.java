@@ -227,7 +227,7 @@ final class Utils {
     static String jid(JID jid, int maxLength) {
         String local = jid.local(), domain = jid.domain();
         if (jid.isHash())
-            local = "[" + jid.local().substring(0, Math.min(jid.local().length(), 6)) + "]";
+            local = "[" + local.substring(0, Math.min(local.length(), 6)) + "]";
 
         local = StringUtils.abbreviate(local, (int) ((maxLength-1) * 0.4));
         domain = StringUtils.abbreviate(domain, (int) ((maxLength-1) * 0.6));
@@ -317,7 +317,7 @@ final class Utils {
                         errorText = Tr.tr("Can't load key files from configuration directory.");
                         break;
                 }
-                errorText += eol + Tr.tr("Please reimport your key.");
+                errorText += eol + Tr.tr("Please reimport your personal key.");
                 break;
             case LOAD_KEY_DECRYPT:
                 errorText = Tr.tr("Can't decrypt key. Is the passphrase correct?");
@@ -328,7 +328,7 @@ final class Utils {
                 if (ex.getCauseClass().equals(SmackException.ConnectionException.class)) {
                     errorText += eol + Tr.tr("Is the server address correct?");
                 } else if (ex.getCauseClass().equals(SSLHandshakeException.class)) {
-                    errorText += eol + Tr.tr("The server rejects the key.");
+                    errorText += eol + Tr.tr("The server rejects the personal key.");
                 } else if (ex.getCauseClass().equals(SmackException.NoResponseException.class)) {
                     errorText += eol + Tr.tr("The server does not respond.");
                 } else {
@@ -409,8 +409,8 @@ final class Utils {
         if (c1.isMe()) return +1;
         if (c2.isMe()) return -1;
 
-        String s1 = StringUtils.defaultIfEmpty(c1.getName(), c1.getJID().string());
-        String s2 = StringUtils.defaultIfEmpty(c2.getName(), c2.getJID().string());
+        String s1 = StringUtils.defaultIfEmpty(c1.getName(), c1.getJID().asUnescapedString());
+        String s2 = StringUtils.defaultIfEmpty(c2.getName(), c2.getJID().asUnescapedString());
         return s1.compareToIgnoreCase(s2);
     }
 

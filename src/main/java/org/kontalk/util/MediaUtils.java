@@ -95,6 +95,7 @@ public class MediaUtils {
     public static String mimeForFile(Path path) {
         String mime = null;
         try {
+            // NOTE: this "magic" function uses actually the file extension
             mime = Files.probeContentType(path);
         } catch (IOException ex) {
             LOGGER.log(Level.WARNING, "can't probe type", ex);

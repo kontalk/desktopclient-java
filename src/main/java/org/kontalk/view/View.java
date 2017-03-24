@@ -272,9 +272,6 @@ public final class View implements Observer {
             mNotifier.onNewMessage(newMessage.message);
         } else if (arg instanceof ViewEvent.NewKey) {
             ViewEvent.NewKey newKey = (ViewEvent.NewKey) arg;
-            if (!newKey.contact.hasKey())
-                // TODO webkey, disabling for now
-                return;
             mNotifier.confirmNewKey(newKey.contact, newKey.key);
         } else if (arg instanceof ViewEvent.ContactDeleted) {
             ViewEvent.ContactDeleted contactDeleted = (ViewEvent.ContactDeleted) arg;

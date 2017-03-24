@@ -226,6 +226,9 @@ public abstract class KonMessage extends Observable implements Searchable, Obser
     }
 
     public void setSecurityErrors(EnumSet<Coder.Error> errors) {
+        if (mCoderStatus.getErrors().equals(errors))
+            return;
+
         mCoderStatus.setSecurityErrors(errors);
         this.save();
         this.changed(ViewChange.STATUS);

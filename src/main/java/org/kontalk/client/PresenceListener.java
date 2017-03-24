@@ -63,7 +63,7 @@ class PresenceListener implements StanzaListener {
     }
 
     @Override
-    public void processPacket(Stanza packet) {
+    public void processStanza(Stanza packet) {
         if (MUCUser.from(packet) != null) {
             // handled by MUC manager
             LOGGER.config("ignoring MUC presence, from: "+packet.getFrom());
@@ -74,7 +74,7 @@ class PresenceListener implements StanzaListener {
 
         Presence presence = (Presence) packet;
 
-        JID jid = JID.full(presence.getFrom());
+        JID jid = JID.fromSmack(presence.getFrom());
 
         ExtensionElement publicKeyExt = presence.getExtension(
                 PublicKeyPresence.ELEMENT_NAME,
@@ -111,7 +111,7 @@ class PresenceListener implements StanzaListener {
 
         // NOTE: using only the "best" presence to ignore unimportant updates
         // from multiple clients
-        Presence bestPresence = mRoster.getPresence(jid.string());
+        Presence bestPresence = mRoster.getPresence(jid.toBareSmack());
 
         mHandler.onPresenceUpdate(jid,
                 bestPresence.getType(),

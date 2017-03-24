@@ -34,6 +34,8 @@ import org.kontalk.persistence.Database;
 /**
  * A long-term persistent chat conversation with multiple participants.
  *
+ * TODO efficient db commit when adding many members
+ *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public abstract class GroupChat<D extends GroupMetaData> extends Chat {
