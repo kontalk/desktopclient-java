@@ -368,6 +368,7 @@ final class ChatView extends WebPanel implements Observer {
 
         // avatar
         mAvatar.setAvatarImage(chat);
+        TooltipManager.setTooltip(mAvatar, Utils.chatTooltip(chat));
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));

@@ -62,6 +62,7 @@ import org.kontalk.model.Contact;
 import org.kontalk.model.ContactList;
 import org.kontalk.model.chat.Chat;
 import org.kontalk.model.chat.Member;
+import org.kontalk.model.chat.SingleChat;
 import org.kontalk.persistence.Config;
 import org.kontalk.system.AttachmentManager;
 import org.kontalk.util.EncodingUtils;
@@ -242,6 +243,14 @@ final class Utils {
         } else {
             return Utils.displayNames(chat.getAllContacts());
         }
+    }
+
+    static String chatTooltip(Chat chat) {
+        if (chat instanceof SingleChat)
+            return jid(((SingleChat) chat).getMember().getContact().getJID(), View.MAX_JID_LENGTH);
+        int numMembers = chat.getAllMembers().size();
+        return numMembers == 1 ? Tr.tr("one member") :
+                String.format(Tr.tr("%1$s members"), numMembers);
     }
 
     static String fingerprint(String fp) {

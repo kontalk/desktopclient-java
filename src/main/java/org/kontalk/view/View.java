@@ -91,9 +91,9 @@ public final class View implements Observer {
     static final int MAX_NAME_IN_LIST_LENGTH = 18;
     static final int MAX_NAME_IN_GROUP_LENGTH = 25;
     static final int MAX_NAME_IN_FROM_LABEL = 40;
-    static final int MAX_NAME_IN_NOTIER = 20;
+    static final int MAX_NAME_IN_NOTIFIER_LENGTH = 20;
     static final int MAX_JID_LENGTH = 100;
-    static final int MAX_JID_IN_NOTIFIER = 30;
+    static final int MAX_JID_IN_NOTIFIER_LENGTH = 30;
     static final int MAX_USER_ID_LENGTH = 30;
     static final int MAX_XMPP_ID_LENGTH = 30;
 
