@@ -30,7 +30,7 @@ public class MessageUtils {
 
     public static class SendTask {
 
-        public enum Encryption {NONE, RFC3923, XEP0373}
+        public enum Encryption {NONE, RFC3923, XEP0373, OMEMO}
 
         public final OutMessage message;
         public final Encryption encryption;

@@ -489,10 +489,10 @@ public final class Control {
 
         final SendTask task = new SendTask(message,
                 // TODO which encryption method to use?
-                message.isSendEncrypted() ? Encryption.RFC3923 : Encryption.NONE,
+                message.isSendEncrypted() ? Encryption.OMEMO : Encryption.NONE,
                 Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE));
 
-        if (task.encryption != Encryption.NONE) {
+        if (task.encryption != Encryption.NONE && task.encryption != Encryption.OMEMO) {
             // prepare encrypted content
             PersonalKey myKey = this.myKey().orElse(null);
             if (myKey == null)

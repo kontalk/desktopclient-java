@@ -23,16 +23,21 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
+import org.jivesoftware.smack.XMPPConnection;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smackx.address.packet.MultipleAddresses;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
+import org.jivesoftware.smackx.omemo.OmemoManager;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
+import org.jxmpp.jid.BareJid;
 import org.jxmpp.jid.Jid;
+import org.kontalk.client.OpenPGPExtension.BodyElement;
 import org.kontalk.client.OpenPGPExtension.SignCryptElement;
 import org.kontalk.misc.JID;
 import org.kontalk.model.chat.Chat;
@@ -44,11 +49,10 @@ import org.kontalk.model.message.MessageContent.OutAttachment;
 import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
-import org.kontalk.util.MessageUtils.SendTask;
-import org.kontalk.util.MessageUtils.SendTask.Encryption;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
-import org.kontalk.client.OpenPGPExtension.BodyElement;
+import org.kontalk.util.MessageUtils.SendTask;
+import org.kontalk.util.MessageUtils.SendTask.Encryption;
 
 /**
  *
@@ -112,33 +116,54 @@ public final class KonMessageSender {
         if (task.sendChatState)
             smackMessage.addExtension(new ChatStateExtension(ChatState.active));
 
-        if (encrypted) {
-            String encryptedData = task.getEncryptedData();
-            if (encryptedData.isEmpty()) {
-                LOGGER.warning("no encrypted data");
-                return false;
-            }
-
-            ExtensionElement encryptionExtension;
-            switch(task.encryption) {
-                case RFC3923: encryptionExtension = new E2EEncryption(encryptedData); break;
-                case XEP0373: encryptionExtension = new OpenPGPExtension(encryptedData); break;
-                default:
-                    LOGGER.warning("unknown encryption: " + task.encryption);
-                    return false;
-            }
-            smackMessage.addExtension(encryptionExtension);
-        }
-
-        List<JID> JIDs = message.getTransmissions().stream()
+        List<JID> jids = message.getTransmissions().stream()
                 .map(Transmission::getJID)
                 .collect(Collectors.toList());
 
-        if (JIDs.size() > 1 && multiAddressHost.isPresent()) {
+        if (encrypted) {
+            if (task.encryption == Encryption.OMEMO) {
+                XMPPConnection conn = mClient.getConnection().orElse(null);
+                if (conn == null) {
+                    LOGGER.warning("no connection, we already checked that!?");
+                    return false;
+                }
+                OmemoManager omemoManager = OmemoManager.getInstanceFor(conn);
+
+                List<BareJid> tos = jids.stream().map(JID::toBareSmack).collect(Collectors.toList());
+                try {
+                    smackMessage = omemoManager.encrypt(tos, smackMessage);
+                } catch (Exception ex) { // TODO replace
+                    LOGGER.log(Level.WARNING, "OMEMO encryption failed", ex);
+                    return false;
+                }
+            } else {
+                String encryptedData = task.getEncryptedData();
+                if (encryptedData.isEmpty()) {
+                    LOGGER.warning("no encrypted data");
+                    return false;
+                }
+
+                ExtensionElement encryptionExtension;
+                switch (task.encryption) {
+                    case RFC3923:
+                        encryptionExtension = new E2EEncryption(encryptedData);
+                        break;
+                    case XEP0373:
+                        encryptionExtension = new OpenPGPExtension(encryptedData);
+                        break;
+                    default:
+                        LOGGER.warning("unknown encryption: " + task.encryption);
+                        return false;
+                }
+                smackMessage.addExtension(encryptionExtension);
+            }
+        }
+
+        if (jids.size() > 1 && multiAddressHost.isPresent()) {
             // send one message to multiple receiver using XEP-0033
             smackMessage.setTo(multiAddressHost.get());
             MultipleAddresses addresses = new MultipleAddresses();
-            for (JID to: JIDs) {
+            for (JID to: jids) {
                 addresses.addAddress(MultipleAddresses.Type.to, to.toBareSmack(), null, null, false, null);
             }
             smackMessage.addExtension(addresses);
@@ -147,7 +172,7 @@ public final class KonMessageSender {
         } else {
             // only one receiver or fallback: send one message to each receiver
             ArrayList<Message> sendMessages = new ArrayList<>();
-            for (JID to: JIDs) {
+            for (JID to: jids) {
                 Message sendMessage = smackMessage.clone();
                 sendMessage.setTo(to.toBareSmack());
                 sendMessages.add(sendMessage);

@@ -18,9 +18,17 @@
 
 package org.kontalk.client;
 
+import javax.crypto.BadPaddingException;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.file.Path;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumMap;
@@ -34,6 +42,7 @@ import java.util.logging.Logger;
 import org.jivesoftware.smack.SmackException;
 import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
+import org.jivesoftware.smack.XMPPException.XMPPErrorException;
 import org.jivesoftware.smack.filter.IQTypeFilter;
 import org.jivesoftware.smack.filter.StanzaFilter;
 import org.jivesoftware.smack.filter.StanzaTypeFilter;
@@ -43,12 +52,18 @@ import org.jivesoftware.smack.packet.Presence;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smack.roster.RosterEntry;
+import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smackx.caps.EntityCapsManager;
 import org.jivesoftware.smackx.caps.cache.SimpleDirectoryPersistentCache;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
 import org.jivesoftware.smackx.disco.ServiceDiscoveryManager;
 import org.jivesoftware.smackx.iqlast.packet.LastActivity;
+import org.jivesoftware.smackx.omemo.OmemoInitializer;
+import org.jivesoftware.smackx.omemo.OmemoManager;
+import org.jivesoftware.smackx.omemo.exceptions.CorruptedOmemoKeyException;
+import org.jivesoftware.smackx.omemo.signal.SignalFileBasedOmemoStore;
+import org.jivesoftware.smackx.omemo.signal.SignalOmemoService;
 import org.jxmpp.jid.EntityFullJid;
 import org.jxmpp.jid.Jid;
 import org.kontalk.crypto.PersonalKey;
@@ -69,6 +84,7 @@ public final class Client implements StanzaListener, Runnable {
     private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
 
     private static final String CAPS_CACHE_DIR = "caps_cache";
+    private static final String OMEMO_STORE_FILE = "omemo_store.dat";
     private static final LinkedBlockingQueue<Task> TASK_QUEUE = new LinkedBlockingQueue<>();
 
     public enum PresenceCommand {REQUEST, GRANT, DENY}
@@ -80,6 +96,7 @@ public final class Client implements StanzaListener, Runnable {
 
     private final KonMessageSender mMessageSender;
     private final EnumMap<FeatureDiscovery.Feature, JID> mFeatures;
+    private final File mOmemoStoreFile;
 
     private KonConnection mConn = null;
     private AvatarSendReceiver mAvatarSendReceiver = null;
@@ -106,11 +123,12 @@ public final class Client implements StanzaListener, Runnable {
 
         if (!cacheDir.isDirectory()) {
             LOGGER.warning("invalid cache directory: "+cacheDir);
-            return;
+        } else {
+            EntityCapsManager.setPersistentCache(new SimpleDirectoryPersistentCache(cacheDir));
         }
 
-        EntityCapsManager.setPersistentCache(
-                new SimpleDirectoryPersistentCache(cacheDir));
+        new OmemoInitializer().initialize();
+        mOmemoStoreFile = appDir.resolve(OMEMO_STORE_FILE).toFile();
     }
 
     public static Client create(Control control, Path appDir) {
@@ -229,6 +247,20 @@ public final class Client implements StanzaListener, Runnable {
                 new HTTPFileSlotRequester(mConn,
                         mFeatures.get(FeatureDiscovery.Feature.HTTP_FILE_UPLOAD)) :
                 null;
+
+        OmemoManager omemoManager = OmemoManager.getInstanceFor(mConn);
+        SignalFileBasedOmemoStore store = new SignalFileBasedOmemoStore(omemoManager,
+                mOmemoStoreFile);
+        SignalOmemoService omemoService = null;
+        try {
+            omemoService = new SignalOmemoService(omemoManager, store);
+        } catch (SmackException | InterruptedException | XMPPErrorException
+                | CorruptedOmemoKeyException | NoSuchPaddingException
+                | InvalidAlgorithmParameterException | IllegalBlockSizeException
+                | UnsupportedEncodingException | NoSuchAlgorithmException | BadPaddingException
+                | InvalidKeyException | NoSuchProviderException ex) {
+            LOGGER.log(Level.WARNING, "cannot create omemo service", ex);
+        }
 
         // Caps, XEP-0115
         // NOTE: caps manager is automatically used by Smack
@@ -533,6 +565,10 @@ public final class Client implements StanzaListener, Runnable {
     }
 
     /* package internal*/
+
+    Optional<XMPPTCPConnection> getConnection() {
+        return Optional.ofNullable(mConn);
+    }
 
     void newStatus(Control.Status status) {
         if (status != Control.Status.CONNECTED)
