@@ -120,6 +120,8 @@ final class Decryptor {
                 CPIMMessage.CHARSET);
 
         MessageContent content;
+        // NOTE: we are not restricting the expected decrypted content to match the outer protocol
+        // extension. E.g. somebody could wrap a CPIM message inside a XEP-0373 extension element
         // TODO ugly, but working
         if (decryptedContent.startsWith("<" + SignCryptElement.ELEMENT_NAME)) {
             content = parseSignCryptElement(decryptedContent, allErrors);

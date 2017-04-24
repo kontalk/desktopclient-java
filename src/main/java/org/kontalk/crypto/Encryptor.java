@@ -66,7 +66,6 @@ final class Encryptor {
 
     // should always be a power of 2
     private static final int BUFFER_SIZE = 1 << 8;
-    private static final String CHARSET = "utf-8";
 
     private final PersonalKey myKey;
     private final OutMessage message;
@@ -81,13 +80,7 @@ final class Encryptor {
     }
 
     String encryptString(String plainText) {
-        byte[] plainData;
-        try {
-            plainData = plainText.getBytes(CHARSET);
-        } catch (UnsupportedEncodingException ex) {
-            LOGGER.log(Level.WARNING, "default charset not supported", ex);
-            plainData = plainText.getBytes();
-        }
+        byte[] plainData = EncodingUtils.stringToBytes(plainText);
 
         List<PGPUtils.PGPCoderKey> receiverKeys = this.loadKeysOrNull();
         if (receiverKeys == null)
@@ -139,7 +132,6 @@ final class Encryptor {
             return "";
         }
 
-        LOGGER.info("data encryption successful");
         return EncodingUtils.bytesToBase64(out.toByteArray());
     }
 

@@ -42,6 +42,7 @@ import org.kontalk.client.E2EEncryption;
 import org.kontalk.client.GroupExtension;
 import org.kontalk.client.GroupExtension.Member;
 import org.kontalk.client.GroupExtension.Type;
+import org.kontalk.client.OpenPGPExtension;
 import org.kontalk.client.OpenPGPExtension.BodyElement;
 import org.kontalk.client.OutOfBandData;
 import org.kontalk.misc.JID;
@@ -137,22 +138,34 @@ public final class ClientUtils {
 
         // parsing only default body
         String plainText = StringUtils.defaultString(m.getBody());
+        String encrypted = "";
 
         if (!decrypted) {
-            ExtensionElement encryptionExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
-            if (encryptionExt instanceof E2EEncryption) {
+            ExtensionElement e2eExt = m.getExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
+            if (e2eExt instanceof E2EEncryption) {
                 // encryption extension (RFC 3923), decrypted later
-                if (!plainText.isEmpty()) {
-                    LOGGER.config("message contains encryption and body (ignoring body): " + m.getBody());
-                    plainText = "";
-                }
-                builder.encrypted(
-                        EncodingUtils.bytesToBase64(((E2EEncryption) encryptionExt).getData()));
+                encrypted = EncodingUtils.bytesToBase64(((E2EEncryption) e2eExt).getData());
                 // remove extension before parsing all others
                 m.removeExtension(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE);
             }
+            ExtensionElement openPGPExt = m.getExtension(OpenPGPExtension.ELEMENT_NAME, OpenPGPExtension.NAMESPACE);
+            if (openPGPExt instanceof OpenPGPExtension) {
+                if (!encrypted.isEmpty()) {
+                    LOGGER.info("message contains e2e and OpenPGP element, ignoring e2e");
+                }
+                encrypted = ((OpenPGPExtension) openPGPExt).getData();
+                // remove extension before parsing all others
+                m.removeExtension(OpenPGPExtension.ELEMENT_NAME, OpenPGPExtension.NAMESPACE);
+            }
         }
 
+        if (!encrypted.isEmpty()) {
+            if (!plainText.isEmpty()) {
+                LOGGER.config("message contains encryption and body (ignoring body): " + plainText);
+                plainText = "";
+            }
+            builder.encrypted(encrypted);
+        }
         addContent(builder, m.getExtensions(), plainText, decrypted);
         return builder.build();
     }

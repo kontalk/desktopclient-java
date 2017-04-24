@@ -479,15 +479,15 @@ public final class Control {
     }
 
     boolean sendMessage(OutMessage message) {
-        MessageContent content = message.getContent();
-        OutAttachment attachment = content.getOutAttachment().orElse(null);
+        final MessageContent content = message.getContent();
+        final OutAttachment attachment = content.getOutAttachment().orElse(null);
         if (attachment != null && !attachment.hasURL()) {
             // continue later...
             mAttachmentManager.queueUpload(message);
             return false;
         }
 
-        SendTask task = new SendTask(message,
+        final SendTask task = new SendTask(message,
                 // TODO which encryption method to use?
                 message.isSendEncrypted() ? Encryption.RFC3923 : Encryption.NONE,
                 Config.getInstance().getBoolean(Config.NET_SEND_CHAT_STATE));
@@ -516,16 +516,18 @@ public final class Control {
 
             // check also for security errors just to be sure
             if (encryptedData.isEmpty() || !message.getCoderStatus().getErrors().isEmpty()) {
-                LOGGER.warning("encryption failed");
+                LOGGER.warning("encryption failed ("+task.encryption+")");
                 message.setStatus(KonMessage.Status.ERROR);
                 this.onSecurityErrors(message);
                 return false;
+            } else {
+                LOGGER.config("encryption successful ("+task.encryption+")");
             }
 
             task.setEncryptedData(encryptedData);
         }
 
-        boolean sent = mClient.sendMessage(task);
+        final boolean sent = mClient.sendMessage(task);
         mChatStateManager.handleOwnChatStateEvent(message.getChat(), ChatState.active);
         return sent;
     }

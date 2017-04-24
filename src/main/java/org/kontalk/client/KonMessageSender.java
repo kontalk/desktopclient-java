@@ -122,7 +122,7 @@ public final class KonMessageSender {
             ExtensionElement encryptionExtension;
             switch(task.encryption) {
                 case RFC3923: encryptionExtension = new E2EEncryption(encryptedData); break;
-                case XEP0373: encryptionExtension = new E2EEncryption(encryptedData); break;
+                case XEP0373: encryptionExtension = new OpenPGPExtension(encryptedData); break;
                 default:
                     LOGGER.warning("unknown encryption: " + task.encryption);
                     return false;
