@@ -237,9 +237,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 79 * hash + Objects.hashCode(this.mGroupData);
-        return hash;
+        return Objects.hash(mGroupData);
     }
 
     @Override

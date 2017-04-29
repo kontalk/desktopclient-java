@@ -377,10 +377,7 @@ public abstract class Chat extends Observable implements Observer, Searchable {
 
         @Override
         public int hashCode() {
-            int hash = 7;
-            hash = 37 * hash + Objects.hashCode(this.mColor);
-            hash = 37 * hash + Objects.hashCode(this.mImagePath);
-            return hash;
+            return Objects.hash(mColor, mImagePath);
         }
 
         @Override

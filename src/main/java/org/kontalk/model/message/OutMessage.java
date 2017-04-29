@@ -22,6 +22,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -133,7 +134,6 @@ public final class OutMessage extends KonMessage {
 
     @Override
     public int hashCode() {
-        int hash = 97 * this.abstractHashCode();
-        return hash;
+        return Objects.hash(mTransmissions);
     }
 }

@@ -144,10 +144,7 @@ public final class SingleChat extends Chat {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 41 * hash + Objects.hashCode(this.mMember);
-        hash = 41 * hash + Objects.hashCode(this.mXMPPID);
-        return hash;
+        return Objects.hash(mMember, mXMPPID);
     }
 
     @Override

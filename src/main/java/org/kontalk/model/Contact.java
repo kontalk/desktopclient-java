@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Observable;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -421,9 +422,7 @@ public final class Contact extends Observable implements Searchable {
 
     @Override
     public int hashCode() {
-        int hash = 3;
-        hash = 29 * hash + this.mID;
-        return hash;
+        return Objects.hash(mID);
     }
 
     @Override

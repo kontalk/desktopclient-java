@@ -172,12 +172,7 @@ final class AvatarLoader {
 
         @Override
         public int hashCode() {
-            int hash = 7;
-            hash = 71 * hash + this.mSize;
-            hash = 71 * hash + Objects.hashCode(this.mAvatar);
-            hash = 71 * hash + Objects.hashCode(this.mLetter);
-            hash = 71 * hash + Objects.hashCode(this.mColor);
-            return hash;
+            return Objects.hash(mSize, mAvatar, mLetter, mColor);
         }
     }
 
