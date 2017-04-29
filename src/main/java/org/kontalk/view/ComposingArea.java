@@ -204,7 +204,7 @@ final class ComposingArea {
         return SwingUtilities.getWindowAncestor(mChatView).getFocusOwner() == mTextArea;
     }
 
-    public Component getComponent() {
+    Component getComponent() {
         return mOverlay;
     }
 
