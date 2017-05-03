@@ -19,7 +19,6 @@
 package org.kontalk.view;
 
 import javax.swing.Box;
-import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import java.awt.BorderLayout;
@@ -34,7 +33,6 @@ import java.awt.image.BufferedImage;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.Optional;
 
 import com.alee.extended.layout.FormLayout;
@@ -60,7 +58,7 @@ import org.kontalk.view.ComponentUtils.LabelTextField;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ContactDetails extends WebPanel implements Observer {
+final class ContactDetails extends WebPanel implements ObserverTrait {
 
     private static final Map<Contact, ContactDetails> CACHE = new HashMap<>();
 
@@ -203,7 +201,7 @@ final class ContactDetails extends WebPanel implements Observer {
         keyPanel.add(mFPArea);
 
         // set everything that can change
-        this.updateOnEDT();
+        this.updateOnEDT(null, null);
 
         groupPanel.add(keyPanel);
 
@@ -246,20 +244,7 @@ final class ContactDetails extends WebPanel implements Observer {
     }
 
     @Override
-    public void update(Observable o, final Object arg) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            this.updateOnEDT();
-            return;
-        }
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                ContactDetails.this.updateOnEDT();
-            }
-        });
-    }
-
-    private void updateOnEDT() {
+    public void updateOnEDT(Observable o, Object arg) {
         // may have changed: avatar...
         mAvatarImage.update();
         // ...contact name...

@@ -28,7 +28,6 @@ import java.awt.event.WindowEvent;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -61,7 +60,7 @@ import org.kontalk.util.Tr;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class View implements Observer {
+public final class View implements ObserverTrait {
     private static final Logger LOGGER = Logger.getLogger(View.class.getName());
 
     static final String KONTALK_SITE = "https://www.kontalk.org";
@@ -239,20 +238,7 @@ public final class View implements Observer {
     /* control to view */
 
     @Override
-    public void update(Observable o, final Object arg) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            this.updateOnEDT(arg);
-            return;
-        }
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                View.this.updateOnEDT(arg);
-            }
-        });
-    }
-
-    private void updateOnEDT(Object arg) {
+    public void updateOnEDT(Observable o, Object arg) {
         if (arg instanceof ViewEvent.StatusChange) {
             ViewEvent.StatusChange statChange = (ViewEvent.StatusChange) arg;
             this.statusChanged(statChange.status, statChange.features);

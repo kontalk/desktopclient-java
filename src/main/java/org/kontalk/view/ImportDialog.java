@@ -18,7 +18,6 @@
 
 package org.kontalk.view;
 
-import javax.swing.SwingUtilities;
 import javax.swing.event.DocumentEvent;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.BorderLayout;
@@ -32,7 +31,6 @@ import java.io.File;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -265,7 +263,7 @@ final class ImportDialog extends WebDialog {
         }
     }
 
-    private class ResultPanel extends ImportPanel implements Observer {
+    private class ResultPanel extends ImportPanel implements ObserverTrait {
 
         private final AccountImporter mImporter;
 
@@ -324,20 +322,7 @@ final class ImportDialog extends WebDialog {
         }
 
         @Override
-        public void update(Observable o, final Object arg) {
-            if (SwingUtilities.isEventDispatchThread()) {
-                this.updateOnEDT(arg);
-                return;
-            }
-            SwingUtilities.invokeLater(new Runnable() {
-                @Override
-                public void run() {
-                    ResultPanel.this.updateOnEDT(arg);
-                }
-            });
-        }
-
-        private void updateOnEDT(Object arg) {
+        public void updateOnEDT(Observable o, Object arg) {
             if (arg == null) {
                 this.onResult(null);
             } else if (arg instanceof KonException) {
