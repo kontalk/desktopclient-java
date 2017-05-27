@@ -7,7 +7,7 @@ A platform independent Java client for Kontalk (http://www.kontalk.org). Include
 
 The desktop client uses your existing Kontalk account from the [Android client](https://github.com/kontalk/androidclient/blob/master/README.md#kontalk-official-android-client). Instructions for exporting the key [here](https://github.com/kontalk/androidclient/wiki/Export-personal-key-to-another-device).
 
-**FAQ:** Common questions are answered [HERE!](https://github.com/kontalk/desktopclient-java/wiki)
+**FAQ:** Common questions are answered [here!](https://github.com/kontalk/desktopclient-java/wiki/FAQ)
 
 User Forum: https://forum.kontalk.org/
 
@@ -19,7 +19,7 @@ User Forum: https://forum.kontalk.org/
 
 ## Software Dependencies
 
-- Java 8
+- Java 8 (Java Runtime Engine)
 
 ## Key Features
 

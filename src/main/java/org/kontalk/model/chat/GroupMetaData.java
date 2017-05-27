@@ -79,10 +79,7 @@ public abstract class GroupMetaData {
 
         @Override
         public int hashCode() {
-            int hash = 7;
-            hash = 37 * hash + Objects.hashCode(this.owner);
-            hash = 37 * hash + Objects.hashCode(this.id);
-            return hash;
+            return Objects.hash(owner, id);
         }
 
         @Override
@@ -138,9 +135,7 @@ public abstract class GroupMetaData {
 
         @Override
         public int hashCode() {
-            int hash = 7;
-            hash = 79 * hash + Objects.hashCode(this.room);
-            return hash;
+            return Objects.hash(room);
         }
 
         @Override

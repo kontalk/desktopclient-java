@@ -141,10 +141,7 @@ public final class JID {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 17 * hash + Objects.hashCode(this.mLocal.toLowerCase());
-        hash = 17 * hash + Objects.hashCode(this.mDomain.toLowerCase());
-        return hash;
+        return Objects.hash(mLocal, mDomain);
     }
 
     /** Use this only for debugging and otherwise string() instead! */

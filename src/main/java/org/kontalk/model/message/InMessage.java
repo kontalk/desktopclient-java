@@ -111,8 +111,6 @@ public final class InMessage extends KonMessage implements DecryptMessage {
 
     @Override
     public int hashCode() {
-        int hash = this.abstractHashCode();
-        hash = 67 * hash + Objects.hashCode(this.mTransmission);
-        return hash;
+        return Objects.hash(mTransmission);
     }
 }

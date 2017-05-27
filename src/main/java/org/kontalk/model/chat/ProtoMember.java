@@ -68,9 +68,7 @@ public class ProtoMember {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 23 * hash + Objects.hashCode(mContact);
-        return hash;
+        return Objects.hash(mContact);
     }
 
     @Override

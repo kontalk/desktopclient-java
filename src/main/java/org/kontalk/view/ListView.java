@@ -46,7 +46,6 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Timer;
@@ -73,7 +72,7 @@ import org.kontalk.misc.Searchable;
  * @param <V> the (model) value type in the list
  */
 abstract class ListView<V extends Observable & Searchable>
-        extends WebTable implements Observer, Comparator<V> {
+        extends WebTable implements ObserverTrait, Comparator<V> {
 
     private final Class mVClass;
     final View mView;
@@ -360,7 +359,8 @@ abstract class ListView<V extends Observable & Searchable>
     }
 
     @SuppressWarnings("unchecked")
-    private void updateOnEDT(Observable o, Object arg) {
+    @Override
+    public void updateOnEDT(Observable o, Object arg) {
         if (o == null || mVClass.isAssignableFrom(o.getClass())) {
             // render everything again (and update sorting)
             updateRowRendering(0, this.getRowCount() -1);

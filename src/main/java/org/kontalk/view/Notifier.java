@@ -307,8 +307,8 @@ final class Notifier {
     }
 
     private static String contactText(Contact contact){
-        return Utils.name(contact, View.MAX_NAME_IN_NOTIER)
-                + " < " + Utils.jid(contact.getJID(), View.MAX_JID_IN_NOTIFIER)+" >";
+        return Utils.name(contact, View.MAX_NAME_IN_NOTIFIER_LENGTH)
+                + " < " + Utils.jid(contact.getJID(), View.MAX_JID_IN_NOTIFIER_LENGTH) + " >";
     }
 
     private static WebTextArea textArea(String text) {

@@ -18,7 +18,6 @@
 
 package org.kontalk.view;
 
-import javax.swing.SwingUtilities;
 import java.awt.AWTException;
 import java.awt.Image;
 import java.awt.SystemTray;
@@ -29,7 +28,6 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,7 +43,7 @@ import org.kontalk.util.Tr;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class TrayManager implements Observer {
+final class TrayManager implements ObserverTrait {
     private static final Logger LOGGER = Logger.getLogger(TrayManager.class.getName());
 
     private static final Image NORMAL_TRAY = Utils.getImage("kontalk.png");
@@ -96,16 +94,7 @@ final class TrayManager implements Observer {
     }
 
     @Override
-    public void update(Observable o, final Object arg) {
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                TrayManager.this.updateOnEDT(arg);
-            }
-        });
-    }
-
-    private void updateOnEDT(Object arg) {
+    public void updateOnEDT(Observable o, Object arg) {
         if (arg != ChatList.ViewChange.UNREAD)
             return;
 

@@ -79,7 +79,7 @@ import org.kontalk.util.Tr;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class ChatView extends WebPanel implements Observer {
+final class ChatView extends WebPanel implements ObserverTrait {
 
     private static final Icon ATT_ICON = Utils.getIcon("ic_ui_attach.png");
     private static final Icon SEND_ICON = Utils.getIcon("ic_ui_send.png");
@@ -325,20 +325,7 @@ final class ChatView extends WebPanel implements Observer {
     }
 
     @Override
-    public void update(Observable o, final Object arg) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            this.updateOnEDT(arg);
-            return;
-        }
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                ChatView.this.updateOnEDT(arg);
-            }
-        });
-    }
-
-    private void updateOnEDT(Object arg) {
+    public void updateOnEDT(Observable o, Object arg) {
         if (arg instanceof Chat) {
             Chat chat = (Chat) arg;
             if (chat.isDeleted()) {
@@ -368,6 +355,7 @@ final class ChatView extends WebPanel implements Observer {
 
         // avatar
         mAvatar.setAvatarImage(chat);
+        TooltipManager.setTooltip(mAvatar, Utils.chatTooltip(chat));
 
         // chat titles
         mTitleLabel.setText(Utils.chatTitle(chat));

@@ -194,9 +194,6 @@ final public class Transmission {
 
     @Override
     public int hashCode() {
-        int hash = 7;
-        hash = 71 * hash + Objects.hashCode(this.mContact);
-        hash = 71 * hash + Objects.hashCode(this.mJID);
-        return hash;
+        return Objects.hash(mContact, mJID);
     }
 }
