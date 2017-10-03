@@ -751,7 +751,7 @@ final class MessageList extends ListView<KonMessage> {
         }
 
         private static class WrapLabelView extends LabelView {
-            public WrapLabelView(Element elem) {
+            WrapLabelView(Element elem) {
                 super(elem);
             }
             @Override

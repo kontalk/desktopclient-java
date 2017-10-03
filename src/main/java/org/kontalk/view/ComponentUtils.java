@@ -592,7 +592,7 @@ final class ComponentUtils {
             private final WebLabel mNameLabel;
             private final WebLabel mRoleLabel;
 
-            public CellRenderer() {
+            CellRenderer() {
                 mNameLabel = new WebLabel();
                 mRoleLabel = new WebLabel();
                 mRoleLabel.setForeground(View.DARK_GREEN);
@@ -723,7 +723,7 @@ final class ComponentUtils {
             char[] newPass = mNewPassField.getPassword();
             // better check again
             if (!Arrays.equals(newPass, mConfirmPassField.getPassword()))
-                Optional.empty();
+                return Optional.empty();
 
             return Optional.of(newPass);
         }

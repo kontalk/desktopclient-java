@@ -103,7 +103,7 @@ public class AttachmentManager implements Runnable {
         static final class UploadTask extends Task {
             final OutMessage message;
 
-            public UploadTask(OutMessage message) {
+            UploadTask(OutMessage message) {
                 this.message = message;
             }
         }
@@ -111,7 +111,7 @@ public class AttachmentManager implements Runnable {
         static final class DownloadTask extends Task {
             final InMessage message;
 
-            public DownloadTask(InMessage message) {
+            DownloadTask(InMessage message) {
                 this.message = message;
             }
         }

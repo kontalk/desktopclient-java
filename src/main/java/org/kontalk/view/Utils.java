@@ -76,7 +76,7 @@ import org.ocpsoft.prettytime.PrettyTime;
 final class Utils {
     private static final Logger LOGGER = Logger.getLogger(Utils.class.getName());
 
-    static final String IMG_DIR =  "img";
+    private static final String IMG_DIR =  "img";
 
     static final DateFormat SHORT_DATE_FORMAT = new SimpleDateFormat("HH:mm");
     static final DateFormat MID_DATE_FORMAT = new SimpleDateFormat("EEE, d MMM HH:mm");

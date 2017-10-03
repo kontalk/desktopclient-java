@@ -251,10 +251,10 @@ public class MessageContent {
     }
 
     public abstract static class Attachment extends Observable {
-        protected static final String JSON_URL = "url";
-        protected static final String JSON_FILENAME = "file_name";
+        static final String JSON_URL = "url";
+        static final String JSON_FILENAME = "file_name";
 
-        protected void changed(boolean repeat) {
+        void changed(boolean repeat) {
             this.setChanged();
             this.notifyObservers(repeat);
         }
@@ -304,7 +304,7 @@ public class MessageContent {
         // file name of downloaded file, empty by default
         private String mFilename;
         // coder status of file encryption, known after file is downloaded
-        protected CoderStatus mCoderStatus;
+        CoderStatus mCoderStatus;
 
         // progress downloaded of (encrypted) file in percent
         private int mDownloadProgress = -1;
@@ -391,7 +391,7 @@ public class MessageContent {
         protected String toJSONString() {
             JSONObject json = new JSONObject();
             EncodingUtils.putJSON(json, JSON_URL, mURL.toString());
-            EncodingUtils.putJSON(json, JSON_FILENAME, mFilename.toString());
+            EncodingUtils.putJSON(json, JSON_FILENAME, mFilename);
             json.put(JSON_ENCRYPTION, mCoderStatus.getEncryption().ordinal());
             json.put(JSON_SIGNING, mCoderStatus.getSigning().ordinal());
             int errs = EncodingUtils.enumSetToInt(mCoderStatus.getErrors());

@@ -323,7 +323,7 @@ public class X509Bridge {
 
        private final DERBitString keyData;
 
-       public SubjectPGPPublicKeyInfo(byte[] publicKey) {
+       SubjectPGPPublicKeyInfo(byte[] publicKey) {
            keyData = new DERBitString(publicKey);
        }
 
