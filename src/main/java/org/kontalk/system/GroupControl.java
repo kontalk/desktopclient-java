@@ -150,7 +150,7 @@ final class GroupControl {
         }
 
         @Override
-        public void onInMessage(GroupCommand command, Contact sender) {
+        void onInMessage(GroupCommand command, Contact sender) {
             // TODO ignore message if it contains unexpected group command (?)
 
             // NOTE: chat was selected/created by GID so we can be sure message
@@ -177,7 +177,7 @@ final class GroupControl {
                     //assert mMemberSet.size() == 1;
                     //assert mMemberSet.contains(new Member(sender));
                     added.addAll(JIDsToMembers(command.getAdded()));
-                    if (!added.stream().anyMatch(m -> m.getContact().isMe()))
+                    if (added.stream().noneMatch(m -> m.getContact().isMe()))
                         LOGGER.warning("user not included in new chat");
 
                     subject = command.getSubject();

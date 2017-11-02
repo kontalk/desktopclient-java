@@ -7,7 +7,7 @@ import java.util.Observer;
 /**
  * @author Alexander Bikadorov {@literal <goto@openmailbox.org>}
  */
-public interface ObserverTrait extends Observer {
+interface ObserverTrait extends Observer {
 
     @Override
     default void update(Observable o, Object arg) {

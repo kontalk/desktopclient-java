@@ -97,8 +97,7 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
     }
 
     private void addMembersSilent(List<ProtoMember> members) {
-        members.stream()
-        .filter(m -> {
+        members.stream().filter(m -> {
             if (mMemberSet.contains(m)) {
                 LOGGER.warning("(proto)member already in chat: " + m);
                 return false;
@@ -106,8 +105,8 @@ public abstract class GroupChat<D extends GroupMetaData> extends Chat {
                 return true;
             }
         })
-        .map(m -> new Member(m, mID))
-        .forEach(this::addMemberSilent);
+                .map(m -> new Member(m, mID))
+                .forEach(this::addMemberSilent);
     }
 
     private void addMemberSilent(Member member) {

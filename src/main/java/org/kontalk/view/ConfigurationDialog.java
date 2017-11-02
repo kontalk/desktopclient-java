@@ -197,7 +197,7 @@ final class ConfigurationDialog extends WebDialog {
         private final WebComboBox mMaxImgSizeBox;
         private final LinkedHashMap<Integer, String> mImgResizeMap;
 
-        public NetworkPanel() {
+        NetworkPanel() {
             GroupPanel groupPanel = new GroupPanel(View.GAP_DEFAULT, false);
             groupPanel.setMargin(View.MARGIN_BIG);
 

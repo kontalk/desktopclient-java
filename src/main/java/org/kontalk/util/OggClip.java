@@ -620,11 +620,11 @@ class OggClip {
 
     private class InternalException extends Exception {
 
-        public InternalException(Exception e) {
+        InternalException(Exception e) {
             super(e);
         }
 
-        public InternalException(String msg) {
+        InternalException(String msg) {
             super(msg);
         }
     }

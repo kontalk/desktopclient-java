@@ -80,9 +80,9 @@ abstract class ListView<V extends Observable & Searchable>
     private final TableRowSorter<DefaultTableModel> mRowSorter;
 
     /** Flyweight item that is used by cell renderer. */
-    protected final FlyweightItem mRenderItem;
+    final FlyweightItem mRenderItem;
     /** Flyweight item that is used by cell editor. */
-    protected final FlyweightItem mEditorItem;
+    final FlyweightItem mEditorItem;
 
     /** The current search string. */
     private String mSearch = "";
@@ -426,7 +426,7 @@ abstract class ListView<V extends Observable & Searchable>
         /** Update before painting. */
         protected abstract void render(V value, int listWidth, boolean isSelected, boolean isLast);
 
-        protected void configUpdate() {};
+        void configUpdate() {}
     }
 
     private class TableRenderer extends WebTableCellRenderer {

@@ -134,6 +134,8 @@ public final class OutMessage extends KonMessage {
 
     @Override
     public int hashCode() {
-        return Objects.hash(mTransmissions);
+        int hash = this.abstractHashCode();
+        hash = 67 * hash + Objects.hash(mTransmissions);
+        return hash;
     }
 }

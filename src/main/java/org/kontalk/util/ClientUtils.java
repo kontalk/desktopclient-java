@@ -218,7 +218,7 @@ public final class ClientUtils {
             } else {
                 if (decrypted || !IGNORED_NAMESPACES.contains(element.getNamespace()))
                     LOGGER.warning("unexpected extension: "
-                            + (element == null ? element : element.toXML().toString()));
+                            + (element == null ? null : element.toXML().toString()));
             }
         }
 

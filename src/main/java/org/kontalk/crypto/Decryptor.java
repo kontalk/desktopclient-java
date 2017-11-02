@@ -362,8 +362,8 @@ final class Decryptor {
         //}
 
         // check that the recipient matches the full UID of the personal key
-        if (!Arrays.stream(cpimMessage.getTo())
-                .anyMatch(s -> s.contains(myUID))) {
+        if (Arrays.stream(cpimMessage.getTo())
+                .noneMatch(s -> s.contains(myUID))) {
             LOGGER.warning("receiver list does not include own UID");
             allErrors.add(Coder.Error.INVALID_RECIPIENT);
         }

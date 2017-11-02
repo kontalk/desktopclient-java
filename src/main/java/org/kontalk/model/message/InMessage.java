@@ -24,7 +24,6 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.logging.Logger;
 
 import org.kontalk.crypto.Coder;
 import org.kontalk.misc.JID;
@@ -36,7 +35,6 @@ import org.kontalk.model.chat.Chat;
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
 public final class InMessage extends KonMessage implements DecryptMessage {
-    private static final Logger LOGGER = Logger.getLogger(InMessage.class.getName());
 
     private final Transmission mTransmission;
 
@@ -111,6 +109,8 @@ public final class InMessage extends KonMessage implements DecryptMessage {
 
     @Override
     public int hashCode() {
-        return Objects.hash(mTransmission);
+        int hash = this.abstractHashCode();
+        hash = 67 * hash + Objects.hash(mTransmission);
+        return hash;
     }
 }
