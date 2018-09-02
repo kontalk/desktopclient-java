@@ -18,6 +18,7 @@
 # IntelliJ Idea
 .idea/
 *.iml
+out/
 
 # Package Files #
 #*.jar
