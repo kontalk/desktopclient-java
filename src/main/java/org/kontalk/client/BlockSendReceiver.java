@@ -19,10 +19,9 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.StanzaListener;
-import org.jivesoftware.smack.SmackException;
+
 import org.jivesoftware.smack.packet.IQ;
-import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.util.SuccessCallback;
 import org.kontalk.misc.JID;
 import org.kontalk.system.Control;
 
@@ -30,7 +29,7 @@ import org.kontalk.system.Control;
  * Send blocking command and listen to response.
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-final class BlockSendReceiver implements StanzaListener {
+final class BlockSendReceiver implements SuccessCallback<IQ> {
     private static final Logger LOGGER = Logger.getLogger(BlockSendReceiver.class.getName());
 
     private final Control mControl;
@@ -57,15 +56,11 @@ final class BlockSendReceiver implements StanzaListener {
         mConn.sendWithCallback(blockingCommand, this);
     }
 
+
     @Override
-    public void processStanza(Stanza packet)
-            throws SmackException.NotConnectedException {
+    public void onSuccess(IQ packet) {
         LOGGER.info("response: "+packet);
 
-        if (!(packet instanceof IQ)) {
-            LOGGER.warning("response not an IQ packet");
-            return;
-        }
         IQ p = (IQ) packet;
 
         if (p.getType() != IQ.Type.result) {

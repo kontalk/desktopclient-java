@@ -22,12 +22,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import org.jivesoftware.smack.ExceptionCallback;
+
 import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.IQ;
-import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.util.SuccessCallback;
 import org.jivesoftware.smackx.iqregister.packet.Registration;
 import org.jivesoftware.smackx.xdata.Form;
 import org.jivesoftware.smackx.xdata.FormField;
@@ -44,7 +43,7 @@ import org.kontalk.misc.Callback;
  *
  * @author Alexander Bikadorov {@literal <bikaejkb@mail.tu-berlin.de>}
  */
-public final class PrivateKeyReceiver implements StanzaListener {
+public final class PrivateKeyReceiver implements SuccessCallback<IQ> {
     private static final Logger LOGGER = Logger.getLogger(PrivateKeyReceiver.class.getName());
 
     private static final String FORM_TYPE_VALUE = "http://kontalk.org/protocol/register#privatekey";
@@ -102,24 +101,15 @@ public final class PrivateKeyReceiver implements StanzaListener {
 
         iq.addExtension(form.getDataFormToSend());
 
-        try {
-            mConn.sendIqWithResponseCallback(iq, this, new ExceptionCallback() {
-                @Override
-                public void processException(Exception exception) {
-                    mHandler.handle(new Callback<>(exception));
-                }
-            });
-        } catch (SmackException.NotConnectedException | InterruptedException ex) {
-            LOGGER.log(Level.WARNING, "not connected", ex);
-            mHandler.handle(new Callback<>(ex));
-        }
+        mConn.sendIqRequestAsync(iq)
+             .onSuccess(this)
+             .onError(exception -> mHandler.handle(new Callback<>(exception)));
     }
 
     @Override
-    public void processStanza(Stanza packet) {
+    public void onSuccess(IQ packet) {
         LOGGER.info("response: "+packet);
 
-        mConn.removeSyncStanzaListener(this);
         mConn.disconnect();
 
         if (!(packet instanceof IQ)) {

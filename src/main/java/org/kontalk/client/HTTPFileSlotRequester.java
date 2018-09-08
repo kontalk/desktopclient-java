@@ -19,9 +19,7 @@
 package org.kontalk.client;
 
 import java.util.logging.Logger;
-import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.StanzaListener;
-import org.jivesoftware.smack.packet.Stanza;
+
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.kontalk.misc.Callback;
 import org.kontalk.misc.JID;
@@ -57,20 +55,16 @@ final class HTTPFileSlotRequester {
 
         final Callback.Synchronizer syncer = new Callback.Synchronizer();
         mSlotPacket = null;
-        mConn.sendWithCallback(request, new StanzaListener() {
-            @Override
-            public void processStanza(Stanza packet)
-                    throws SmackException.NotConnectedException {
-                LOGGER.config("response: "+packet);
+        mConn.sendWithCallback(request, packet -> {
+            LOGGER.config("response: " + packet);
 
-                if (!(packet instanceof HTTPFileUpload.Slot)) {
-                    LOGGER.warning("response not a slot packet: "+packet);
-                    syncer.sync();
-                    return;
-                }
-                mSlotPacket = (HTTPFileUpload.Slot) packet;
+            if (!(packet instanceof HTTPFileUpload.Slot)) {
+                LOGGER.warning("response not a slot packet: " + packet);
                 syncer.sync();
+                return;
             }
+            mSlotPacket = (HTTPFileUpload.Slot) packet;
+            syncer.sync();
         });
 
         syncer.waitForSync();

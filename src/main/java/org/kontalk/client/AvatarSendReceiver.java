@@ -24,13 +24,12 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.NamedElement;
-import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.jivesoftware.smack.util.SuccessCallback;
 import org.jivesoftware.smackx.pubsub.Item;
 import org.jivesoftware.smackx.pubsub.ItemsExtension;
 import org.jivesoftware.smackx.pubsub.LeafNode;
@@ -102,7 +101,7 @@ final class AvatarSendReceiver {
                 new AvatarDataExtension(data));
         try {
             // blocking
-            node.send(item);
+            node.publish(item);
         } catch (SmackException.NoResponseException |
                 XMPPException.XMPPErrorException |
                 SmackException.NotConnectedException |
@@ -178,11 +177,9 @@ final class AvatarSendReceiver {
                         Collections.singletonList(new Item(id))));
 
         // handle response
-        StanzaListener callback = new StanzaListener() {
+        SuccessCallback<IQ> callback = new SuccessCallback<IQ>() {
             @Override
-            public void processStanza(Stanza packet)
-                    throws SmackException.NotConnectedException {
-
+            public void onSuccess(IQ packet) {
                 if (!(packet instanceof PubSub)) {
                     LOGGER.warning("response not a pubsub packet");
                     return;

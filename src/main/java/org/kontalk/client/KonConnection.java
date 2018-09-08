@@ -34,15 +34,14 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jivesoftware.smack.ConnectionConfiguration.SecurityMode;
-import org.jivesoftware.smack.ExceptionCallback;
 import org.jivesoftware.smack.SASLAuthentication;
 import org.jivesoftware.smack.SmackException;
-import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.packet.IQ;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration;
 import org.jivesoftware.smack.tcp.XMPPTCPConnectionConfiguration.Builder;
+import org.jivesoftware.smack.util.SuccessCallback;
 import org.jxmpp.jid.DomainBareJid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.jid.parts.Resourcepart;
@@ -168,17 +167,14 @@ final class KonConnection extends XMPPTCPConnection {
         return true;
     }
 
-    void sendWithCallback(IQ packet, StanzaListener callback) {
-        LOGGER.config("packet: "+packet);
-        try {
-            super.sendIqWithResponseCallback(packet, callback, new ExceptionCallback() {
-                @Override
-                public void processException(Exception ex) {
-                    LOGGER.log(Level.WARNING, "exception response", ex);
-                }
-            });
-        } catch (SmackException.NotConnectedException | InterruptedException ex) {
-            LOGGER.log(Level.WARNING, "not connected", ex);
-        }
+    void sendWithCallback(IQ packet, SuccessCallback<IQ> callback) {
+        super.sendIqRequestAsync(packet)
+                .onSuccess(callback)
+                .onError(new org.jivesoftware.smack.util.ExceptionCallback<Exception>() {
+                    @Override
+                    public void processException(Exception exception) {
+                        LOGGER.log(Level.WARNING, "exception response", exception);
+                    }
+                });
     }
 }
