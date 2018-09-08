@@ -22,7 +22,7 @@ gradle.projectsEvaluated {
 
 evaluationDependsOn ':'+clientCommonDir
 
-ext.bcVersion = '1.52'
+ext.bcVersion = '1.60'
 ext.smackVersion = project(':'+clientCommonDir).smackVersion
 
 //configurations.all { transitive = false }
