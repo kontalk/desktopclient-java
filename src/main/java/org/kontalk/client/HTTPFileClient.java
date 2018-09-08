@@ -259,7 +259,7 @@ public class HTTPFileClient {
             SSLContext sslContext = TrustUtils.getCustomSSLContext(privateKey,
                     certificate,
                     validateCertificate);
-            clientBuilder.setSslcontext(sslContext);
+            clientBuilder.setSSLContext(sslContext);
         }
         catch (KeyStoreException |
                 NoSuchAlgorithmException |
