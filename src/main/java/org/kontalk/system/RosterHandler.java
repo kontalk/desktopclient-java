@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import org.jivesoftware.smack.packet.Presence;
-import org.jivesoftware.smack.packet.XMPPError;
+import org.jivesoftware.smack.packet.StanzaError;
 import org.kontalk.client.Client;
 import org.kontalk.client.HKPClient;
 import org.kontalk.crypto.Coder;
@@ -235,8 +235,8 @@ public final class RosterHandler {
         mControl.getViewControl().changed(new ViewEvent.NewKey(contact, key));
     }
 
-    public void onPresenceError(JID jid, XMPPError.Type type, XMPPError.Condition condition) {
-        if (type != XMPPError.Type.CANCEL)
+    public void onPresenceError(JID jid, StanzaError.Type type, StanzaError.Condition condition) {
+        if (type != StanzaError.Type.CANCEL)
             // it can't be that bad)
             return;
 

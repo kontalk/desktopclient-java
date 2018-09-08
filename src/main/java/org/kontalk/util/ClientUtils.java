@@ -43,7 +43,6 @@ import org.kontalk.client.GroupExtension;
 import org.kontalk.client.GroupExtension.Member;
 import org.kontalk.client.GroupExtension.Type;
 import org.kontalk.client.OpenPGPExtension;
-import org.kontalk.client.OpenPGPExtension.BodyElement;
 import org.kontalk.client.OutOfBandData;
 import org.kontalk.misc.JID;
 import org.kontalk.model.Contact;
@@ -180,8 +179,8 @@ public final class ClientUtils {
                                    String body, boolean decrypted) {
         String outOfBandURL = null;
         for (ExtensionElement element : elements) {
-            if (element instanceof BodyElement) {
-                body = ((BodyElement) element).getText();
+            if (element instanceof Message.Body) {
+                body = ((Message.Body) element).getMessage();
             } else if (element instanceof BitsOfBinary) {
                 // Bits of Binary: preview for file attachment
                 BitsOfBinary bob = (BitsOfBinary) element;
@@ -190,7 +189,7 @@ public final class ClientUtils {
                 if (bits == null)
                     bits = new byte[0];
                 if (mime.isEmpty() || bits.length <= 0)
-                    LOGGER.warning("invalid BOB data: " + bob.toXML());
+                    LOGGER.warning("invalid BOB data: " + bob.toXML(null));
                 else
                     builder.preview(new Preview(bits, mime));
             } else if (element instanceof OutOfBandData) { // Out of Band Data: a URI to a file
@@ -218,7 +217,7 @@ public final class ClientUtils {
             } else {
                 if (decrypted || !IGNORED_NAMESPACES.contains(element.getNamespace()))
                     LOGGER.warning("unexpected extension: "
-                            + (element == null ? null : element.toXML().toString()));
+                            + (element == null ? null : element.toXML(null)));
             }
         }
 

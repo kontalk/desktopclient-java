@@ -388,7 +388,7 @@ final class Decryptor {
                 allErrors.add(Coder.Error.INVALID_DATA);
                 return null;
             }
-            LOGGER.config("decrypted XML: "+parsedMessage.toXML());
+            LOGGER.config("decrypted XML: "+parsedMessage.toXML(null));
             decryptedContent = ClientUtils.parseMessageContent(parsedMessage, true);
         } else {
             // text/plain MIME type for simple text messages

@@ -27,7 +27,7 @@ import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Message;
 import org.jivesoftware.smack.packet.Stanza;
-import org.jivesoftware.smack.packet.XMPPError;
+import org.jivesoftware.smack.packet.StanzaError;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.jivesoftware.smackx.chatstates.packet.ChatStateExtension;
@@ -39,7 +39,6 @@ import org.jivesoftware.smackx.pubsub.NodeExtension;
 import org.jivesoftware.smackx.pubsub.packet.PubSubNamespace;
 import org.jivesoftware.smackx.receipts.DeliveryReceipt;
 import org.jivesoftware.smackx.receipts.DeliveryReceiptRequest;
-import org.kontalk.client.OpenPGPExtension.BodyElement;
 import org.kontalk.misc.JID;
 import org.kontalk.model.message.MessageContent;
 import org.kontalk.system.Control;
@@ -60,7 +59,7 @@ final class KonMessageListener implements StanzaListener {
     static {
         ProviderManager.addExtensionProvider(E2EEncryption.ELEMENT_NAME, E2EEncryption.NAMESPACE, new E2EEncryption.Provider());
         ProviderManager.addExtensionProvider(OpenPGPExtension.ELEMENT_NAME, OpenPGPExtension.NAMESPACE, new OpenPGPExtension.Provider());
-        ProviderManager.addExtensionProvider(BodyElement.ELEMENT_NAME, BodyElement.NAMESPACE, new BodyElement.Provider());
+        //ProviderManager.addExtensionProvider(Message.Body.ELEMENT, BodyElement.NAMESPACE, new BodyElement.Provider());
         ProviderManager.addExtensionProvider(OutOfBandData.ELEMENT_NAME, OutOfBandData.NAMESPACE, new OutOfBandData.Provider());
         ProviderManager.addExtensionProvider(BitsOfBinary.ELEMENT_NAME, BitsOfBinary.NAMESPACE, new BitsOfBinary.Provider());
         ProviderManager.addExtensionProvider(GroupExtension.ELEMENT_NAME, GroupExtension.NAMESPACE, new GroupExtension.Provider());
@@ -96,7 +95,7 @@ final class KonMessageListener implements StanzaListener {
         if (type == Message.Type.error) {
             LOGGER.warning("got error message: "+m);
 
-            XMPPError error = m.getError();
+            StanzaError error = m.getError();
             if (error == null) {
                 LOGGER.warning("error message does not contain error");
                 return;
@@ -179,7 +178,7 @@ final class KonMessageListener implements StanzaListener {
         LOGGER.config("message: "+m);
 
         // this should be a pubsub event
-        PubSubNamespace ns = PubSubNamespace.EVENT;
+        PubSubNamespace ns = PubSubNamespace.event;
         ExtensionElement eventExt = m.getExtension(ns.getFragment(), ns.getXmlns());
         if (eventExt instanceof EventElement){
             EventElement event = (EventElement) eventExt;

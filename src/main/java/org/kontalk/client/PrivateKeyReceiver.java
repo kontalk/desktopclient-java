@@ -84,7 +84,7 @@ public final class PrivateKeyReceiver implements StanzaListener {
 
         Registration iq = new Registration();
         iq.setType(IQ.Type.set);
-        iq.setTo(mConn.getServiceName());
+        iq.setTo(mConn.getXMPPServiceDomain());
         Form form = new Form(DataForm.Type.submit);
 
         // form type field
@@ -145,7 +145,7 @@ public final class PrivateKeyReceiver implements StanzaListener {
         List<FormField> fields = response.getFields();
         for (FormField field : fields) {
             if ("token".equals(field.getVariable())) {
-                token = field.getValues().get(0);
+                token = field.getValues().get(0).toString();
                 break;
             }
         }

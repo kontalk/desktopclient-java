@@ -20,14 +20,15 @@ package org.kontalk.client;
 
 import java.util.Optional;
 import java.util.logging.Logger;
+
 import org.apache.commons.lang.StringUtils;
 import org.jivesoftware.smack.StanzaListener;
-import org.jivesoftware.smack.roster.Roster;
-import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.Presence;
-import org.jivesoftware.smack.packet.XMPPError;
+import org.jivesoftware.smack.packet.Stanza;
+import org.jivesoftware.smack.packet.StanzaError;
 import org.jivesoftware.smack.provider.ProviderManager;
+import org.jivesoftware.smack.roster.Roster;
 import org.jivesoftware.smackx.muc.packet.MUCUser;
 import org.kontalk.misc.JID;
 import org.kontalk.system.RosterHandler;
@@ -85,7 +86,7 @@ class PresenceListener implements StanzaListener {
 
         switch(presence.getType()) {
             case error:
-                XMPPError error = presence.getError();
+                StanzaError error = presence.getError();
                 if (error == null) {
                     LOGGER.warning("error presence does not contain error");
                     return;

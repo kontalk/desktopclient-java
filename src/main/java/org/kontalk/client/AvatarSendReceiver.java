@@ -28,6 +28,7 @@ import org.jivesoftware.smack.StanzaListener;
 import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.packet.IQ;
+import org.jivesoftware.smack.packet.NamedElement;
 import org.jivesoftware.smack.packet.Stanza;
 import org.jivesoftware.smack.provider.ProviderManager;
 import org.jivesoftware.smackx.pubsub.Item;
@@ -85,7 +86,7 @@ final class AvatarSendReceiver {
             return;
         }
 
-        PubSubManager mPubSubManager = PubSubManager.getInstance(mConn, mConn.getServiceName());
+        PubSubManager mPubSubManager = PubSubManager.getInstance(mConn, mConn.getXMPPServiceDomain());
         LeafNode node;
         try {
             node = mPubSubManager.createNode(DATA_NODE);
@@ -127,14 +128,14 @@ final class AvatarSendReceiver {
     }
 
     void processMetadataEvent(JID jid, ItemsExtension itemsExt) {
-        List<? extends ExtensionElement> items = itemsExt.getItems();
+        List<? extends NamedElement> items = itemsExt.getItems();
         if (items.isEmpty()) {
             LOGGER.warning("no items in items event");
             return;
         }
 
         // there should be only one item
-        ExtensionElement e = items.get(0);
+        NamedElement e = items.get(0);
         if (!(e instanceof PayloadItem)) {
             LOGGER.warning("element not a payloaditem");
             return;
@@ -168,7 +169,7 @@ final class AvatarSendReceiver {
         // I dont get how to use this here
         //PubSubManager manager = new PubSubManager(conn);
 
-        PubSub request = new PubSub(jid.toBareSmack(), IQ.Type.get, PubSubNamespace.BASIC);
+        PubSub request = new PubSub(jid.toBareSmack(), IQ.Type.get, PubSubNamespace.basic);
 
         request.addExtension(
                 new ItemsExtension(
@@ -195,7 +196,7 @@ final class AvatarSendReceiver {
                 }
 
                 ItemsExtension items = (ItemsExtension) itemsExt;
-                List<? extends ExtensionElement> itemsList = items.getItems();
+                List<? extends NamedElement> itemsList = items.getItems();
                 if (itemsList.isEmpty()) {
                     // TODO why this happens?
                     LOGGER.warning("no items in itemlist");
@@ -203,7 +204,7 @@ final class AvatarSendReceiver {
                 }
 
                 // there should be only one item
-                ExtensionElement e = itemsList.get(0);
+                NamedElement e = itemsList.get(0);
                 if (!(e instanceof PayloadItem)) {
                     LOGGER.warning("element not a payloaditem");
                     return;

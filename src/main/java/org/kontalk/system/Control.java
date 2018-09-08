@@ -37,7 +37,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-import org.jivesoftware.smack.packet.XMPPError.Condition;
+import org.jivesoftware.smack.packet.StanzaError;
 import org.jivesoftware.smackx.chatstates.ChatState;
 import org.kontalk.client.Client;
 import org.kontalk.client.FeatureDiscovery;
@@ -332,7 +332,7 @@ public final class Control {
         message.setReceived(ids.jid, receivedDate);
     }
 
-    public void onMessageError(MessageIDs ids, Condition condition, String errorText) {
+    public void onMessageError(MessageIDs ids, StanzaError.Condition condition, String errorText) {
         OutMessage message = this.findMessage(ids).orElse(null);
         if (message == null)
             return ;

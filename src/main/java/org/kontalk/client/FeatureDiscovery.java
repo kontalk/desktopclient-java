@@ -82,7 +82,7 @@ public final class FeatureDiscovery {
     /** Discover all known features of connected server and its items.  */
     EnumMap<Feature, JID> getServerFeatures() {
         // TODO use ServiceDiscoveryManager.serverSupportsFeature()
-        return getFeatures(JID.fromSmack(mConn.getServiceName()), true);
+        return getFeatures(JID.fromSmack(mConn.getXMPPServiceDomain()), true);
     }
 
     /** Discover all known features of an entity.  */

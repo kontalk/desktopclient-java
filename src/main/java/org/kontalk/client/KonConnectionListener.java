@@ -76,21 +76,4 @@ final class KonConnectionListener implements ConnectionListener {
         mClient.newStatus(Control.Status.ERROR);
         mClient.newException(new KonException(KonException.Error.CLIENT_ERROR, ex));
     }
-
-    @Override
-    public void reconnectingIn(int seconds) {
-        LOGGER.info("reconnecting in " + seconds + " secs");
-    }
-
-    @Override
-    public void reconnectionSuccessful() {
-        mConnected = true;
-        LOGGER.info("reconnected");
-    }
-
-    @Override
-    public void reconnectionFailed(Exception e) {
-        mConnected = false;
-        LOGGER.info("reconnection failed");
-    }
 }

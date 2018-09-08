@@ -44,11 +44,10 @@ import org.kontalk.model.message.MessageContent.OutAttachment;
 import org.kontalk.model.message.MessageContent.Preview;
 import org.kontalk.model.message.OutMessage;
 import org.kontalk.model.message.Transmission;
-import org.kontalk.util.MessageUtils.SendTask;
-import org.kontalk.util.MessageUtils.SendTask.Encryption;
 import org.kontalk.util.ClientUtils;
 import org.kontalk.util.EncodingUtils;
-import org.kontalk.client.OpenPGPExtension.BodyElement;
+import org.kontalk.util.MessageUtils.SendTask;
+import org.kontalk.util.MessageUtils.SendTask.Encryption;
 
 /**
  *
@@ -158,7 +157,7 @@ public final class KonMessageSender {
     }
 
     public static String getEncryptionPayloadRFC3923(MessageContent content, Chat chat) {
-        return rawMessage(content, chat, true).toXML().toString();
+        return rawMessage(content, chat, true).toXML(null).toString();
     }
 
     private static Message rawMessage(MessageContent content, Chat chat, boolean encrypted) {
@@ -191,11 +190,11 @@ public final class KonMessageSender {
         MessageContent content = message.getContent();
         String text = content.getPlainText();
         if (!text.isEmpty())
-            contentElements.add(new BodyElement(text));
+            contentElements.add(new Message.Body(null, text));
         contentElements.addAll(extensionsForContent(content, message.getChat(), true));
 
         return new SignCryptElement(tos, new Date(), rpadLength, contentElements)
-                .toXML().toString();
+                .toXML(null).toString();
     }
 
     private static List<ExtensionElement> extensionsForContent(MessageContent content, Chat chat,

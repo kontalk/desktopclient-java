@@ -305,7 +305,7 @@ public final class Client implements StanzaListener, Runnable {
     public boolean sendMessage(SendTask task) {
         Optional<Jid> multiAddressHost =
                 mFeatures.containsKey(FeatureDiscovery.Feature.MULTI_ADDRESSING)
-                && mConn != null ? Optional.of(mConn.getServiceName()) : Optional.empty();
+                && mConn != null ? Optional.of(mConn.getXMPPServiceDomain()) : Optional.empty();
 
         return mMessageSender.sendMessage(task, multiAddressHost);
     }
