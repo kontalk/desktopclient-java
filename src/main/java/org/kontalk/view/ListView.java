@@ -344,20 +344,6 @@ abstract class ListView<V extends Observable & Searchable>
         mRowSorter.sort();
     }
 
-    @Override
-    public void update(Observable o, Object arg) {
-        if (SwingUtilities.isEventDispatchThread()) {
-            this.updateOnEDT(o, arg);
-            return;
-        }
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                ListView.this.updateOnEDT(o, arg);
-            }
-        });
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public void updateOnEDT(Observable o, Object arg) {
