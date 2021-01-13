@@ -73,7 +73,7 @@ public final class Client implements StanzaListener, Runnable {
 
     public enum PresenceCommand {REQUEST, GRANT, DENY}
 
-    // NOTE: disconnect is instantaneous, all resulting exceptions should be catched
+    // NOTE: disconnect is instantaneous, all resulting exceptions should be caught
     private enum Command {CONNECT, LAST_ACTIVITY}
 
     private final Control mControl;

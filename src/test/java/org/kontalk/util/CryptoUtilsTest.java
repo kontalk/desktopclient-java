@@ -50,7 +50,7 @@ public class CryptoUtilsTest {
 
     /**
      * Test of removeCryptographyRestrictions method, of class CryptoUtils.
-     * NOTE: crypto restriction removal is platform dependend, so is the
+     * NOTE: crypto restriction removal is platform dependent, so is the
      * result of this test
      */
     @Test
